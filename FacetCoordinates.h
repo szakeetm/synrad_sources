@@ -34,9 +34,7 @@ public:
 
   // Component method
   void Display(Worker *w);
-  void UpdateId(int vertexId);
-  void UpdateFromSelection();
-
+  void Update();
 
   // Implementation
   void ProcessMessage(GLComponent *src,int message);
@@ -44,27 +42,17 @@ public:
 private:
 
   void GetSelected();
-  void InsertVertex(int rowId,int vertexId);
-  void RemoveRow(int rowId);
   void setBounds(GLComponent *org,GLComponent *src,int x,int y,int w,int h);
-  void RebuildList();
-  void ApplyChanges();
-  
 
   Worker       *worker;
   Facet        *selFacet;
   GLList       *facetListC;
   GLButton     *dismissButton;
-  GLButton     *updateButton; //apply
-  GLButton     *insertLastButton;
-  GLButton     *insertBeforeButton;
-  GLButton     *removePosButton;
-
-
-
-  GLTextField  *insertIdText;
-
-  std::vector<line> lines;
+  GLButton     *updateButton;
+  GLButton     *insert1Button;
+  GLButton     *insert2Button;
+  GLButton     *removeButton;
+  GLTextField  *insertPosText;
 
 };
 

@@ -107,7 +107,7 @@ public:
   DWORD GetNbCellForRatio(double ratio);
   DWORD GetNbCell();
   void  UpdateFlags();
-  void  BuildTexture(double *texBuffer,double min,double max,double no_scans,BOOL useColorMap,BOOL doLog);
+  void  BuildTexture(double *texBuffer,double min,double max,double no_scans,BOOL useColorMap,BOOL doLog,BOOL normalize=TRUE);
   void  BuildTexture(llong *texBuffer,llong min,llong max,BOOL useColorMap,BOOL doLog);
   void  BuildMesh();
   void  BuildSelElemList();

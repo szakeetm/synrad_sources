@@ -743,7 +743,7 @@ void Worker::InsertGeometry(BOOL newStr,char *fileName) {
 				changedSinceSave = TRUE;
 				ResetWorkerStats();
 				f = new FileReader(fileName);
-				geom->InsertSTL(f,progressDlg,newStr);
+				geom->InsertSTL(f,progressDlg,newStr,scaleFactor);
 				//geom->sh.nbSuper++;
 				//nbHit = geom->tNbHit;
 				//nbDesorption = geom->tNbDesorption;

@@ -69,7 +69,7 @@ public:
   void InsertTXT(FileReader *file,GLProgress *prg,BOOL newStr);
   void InsertGEO(FileReader *file,GLProgress *prg,BOOL newStr);
   PARfileList InsertSYN(FileReader *file,GLProgress *prg,BOOL newStr);
-  void InsertSTL(FileReader *file,GLProgress *prg,BOOL newStr);
+  void InsertSTL(FileReader *file,GLProgress *prg,BOOL newStr,double scaleFactor);
 
   // Save
   void SaveTXT(FileWriter *file,Dataport *dhHit,BOOL saveSelected);
@@ -227,7 +227,7 @@ private:
   void InsertTXTGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0,BOOL newStruct=FALSE);
   void InsertGEOGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0,BOOL newStruct=FALSE);
   PARfileList InsertSYNGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0,BOOL newStruct=FALSE);
-  void InsertSTLGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0,BOOL newStruct=FALSE);
+  void InsertSTLGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0,BOOL newStruct=FALSE,double scaleFactor=1.0);
   void RemoveLinkFacet();
   void UpdateName(FileReader *file);
   void SaveProfileSYN(FileWriter *file,Dataport *dpHit,int super=-1,BOOL saveSelected=FALSE,BOOL crashSave=FALSE);

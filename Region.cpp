@@ -252,11 +252,11 @@ void Region::LoadPAR(FileReader *file,GLProgress *prg){
 	psimaxY=file->ReadDouble()*0.001;
 	file->JumpComment();
 
-	/*emittance_x=emittance/(1.0+coupling);
-	emittance_y=emittance_x*coupling;*/
-
 	emittance_x=emittance/(1.0+coupling);
-	emittance_y=emittance_x;
+	emittance_y=emittance_x*coupling;
+
+	/*emittance_x=emittance/(1.0+coupling);
+	emittance_y=emittance_x;*/
 
 	beta_kind=0;
 	if (betax<0.0) { //read BXY file

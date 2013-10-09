@@ -993,7 +993,7 @@ DWORD Facet::GetTexRamSizeForRatio(double ratio,BOOL useMesh,BOOL countDir) {
 	if( (i)>=0 && (i)<=w && (j)>=0 && (j)<=h ) {    \
 	add = (i)+(j)*sh.texWidth;                    \
 	if( mesh[add].area>0.0f ) {                   \
-	sum += we*(texBuffer[add]*scaleF);          \
+	sum += we*(texBuffer[add]/mesh[add].area*scaleF);          \
 	W=W+we;                                     \
 	}                                             \
 	}
@@ -1049,7 +1049,7 @@ float Facet::GetSmooth(int i,int j,llong *texBuffer,float scaleF) {
 // -----------------------------------------------------------
 #define LOG10(x) log10f((float)x)
 
-void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans,BOOL useColorMap,BOOL doLog) {
+void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans,BOOL useColorMap,BOOL doLog,BOOL normalize) {
 	min=min*no_scans;
 	max=max*no_scans;
 	int size  = sh.texWidth*sh.texHeight;
@@ -1085,9 +1085,9 @@ void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans
 			for(int i=0;i<sh.texWidth;i++) {
 				int idx = i+j*sh.texWidth;
 				if( doLog ) {
-					val = (int)((LOG10(texBuffer[idx])-LOG10(min))*scaleFactor+0.5f);
+					val = (int)((LOG10(texBuffer[idx]/mesh[idx].area)-LOG10(min))*scaleFactor+0.5f);
 				} else {
-					val = (int)((texBuffer[idx]-min)*scaleFactor+0.5f);
+					val = (int)((texBuffer[idx]/mesh[idx].area-min)*scaleFactor+0.5f);
 				}
 				SATURATE(val,0,65535);	
 				buff32[(i+1) + (j+1)*texDimW] = colorMap[val];
@@ -1157,9 +1157,9 @@ void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans
 			for(int i=0;i<sh.texWidth;i++) {
 				int idx = i+j*sh.texWidth;
 				if( doLog ) {
-					val = (int)((LOG10(texBuffer[idx])-LOG10(min))*scaleFactor+0.5f);
+					val = (int)((LOG10(texBuffer[idx]/mesh[idx].area)-LOG10(min))*scaleFactor+0.5f);
 				} else {
-					val = (int)((texBuffer[idx]-min)*scaleFactor+0.5f);
+					val = (int)((texBuffer[idx]/mesh[idx].area-min)*scaleFactor+0.5f);
 				}
 				SATURATE(val,0,255);
 				buff8[(i+1) + (j+1)*texDimW] = val;

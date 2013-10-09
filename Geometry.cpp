@@ -957,6 +957,10 @@ void Geometry::CopyGeometryBuffer(BYTE *buffer,std::vector<Region> *regions,std:
 			buffer+=sizeof(double);
 			(*((double*)(buffer)))=(*regions)[i].etaprime_distr->valuesY[j];
 			buffer+=sizeof(double);
+			(*((double*)(buffer)))=(*regions)[i].coupling_distr->valuesY[j];
+			buffer+=sizeof(double);
+			(*((double*)(buffer)))=(*regions)[i].e_spread_distr->valuesY[j];
+			buffer+=sizeof(double);
 		}
 	}
 
@@ -2256,12 +2260,12 @@ void Geometry::InsertTXT(FileReader *file,GLProgress *prg,BOOL newStr) {
 
 // -----------------------------------------------------------
 
-void Geometry::InsertSTL(FileReader *file,GLProgress *prg,BOOL newStr) {
+void Geometry::InsertSTL(FileReader *file,GLProgress *prg,BOOL newStr,double scaleFactor) {
 
 	//Clear();
 	int structId=viewStruct;
 	if (structId==-1) structId=0;
-	InsertSTLGeom(file,&(sh.nbVertex),&(sh.nbFacet),&vertices3,&facets,structId,newStr);
+	InsertSTLGeom(file,&(sh.nbVertex),&(sh.nbFacet),&vertices3,&facets,structId,newStr,scaleFactor);
 	//UpdateName(file);
 	//sh.nbSuper = 1;
 	//strName[0] = _strdup(sh.name);
@@ -2826,7 +2830,7 @@ PARfileList Geometry::InsertSYNGeom(FileReader *file,int *nbVertex,int *nbFacet,
 
 // -----------------------------------------------------------
 
-void Geometry::InsertSTLGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3D **vertices3,Facet ***facets,int strIdx,BOOL newStruct) {
+void Geometry::InsertSTLGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3D **vertices3,Facet ***facets,int strIdx,BOOL newStruct,double scaleFactor) {
 
 	UnSelectAll();
 	char *w;
@@ -2862,26 +2866,26 @@ void Geometry::InsertSTLGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3
 
 		file->ReadKeyword("facet");
 		file->ReadKeyword("normal");
-		file->ReadDouble();
+		file->ReadDouble(); //ignoring normal vector, will be calculated from triangle orientation
 		file->ReadDouble();
 		file->ReadDouble();
 		file->ReadKeyword("outer");
 		file->ReadKeyword("loop");
 
 		file->ReadKeyword("vertex");
-		(*vertices3)[*nbVertex+3*i+0].x = file->ReadDouble();
-		(*vertices3)[*nbVertex+3*i+0].y = file->ReadDouble();
-		(*vertices3)[*nbVertex+3*i+0].z = file->ReadDouble();
+		(*vertices3)[*nbVertex+3*i+0].x = file->ReadDouble()*scaleFactor;
+		(*vertices3)[*nbVertex+3*i+0].y = file->ReadDouble()*scaleFactor;
+		(*vertices3)[*nbVertex+3*i+0].z = file->ReadDouble()*scaleFactor;
 
 		file->ReadKeyword("vertex");
-		(*vertices3)[*nbVertex+3*i+1].x = file->ReadDouble();
-		(*vertices3)[*nbVertex+3*i+1].y = file->ReadDouble();
-		(*vertices3)[*nbVertex+3*i+1].z = file->ReadDouble();
+		(*vertices3)[*nbVertex+3*i+1].x = file->ReadDouble()*scaleFactor;
+		(*vertices3)[*nbVertex+3*i+1].y = file->ReadDouble()*scaleFactor;
+		(*vertices3)[*nbVertex+3*i+1].z = file->ReadDouble()*scaleFactor;
 
 		file->ReadKeyword("vertex");
-		(*vertices3)[*nbVertex+3*i+2].x = file->ReadDouble();
-		(*vertices3)[*nbVertex+3*i+2].y = file->ReadDouble();
-		(*vertices3)[*nbVertex+3*i+2].z = file->ReadDouble();
+		(*vertices3)[*nbVertex+3*i+2].x = file->ReadDouble()*scaleFactor;
+		(*vertices3)[*nbVertex+3*i+2].y = file->ReadDouble()*scaleFactor;
+		(*vertices3)[*nbVertex+3*i+2].z = file->ReadDouble()*scaleFactor;
 
 		file->ReadKeyword("endloop");
 		file->ReadKeyword("endfacet");
@@ -3625,7 +3629,8 @@ void Geometry::SaveDesorption(FILE *file,Dataport *dpHit,BOOL selectedOnly,int m
 							}
 							sprintf(tmp,"%g",val);
 							if( tmp ) fprintf(file,"%s",tmp);
-							if( j<w-1 ) 
+							//fprintf(file,"%s",tmp);
+							if( j<h-1 ) 
 								fprintf(file,"\t");
 						}
 						fprintf(file,"\n");

@@ -219,15 +219,9 @@ void AlignFacet::ProcessMessage(GLComponent *src,int message) {
 				}
 			}
 			geom->InitializeGeometry();
-			for(int i=0;i<nbSelected;i++) {
-				try {
-					geom->SetFacetTexture(selection[i],geom->GetFacet(selection[i])->tRatio,geom->GetFacet(selection[i])->hasMesh);
-					work->Reload();
-				} catch (Error &e) {
-					GLMessageBox::Display((char *)e.GetMsg(),"Error",GLDLG_OK,GLDLG_ICONERROR);
-					return;
-				}
-			} 
+			//for(int i=0;i<nbSelected;i++)
+			//	geom->SetFacetTexture(selection[i],geom->GetFacet(selection[i])->tRatio,geom->GetFacet(selection[i])->hasMesh);	
+			work->Reload(); 
 			theApp->UpdateFacetlistSelected();	
 			mApp->UpdateViewers();
 		}

@@ -637,6 +637,8 @@ void RecordHitOnTexture(FACET *f,double dF,double dP) {
 	int tv = (int)(f->colV * f->sh.texHeightD); 
 	int add = tu+tv*f->sh.texWidth;  
 	f->hits_MC[add]++;
+	/*f->hits_flux[add]+=dF*f->inc[add];
+	f->hits_power[add]+=dP*f->inc[add];*/
 	f->hits_flux[add]+=dF;
 	f->hits_power[add]+=dP;
 }

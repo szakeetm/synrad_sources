@@ -365,19 +365,7 @@ BOOL FacetMesh::Apply() {
 				f->sh.countDirection = recordDirBtn->IsChecked();
 				f->textureVisible = showTexture->IsChecked();
 				f->volumeVisible = showVolume->IsChecked();
-				try {
-					geom->SetFacetTexture(i,ratio,boundMap);
-				} catch (Error &e) {
-					GLMessageBox::Display((char *)e.GetMsg(),"Error",GLDLG_OK,GLDLG_ICONWARNING);
-					progressDlg->SetVisible(FALSE);
-					SAFE_DELETE(progressDlg);
-					return FALSE;
-				} catch (...) {
-					GLMessageBox::Display("Unexpected error while setting textures","Error",GLDLG_OK,GLDLG_ICONWARNING);
-					progressDlg->SetVisible(FALSE);
-					SAFE_DELETE(progressDlg);
-					return FALSE;
-				}
+				geom->SetFacetTexture(i,ratio,boundMap);
 				nbPerformed+=1.0;
 				progressDlg->SetProgress(nbPerformed/nbSelected);
 			}

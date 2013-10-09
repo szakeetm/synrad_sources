@@ -57,8 +57,8 @@ TexturePlotter::TexturePlotter():GLWindow() {
   viewCombo = new GLCombo(0);
   viewCombo->SetSize(4);
   viewCombo->SetValueAt(0,"Elem. area");
-  viewCombo->SetValueAt(1,"SR Flux/scan");
-  viewCombo->SetValueAt(2,"SR Power/scan");
+  viewCombo->SetValueAt(1,"SR Flux/scan/cm2/mA");
+  viewCombo->SetValueAt(2,"SR Power/scan/cm2/mA");
   viewCombo->SetValueAt(3,"MC Hits");
   
   viewCombo->SetSelectedIndex(1);
@@ -206,7 +206,7 @@ void TexturePlotter::UpdateTable() {
        
 		for(int i=0;i<w;i++) {
           for(int j=0;j<h;j++) {
-            double val=hits_flux[i+j*w]/no_scans; //already divided by area
+            double val=hits_flux[i+j*w]/no_scans/selFacet->mesh[i+j*w].area; //already divided by area
 				if (val>maxValue) {
 				maxValue=(float)val;
 				maxX=i;maxY=j;
@@ -230,7 +230,7 @@ void TexturePlotter::UpdateTable() {
 
         for(int i=0;i<w;i++) {
           for(int j=0;j<h;j++) {
-            double val=hits_power[i+j*w]/no_scans;
+            double val=hits_power[i+j*w]/no_scans/selFacet->mesh[i+j*w].area;
 				if (val>maxValue) {
 				maxValue=(float)val;
 				maxX=i;maxY=j;

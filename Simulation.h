@@ -48,6 +48,7 @@ typedef struct {
   double    *hits_flux;  //absorbed SR flux
   double    *hits_power; //absorbed SR power
   double	 fullSizeArea; //Texture FULL element area
+  double   *inc;        //reciprocial of element area
   VHIT     *direction; // Direction field recording (average)
   char     *fullElem;  // Direction field recording (only on full element) (WHY???)
   llong    *profile_hits;   // MC hits

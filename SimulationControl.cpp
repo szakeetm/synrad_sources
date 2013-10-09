@@ -385,16 +385,19 @@ BOOL LoadSimulation(Dataport *loader) {
 			f->hits_power = (double *)malloc(nbE*sizeof(double));
 			memset(f->hits_power,0,nbE*sizeof(double));
 
-
+			f->inc = (double *)malloc(nbE*sizeof(double));
 			f->fullElem = (char *)malloc(nbE*sizeof(char));
 
 			for(j=0;j<nbE;j++) {
 				double incVal = ((double *)areaBuff)[j];
 				if( incVal<0 ) {
 					f->fullElem[j] = 1;
+					f->inc[j] = -incVal;
 				} else {
 					f->fullElem[j] = 0;
+					f->inc[j] = incVal;
 				}
+				if ((f->inc[j]>0.0)&&(f->inc[j]<f->fullSizeArea)) f->fullSizeArea = f-> inc[j];
 			}
 			sHandle->textTotalSize += f->textureSize;
 			areaBuff += nbE*sizeof(double);
