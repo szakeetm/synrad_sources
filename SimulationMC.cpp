@@ -649,6 +649,7 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 	static double last_critical_energy,last_Bfactor,last_Bfactor_power; //to speed up calculation if critical energy didn't change
 	static double last_average_ans;
 	double average_;
+	double emittance_x_,emittance_y_;
 	double B_factor,B_factor_power;
 	double x_offset,y_offset,divx_offset,divy_offset;
 
@@ -656,7 +657,7 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 	double critical_energy;
 	if (current_region->emittance>0.0) { //if beam is not ideal
 		//calculate non-ideal beam's offset (the four sigmas)
-		double betax_,betay_,eta_,etaprime_;
+		double betax_,betay_,eta_,etaprime_,coupling_,e_spread_;
 		if (current_region->betax<0.0) { //negative betax value: load BXY file
 			double coordinate; //interpolation X value (first column of BXY file)
 			if (current_region->beta_kind==0) coordinate=sourceId*current_region->dL;
@@ -668,7 +669,9 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 			betay_=current_region->beta_y_distr->InterpolateY(coordinate);
 			eta_=current_region->eta_distr->InterpolateY(coordinate);
 			etaprime_=current_region->etaprime_distr->InterpolateY(coordinate);
-			//the four above distributions are the ones that are read from the BXY file
+			coupling_=current_region->coupling_distr->InterpolateY(coordinate);
+			e_spread_=current_region->e_spread_distr->InterpolateY(coordinate);
+			//the six above distributions are the ones that are read from the BXY file
 			//interpolateY finds the Y value corresponding to X input
 
 		} else { //if no BXY file, use average values
@@ -676,15 +679,20 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 			betay_=current_region->betay;
 			eta_=current_region->eta;
 			etaprime_=current_region->etaprime;
+			coupling_=current_region->coupling;
+			e_spread_=current_region->energy_spread;
 		}
 
-		double sigmaxprime=sqrt(current_region->emittance_x/betax_+Sqr(etaprime_*current_region->energy_spread));
+		emittance_x_=current_region->emittance/(1.0+coupling_);
+		emittance_y_=emittance_x_*coupling_;
+
+		double sigmaxprime=sqrt(emittance_x_/betax_+Sqr(etaprime_*e_spread_));
 		//{ hor lattice-dependent divergence, radians }
-		double sigmayprime=sqrt(current_region->emittance_y/betay_);
+		double sigmayprime=sqrt(emittance_y_/betay_);
 		//{ same for vertical divergence, radians }
-		double sigmax=sqrt(current_region->emittance_x*betax_+Sqr(eta_*current_region->energy_spread));
+		double sigmax=sqrt(emittance_x_*betax_+Sqr(eta_*e_spread_));
 		//{ hor lattice-dependent beam dimension, cm }
-		double sigmay=sqrt(current_region->emittance_y*betay_);
+		double sigmay=sqrt(emittance_y_*betay_);
 		//{ same for vertical, cm }
 
 		x_offset=Gaussian(sigmax);

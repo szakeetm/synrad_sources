@@ -227,7 +227,7 @@ void Region::LoadPAR(FileReader *file,GLProgress *prg){
 		}
 	}
 
-	emittance=emittance_x=emittance_y=eta=etaprime=coupling=energy_spread=betax=betay=0.0; //default values
+	emittance=eta=etaprime=coupling=energy_spread=betax=betay=0.0; //default values
 	nbDistr_BXY=0;
 
 	emittance=file->ReadDouble();
@@ -252,12 +252,6 @@ void Region::LoadPAR(FileReader *file,GLProgress *prg){
 	psimaxY=file->ReadDouble()*0.001;
 	file->JumpComment();
 
-	emittance_x=emittance/(1.0+coupling);
-	emittance_y=emittance_x*coupling;
-
-	/*emittance_x=emittance/(1.0+coupling);
-	emittance_y=emittance_x;*/
-
 	beta_kind=0;
 	if (betax<0.0) { //read BXY file
 		double fileDouble=-1.0*betax;
@@ -276,7 +270,7 @@ void Region::LoadPAR(FileReader *file,GLProgress *prg){
 			}
 			FileReader BXYfile(fileName);
 			BXYfileName.assign(fileName);
-			nbDistr_BXY=LoadBXY(&BXYfile,beta_x_distr,beta_y_distr,eta_distr,etaprime_distr);
+			nbDistr_BXY=LoadBXY(&BXYfile,beta_x_distr,beta_y_distr,eta_distr,etaprime_distr,coupling_distr,e_spread_distr);
 		} catch(Error &e) {
 			throw e;
 			return;
@@ -344,7 +338,7 @@ Distribution2D Region::LoadMAGFile(FileReader *file,Vector *dir,double *period,d
 Region::Region(){
 
 	generation_mode=SYNGEN_MODE_FLUXWISE;
-	emittance=emittance_x=emittance_y=eta=etaprime=coupling=energy_spread=betax=betay=0.0;
+	emittance=eta=etaprime=coupling=energy_spread=betax=betay=0.0;
 	selectedPoint=-1;
 	isLoaded=FALSE;
 	//object placeholders until MAG files are loaded
@@ -356,6 +350,8 @@ Region::Region(){
 	beta_y_distr = new Distribution2D(1);
 	eta_distr = new Distribution2D(1);
 	etaprime_distr = new Distribution2D(1);
+	coupling_distr = new Distribution2D(1);
+	e_spread_distr = new Distribution2D(1);
 
 	MAGXfileName="";
 	MAGYfileName="";
@@ -381,8 +377,9 @@ Region::Region(){
 }
 
 Region::~Region(){
-	Distribution2D* distr_ptr[7]={Bx_distr,By_distr,Bz_distr,beta_x_distr,beta_y_distr,eta_distr,etaprime_distr};
-	for (int i=0;i<7;i++)
+	Distribution2D* distr_ptr[9]={Bx_distr,By_distr,Bz_distr,beta_x_distr,beta_y_distr,eta_distr,
+		etaprime_distr,coupling_distr,e_spread_distr};
+	for (int i=0;i<9;i++)
 		SAFE_DELETE(distr_ptr[i]);
 	Points=std::vector<Trajectory_Point>();
 }
@@ -560,13 +557,15 @@ Region::Region(const Region &src) {
 	*eta_distr=*(src.eta_distr);
 	etaprime_distr=new Distribution2D(src.nbDistr_BXY);
 	*etaprime_distr=*(src.etaprime_distr);
+	coupling_distr=new Distribution2D(src.nbDistr_BXY);
+	*coupling_distr=*(src.coupling_distr);
+	e_spread_distr=new Distribution2D(src.nbDistr_BXY);
+	*e_spread_distr=*(src.e_spread_distr);
 
 	this->B_const=Vector(src.B_const.x,src.B_const.y,src.B_const.z);
 	this->dL=src.dL;
 	this->E=src.E;
 	this->emittance=src.emittance;
-	this->emittance_x=src.emittance_x;
-	this->emittance_y=src.emittance_y;
 	this->coupling=src.coupling;
 	this->energy_spread=src.energy_spread;
 	this->enable_ort_polarization=src.enable_ort_polarization;
@@ -641,13 +640,15 @@ Region& Region::operator=(const Region &src) {
 	*eta_distr=*(src.eta_distr);
 	etaprime_distr=new Distribution2D(src.nbDistr_BXY);
 	*etaprime_distr=*(src.etaprime_distr);
+	coupling_distr=new Distribution2D(src.nbDistr_BXY);
+	*coupling_distr=*(src.coupling_distr);
+	e_spread_distr=new Distribution2D(src.nbDistr_BXY);
+	*e_spread_distr=*(src.e_spread_distr);
 
 	this->B_const=Vector(src.B_const.x,src.B_const.y,src.B_const.z);
 	this->dL=src.dL;
 	this->E=src.E;
 	this->emittance=src.emittance;
-	this->emittance_x=src.emittance_x;
-	this->emittance_y=src.emittance_y;
 	this->coupling=src.coupling;
 	this->energy_spread=src.energy_spread;
 	this->enable_ort_polarization=src.enable_ort_polarization;
@@ -689,18 +690,21 @@ Region& Region::operator=(const Region &src) {
 }
 
 int Region::LoadBXY(FileReader *file,Distribution2D *beta_x_distr,Distribution2D *beta_y_distr,
-					Distribution2D *eta_distr,Distribution2D *etaprime_distr)
+					Distribution2D *eta_distr,Distribution2D *etaprime_distr,
+					Distribution2D *coupling_distr,	Distribution2D *e_spread_distr)
 {
-	file->wasLineEnd=false;
+	//file->wasLineEnd=false;
 	int nbDistr_BXY=file->ReadInt();
+	beta_kind=file->ReadInt();
 
 	*beta_x_distr=   Distribution2D(nbDistr_BXY);
 	*beta_y_distr=   Distribution2D(nbDistr_BXY);
 	*eta_distr=      Distribution2D(nbDistr_BXY);
 	*etaprime_distr= Distribution2D(nbDistr_BXY);
+	*coupling_distr= Distribution2D(nbDistr_BXY);
+	*e_spread_distr= Distribution2D(nbDistr_BXY);
 
-
-	char* tmp=file->ReadWord();
+	/*char* tmp=file->ReadWord();
 	if (!file->wasLineEnd) {
 		sscanf(tmp,"%d",&beta_kind);
 		beta_x_distr->valuesX[0]=beta_y_distr->valuesX[0]=eta_distr->valuesX[0]=etaprime_distr->valuesX[0]=file->ReadDouble();
@@ -726,6 +730,15 @@ int Region::LoadBXY(FileReader *file,Distribution2D *beta_x_distr,Distribution2D
 			} else
 				if (i<(nbDistr_BXY-1)) beta_x_distr->valuesX[i+1]=beta_y_distr->valuesX[i+1]=eta_distr->valuesX[i+1]=etaprime_distr->valuesX[i+1]=value;
 		}
+	}*/
+	for (int i=0;i<nbDistr_BXY;i++)
+	{
+		beta_x_distr->valuesY[i]=file->ReadDouble();
+		beta_y_distr->valuesY[i]=file->ReadDouble();
+		eta_distr->valuesY[i]=file->ReadDouble();
+		etaprime_distr->valuesY[i]=file->ReadDouble();
+		coupling_distr->valuesY[i]=file->ReadDouble();
+		e_spread_distr->valuesY[i]=file->ReadDouble();
 	}
 	return nbDistr_BXY;
 }
@@ -768,24 +781,27 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 		"Beta_Y",
 		"Eta",
 		"Eta_Prime",
+		"Coupling",
+		"Energy_Spread",
+		"Emittance",
+		"Emittance_X",
+		"Emittance_Y",
 		"Sigma_X",
 		"Sigma_Y",
 		"Sigma_X_Prime",
 		"Sigma_Y_Prime",
-		"Coupling",
-		"Energy_Spread"
-	}; //35 variables
+	}; //38 variables
 
 	static char* varNamesFullScan[] = {
 		"SR_flux.Integral",
-		"SR_power.Intergral",
+		"SR_power.Integral",
 		"B_X.Integral",
 		"B_Y.Integral",
 		"B_Z.Integral"
 	}; //5 variables
 
 	//write column header
-	for (int i=0;i<35;i++) {
+	for (int i=0;i<38;i++) {
 		file->Write(varNames[i]);
 		file->Write(delimiter);
 	}
@@ -833,10 +849,12 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 			Trajectory_Point *source=&(current_region->Points[sourceId]);
 			static double last_critical_energy,last_Bfactor,last_Bfactor_power; //to speed up calculation if critical energy didn't change
 			static double last_average_ans;
+			//actual variables: variables at actual point
 			double average_;
 			double B_factor,B_factor_power;
 			double x_offset,y_offset,divx_offset,divy_offset,alpha,theta;
-			double betax_,betay_,eta_,etaprime_;
+			double emittance_x_,emittance_y_;
+			double betax_,betay_,eta_,etaprime_,coupling_,e_spread_;
 			double sigmax,sigmay,sigmaxprime,sigmayprime;
 			double critical_energy,generated_energy;
 			double SR_flux,SR_power,g1h2,natural_divx,natural_divy,radius;
@@ -846,7 +864,8 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 			last_critical_energy=last_Bfactor=last_Bfactor_power=last_average_ans=average_=B_factor=
 				B_factor_power=x_offset=y_offset=divx_offset=divy_offset=betax_=betay_=
 				eta_=etaprime_=sigmax=sigmay=sigmaxprime=sigmayprime=critical_energy=generated_energy=
-				SR_flux=SR_power=g1h2=natural_divx=natural_divy=radius=0.0;
+				SR_flux=SR_power=g1h2=natural_divx=natural_divy=radius=coupling_=e_spread_=
+				emittance_x_=emittance_y_=0.0;
 
 			//trajectory direction angles
 			if (source->direction.z==0) {
@@ -869,7 +888,9 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 					betay_=current_region->beta_y_distr->InterpolateY(coordinate);
 					eta_=current_region->eta_distr->InterpolateY(coordinate);
 					etaprime_=current_region->etaprime_distr->InterpolateY(coordinate);
-					//the four above distributions are the ones that are read from the BXY file
+					coupling_=current_region->coupling_distr->InterpolateY(coordinate);
+					e_spread_=current_region->e_spread_distr->InterpolateY(coordinate);
+					//the six above distributions are the ones that are read from the BXY file
 					//interpolateY finds the Y value corresponding to X input
 
 				} else { //if no BXY file, use average values
@@ -877,15 +898,19 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 					betay_=current_region->betay;
 					eta_=current_region->eta;
 					etaprime_=current_region->etaprime;
+					coupling_=current_region->coupling;
 				}
 
-				sigmaxprime=sqrt(current_region->emittance_x/betax_+Sqr(etaprime_*current_region->energy_spread));
+				emittance_x_=current_region->emittance/(1.0+coupling_);
+				emittance_y_=emittance_x_*coupling_;
+
+				sigmaxprime=sqrt(emittance_x_/betax_+Sqr(etaprime_*e_spread_));
 				//{ hor lattice-dependent divergence, radians }
-				sigmayprime=sqrt(current_region->emittance_y/betay_);
+				sigmayprime=sqrt(emittance_y_/betay_);
 				//{ same for vertical divergence, radians }
-				sigmax=sqrt(current_region->emittance_x*betax_+Sqr(eta_*current_region->energy_spread));
+				sigmax=sqrt(emittance_x_*betax_+Sqr(eta_*e_spread_));
 				//{ hor lattice-dependent beam dimension, cm }
-				sigmay=sqrt(current_region->emittance_y*betay_);
+				sigmay=sqrt(emittance_y_*betay_);
 				//{ same for vertical, cm }
 
 				x_offset=Gaussian(sigmax);
@@ -1007,12 +1032,16 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 				file->WriteDouble(betay_);file->Write(delimiter);
 				file->WriteDouble(eta);file->Write(delimiter);
 				file->WriteDouble(etaprime);file->Write(delimiter);
+				file->WriteDouble(coupling_);file->Write(delimiter);
+				file->WriteDouble(e_spread_);file->Write(delimiter);
+				file->WriteDouble(emittance);file->Write(delimiter);
+				file->WriteDouble(emittance_x_);file->Write(delimiter);
+				file->WriteDouble(emittance_y_);file->Write(delimiter);
 				file->WriteDouble(sigmax);file->Write(delimiter);
 				file->WriteDouble(sigmay);file->Write(delimiter);
 				file->WriteDouble(sigmaxprime);file->Write(delimiter);
 				file->WriteDouble(sigmayprime);file->Write(delimiter);
-				file->WriteDouble(coupling);file->Write(delimiter);
-				file->WriteDouble(energy_spread);file->Write(delimiter);
+				
 				if (doFullScan) {
 					file->WriteDouble(integ_flux);file->Write(delimiter);
 					file->WriteDouble(integ_power);file->Write(delimiter);
@@ -1108,7 +1137,7 @@ void Region::LoadParam(FileReader *file,GLProgress *prg){
 	file->ReadKeyword("particleMass_GeV");file->ReadKeyword(":");particleMass=file->ReadDouble();
 	file->ReadKeyword("beamEnergy_GeV");file->ReadKeyword(":");E=file->ReadDouble();
 
-	emittance=emittance_x=emittance_y=eta=etaprime=coupling=energy_spread=betax=betay=0.0; //default values
+	emittance=eta=etaprime=coupling=energy_spread=betax=betay=0.0; //default values
 	nbDistr_BXY=0;
 
 	file->ReadKeyword("emittance");file->ReadKeyword(":");emittance=file->ReadDouble();
@@ -1136,7 +1165,7 @@ void Region::LoadParam(FileReader *file,GLProgress *prg){
 					}
 				}
 				FileReader BXYfile((char*)BXYfileName.c_str());
-				nbDistr_BXY=LoadBXY(&BXYfile,beta_x_distr,beta_y_distr,eta_distr,etaprime_distr);
+				nbDistr_BXY=LoadBXY(&BXYfile,beta_x_distr,beta_y_distr,eta_distr,etaprime_distr,coupling_distr,e_spread_distr);
 			} catch(Error &e) {
 				throw e;
 				return;
@@ -1148,8 +1177,6 @@ void Region::LoadParam(FileReader *file,GLProgress *prg){
 			file->ReadKeyword("coupling");file->ReadKeyword(":");coupling=file->ReadDouble();
 			file->ReadKeyword("energy_spread");file->ReadKeyword(":");energy_spread=file->ReadDouble();
 		}
-		emittance_x=emittance/(1.0+coupling);
-		emittance_y=emittance_x;
 	}
 	file->ReadKeyword("E_min_eV");file->ReadKeyword(":");energy_low=file->ReadDouble();
 	file->ReadKeyword("E_max_eV");file->ReadKeyword(":");energy_hi=file->ReadDouble();

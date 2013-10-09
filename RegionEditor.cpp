@@ -1100,15 +1100,14 @@ void RegionEditor::ApplyChanges() {
 			//loadbxy
 			try {
 				FileReader BXYfile(BXYfileNameText->GetText());
-				cr->nbDistr_BXY=cr->LoadBXY(&BXYfile,cr->beta_x_distr,cr->beta_y_distr,cr->eta_distr,cr->etaprime_distr);
+				cr->nbDistr_BXY=cr->LoadBXY(&BXYfile,cr->beta_x_distr,cr->beta_y_distr,
+					cr->eta_distr,cr->etaprime_distr,cr->coupling_distr,cr->e_spread_distr);
 			} catch(Error &e) {
 				throw e;
 				return;
 			}
 		}
 	}
-	cr->emittance_x=cr->emittance/(1.0+cr->coupling);
-	cr->emittance_y=cr->emittance_x;
 
 	EminText->GetNumber(&cr->energy_low);
 	EmaxText->GetNumber(&cr->energy_hi);
