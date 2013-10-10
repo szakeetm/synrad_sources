@@ -882,7 +882,7 @@ DWORD Geometry::GetGeometrySize(std::vector<Region> *regions,std::vector<Materia
 		memoryUsage += 2*sizeof(double)*(*regions)[i].Bx_distr->size;
 		memoryUsage += 2*sizeof(double)*(*regions)[i].By_distr->size;
 		memoryUsage += 2*sizeof(double)*(*regions)[i].Bz_distr->size;
-		memoryUsage += 5*sizeof(double)*(*regions)[i].nbDistr_BXY;
+		memoryUsage += 7*sizeof(double)*(*regions)[i].nbDistr_BXY;
 	}
 	//Material library
 	memoryUsage+=sizeof(int); //number of (*materials)

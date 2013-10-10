@@ -733,6 +733,8 @@ int Region::LoadBXY(FileReader *file,Distribution2D *beta_x_distr,Distribution2D
 	}*/
 	for (int i=0;i<nbDistr_BXY;i++)
 	{
+		beta_x_distr->valuesX[i]=beta_y_distr->valuesX[i]=eta_distr->valuesX[i]=etaprime_distr->valuesX[i]=
+			coupling_distr->valuesX[i]=e_spread_distr->valuesX[i]=file->ReadDouble();
 		beta_x_distr->valuesY[i]=file->ReadDouble();
 		beta_y_distr->valuesY[i]=file->ReadDouble();
 		eta_distr->valuesY[i]=file->ReadDouble();
@@ -1030,8 +1032,8 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 				file->WriteDouble(SR_power);file->Write(delimiter);
 				file->WriteDouble(betax_);file->Write(delimiter);
 				file->WriteDouble(betay_);file->Write(delimiter);
-				file->WriteDouble(eta);file->Write(delimiter);
-				file->WriteDouble(etaprime);file->Write(delimiter);
+				file->WriteDouble(eta_);file->Write(delimiter);
+				file->WriteDouble(etaprime_);file->Write(delimiter);
 				file->WriteDouble(coupling_);file->Write(delimiter);
 				file->WriteDouble(e_spread_);file->Write(delimiter);
 				file->WriteDouble(emittance);file->Write(delimiter);

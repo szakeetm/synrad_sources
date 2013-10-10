@@ -271,18 +271,18 @@ void RegionInfo::ExportPoints(int regionId,int exportFrequency,BOOL doFullScan) 
 	FILENAME *fn = GLFileBox::SaveFile(NULL,NULL,"Save Region Points","CSV files\0*.csv\0Text files\0*.txt\0All files\0*.*\0",3);
 
 	if( fn ) {
+		GLProgress *prg = new GLProgress("Exporting points...","Region export in progress");
+		prg->SetProgress(0.0);
+		prg->SetVisible(TRUE);
 		try {
-			GLProgress *prg = new GLProgress("Exporting points...","Region export in progress");
-			prg->SetProgress(0.0);
-			prg->SetVisible(TRUE);
 			work->ExportRegionPoints(fn->fullName,prg,regionId,exportFrequency,doFullScan); //include dofullscan
-			prg->SetVisible(FALSE);
-			SAFE_DELETE(prg);
 		} catch (Error &e) {
 			char errMsg[512];
 			sprintf(errMsg,"%s\nFile:%s",e.GetMsg(),fn->fullName);
 			GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
 		}
+		prg->SetVisible(FALSE);
+		SAFE_DELETE(prg);
 	}
 }
 

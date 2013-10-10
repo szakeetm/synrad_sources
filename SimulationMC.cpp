@@ -23,6 +23,7 @@ GNU General Public License for more details.
 #include "Random.h"
 #include "Distributions.h"
 #include "Tools.h"
+#include "Utils.h" //debug only
 #include <vector>
 #include "Region_mathonly.h"
 
@@ -89,7 +90,7 @@ void PolarToCartesian(FACET *iFacet,double theta,double phi,BOOL reverse) {
 	sHandle->pDir.x = u*U.x + v*V.x + n*N.x;
 	sHandle->pDir.y = u*U.y + v*V.y + n*N.y;
 	sHandle->pDir.z = u*U.z + v*V.z + n*N.z;
-
+	//_ASSERTE(Norme(&sHandle->pDir)<=1.0);
 }
 
 // -------------------------------------------------------
@@ -110,6 +111,7 @@ void CartesianToPolar(FACET *iFacet,double *theta,double *phi) {
 		iFacet->sh.nV.x,iFacet->sh.nV.y,iFacet->sh.nV.z);
 	double n = DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,
 		iFacet->sh.N.x,iFacet->sh.N.y,iFacet->sh.N.z);
+	SATURATE(n,-1.0,1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
 
 	// (u,v,n) -> (theta,phi)
 	double rho = sqrt( v*v + u*u );
@@ -121,6 +123,7 @@ void CartesianToPolar(FACET *iFacet,double *theta,double *phi) {
 
 int RoughReflection(FACET *iFacet,double sigmaRatio,double theta,double phi,
 	Vector N_rotated,Vector nU_rotated,Vector nV_rotated) {
+		//_ASSERTE(theta>(PI/2.0));
 
 	Vector nU_facet=Vector(iFacet->sh.nU.x,iFacet->sh.nU.y,iFacet->sh.nU.z);
 	Vector nV_facet=Vector(iFacet->sh.nV.x,iFacet->sh.nV.y,iFacet->sh.nV.z);
@@ -130,7 +133,7 @@ int RoughReflection(FACET *iFacet,double sigmaRatio,double theta,double phi,
 	double u,v,n;
 
 	//Polar to cartesian routine
-	theta=PI-theta;
+	theta=PI-theta; //perform reflection
 
 	u = sin(theta)*cos(phi);
 	v = sin(theta)*sin(phi);
@@ -141,11 +144,14 @@ int RoughReflection(FACET *iFacet,double sigmaRatio,double theta,double phi,
 		u*nU_rotated.z + v*nV_rotated.z + n*N_rotated.z);
 
 	if (DOT3(newDir.x,newDir.y,newDir.z,
-		N_facet.x,N_facet.y,N_facet.z)<=0) return 0; //if reflection would go against the surface, generate new angles
+		N_facet.x,N_facet.y,N_facet.z)<=0) {
+			return 0; //if reflection would go against the surface, generate new angles
+	}
 
 	sHandle->pDir.x = newDir.x;
 	sHandle->pDir.y = newDir.y;
 	sHandle->pDir.z = newDir.z;
+	//_ASSERTE(Norme(&sHandle->pDir)<=1.0);
 	return 1;
 }
 
@@ -341,12 +347,17 @@ void PerformTeleport(FACET *iFacet) {
 	BOOL revert=FALSE;
 	int i,j;
 	//Look in which superstructure is the destination facet:
-	for (i=0;i<sHandle->nbSuper&&(!found);i++) {
-		for (j=0;j<sHandle->str[i].nbFacet&&(!found);j++) {
-			if ((iFacet->sh.teleportDest-1)==sHandle->str[i].facets[j]->globalId) {
-				destination=sHandle->str[i].facets[j];
-				sHandle->curStruct = destination->sh.superIdx; //change current superstructure
-				found=TRUE;
+	if (sHandle->nbSuper==1) { //speedup for mono-structure systems
+		found=iFacet->sh.teleportDest<=sHandle->str[0].nbFacet;
+		if (found) destination=sHandle->str[0].facets[iFacet->sh.teleportDest-1];
+	} else {
+		for (i=0;i<sHandle->nbSuper&&(!found);i++) {
+			for (j=0;j<sHandle->str[i].nbFacet&&(!found);j++) {
+				if ((iFacet->sh.teleportDest-1)==sHandle->str[i].facets[j]->globalId) {
+					destination=sHandle->str[i].facets[j];
+					sHandle->curStruct = destination->sh.superIdx; //change current superstructure
+					found=TRUE;
+				}
 			}
 		}
 	}
@@ -396,6 +407,9 @@ BOOL SimulationMCStep(int nbStep) {
 			if (collidedFacet->sh.teleportDest) {
 				PerformTeleport(collidedFacet); 
 			} else if(collidedFacet->sh.reflectType>=2) { //rough surface reflection
+				if (sHandle->dF==0.0 || sHandle->dP==0.0 || sHandle->energy<1E-3) { //stick non real photons (from beam beginning)
+					if (!Stick(collidedFacet)) return FALSE;
+				} else {
 				double sigmaRatio=collidedFacet->sh.roughness; 
 				for (int m=0;m<(int)sHandle->materials.size();m++) {
 					if (collidedFacet->sh.reflectType==m+2) { //found material type
@@ -407,10 +421,14 @@ BOOL SimulationMCStep(int nbStep) {
 						double n,u,v,thetaOffset,phiOffset;
 						BOOL reflected;
 						do {
+							double n_ori= DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,
+									N_facet.x,N_facet.y,N_facet.z); //original incident angle (negative if front collision, positive if back collision);
 							do {
 								//Generating bending angle due to local roughness
-								thetaOffset=atan(sigmaRatio*tan(PI*(rnd()-0.5)));
-								phiOffset=atan(sigmaRatio*tan(PI*(rnd()-0.5)));
+								double rnd1=rnd();
+								double rnd2=rnd(); //for debug
+								thetaOffset=atan(sigmaRatio*tan(PI*(rnd1-0.5)));
+								phiOffset=atan(sigmaRatio*tan(PI*(rnd2-0.5)));
 
 								//Random rotation around N (to discard U orientation thus make scattering isotropic)
 								double randomAngle=rnd()*2*PI;
@@ -420,6 +438,7 @@ BOOL SimulationMCStep(int nbStep) {
 								//Bending surface base vectors
 								nU_rotated=nU_facet.Rotate(nV_facet,thetaOffset);
 								N_rotated=N_facet.Rotate(nV_facet,thetaOffset);
+								nU_rotated=nU_facet.Rotate(nU_facet,thetaOffset); //check if correct
 								nV_rotated=nV_facet.Rotate(nU_facet,phiOffset);
 								N_rotated=N_rotated.Rotate(nU_facet,phiOffset);
 
@@ -430,8 +449,9 @@ BOOL SimulationMCStep(int nbStep) {
 									nV_rotated.x,nV_rotated.y,nV_rotated.z);
 								n = DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,
 									N_rotated.x,N_rotated.y,N_rotated.z);
+								SATURATE(n,-1.0,1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
 
-							} while (n>=0.0 ); //regenerate random numbers if grazing angle would be over 90deg
+							} while (n*n_ori<=0.0 ); //regenerate random numbers if grazing angle would be over 90deg
 
 							double rho = sqrt( v*v + u*u );
 							double theta = acos(n);              // Angle to normal (PI/2 => PI)
@@ -445,10 +465,11 @@ BOOL SimulationMCStep(int nbStep) {
 								reflected=TRUE;
 							}
 						} while (!reflected); //do it again if reflection wasn't successful (ie. new angle was over 90deg)
-					 
+						//}while (FALSE);
+						break;
 					}
 				}
-
+				}
 			} else if( collidedFacet->sh.sticking>0.0 ) {
 
 				if( collidedFacet->sh.sticking==1.0 || rnd()<collidedFacet->sh.sticking ) { //sticking
@@ -541,6 +562,7 @@ BOOL StartFromSource() {
 	sHandle->pDir.y = start_dir.y;
 	sHandle->pDir.z = start_dir.z;
 
+	//_ASSERTE(Norme(&sHandle->pDir)<=1.0);
 	// Current structure = 0
 	//sHandle->curStruct = src->sh.superIdx;
 	//sHandle->curStruct=sourceRegion->i_struct1;
@@ -608,14 +630,17 @@ int PerformBounce(FACET *iFacet,double sigmaRatio,double theta,double phi,
 		//See docs/theta_gen.png for further details on angular distribution generation
 		PolarToCartesian(iFacet,acos(sqrt(rnd())),rnd()*2.0*PI,FALSE);
 		break;
-	}
-	for (int i=0;i<(sHandle->nbMaterials);i++) {
-		if (iFacet->sh.reflectType==2+i) {
-			if (!RoughReflection(iFacet,sigmaRatio,theta,phi,
-				N_rotated,nU_rotated,nV_rotated)) return 0;
+	default: //Material reflection - theta, etc. are already calculated
+		for (int i=0;i<(sHandle->nbMaterials);i++) {
+			if (iFacet->sh.reflectType==(2+i)) {
+				if (!RoughReflection(iFacet,sigmaRatio,theta,phi,
+					N_rotated,nU_rotated,nV_rotated)) {
+						return 0;
+				}
+				break;
+			}
 		}
 	}
-
 	if( revert ) {
 		sHandle->pDir.x = -sHandle->pDir.x;
 		sHandle->pDir.y = -sHandle->pDir.y;
