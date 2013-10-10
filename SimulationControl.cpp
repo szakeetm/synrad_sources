@@ -540,11 +540,12 @@ void ResetSimulation() {
 	sHandle->nbHHit = 0;
 	memset(sHandle->pHits,0,sizeof(HIT)*NBHHIT);
 	sHandle->lastHit = NULL;
-	sHandle->counter.nbHit = 0;
+/*	sHandle->counter.nbHit = 0;
 	sHandle->counter.fluxAbs = 0.0;
 	sHandle->counter.powerAbs = 0.0;
 	sHandle->counter.nbAbsorbed = 0;
-	sHandle->counter.nbDesorbed = 0;
+	sHandle->counter.nbDesorbed = 0;*/
+	sHandle->totalDesorbed=0;
 	ResetCounter();
 	if( sHandle->acDensity ) memset(sHandle->acDensity,0,sHandle->nbAC*sizeof(ACFLOAT));
 
@@ -578,6 +579,16 @@ void RecordHit(int type,double dF,double dP) {
 	sHandle->nbHHit++;
 	if((sHandle->nbHHit)>=NBHHIT) sHandle->nbHHit = 0;
 	sHandle->pHits[sHandle->nbHHit].type=LASTHIT;
+}
+
+void RecordLeakPos() {
+	// Record leak for debugging
+	sHandle->pLeak[sHandle->nbLeak].pos = sHandle->pPos;
+	sHandle->pLeak[sHandle->nbLeak].dir = sHandle->pDir;
+	sHandle->nbLeak++;
+	if((sHandle->nbLeak)>=NBHLEAK) sHandle->nbLeak = 0;
+	RecordHit(HIT_REF,sHandle->dF,sHandle->dP);
+	RecordHit(LASTHIT,sHandle->dF,sHandle->dP);
 }
 
 // -------------------------------------------------------

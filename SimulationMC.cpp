@@ -132,7 +132,7 @@ int RoughReflection(FACET *iFacet,double sigmaRatio,double theta,double phi,
 	Vector newDir;
 	double u,v,n;
 
-	//Polar to cartesian routine
+	//Polar to cartesian routineF-_
 	theta=PI-theta; //perform reflection
 
 	u = sin(theta)*cos(phi);
@@ -143,8 +143,8 @@ int RoughReflection(FACET *iFacet,double sigmaRatio,double theta,double phi,
 		u*nU_rotated.y + v*nV_rotated.y + n*N_rotated.y,
 		u*nU_rotated.z + v*nV_rotated.z + n*N_rotated.z);
 
-	if (DOT3(newDir.x,newDir.y,newDir.z,
-		N_facet.x,N_facet.y,N_facet.z)<=0) {
+	if ((DOT3(newDir.x,newDir.y,newDir.z,
+		N_facet.x,N_facet.y,N_facet.z)>0) != (theta<PI/2)) {
 			return 0; //if reflection would go against the surface, generate new angles
 	}
 
@@ -485,7 +485,7 @@ BOOL SimulationMCStep(int nbStep) {
 			if (!collidedFacet->sh.teleportDest){
 				// Hit count
 				sHandle->tmpCount.nbHit++;
-				sHandle->counter.nbHit++;
+				//sHandle->counter.nbHit++;
 				collidedFacet->sh.counter.nbHit++;
 				//dF,dP comes here?
 			}
@@ -493,12 +493,7 @@ BOOL SimulationMCStep(int nbStep) {
 		} else {
 
 			// Leak (simulation error)
-			if(sHandle->nbLeak<NBHLEAK) {
-				// Record leak for debugging
-				sHandle->pLeak[sHandle->nbLeak].pos = sHandle->pPos;
-				sHandle->pLeak[sHandle->nbLeak].dir = sHandle->pDir;
-			}
-			sHandle->nbLeak++;
+			RecordLeakPos();
 			if( !StartFromSource() )
 				// maxDesorption reached
 				return FALSE;
@@ -516,6 +511,14 @@ BOOL SimulationMCStep(int nbStep) {
 // -------------------------------------------------------------
 
 BOOL StartFromSource() {
+
+	// Check end of simulation
+	if( sHandle->maxDesorption>0 ) {
+		if( sHandle->totalDesorbed>=sHandle->maxDesorption ) {
+			sHandle->lastHit=NULL;
+			return FALSE;
+		}
+	}
 
 	//find source point
 	int pointIdGlobal=(int)(rnd()*sHandle->sourceArea);
@@ -552,6 +555,8 @@ BOOL StartFromSource() {
 	sHandle->pPos.x = start_pos.x;
 	sHandle->pPos.y = start_pos.y;
 	sHandle->pPos.z = start_pos.z;
+	
+	RecordHit(HIT_DES,sHandle->dF,sHandle->dP);
 
 	//angle
 	Vector start_dir=Z_local;
@@ -570,6 +575,7 @@ BOOL StartFromSource() {
 
 	// Count
 	sHandle->totalDesorbed++;
+	//sHandle->counter.nbDesorbed++;
 	sHandle->tmpCount.nbDesorbed++;
 	sHandle->nbPHit = 0;
 
@@ -847,14 +853,13 @@ int Stick(FACET* collidedFacet) {
 	sHandle->tmpCount.nbAbsorbed++;
 	sHandle->tmpCount.fluxAbs+=sHandle->dF;
 	sHandle->tmpCount.powerAbs+=sHandle->dP;
-	sHandle->counter.nbAbsorbed++;
-	sHandle->counter.fluxAbs+=sHandle->dF;
-	sHandle->counter.powerAbs+=sHandle->dP;
+	//sHandle->counter.nbAbsorbed++;
+	//sHandle->counter.fluxAbs+=sHandle->dF;
+	//sHandle->counter.powerAbs+=sHandle->dP;
 	RecordHit(HIT_ABS,sHandle->dF,sHandle->dP); //for hits and lines display
 	if( collidedFacet->hits_MC && collidedFacet->sh.countAbs ) RecordHitOnTexture(collidedFacet,sHandle->dF,sHandle->dP);
 	if( !StartFromSource() )
 		// maxDesorption reached
 		return 0; //FALSE
-	RecordHit(HIT_DES,sHandle->dF,sHandle->dP);
 	return 1;
 }

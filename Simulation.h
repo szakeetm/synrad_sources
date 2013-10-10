@@ -107,14 +107,14 @@ typedef struct {
 typedef struct {
 
   SHHITS tmpCount;            // Temporary number of hits (between 2 updates)
-  SHHITS counter;             // Total number of hits (for the process)
+  //SHHITS counter;             // Total number of hits (for the process)  //commented out because not used
   int    nbLeak;              // Total number of unexpected leak (simulation error)
   int    nbHHit;              // Last hits
   llong  maxDesorption;       // Maximum number of desorption
   HIT    pHits[NBHHIT];       // Last hit history
   LEAK   pLeak[NBHLEAK];      // Leak history
   //llong  wallHits[BOUNCEMAX]; // 'Wall collision count before absoprtion' density histogram
-  llong totalDesorbed;        //total number of desorbed particles
+  llong totalDesorbed;        //total number of desorbed particles, for process state reporting and simulation end check
 
   // Geometry
   char        name[64];         // Global name
@@ -206,6 +206,7 @@ void ResetSimulation();
 BOOL SimulationRun();
 BOOL SimulationMCStep(int nbStep);
 void RecordHit(int type,double dF,double dP);
+void RecordLeakPos();
 BOOL StartFromSource();
 void ComputeSourceArea();
 int PerformBounce(FACET *iFacet,double sigmaRatio=0.0,double theta=0.0,double phi=0.0,

@@ -842,9 +842,13 @@ void GeometryViewer::DrawLinesAndHits() {
 							glPopAttrib();
 
 							if (whiteBg) { //whitebg
-								glColor3f(0.3f,0.9f,0.3f);
+								lineOpacity=1.0f;
+								glColor4f(0.2f,0.7f,0.2f,lineOpacity);
+						
 							} else {
-								glColor3f(0.6f,1.0f,0.6f);
+
+								lineOpacity=(float)((generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)/(float)opacityMax;
+								glColor4f(0.5f,1.0f,0.5f,lineOpacity);
 							}
 							glBegin(GL_LINE_STRIP);
 						}
