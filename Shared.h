@@ -39,7 +39,8 @@ typedef  struct {
 typedef struct {
 
   SHHITS total;               // Global counts
-  int    nbLeak;              // Total number of unexpected leak (simulation error)
+  llong  nbLeakTotal;         // Total leaks
+  int    nbLastLeaks;         // Last leaks
   int    nbHHit;              // Last hits
   HIT    pHits[NBHHIT];       // Hit history
   LEAK   pLeak[NBHLEAK];      // Leak history
@@ -48,7 +49,7 @@ typedef struct {
   double   maxHit_flux;              // Maximum on texture
   double   minHit_power;              // Minimum on texture
   double   maxHit_power;              // Maximum on texture
-  
+  double distTraveledTotal;
 } SHGHITS;
 
 // -----------------------------------------------------------------

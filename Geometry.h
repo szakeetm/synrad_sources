@@ -37,7 +37,7 @@ class Worker;
 #define SEL_HISTORY  100
 #define MAX_SUPERSTR 256
 #define SYNVERSION   4
-#define GEOVERSION   9
+#define GEOVERSION   12
 #define PARAMVERSION 1
 
 #define TEXTURE_MODE_MCHITS 0
@@ -190,7 +190,9 @@ public:
   llong tNbDesorptionMax;
   double tFlux;
   double tPower;
-  int   tNbLeak;
+  llong   tNbLeak;
+  llong tNbAbsorption;
+  double distTraveledTotal;
 
   // Memory usage (in bytes)
   DWORD GetGeometrySize(std::vector<Region> *regions,std::vector<Material> *materials);

@@ -180,6 +180,7 @@ void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 	gHits->total.nbHit      += sHandle->tmpCount.nbHit;
 	gHits->total.nbAbsorbed += sHandle->tmpCount.nbAbsorbed;
 	gHits->total.nbDesorbed += sHandle->tmpCount.nbDesorbed;
+	gHits->distTraveledTotal    += sHandle->distTraveledSinceUpdate;
 	gHits->total.fluxAbs += sHandle->tmpCount.fluxAbs;
 	gHits->total.powerAbs += sHandle->tmpCount.powerAbs;
 

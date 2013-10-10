@@ -2435,7 +2435,13 @@ void Geometry::InsertGEOGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3
 	file->ReadKeyword("totalDes");file->ReadKeyword(":");
 	file->ReadLLong();
 	file->ReadKeyword("totalLeak");file->ReadKeyword(":");
-	file->ReadInt();
+	file->ReadLLong();
+	if (version2>=12) {
+		file->ReadKeyword("totalAbs");file->ReadKeyword(":");
+		file->ReadLLong();
+		file->ReadKeyword("totalDist");file->ReadKeyword(":");
+		file->ReadDouble();
+	}
 	file->ReadKeyword("maxDes");file->ReadKeyword(":");
 	file->ReadLLong(); 
 	file->ReadKeyword("nbVertex");file->ReadKeyword(":");
@@ -2460,6 +2466,30 @@ void Geometry::InsertGEOGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3
 	if (version2>=7) {
 		file->ReadKeyword("gasMass");file->ReadKeyword(":");
 		gasMass = file->ReadDouble();
+	}
+	if (version2>=10) { //time-dependent version
+		file->ReadKeyword("userMoments");file->ReadKeyword("{");
+		file->ReadKeyword("nb");file->ReadKeyword(":");
+		int nb=file->ReadInt();
+
+		for(int i=0;i<nb;i++) 
+			file->ReadString();
+		file->ReadKeyword("}");
+	}
+	if (version2>=11) { //gas pulse parameters
+		file->ReadKeyword("desorptionStart");file->ReadKeyword(":");
+		file->ReadDouble();
+		file->ReadKeyword("desorptionStop");file->ReadKeyword(":");
+		file->ReadDouble();
+		file->ReadKeyword("timeWindow");file->ReadKeyword(":");
+		file->ReadDouble();
+		file->ReadKeyword("useMaxwellian");file->ReadKeyword(":");
+		file->ReadInt();
+	}
+
+	if (version2>=12) { //2013.aug.22
+		file->ReadKeyword("calcConstantFlow");file->ReadKeyword(":");
+		file->ReadInt();
 	}
 	if (version2>=2) {
 		file->ReadKeyword("formulas");file->ReadKeyword("{");
@@ -2959,7 +2989,16 @@ void Geometry::LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleak,
 	file->ReadKeyword("totalDes");file->ReadKeyword(":");
 	tNbDesorption =0;file->ReadLLong();
 	file->ReadKeyword("totalLeak");file->ReadKeyword(":");
-	tNbLeak = 0;file->ReadInt();
+	tNbLeak = 0;file->ReadLLong();
+	if (*version>=12) {
+		file->ReadKeyword("totalAbs");file->ReadKeyword(":");
+		tNbAbsorption =0; file->ReadLLong();
+		file->ReadKeyword("totalDist");file->ReadKeyword(":");
+		distTraveledTotal =0.0; file->ReadDouble();
+	} else {
+		tNbAbsorption=0;
+		distTraveledTotal=0.0;
+	}
 	file->ReadKeyword("maxDes");file->ReadKeyword(":");
 	tNbDesorptionMax = file->ReadLLong(); 
 	file->ReadKeyword("nbVertex");file->ReadKeyword(":");
@@ -2984,6 +3023,38 @@ void Geometry::LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleak,
 	if (*version>=7) {
 		file->ReadKeyword("gasMass");file->ReadKeyword(":");
 		gasMass = file->ReadDouble();
+	}
+		if (*version>=10) { //time-dependent version
+		file->ReadKeyword("userMoments");file->ReadKeyword("{");
+		file->ReadKeyword("nb");file->ReadKeyword(":");
+		int nb=file->ReadInt();
+
+		for(int i=0;i<nb;i++) {
+			char tmpExpr[512];
+			strcpy(tmpExpr,file->ReadString());
+			//mApp->worker.userMoments.push_back(tmpExpr);
+			//mApp->worker.AddMoment(mApp->worker.ParseMoment(tmpExpr));
+		}
+		file->ReadKeyword("}");
+	}
+	if (*version>=11) { //pulse version
+		file->ReadKeyword("desorptionStart");file->ReadKeyword(":");
+		//worker->desorptionStartTime=
+		file->ReadDouble();
+		file->ReadKeyword("desorptionStop");file->ReadKeyword(":");
+		//worker->desorptionStopTime=
+		file->ReadDouble();
+		file->ReadKeyword("timeWindow");file->ReadKeyword(":");
+		//worker->timeWindowSize=
+		file->ReadDouble();
+		file->ReadKeyword("useMaxwellian");file->ReadKeyword(":");
+		//worker->useMaxwellDistribution=
+		file->ReadInt();
+	}
+	if (*version>=12) { //2013.aug.22
+		file->ReadKeyword("calcConstantFlow");file->ReadKeyword(":");
+		//worker->calcConstantFlow=
+		file->ReadInt();
 	}
 	if (*version>=2) {
 		file->ReadKeyword("formulas");file->ReadKeyword("{");
@@ -3156,8 +3227,11 @@ bool Geometry::loadTextures(FileReader *file,GLProgress *prg,Dataport *dpHit,int
 
 		gHits->total.nbHit=tNbHit;
 		gHits->total.nbDesorbed=tNbDesorption;
+		gHits->total.nbAbsorbed=tNbAbsorption;
+		gHits->nbLeakTotal = tNbLeak;
 		gHits->total.fluxAbs=tFlux;
 		gHits->total.powerAbs=tPower;
+		gHits->distTraveledTotal = distTraveledTotal;
 
 		// Read facets
 		file->ReadKeyword("minHit_MC");file->ReadKeyword(":");
@@ -4940,6 +5014,8 @@ PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *
 		file->ReadKeyword("totalPower");file->ReadKeyword(":");
 		tPower=file->ReadDouble();
 	}
+	tNbAbsorption=0;
+	distTraveledTotal=0.0;
 	file->ReadKeyword("maxDes");file->ReadKeyword(":");
 	tNbDesorptionMax = file->ReadLLong(); 
 	file->ReadKeyword("nbVertex");file->ReadKeyword(":");

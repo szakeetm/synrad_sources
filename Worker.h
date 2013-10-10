@@ -88,7 +88,10 @@ public:
   double totalFlux;         // Total desorbed Flux
   double totalPower;        // Total desorbed power
   llong  maxDesorption;     // Number of desoprtion before halting
-  int    nbLeak;            // Total number of leak
+  double distTraveledTotal; // Total distance traveled by particles (for mean free path calc.)
+  llong    nbLeakTotal;            // Total number of leak
+  double distTraveledTotal; // Total distance traveled by particles (for mean free path calc.)
+  int    nbLastLeaks;
   int    nbHHit;            // Total number of hhit
   BOOL   running;           // Started/Stopped state
   float  startTime;         // Start time

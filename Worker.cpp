@@ -414,10 +414,12 @@ void Worker::LoadGeometry(char *fileName) {
 			geom->LoadTXT(f,progressDlg);
 			nbHit = geom->tNbHit;
 			nbDesorption = geom->tNbDesorption;
+			nbAbsorption = geom->tNbAbsorption;
+			distTraveledTotal = geom->distTraveledTotal;
 			//totalFlux = geom->tFlux;
 			//totalPower = geom->tPower;
 			maxDesorption = geom->tNbDesorptionMax;
-			nbLeak = geom->tNbLeak;
+			nbLeakTotal = geom->tNbLeak;
 			//RealReload();
 			strcpy(fullFileName,fileName);
 		} catch(Error &e) {
@@ -519,9 +521,10 @@ void Worker::LoadGeometry(char *fileName) {
 			HIT pHits[NBHHIT];
 
 			PARfileList regionsToLoad=geom->LoadSYN(f,progressDlg,pLeak,&nbLeak,pHits,&nbHHit,&version);
-			nbLeak = geom->tNbLeak;
+			nbLeakTotal = geom->tNbLeak;
 			nbHit = geom->tNbHit;
 			nbDesorption = geom->tNbDesorption;
+			nbAbsorption = geom->tNbAbsorption;
 			maxDesorption = geom->tNbDesorptionMax;
 			totalFlux = geom->tFlux;
 			totalPower = geom->tPower;
@@ -610,10 +613,12 @@ void Worker::LoadGeometry(char *fileName) {
 			HIT pHits[NBHHIT];
 
 			geom->LoadGEO(f,progressDlg,pLeak,&nbLeak,pHits,&nbHHit,&version);
-			nbLeak = 0;
+			nbLeakTotal = 0;
 			nbHit = 0;
 			nbDesorption = 0;
-			maxDesorption = geom->tNbDesorptionMax;
+			maxDesorption = 0;
+			nbAbsorption = 0;
+			distTraveledTotal = 0;
 
 			progressDlg->SetMessage("Reloading worker with new geometry...");
 			RealReload(); //for the loading of textures
@@ -943,7 +948,7 @@ void Worker::SetLeak(LEAK *buffer,int *nb,SHGHITS *gHits) { //When loading from 
 	if( nb>0 ) {
 		memcpy(leakCache,buffer,sizeof(LEAK)*MIN(NBHLEAK,*nb));
 		memcpy(gHits->pLeak,buffer,sizeof(LEAK)*MIN(NBHLEAK,*nb));
-		gHits->nbLeak = *nb;
+		gHits->nbLastLeaks = *nb;
 	}
 
 }
@@ -1125,11 +1130,13 @@ void Worker::Update(float appTime) {
 				// Global hits and leaks
 				nbHit = gHits->total.nbHit;
 				nbAbsorption = gHits->total.nbAbsorbed;
+				distTraveledTotal = gHits->distTraveledTotal;
 				nbDesorption = gHits->total.nbDesorbed;
 				totalFlux = gHits->total.fluxAbs;
 				totalPower = gHits->total.powerAbs;
-				nbLeak = gHits->nbLeak;
+				nbLeakTotal = gHits->nbLeakTotal;
 				nbHHit = gHits->nbHHit;
+				nbLastLeaks = gHits->nbLastLeaks;
 				memcpy(hhitCache,gHits->pHits,sizeof(HIT)*NBHHIT);
 				memcpy(leakCache,gHits->pLeak,sizeof(LEAK)*NBHHIT);
 
@@ -1159,10 +1166,12 @@ void Worker::SendHits() {
 
 			SHGHITS *gHits = (SHGHITS *)pBuff;
 			gHits->total.nbHit = nbHit;
+			gHits->nbLeakTotal = nbLeakTotal;
 			gHits->total.nbDesorbed = nbDesorption;
 			gHits->total.nbAbsorbed = nbAbsorption;
 			gHits->total.fluxAbs = totalFlux;
 			gHits->total.powerAbs = totalPower;
+			gHits->distTraveledTotal = distTraveledTotal;
 
 			int nbFacet = geom->GetNbFacet();
 			for(int i=0;i<nbFacet;i++) {
@@ -1432,9 +1441,10 @@ void Worker::ResetWorkerStats() {
 	nbAbsorption = 0;
 	nbDesorption = 0;
 	nbHit = 0;
-	nbLeak = 0;
+	nbLeakTotal = 0;
 	totalFlux = 0.0;
 	totalPower = 0.0;
+	distTraveledTotal = 0.0;
 
 }
 
