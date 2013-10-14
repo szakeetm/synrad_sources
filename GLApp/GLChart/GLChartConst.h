@@ -38,6 +38,7 @@ extern double NaN;
 #define MENU_CHARTPROP 1
 #define MENU_SAVETXT   2
 #define MENU_LOADTXT   3
+#define MENU_COPYALL   4
 
 /* Data view properties menu */
 #define MENU_DVPROPY1  100

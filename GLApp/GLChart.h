@@ -82,6 +82,7 @@ public:
   void UnselectAll();
   void AddData(GLDataView *v, double x, double y);
   void RemoveDataView(GLDataView *view);
+  void CopyAllToClipboard();
 
   // Implementation
   void ProcessMessage(GLComponent *src,int message);

@@ -3514,7 +3514,7 @@ void Geometry::SaveTXT(FileWriter *file,Dataport *dpHit,BOOL saveSelected) {
 }
 
 // -----------------------------------------------------------------------
-void Geometry::ExportTexture(FILE *file,int mode,Dataport *dpHit,BOOL saveSelected) {
+void Geometry::ExportTexture(FILE *file,int mode,double no_scans,Dataport *dpHit,BOOL saveSelected) {
 
 	//if(!IsLoaded()) throw Error("Nothing to save !");
 
@@ -3547,8 +3547,7 @@ void Geometry::ExportTexture(FILE *file,int mode,Dataport *dpHit,BOOL saveSelect
 				llong *hits_MC = (llong *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize));
 				double *hits_flux = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize + nbE*sizeof(llong)));
 				double *hits_power = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize+nbE*(sizeof(llong)+sizeof(double))));
-				
-
+				double norm=1.0/no_scans;
 
 				for(int i=0;i<w;i++) {
 					for(int j=0;j<h;j++) {
@@ -3564,19 +3563,19 @@ void Geometry::ExportTexture(FILE *file,int mode,Dataport *dpHit,BOOL saveSelect
 							break;
 
 						case 2: // Flux
-							sprintf(tmp,"%g",hits_flux[index]*f->mesh[i+j*w].area);
+							sprintf(tmp,"%g",hits_flux[index]*f->mesh[i+j*w].area*norm);
 							break;
 
 						case 3: // Power
-							sprintf(tmp,"%g",hits_power[index]*f->mesh[i+j*w].area);
+							sprintf(tmp,"%g",hits_power[index]*f->mesh[i+j*w].area*norm);
 							break;
 
 						case 4: // Flux/area
-							sprintf(tmp,"%g",hits_flux[index]);
+							sprintf(tmp,"%g",hits_flux[index]*norm);
 							break;
 
 						case 5: // Power/area
-							sprintf(tmp,"%g",hits_power[index]);
+							sprintf(tmp,"%g",hits_power[index]*norm);
 							break;
 						}
 

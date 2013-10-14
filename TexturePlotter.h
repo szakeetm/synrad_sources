@@ -61,6 +61,7 @@ private:
   GLButton    *sizeButton;
   GLLabel     *viewLabel;
   GLCombo     *viewCombo;
+  GLToggle    *autoSizeOnUpdate;
 
   GLButton    *cancelButton;
   GLButton	  *maxButton;

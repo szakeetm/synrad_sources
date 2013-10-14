@@ -328,7 +328,14 @@ void Worker::ExportTextures(char *fileName,int mode,BOOL askConfirm,BOOL saveSel
 	}
 	if( ok ) {
 		f=fopen(fileName,"w");
-		geom->ExportTexture(f,mode,dpHit,saveSelected);
+		if (!f) {
+			throw Error("Couldn't open file for writing");
+			return;
+		}
+		double no_scans;
+		if (nbTrajPoints==0 || nbDesorption==0) no_scans=1.0;
+		else no_scans=(double)nbDesorption/(double)nbTrajPoints;
+		geom->ExportTexture(f,mode,no_scans,dpHit,saveSelected);
 		fclose(f);
 	}
 }

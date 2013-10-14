@@ -70,6 +70,7 @@ GLChart::GLChart(int compId):GLComponent(compId) {
   chartMenu->Add("Dataview Y1");
   chartMenu->Add("Dataview Y2");
   chartMenu->Add(NULL);
+  chartMenu->Add("Copy to Clipboard",MENU_COPYALL);
   chartMenu->Add("Save file (TXT)",MENU_SAVETXT);
   chartMenu->Add("Load file (TXT)",MENU_LOADTXT);
   dvMenuY1 = chartMenu->GetSubMenu("Dataview Y1");
@@ -813,7 +814,9 @@ GLChart::~GLChart() {
         ShowOptionDialog();
       } else if( menuId == MENU_SAVETXT ) {
         SaveFile();
-      } else if( menuId == MENU_LOADTXT ) {
+      } else if( menuId == MENU_COPYALL ) {
+		  CopyAllToClipboard();
+	  } else if( menuId == MENU_LOADTXT ) {
         LoadFile();
       } else if( menuId>=MENU_DVPROPY1 && menuId<MENU_DVPROPY1+nbV1) { 
         ShowDataOptionDialog(y1Axis->GetDataView(menuId-MENU_DVPROPY1));
@@ -1032,6 +1035,142 @@ GLChart::~GLChart() {
 
   }
 
+void GLChart::CopyAllToClipboard() {
+
+	// Compute data length
+	size_t totalLength = 0;
+
+	char tmp[128];
+
+	int nbv1 = y1Axis->GetViewNumber();
+	int nbv2 = y2Axis->GetViewNumber();
+	int nbView = nbv1 + nbv2;
+	if(!nbView) return;
+
+	// Get DataList handle and write dataview name
+	DataList *ptr[MAX_VIEWS];
+	int j=0;
+	totalLength+=strlen("X axis\t"); //X axis
+	for(int i=0;i<nbv1;i++) {
+		ptr[j++] = y1Axis->GetDataView(i)->GetData();
+		sprintf(tmp,"%s",y1Axis->GetDataView(i)->GetName());
+		int l = (int)strlen(tmp)-1;
+		if( l>=0 && tmp[l]>=128 ) tmp[l]=0;
+		totalLength+=strlen(tmp);
+		if(j<nbView) totalLength+=strlen("\t");
+	}
+	for(int i=0;i<nbv2;i++) {
+		ptr[j++] = y2Axis->GetDataView(i)->GetData();
+		sprintf(tmp,"%s",y2Axis->GetDataView(i)->GetName());
+		int l = (int)strlen(tmp)-1;
+		if( l>=0 && tmp[l]>=128 ) tmp[l]=0;
+		totalLength+=strlen(tmp);
+		if(j<nbView) totalLength+=strlen("\t");
+	}
+	totalLength+=strlen("\n");
+
+	BOOL eof = FALSE;
+	while(!eof) {
+		eof = TRUE;
+		for(int i=0;i<nbView;i++) if( ptr[i] ) eof = FALSE;
+		if( !eof ) {
+			for(int i=0;i<nbView;i++) {
+				if( ptr[i] ) {
+					if (i==0) {
+						sprintf(tmp,"%g\t",ptr[i]->x);totalLength+=strlen(tmp);
+					}
+					sprintf(tmp,"%g",ptr[i]->y);totalLength+=strlen(tmp);
+					ptr[i]=ptr[i]->next;
+				}
+				if(i<nbView-1) totalLength+=strlen("\t");
+			}
+			totalLength+=strlen("\n");
+		}
+	}
+
+	if( !totalLength ) return;
+
+#ifdef WIN32
+
+	if( !OpenClipboard(NULL) )
+		return;
+
+	EmptyClipboard();
+
+	HGLOBAL hText = NULL;
+	char   *lpszText;
+
+
+
+	//totalLength=150000;
+
+	if(!(hText = GlobalAlloc(GMEM_ZEROINIT | GMEM_MOVEABLE, totalLength+1 ))) {
+		CloseClipboard();
+		return; 
+	}
+	if(!(lpszText = (char *)GlobalLock(hText))) {
+		CloseClipboard();
+		GlobalFree(hText);
+		return;
+	}
+
+	j=0;
+	//X axis
+	strcpy(lpszText,"X axis\t");lpszText += strlen("X axis\t");
+
+	for(int i=0;i<nbv1;i++) {
+		ptr[j++] = y1Axis->GetDataView(i)->GetData();
+		sprintf(tmp,"%s",y1Axis->GetDataView(i)->GetName());
+		int l = (int)strlen(tmp)-1;
+		if( l>=0 && tmp[l]>=128 ) tmp[l]=0;
+		strcpy(lpszText,tmp);
+		lpszText += strlen(tmp);
+		if(j<nbView) *lpszText++ = '\t';
+	}
+	for(int i=0;i<nbv2;i++) {
+		ptr[j++] = y2Axis->GetDataView(i)->GetData();
+		sprintf(tmp,"%s",y2Axis->GetDataView(i)->GetName());
+		int l = (int)strlen(tmp)-1;
+		if( l>=0 && tmp[l]>=128 ) tmp[l]=0;
+		strcpy(lpszText,tmp);
+		lpszText += strlen(tmp);
+		if(j<nbView) *lpszText++ = '\t';
+	}
+	*lpszText++ = '\n';
+
+	eof = FALSE;
+	while(!eof) {
+		eof = TRUE;
+		for(int i=0;i<nbView;i++) if( ptr[i] ) eof = FALSE;
+		if( !eof ) {
+			for(int i=0;i<nbView;i++) {
+				if( ptr[i] ) {
+					if (i==0) {
+						sprintf(tmp,"%g\t",ptr[i]->x);
+						strcpy(lpszText,tmp);
+						lpszText += strlen(tmp);
+					}
+					sprintf(tmp,"%g",ptr[i]->y);
+					strcpy(lpszText,tmp);
+					lpszText += strlen(tmp);
+					ptr[i]=ptr[i]->next;
+				}
+				if(i<nbView-1) *lpszText++ = '\t';
+			}
+			*lpszText++ = '\n';
+		}
+	}
+
+	*lpszText++ = 0;
+
+	SetClipboardData(CF_TEXT,hText);
+	GlobalUnlock (hText);
+	CloseClipboard();
+	GlobalFree(hText);
+
+#endif
+
+}
   // ------------------------------------------------------------------------
   // Load data From a file
   // ------------------------------------------------------------------------
