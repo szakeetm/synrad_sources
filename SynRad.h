@@ -50,7 +50,7 @@
 #include "SpectrumPlotter.h"
 #include "ViewEditor.h"
 #include "TexturePlotter.h"
-#include "OutgassingMap.h"
+//#include "OutgassingMap.h"
 #include "SelectDialog.h"
 #include "RegionInfo.h"
 #include "RegionEditor.h"
@@ -162,6 +162,8 @@ public:
     // Formula management
     void ProcessFormulaButtons(GLComponent *src);
     void UpdateFormula();
+	void OffsetFormula(char* expression,int offset,int filter=0);
+	void RenumberFormulas(int startId);
     void AddFormula(GLParser *f,BOOL doUpdate=TRUE);
 	
     // Recent files
@@ -319,7 +321,7 @@ public:
 	SpectrumPlotter  *spectrumPlotter;
     ViewEditor       *viewEditor;
     TexturePlotter   *texturePlotter;
-	OutgassingMap    *outgassingMap;
+	//OutgassingMap    *outgassingMap;
 	RegionEditor     *regionEditor2;
 	char *nbF;
 

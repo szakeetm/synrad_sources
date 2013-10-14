@@ -312,7 +312,7 @@ void Geometry::CorrectNonSimple(int *nonSimpleList,int nbNonSimple) {
 
 // -----------------------------------------------------------
 
-void Geometry::CreatePolyFromVertices() {
+void Geometry::CreatePolyFromVertices_Convex() {
 	//creates facet from selected vertices
 
 	SynRad *mApp = (SynRad *)theApp;
@@ -400,6 +400,102 @@ void Geometry::CreatePolyFromVertices() {
 	SAFE_FREE(projected);
 	SAFE_FREE(debug);
 	SAFE_FREE(returnList);
+
+	InitializeGeometry();
+	mApp->UpdateFacetParams(TRUE);
+	UpdateSelection();
+	mApp->facetList->SetSelectedRow(sh.nbFacet-1);
+	mApp->facetList->ScrollToVisible(sh.nbFacet-1,1,FALSE);
+}
+
+void Geometry::CreatePolyFromVertices_Order() {
+	//creates facet from selected vertices
+
+	SynRad *mApp = (SynRad *)theApp;
+	changedSinceSave=TRUE;
+	/*nbSelectedVertex = 0;
+
+	int *vIdx = (int *)malloc(sh.nbVertex*sizeof(int));
+	memset(vIdx,0xFF,sh.nbVertex*sizeof(int));
+	for(int i=0;i<sh.nbVertex;i++ ) {
+		//VERTEX3D *v = GetVertex(i);
+		if( vertices3[i].selected ) {
+			vIdx[nbSelectedVertex] = i;
+			nbSelectedVertex++;
+		}
+	}
+	
+	if (selectedVertexList.size()<3) {
+		char errMsg[512];
+		sprintf(errMsg,"Select at least 3 vertices.");
+		throw Error(errMsg);
+		return;
+	}//at least three vertices
+
+	VERTEX3D U,V,N;
+	U.x = vertices3[selectedVertexList[0]].x - vertices3[selectedVertexList[1]].x;
+	U.y = vertices3[selectedVertexList[0]].y - vertices3[selectedVertexList[1]].y;
+	U.z = vertices3[selectedVertexList[0]].z - vertices3[selectedVertexList[1]].z;
+	double nU = Norme(&U);
+	ScalarMult(&U,1.0/nU); // Normalize U
+
+	int i2=2;
+	double nV;
+	do {
+		V.x = vertices3[selectedVertexList[0]].x - vertices3[selectedVertexList[i2]].x;
+		V.y = vertices3[selectedVertexList[0]].y - vertices3[selectedVertexList[i2]].y;
+		V.z = vertices3[selectedVertexList[0]].z - vertices3[selectedVertexList[i2]].z;
+		nV = Norme(&V);
+		ScalarMult(&V,1.0/nV); // Normalize V
+		i2++;
+	} while (Dot(&U,&V)>0.99 && i2<nbSelectedVertex); //if U and V are almost the same, the projection would be inaccurate
+
+
+	//Now we have the U,V plane, let's define it by computing the normal vector:
+	Cross(&N,&V,&U); //We have a normal vector
+	double nN = Norme(&N);
+	ScalarMult(&N,1.0/nN); // Normalize N
+
+	Cross(&V,&N,&U); //Make V perpendicular to U and N (and still in the U,V plane)
+	nV = Norme(&V);
+	ScalarMult(&V,1.0/nV); // Normalize V
+
+	VERTEX2D *projected = (VERTEX2D *)malloc(nbSelectedVertex * sizeof(VERTEX2D));
+	VERTEX2D *debug = (VERTEX2D *)malloc(nbSelectedVertex * sizeof(VERTEX2D));
+
+	//Get coordinates in the U,V system
+	for (int i=0;i<nbSelectedVertex;i++) {
+		ProjectVertex(&(vertices3[vIdx[i]]),&(projected[i]),U,V,vertices3[vIdx[0]]);
+	}
+
+	//Graham scan here on the projected[] array
+	int *returnList = (int *)malloc(nbSelectedVertex*sizeof(int));
+	grahamMain(projected,nbSelectedVertex,returnList);
+	int ii,loopLength;
+	for (ii=0;ii<nbSelectedVertex;ii++) {
+		if (returnList[ii]==returnList[0] && ii>0) break;
+	}
+	loopLength=ii;
+	//End graham scan
+	*/
+
+	//a new facet
+	sh.nbFacet++;
+	facets = (Facet **)realloc(facets, sh.nbFacet * sizeof(Facet *));
+	facets[sh.nbFacet-1] = new Facet((int)selectedVertexList.size());
+	facets[sh.nbFacet-1]->sh.sticking = 0.0;
+	facets[sh.nbFacet-1]->sh.sticking = DES_NONE;
+	//set selection
+	UnSelectAll();
+	facets[sh.nbFacet-1]->selected = TRUE;
+	nbSelected=1;
+	for (size_t i=0;i<selectedVertexList.size();i++) {
+		facets[sh.nbFacet-1]->indices[i]=selectedVertexList[i];
+	}
+	/*SAFE_FREE(vIdx);
+	SAFE_FREE(projected);
+	SAFE_FREE(debug);
+	SAFE_FREE(returnList);*/
 
 	InitializeGeometry();
 	mApp->UpdateFacetParams(TRUE);
@@ -1620,6 +1716,7 @@ void Geometry::Collapse(double vT,double fT,double lT,BOOL doSelectedOnly,GLProg
 						//SetFacetTexture(i,facets[i]->tRatio,facets[i]->hasMesh);  //rebuild mesh
 						fi = facets[i];
 						mApp->RenumberSelections(j);
+						mApp->RenumberFormulas(j);
 						j=i+1;
 
 					}
@@ -1719,7 +1816,7 @@ void Geometry::Rebuild() {
 
 // -----------------------------------------------------------
 
-void Geometry::SetVertex(int idx,double x,double y,double z) {
+void Geometry::MoveVertexTo(int idx,double x,double y,double z) {
 	vertices3[idx].x = x;
 	vertices3[idx].y = y;
 	vertices3[idx].z = z;
@@ -3964,6 +4061,7 @@ void Geometry::RemoveCollinear() {
 		if(facets[i]->collinear) {
 			delete facets[i];
 			mApp->RenumberSelections(i);
+			mApp->RenumberFormulas(i);
 		} else {
 			f[nb++] = facets[i];
 		}
@@ -4006,6 +4104,7 @@ void Geometry::RemoveFromStruct(int numToDel) {
 		if(facets[i]->sh.superIdx==numToDel) {
 			delete facets[i];
 			mApp->RenumberSelections(i);
+			mApp->RenumberFormulas(i);
 		} else {
 			f[nb++] = facets[i];
 		}
@@ -4019,6 +4118,77 @@ void Geometry::RemoveFromStruct(int numToDel) {
 }
 
 // -----------------------------------------------------------
+
+void Geometry::RemoveSelectedVertex() {
+	SynRad *mApp = (SynRad *)theApp;
+	changedSinceSave=TRUE;
+	
+	//Analyze facets
+	std::vector<int> facetsToRemove,facetsToChange;
+	for (int f=0;f<sh.nbFacet;f++) {
+		int nbSelVertex=0;
+		for (int i=0;i<facets[f]->sh.nbIndex;i++)
+			if (vertices3[facets[f]->indices[i]].selected)
+				nbSelVertex++;
+		if (nbSelVertex) {
+			facetsToChange.push_back(f);
+			if ((facets[f]->sh.nbIndex-nbSelVertex)<=2)
+				facetsToRemove.push_back(f);
+		}
+	}
+
+	for (size_t c=0;c<facetsToChange.size();c++) {
+		Facet* f=facets[facetsToChange[c]];
+		int nbRemove=0;
+		for (size_t i=0;(int)i<f->sh.nbIndex;i++) //count how many to remove			
+			if (vertices3[f->indices[i]].selected)
+				nbRemove++;
+		int *newIndices = (int *)malloc((f->sh.nbIndex-nbRemove)*sizeof(int));
+		int nb=0;
+		for (size_t i=0;(int)i<f->sh.nbIndex;i++)
+			if (!vertices3[f->indices[i]].selected) newIndices[nb++]=f->indices[i];
+
+		SAFE_FREE(f->indices);f->indices=newIndices;
+		SAFE_FREE(f->vertices2);
+		SAFE_FREE(f->visible);
+		f->sh.nbIndex -= nbRemove;
+		f->vertices2 = (VERTEX2D *)malloc(f->sh.nbIndex*sizeof(VERTEX2D));
+		memset(f->vertices2,0,f->sh.nbIndex * sizeof(VERTEX2D));
+		f->visible = (BOOL *)malloc(f->sh.nbIndex*sizeof(BOOL));
+		_ASSERTE(f->visible);
+		memset(f->visible,0xFF,f->sh.nbIndex*sizeof(BOOL));
+	}
+	
+	if (facetsToRemove.size()) {
+		Facet   **newFacets = (Facet **)malloc((sh.nbFacet-facetsToRemove.size()) * sizeof(Facet *));
+		size_t nextToRemove=0;
+		size_t nextToAdd=0;
+		for (size_t f=0;(int)f<sh.nbFacet;f++) {
+			if (nextToRemove<facetsToRemove.size() && f==facetsToRemove[nextToRemove]) {
+				delete facets[f];
+				mApp->RenumberSelections(f);
+				mApp->RenumberFormulas(f);
+				nextToRemove++;
+			} else {
+				newFacets[nextToAdd++]=facets[f];
+			}
+		}
+		SAFE_DELETE(facets);
+		facets=newFacets;
+		sh.nbFacet-=facetsToRemove.size();
+	}
+
+	DeleteIsolatedVertices(TRUE);
+
+	DeleteGLLists(TRUE,TRUE);
+
+	BuildGLList();
+	//CalcTotalOutGassing();
+
+	//Debug memory check
+	 //_ASSERTE (!_CrtDumpMemoryLeaks());;
+	 _ASSERTE(_CrtCheckMemory());
+}
 
 void Geometry::RemoveSelected() {
 	SynRad *mApp = (SynRad *)theApp;
@@ -4043,6 +4213,7 @@ void Geometry::RemoveSelected() {
 		if(facets[i]->selected) {
 			delete facets[i];
 			mApp->RenumberSelections(i);
+			mApp->RenumberFormulas(i);
 		} else {
 			f[nb++] = facets[i];
 		}
@@ -4129,6 +4300,7 @@ int Geometry::ExplodeSelected(BOOL toMap,int desType,double exponent,double *val
 		if(facets[i]->selected) {
 			delete facets[i];
 			mApp->RenumberSelections(i);
+			mApp->RenumberFormulas(i);
 		} else {
 			f[nb++] = facets[i];
 		}
@@ -4181,6 +4353,7 @@ void Geometry::RemoveNullFacet() {
 			delete facets[i];
 			SynRad *mApp = (SynRad *)theApp;
 			mApp->RenumberSelections(i);
+			mApp->RenumberFormulas(i);
 		} else {
 			f[nb++] = facets[i];
 		}
@@ -4214,7 +4387,7 @@ void Geometry::AlignFacets(int* selection,int nbSelected,int Facet_source,int Fa
 		prgAlign->SetProgress(0.0);
 		prgAlign->SetVisible(TRUE);
 		if (!mApp->AskToReset(worker)) return;
-		if (copy) DoubleSelectedFacets(); //move
+		if (copy) CloneSelectedFacets(); //move
 		BOOL *alreadyMoved=(BOOL*)malloc(sh.nbVertex*sizeof(BOOL*));
 		memset(alreadyMoved,FALSE,sh.nbVertex*sizeof(BOOL*));
 
@@ -4361,7 +4534,7 @@ void Geometry::MoveSelectedFacets(double dX,double dY,double dZ,BOOL copy,Worker
 	if (!(dX==0.0&&dY==0.0&&dZ==0.0)) {
 		if (!mApp->AskToReset(worker)) return;
 		int nbSelFacet=0;
-		if (copy) DoubleSelectedFacets(); //move
+		if (copy) CloneSelectedFacets(); //move
 		double counter=1.0;
 		double selected=(double)GetNbSelected();
 		if (selected==0.0) return;
@@ -4408,7 +4581,7 @@ void Geometry::MirrorSelectedFacets(VERTEX3D P0,VERTEX3D N,BOOL copy,Worker *wor
 
 	if (!mApp->AskToReset(worker)) return;
 	int nbSelFacet=0;
-	if (copy) DoubleSelectedFacets(); //move
+	if (copy) CloneSelectedFacets(); //move
 	BOOL *alreadyMirrored=(BOOL*)malloc(sh.nbVertex*sizeof(BOOL*));
 	memset(alreadyMirrored,FALSE,sh.nbVertex*sizeof(BOOL*));
 
@@ -4451,7 +4624,7 @@ void Geometry::RotateSelectedFacets(VERTEX3D AXIS_P0,VERTEX3D AXIS_DIR,double th
 	prgRotate->SetVisible(TRUE);
 	
 		if (!mApp->AskToReset(worker)) return;
-		if (copy) DoubleSelectedFacets(); //move
+		if (copy) CloneSelectedFacets(); //move
 		BOOL *alreadyRotated=(BOOL*)malloc(sh.nbVertex*sizeof(BOOL*));
 		memset(alreadyRotated,FALSE,sh.nbVertex*sizeof(BOOL*));
 
@@ -4482,7 +4655,7 @@ void Geometry::RotateSelectedFacets(VERTEX3D AXIS_P0,VERTEX3D AXIS_DIR,double th
 
 
 // -------------------------------------------------------------
-void Geometry::DoubleSelectedFacets() { //create clone of selected facets
+void Geometry::CloneSelectedFacets() { //create clone of selected facets
 	double counter=0.0;
 	double selected=(double)GetNbSelected();
 	if (selected==0.0) return;
@@ -4603,46 +4776,46 @@ void Geometry::ScaleSelectedVertices(VERTEX3D invariant,double factor,BOOL copy,
 	InitializeGeometry();
 }
 
-void Geometry::ScaleSelectedFacets(VERTEX3D invariant,double factor,BOOL copy,Worker *worker) {
+void Geometry::ScaleSelectedFacets(VERTEX3D invariant,double factorX,double factorY,double factorZ,BOOL copy,Worker *worker) {
 
 	SynRad *mApp = (SynRad *)theApp;
 	GLProgress *prgMove = new GLProgress("Scaling selected facets...","Please wait");
 	prgMove->SetProgress(0.0);
 	prgMove->SetVisible(TRUE);
-	
-		if (!mApp->AskToReset(worker)) return;
-		int nbSelFacet=0;
-		if (copy) DoubleSelectedFacets(); //move
-		double counter=1.0;
-		double selected=(double)GetNbSelected();
-		if (selected==0.0) return;
 
-		BOOL *alreadyMoved=(BOOL*)malloc(sh.nbVertex*sizeof(BOOL*));
-		memset(alreadyMoved,FALSE,sh.nbVertex*sizeof(BOOL*));
+	if (!mApp->AskToReset(worker)) return;
+	int nbSelFacet=0;
+	if (copy) CloneSelectedFacets(); //move
+	double counter=1.0;
+	double selected=(double)GetNbSelected();
+	if (selected==0.0) return;
+
+	BOOL *alreadyMoved=(BOOL*)malloc(sh.nbVertex*sizeof(BOOL*));
+	memset(alreadyMoved,FALSE,sh.nbVertex*sizeof(BOOL*));
 
 
-		int nb = 0;
-		for(int i=0;i<sh.nbFacet;i++) {
-			if(facets[i]->selected) {
-				counter+=1.0;
-				prgMove->SetProgress(counter/selected);
-				for(int j=0;j<facets[i]->sh.nbIndex;j++) {
-					if (!alreadyMoved[facets[i]->indices[j]]) {
-						vertices3[facets[i]->indices[j]].x=invariant.x+factor*(vertices3[facets[i]->indices[j]].x-invariant.x);
-						vertices3[facets[i]->indices[j]].y=invariant.y+factor*(vertices3[facets[i]->indices[j]].y-invariant.y);
-						vertices3[facets[i]->indices[j]].z=invariant.z+factor*(vertices3[facets[i]->indices[j]].z-invariant.z);
-						alreadyMoved[facets[i]->indices[j]] = TRUE;
-					}
+	int nb = 0;
+	for(int i=0;i<sh.nbFacet;i++) {
+		if(facets[i]->selected) {
+			counter+=1.0;
+			prgMove->SetProgress(counter/selected);
+			for(int j=0;j<facets[i]->sh.nbIndex;j++) {
+				if (!alreadyMoved[facets[i]->indices[j]]) {
+					vertices3[facets[i]->indices[j]].x=invariant.x+factorX*(vertices3[facets[i]->indices[j]].x-invariant.x);
+					vertices3[facets[i]->indices[j]].y=invariant.y+factorY*(vertices3[facets[i]->indices[j]].y-invariant.y);
+					vertices3[facets[i]->indices[j]].z=invariant.z+factorZ*(vertices3[facets[i]->indices[j]].z-invariant.z);
+					alreadyMoved[facets[i]->indices[j]] = TRUE;
 				}
 			}
 		}
+	}
 
-		SAFE_FREE(alreadyMoved);
+	SAFE_FREE(alreadyMoved);
 
-		InitializeGeometry();
-		//update textures
-		//for(int i=0;i<sh.nbFacet;i++) if(facets[i]->selected) SetFacetTexture(i,facets[i]->tRatio,facets[i]->hasMesh);	   
-	
+	InitializeGeometry();
+	//update textures
+	//for(int i=0;i<sh.nbFacet;i++) if(facets[i]->selected) SetFacetTexture(i,facets[i]->tRatio,facets[i]->hasMesh);	   
+
 	prgMove->SetVisible(FALSE);
 	SAFE_DELETE(prgMove);
 }
@@ -5292,3 +5465,17 @@ void Geometry::SaveSpectrumSYN(FileWriter *file,Dataport *dpHit,int super,BOOL s
 	file->Write("}\n");
 	SAFE_FREE(spectrumFacet);
 }
+
+  void Geometry::EmptySelectedVertexList(){
+	  selectedVertexList=std::vector<int>();
+  }
+
+  void Geometry::RemoveFromSelectedVertexList(int vertexId){
+	  for (size_t j=0;j<selectedVertexList.size();j++)
+			  if (selectedVertexList[j]==vertexId)
+				  selectedVertexList.erase(selectedVertexList.begin()+j);
+  }
+
+  void Geometry::AddToSelectedVertexList(int vertexId){
+	  selectedVertexList.push_back(vertexId);
+  }

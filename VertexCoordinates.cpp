@@ -178,7 +178,7 @@ void VertexCoordinates::ProcessMessage(GLComponent *src,int message) {
 				sscanf(vertexListC->GetValueAt(1,i),"%lf",&x);
 				sscanf(vertexListC->GetValueAt(2,i),"%lf",&y);
 				sscanf(vertexListC->GetValueAt(3,i),"%lf",&z);
-				geom->SetVertex(id,x,y,z);
+				geom->MoveVertexTo(id,x,y,z);
 			}
 			geom->Rebuild();
           // Send to sub process

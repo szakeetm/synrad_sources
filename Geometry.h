@@ -83,7 +83,7 @@ public:
   // Selection (drawing stuff)
   void SelectAll();
   void UnSelectAll();
-  void SelectArea(int x1,int y1,int x2,int y2,BOOL clear,BOOL unselect,BOOL vertexBound);
+  void SelectArea(int x1,int y1,int x2,int y2,BOOL clear,BOOL unselect,BOOL vertexBound,BOOL circularSelection);
   void Select(int x,int y,BOOL clear,BOOL unselect,BOOL vertexBound,int width,int height);
   void Select(int facet);
   void Select(Facet *f);
@@ -95,19 +95,20 @@ public:
   void UpdateSelection();
   void SwapNormal();
   void RemoveSelected();
+  void RemoveSelectedVertex();
   void RemoveFromStruct(int numToDel);
   void RemoveCollinear();
   int  ExplodeSelected(BOOL toMap=FALSE,int desType=1,double exponent=0.0,double *values=NULL);
   void SelectCoplanar(int width,int height,double tolerance);
   void MoveSelectedVertex(double dX,double dY,double dZ,BOOL copy,Worker *worker);
   void ScaleSelectedVertices(VERTEX3D invariant,double factor,BOOL copy,Worker *worker);
-  void ScaleSelectedFacets(VERTEX3D invariant,double factor,BOOL copy,Worker *worker);
+  void ScaleSelectedFacets(VERTEX3D invariant,double factorX,double factorY,double factorZ,BOOL copy,Worker *worker);
   void MoveSelectedFacets(double dX,double dY,double dZ,BOOL copy,Worker *worker);
   void MirrorSelectedFacets(VERTEX3D P0,VERTEX3D N,BOOL copy,Worker *worker);
   void RotateSelectedFacets(VERTEX3D AXIS_P0,VERTEX3D AXIS_DIR,double theta,BOOL copy,Worker *worker);
   void AlignFacets(int* selection,int nbSelected,int Facet_source,int Facet_dest,int Anchor_source,int Anchor_dest,
 	  int Aligner_source,int Aligner_dest,BOOL invertNormal,BOOL invertDir1,BOOL invertDir2,BOOL copy,Worker *worker);
-  void DoubleSelectedFacets();
+  void CloneSelectedFacets();
   void AddVertex(double X,double Y,double Z);
   void CorrectNonSimple(int *nonSimpleList,int nbNonSimple);
 
@@ -116,9 +117,10 @@ public:
 
     // Vertex Selection (drawing stuff)
   void SelectAllVertex();
-  void CreatePolyFromVertices(); //create facet from selected vertices
+  void CreatePolyFromVertices_Convex(); //create convex facet from selected vertices
+  void CreatePolyFromVertices_Order(); //create facet from selected vertices following selection order
   void CreateDifference(); //creates the difference from 2 selected facets
-  void SelectVertex(int x1,int y1,int x2,int y2,BOOL shiftDown,BOOL ctrlDown);
+  void SelectVertex(int x1,int y1,int x2,int y2,BOOL shiftDown,BOOL ctrlDown,BOOL circularSelection);
   void SelectVertex(int x,int y,BOOL shiftDown,BOOL ctrlDown);
   void SelectVertex(int facet);
   void UnselectAllVertex();
@@ -141,7 +143,7 @@ public:
   VERTEX3D GetCenter();
   Facet    *GetFacet(int facet);
   VERTEX3D *GetVertex(int idx);
-  void     SetVertex(int idx,double x,double y,double z);
+  void     MoveVertexTo(int idx,double x,double y,double z);
   VERTEX3D GetFacetCenter(int facet);
   BOOL     IsInFacet(int facet,double u,double v);
   void     Collapse(double vT,double fT,double lT,BOOL doSelectedOnly,GLProgress *prg);
@@ -163,7 +165,7 @@ public:
   void     SetCenterNorme(BOOL enable);
   BOOL     GetCenterNorme();
   void	   RebuildLists();
-  void	   CalcTotalOutGassing();
+  //void	   CalcTotalOutGassing();
   void     InitializeGeometry(int facet_number=-1,BOOL BBOnly=FALSE);           // Initialiase all geometry related variable
   void     LoadProfileSYN(FileReader *file,Dataport *dpHit);
   void     LoadSpectrumSYN(FileReader *file,Dataport *dpHit);
@@ -258,6 +260,11 @@ private:
   int nbSelectedHistVertex;
   void AddToSelectionHistVertex(int idx);
   BOOL AlreadySelectedVertex(int idx);
+
+  std::vector<int> selectedVertexList;
+  void EmptySelectedVertexList();
+  void RemoveFromSelectedVertexList(int vertexId);
+  void AddToSelectedVertexList(int vertexId);
 
   void DrawFacet(Facet *f,BOOL offset=FALSE,BOOL showHidden=FALSE,BOOL selOffset=FALSE);
   void FillFacet(Facet *f,BOOL addTextureCoord);

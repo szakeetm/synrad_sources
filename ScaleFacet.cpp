@@ -19,6 +19,9 @@ GNU General Public License for more details.
 #define VERTEXMODE 1
 #define FACETMODE 2
 
+#define UNIFORMMODE 0
+#define DISTORTMODE 1
+
 #include "ScaleFacet.h"
 #include "GLApp/GLTitledPanel.h"
 #include "GLApp/GLToolkit.h"
@@ -30,9 +33,10 @@ extern SynRad *theApp;
 
 ScaleFacet::ScaleFacet(Geometry *g,Worker *w):GLWindow() {
 
-	int wD = 275;
-	int hD = 175;
+	int wD = 290;
+	int hD = 220;
 	invariantMode=XYZMODE;
+	scaleMode=UNIFORMMODE;
 
 	SetTitle("Scale selected vertices");
 
@@ -85,14 +89,50 @@ ScaleFacet::ScaleFacet(Geometry *g,Worker *w):GLWindow() {
 	facetNumber->SetEditable(FALSE);
 	iPanel->Add(facetNumber);
 
-	GLLabel *label4 = new GLLabel("Scale factor:");
-	label4->SetBounds(10,105,100,18);
-	Add(label4);
+	sPanel = new GLTitledPanel("Scale factor");
+	sPanel->SetBounds(5,101,wD-10,65);
+	Add(sPanel);
+
+	uniform = new GLToggle(0,"Uniform");
+	uniform->SetBounds(10,115,100,18);
+	uniform->SetCheck(TRUE);
+	Add(uniform);
 
 	factorNumber = new GLTextField(0,"1");
-	factorNumber->SetBounds(115,105,50,18);
+	factorNumber->SetBounds(115,115,40,18);
 	//factorNumber->SetEditable(FALSE);
 	Add(factorNumber);
+
+	distort = new GLToggle(0,"Distorted");
+	distort->SetBounds(10,140,100,18);
+	Add(distort);
+
+	GLLabel* x2Label = new GLLabel("X:");
+	x2Label->SetBounds(103,141,20,18);
+	Add(x2Label);
+
+	factorNumberX = new GLTextField(0,"1");
+	factorNumberX->SetBounds(115,140,40,18);
+	factorNumberX->SetEditable(FALSE);
+	Add(factorNumberX);
+
+	GLLabel* y2Label = new GLLabel("Y:");
+	y2Label->SetBounds(163,141,20,18);
+	Add(y2Label);
+
+	factorNumberY = new GLTextField(0,"1");
+	factorNumberY->SetBounds(175,140,40,18);
+	factorNumberY->SetEditable(FALSE);
+	Add(factorNumberY);
+
+	GLLabel* z2Label = new GLLabel("Z:");
+	z2Label->SetBounds(223,141,20,18);
+	Add(z2Label);
+
+	factorNumberZ = new GLTextField(0,"1");
+	factorNumberZ->SetBounds(235,140,40,18);
+	factorNumberZ->SetEditable(FALSE);
+	Add(factorNumberZ);
 
 	scaleButton = new GLButton(0,"Scale");
 	scaleButton->SetBounds(5,hD-44,85,21);
@@ -122,7 +162,7 @@ ScaleFacet::ScaleFacet(Geometry *g,Worker *w):GLWindow() {
 
 void ScaleFacet::ProcessMessage(GLComponent *src,int message) {
 	SynRad *mApp = (SynRad *)theApp;
-	double x,y,z,factor;
+	double x,y,z,factor,factorX,factorY,factorZ;
 	int facetNum;
 
 	switch(message) {
@@ -144,7 +184,6 @@ void ScaleFacet::ProcessMessage(GLComponent *src,int message) {
 			}
 
 			VERTEX3D invariant;
-			invariant.x=invariant.y=invariant.z=0;
 			BOOL found;
 
 			switch (invariantMode) {
@@ -188,13 +227,30 @@ void ScaleFacet::ProcessMessage(GLComponent *src,int message) {
 				return;
 			}
 
-			if( !(factorNumber->GetNumber(&factor))) {
-				GLMessageBox::Display("Invalid scale factor number","Error",GLDLG_OK,GLDLG_ICONERROR);
-				return;
-			}
+			if (scaleMode==UNIFORMMODE) {
+				if( !(factorNumber->GetNumber(&factor))) {
+					GLMessageBox::Display("Invalid scale factor number","Error",GLDLG_OK,GLDLG_ICONERROR);
+					return;
+				}
+			} else {
+				if( !(factorNumberX->GetNumber(&factorX))) {
+					GLMessageBox::Display("Invalid X scale factor number","Error",GLDLG_OK,GLDLG_ICONERROR);
+					return;
+				}
 
+				if( !(factorNumberY->GetNumber(&factorY))) {
+					GLMessageBox::Display("Invalid Y scale factor number","Error",GLDLG_OK,GLDLG_ICONERROR);
+					return;
+				}
+
+				if( !(factorNumberZ->GetNumber(&factorZ))) {
+					GLMessageBox::Display("Invalid Z scale factor number","Error",GLDLG_OK,GLDLG_ICONERROR);
+					return;
+				}
+			}
 			if (mApp->AskToReset()) {
-				geom->ScaleSelectedFacets(invariant,factor,src==copyButton,work);
+				if (scaleMode==UNIFORMMODE) factorX=factorY=factorZ=factor;
+				geom->ScaleSelectedFacets(invariant,factorX,factorY,factorZ,src==copyButton,work);
 				theApp->UpdateModelParams();
 				work->Reload(); 
 				theApp->UpdateFacetlistSelected();
@@ -209,19 +265,31 @@ void ScaleFacet::ProcessMessage(GLComponent *src,int message) {
 }
 
 void ScaleFacet::UpdateToggle(GLComponent *src) {
-	l1->SetCheck(FALSE);
-	l2->SetCheck(FALSE);
-	l3->SetCheck(FALSE);
+	
+	if (src==l1 || src==l2 || src==l3) {
 
-	GLToggle *toggle=(GLToggle*)src;
-	toggle->SetCheck(TRUE);
+		l1->SetCheck(src==l1);
+		l2->SetCheck(src==l2);
+		l3->SetCheck(src==l3);
 
-	facetNumber->SetEditable(src==l3);
-	xText->SetEditable(src==l1);
-	yText->SetEditable(src==l1);
-	zText->SetEditable(src==l1);
+		facetNumber->SetEditable(src==l3);
+		xText->SetEditable(src==l1);
+		yText->SetEditable(src==l1);
+		zText->SetEditable(src==l1);
 
-	if (src==l1) invariantMode=XYZMODE;
-	if (src==l2) invariantMode=VERTEXMODE;
-	if (src==l3) invariantMode=FACETMODE;
+		if (src==l1) invariantMode=XYZMODE;
+		if (src==l2) invariantMode=VERTEXMODE;
+		if (src==l3) invariantMode=FACETMODE;
+	} else {
+		uniform->SetCheck(src==uniform);
+		distort->SetCheck(src==distort);
+
+		factorNumber->SetEditable(src==uniform);
+		factorNumberX->SetEditable(src==distort);
+		factorNumberY->SetEditable(src==distort);
+		factorNumberZ->SetEditable(src==distort);
+
+		if (src==uniform) scaleMode=UNIFORMMODE;
+		if (src==distort) scaleMode=DISTORTMODE;
+	}
 }

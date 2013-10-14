@@ -52,19 +52,22 @@ void Geometry::Select(int facet) {
 
 // -----------------------------------------------------------
 
-void Geometry::SelectArea(int x1,int y1,int x2,int y2,BOOL clear,BOOL unselect,BOOL vertexBound) {
+void Geometry::SelectArea(int x1,int y1,int x2,int y2,BOOL clear,BOOL unselect,BOOL vertexBound,BOOL circularSelection) {
 
   // Select a set of facet according to a 2D bounding rectangle
   // (x1,y1) and (x2,y2) are in viewport coordinates
-	  SynRad *mApp = (SynRad *)theApp;
-	  
-  float rx,ry,rz,rw;
+	SynRad *mApp = (SynRad *)theApp;
+  float rx,ry,rz,rw,r2;
   int _x1,_y1,_x2,_y2;
 
   _x1 = MIN(x1,x2);
   _x2 = MAX(x1,x2);
   _y1 = MIN(y1,y2);
   _y2 = MAX(y1,y2);
+
+  if (circularSelection) {
+	  r2=pow((float)(x1-x2),2)+pow((float)(y1-y2),2);
+  }
 
   GLfloat mProj[16];
   GLfloat mView[16];
@@ -108,7 +111,10 @@ void Geometry::SelectArea(int x1,int y1,int x2,int y2,BOOL clear,BOOL unselect,B
         if( rw>0.0f ) {
           int xe = (int)(((rx / rw) + 1.0f) * (float)g.width/2.0f);
           int ye = (int)(((-ry / rw) + 1.0f) * (float)g.height/2.0f);
-		  isInside = (xe>=_x1) && (xe<=_x2) && (ye>=_y1) && (ye<=_y2);
+		  if (!circularSelection)
+			  isInside = (xe>=_x1) && (xe<=_x2) && (ye>=_y1) && (ye<=_y2);
+		  else //circular selection
+			  isInside= (pow((float)(xe-x1),2)+pow((float)(ye-y1),2))<=r2;
 		  if(vertices3[idx].selected) hasSelectedVertex=TRUE;
         } else {
           isInside = FALSE;
@@ -129,7 +135,6 @@ void Geometry::SelectArea(int x1,int y1,int x2,int y2,BOOL clear,BOOL unselect,B
   }
   mApp->SetFacetSearchPrg(FALSE,NULL);
   UpdateSelection();
-
 }
 
 // -----------------------------------------------------------
@@ -268,18 +273,24 @@ void Geometry::SelectVertex(int vertexId) {
 
 // -----------------------------------------------------------
 
-void Geometry::SelectVertex(int x1,int y1,int x2,int y2,BOOL shiftDown,BOOL ctrlDown) {
+void Geometry::SelectVertex(int x1,int y1,int x2,int y2,BOOL shiftDown,BOOL ctrlDown,BOOL circularSelection) {
 
   // Select a set of vertices according to a 2D bounding rectangle
   // (x1,y1) and (x2,y2) are in viewport coordinates
 
-  float rx,ry,rz,rw;
+  float rx,ry,rz,rw,r2;
   int _x1,_y1,_x2,_y2;
+
+  SynRad *mApp = (SynRad *)theApp;
 
   _x1 = MIN(x1,x2);
   _x2 = MAX(x1,x2);
   _y1 = MIN(y1,y2);
   _y2 = MAX(y1,y2);
+
+  if (circularSelection) {
+	  r2=pow((float)(x1-x2),2)+pow((float)(y1-y2),2);
+  }
 
   GLfloat mProj[16];
   GLfloat mView[16];
@@ -295,7 +306,7 @@ void Geometry::SelectVertex(int x1,int y1,int x2,int y2,BOOL shiftDown,BOOL ctrl
 
   
   if(!ctrlDown && !shiftDown) {
-	  UnselectAllVertex();
+	  UnselectAllVertex();EmptySelectedVertexList();
 		//nbSelectedHistVertex = 0;
   }
   
@@ -315,7 +326,10 @@ void Geometry::SelectVertex(int x1,int y1,int x2,int y2,BOOL shiftDown,BOOL ctrl
         if( rw>0.0f ) {
           int xe = (int)(((rx / rw) + 1.0f) * (float)g.width/2.0f);
           int ye = (int)(((-ry / rw) + 1.0f) * (float)g.height/2.0f);
-          isInside = (xe>=_x1) && (xe<=_x2) && (ye>=_y1) && (ye<=_y2);
+		  if (!circularSelection)
+			  isInside = (xe>=_x1) && (xe<=_x2) && (ye>=_y1) && (ye<=_y2);
+		  else //circular selection
+			  isInside= (pow((float)(xe-x1),2)+pow((float)(ye-y1),2))<=r2;
         } else {
           isInside = FALSE;
         }
@@ -325,20 +339,24 @@ void Geometry::SelectVertex(int x1,int y1,int x2,int y2,BOOL shiftDown,BOOL ctrl
 
       if( isInside ) {
 		  vertices3[i].selected = !ctrlDown;
+		  if (ctrlDown) RemoveFromSelectedVertexList(i);
+		  else {
+			  AddToSelectedVertexList(i);
+			  if (mApp->facetCoordinates) mApp->facetCoordinates->UpdateId(i);
+		  }
 	  }
 
     }    
   }
   
   //UpdateSelectionVertex();
-  SynRad *mApp = (SynRad *)theApp;
   if (mApp->vertexCoordinates) mApp->vertexCoordinates->Update();
 }
 
 // -----------------------------------------------------------
 
 void Geometry::SelectVertex(int x,int y,BOOL shiftDown,BOOL ctrlDown) {
-
+	SynRad *mApp = (SynRad *)theApp;
   int i;
   if(!isLoaded) return;
 
@@ -370,20 +388,24 @@ void Geometry::SelectVertex(int x,int y,BOOL shiftDown,BOOL ctrlDown) {
   }
 
     if(!ctrlDown && !shiftDown) {
-	  UnselectAllVertex();
+	  UnselectAllVertex();EmptySelectedVertexList();
 		//nbSelectedHistVertex = 0;
   }
 
   if (minDist<250.0) {
 	  vertices3[minId].selected=!ctrlDown;
+	  if (ctrlDown) RemoveFromSelectedVertexList(minId);
+	  else {
+		  AddToSelectedVertexList(minId);
+		  if (mApp->facetCoordinates) mApp->facetCoordinates->UpdateId(minId);
 	  //nbSelectedHistVertex++;
+	  }
   }
   
   free(allXe);
   free(allYe);
   free(ok);
   //UpdateSelection();
-  SynRad *mApp = (SynRad *)theApp;
   if (mApp->vertexCoordinates) mApp->vertexCoordinates->Update();
 }
 

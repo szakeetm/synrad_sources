@@ -2,7 +2,7 @@
   File:        FacetCoordinates.h
   Description: Facet coordinates window
   Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS
+  Author:      R. KERSEVAN / J-L PONS / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,11 @@
 #ifndef _FACETCOORDINATESH_
 #define _FACETCOORDINATESH_
 
+struct line {
+	  int vertexId;
+	  VERTEX3D coord;
+  };
+
 class FacetCoordinates : public GLWindow {
 
 public:
@@ -34,7 +39,8 @@ public:
 
   // Component method
   void Display(Worker *w);
-  void Update();
+  void UpdateId(int vertexId);
+  void UpdateFromSelection();
 
   // Implementation
   void ProcessMessage(GLComponent *src,int message);
@@ -42,17 +48,24 @@ public:
 private:
 
   void GetSelected();
+  void InsertVertex(int rowId,int vertexId);
+  void RemoveRow(int rowId);
   void setBounds(GLComponent *org,GLComponent *src,int x,int y,int w,int h);
+  void RebuildList();
+  void ApplyChanges();
+  
 
   Worker       *worker;
   Facet        *selFacet;
   GLList       *facetListC;
   GLButton     *dismissButton;
-  GLButton     *updateButton;
-  GLButton     *insert1Button;
-  GLButton     *insert2Button;
-  GLButton     *removeButton;
-  GLTextField  *insertPosText;
+  GLButton     *updateButton; //apply
+  GLButton     *insertLastButton;
+  GLButton     *insertBeforeButton;
+  GLButton     *removePosButton;
+  GLTextField  *insertIdText;
+
+  std::vector<line> lines;
 
 };
 

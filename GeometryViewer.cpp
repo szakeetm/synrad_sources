@@ -1612,7 +1612,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 			else if (mode==MODE_SELECTVERTEX) draggMode=DRAGG_SELECTVERTEX;
 			else if (mode==MODE_SELECTTRAJ) draggMode=DRAGG_SELECTTRAJ;
 			else if (mode==MODE_MOVE) draggMode=DRAGG_MOVE;
-			else if (mode==MODE_ZOOM) draggMode=DRAGG_ZOOM;
+			//else if (mode==MODE_ZOOM) draggMode=DRAGG_ZOOM;
 		}
 		if( evt->button.button == SDL_BUTTON_MIDDLE ) {
 			// Camera translational dragging
@@ -1656,7 +1656,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 
 		case DRAGG_SELECT:
 		case DRAGG_SELECTVERTEX:
-		case DRAGG_ZOOM:
+		//case DRAGG_ZOOM:
 		case DRAGG_SELECTTRAJ:
 			switch(mode) {
 			case MODE_ZOOM:
@@ -1680,7 +1680,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 				} else {
 					// Select region
 					geom->SelectArea(selX1-posX,selY1-posY,selX2-posX,selY2-posY,
-						!GetWindow()->IsShiftDown(),GetWindow()->IsCtrlDown(),GetWindow()->IsCapsLockOn());
+						!GetWindow()->IsShiftDown(),GetWindow()->IsCtrlDown(),GetWindow()->IsCapsLockOn(),GetWindow()->IsAltDown());
 				}
 				break;
 			case MODE_SELECTVERTEX:
@@ -1697,7 +1697,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 				} else {
 					// Select region
 					geom->SelectVertex(selX1-posX,selY1-posY,selX2-posX,selY2-posY,
-						GetWindow()->IsShiftDown(),GetWindow()->IsCtrlDown());
+						GetWindow()->IsShiftDown(),GetWindow()->IsCtrlDown(),GetWindow()->IsAltDown());
 				}
 				break;
 			case MODE_SELECTTRAJ:

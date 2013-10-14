@@ -29,6 +29,7 @@ private:
   void UpdateToggle(GLComponent *src);
   
   GLTitledPanel *iPanel;
+  GLTitledPanel *sPanel;
   GLButton     *scaleButton;
   GLButton    *copyButton;
   GLButton    *cancelButton;
@@ -40,8 +41,13 @@ private:
   GLTextField *zText;
   GLTextField *facetNumber;
   GLTextField *factorNumber;
+  GLTextField *factorNumberX;
+  GLTextField *factorNumberY;
+  GLTextField *factorNumberZ;
+  GLToggle    *uniform;
+  GLToggle    *distort;
 
-  int nbFacetS,invariantMode;
+  int nbFacetS,invariantMode,scaleMode;
 
   Geometry     *geom;
   Worker	   *work;

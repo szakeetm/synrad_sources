@@ -20,10 +20,12 @@
 #include <math.h>
 #include <errno.h>
 #include "GLParser.h"
+#include "..\SynRad.h"
 
 #define TRUE  1
 #define FALSE 0
 
+extern GLApplication *theApp;
 // -------------------------------------------------------
 // Utils functions
 // -------------------------------------------------------
@@ -364,28 +366,53 @@ void GLParser::ReadTerm(ETREE **node,VLIST **var_list)
 
                   ReadVariable(v_name);
                   if (EC!=',') SetError(", expected",current);AV();
-                  ReadDouble(&d1);
-                  if (EC!=',') SetError(", expected",current);AV();
-                  ReadDouble(&d2);
+                  bool selectionGroup;
+				  selectionGroup=(EC=='S');
+				  if (selectionGroup) AV();
+				  ReadDouble(&d1);
+                  if (!selectionGroup) {
+					  if (EC!=',') SetError(", expected",current);AV();
+					  ReadDouble(&d2);
+				  }
                   if (EC!=')') SetError(") expected",current);AV();
 
                   // Add all variables
                   i1 = (int)(d1+0.5);
-                  i2 = (int)(d2+0.5);
+                  if (!selectionGroup) 
+					  {//ordinary SUM
+						  i2 = (int)(d2+0.5);
 
-                  // 1st
-                  sprintf(tmpVName,"%s%d",v_name,i1);
-                  elem.variable = AddVar(tmpVName,var_list);
-                  AddNode( TVARIABLE , elem , &l_t , NULL , NULL);
+						  // 1st
+						  sprintf(tmpVName,"%s%d",v_name,i1);
+						  elem.variable = AddVar(tmpVName,var_list);
+						  AddNode( TVARIABLE , elem , &l_t , NULL , NULL);
 
-                  for(i=i1+1;i<=i2;i++) {
-                    sprintf(tmpVName,"%s%d",v_name,i);
-                    elem.variable = AddVar(tmpVName,var_list);
-                    AddNode( TVARIABLE , elem , &r_t , NULL , NULL);
-                    AddNode( OPER_PLUS , elem , &l_t , l_t , r_t );
-                  }
-                  *node = l_t;
-
+						  for(i=i1+1;i<=i2;i++) {
+							  sprintf(tmpVName,"%s%d",v_name,i);
+							  elem.variable = AddVar(tmpVName,var_list);
+							  AddNode( TVARIABLE , elem , &r_t , NULL , NULL);
+							  AddNode( OPER_PLUS , elem , &l_t , l_t , r_t );
+						  }
+						  
+				  } else {
+					  i1--; //selection indexes start from 0
+					  //SUM of a selection Group
+					  SynRad *mApp = (SynRad *)theApp;
+					  if (i1<0 || i1>=mApp->nbSelection) {
+						  SetError("invalid selection group",current);
+						  break;
+					  }
+					  for (int j=0;j<mApp->selections[i1].nbSel;j++) {
+						  sprintf(tmpVName,"%s%d",v_name,mApp->selections[i1].selection[j]+1);
+						  elem.variable = AddVar(tmpVName,var_list);
+						  if (j==0) AddNode( TVARIABLE , elem , &l_t , NULL , NULL);
+						  else {
+							  AddNode( TVARIABLE , elem , &r_t , NULL , NULL);
+							  AddNode( OPER_PLUS , elem , &l_t , l_t , r_t );
+						  }
+					  }
+				  }
+				  if (!error) *node = l_t;
                 } else {
                   SetError("variable prefix name expected",current);
                 }
