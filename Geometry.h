@@ -73,8 +73,8 @@ public:
 
   // Save
   void SaveTXT(FileWriter *file,Dataport *dhHit,BOOL saveSelected);
-  void SaveTexture(FILE *file,int mode,Dataport *dhHit,BOOL saveSelected);
-  void SaveDesorption(FILE *file,Dataport *dhHit,BOOL selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr);
+  void ExportTexture(FILE *file,int mode,Dataport *dhHit,BOOL saveSelected);
+  //void SaveDesorption(FILE *file,Dataport *dhHit,BOOL selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr);
   void SaveGEO(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL saveSelected,LEAK *pleak,int *nbleakSave,HIT *pHits,int *nbHHitSave,BOOL crashSave=FALSE);
   void SaveSYN(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL saveSelected,LEAK *pleak,int *nbleakSave,HIT *pHits,int *nbHHitSave,BOOL crashSave=FALSE);
   void SaveSTR(Dataport *dhHit,BOOL saveSelected);

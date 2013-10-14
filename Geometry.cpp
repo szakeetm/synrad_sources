@@ -119,12 +119,14 @@ void Geometry::Clear() {
 	whiteMaterial.Ambient.b = 0.9f;
 
 	memset (&fillMaterial, 0, sizeof (GLMATERIAL));
-	fillMaterial.Diffuse.r = 0.7f;
-	fillMaterial.Diffuse.g = 0.7f;
-	fillMaterial.Diffuse.b = 0.7f;
-	fillMaterial.Ambient.r = 0.3f;
-	fillMaterial.Ambient.g = 0.3f;
-	fillMaterial.Ambient.b = 0.3f;
+
+	
+	fillMaterial.Diffuse.r = 0.6f;
+	fillMaterial.Diffuse.g = 0.65f;
+	fillMaterial.Diffuse.b = 0.65f;
+	fillMaterial.Ambient.r = 0.45f;
+	fillMaterial.Ambient.g = 0.41f;
+	fillMaterial.Ambient.b = 0.41f;
 
 	memset (&arrowMaterial, 0, sizeof (GLMATERIAL));
 	arrowMaterial.Diffuse.r = 0.4f;
@@ -3132,6 +3134,7 @@ void Geometry::LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleak,
 		vertices3[i].x = file->ReadDouble();
 		vertices3[i].y = file->ReadDouble();
 		vertices3[i].z = file->ReadDouble();
+		vertices3[i].selected = FALSE;
 	}
 	file->ReadKeyword("}");
 
@@ -3277,6 +3280,12 @@ bool Geometry::loadTextures(FileReader *file,GLProgress *prg,Dataport *dpHit,int
 						*(hits_MC+index)=file->ReadLLong();
 						*(hits_flux+index)=file->ReadDouble();
 						*(hits_power+index)=file->ReadDouble();
+
+						//Normalize by area
+						if(f->mesh[index].area>0.0) {
+							*(hits_flux+index)/=f->mesh[index].area;
+							*(hits_power+index)/=f->mesh[index].area;
+						}
 					}
 				}
 				file->ReadKeyword("}");
@@ -3505,7 +3514,7 @@ void Geometry::SaveTXT(FileWriter *file,Dataport *dpHit,BOOL saveSelected) {
 }
 
 // -----------------------------------------------------------------------
-void Geometry::SaveTexture(FILE *file,int mode,Dataport *dpHit,BOOL saveSelected) {
+void Geometry::ExportTexture(FILE *file,int mode,Dataport *dpHit,BOOL saveSelected) {
 
 	//if(!IsLoaded()) throw Error("Nothing to save !");
 
@@ -3531,105 +3540,58 @@ void Geometry::SaveTexture(FILE *file,int mode,Dataport *dpHit,BOOL saveSelected
 				float dCoef = 1.0f;
 				if(!buffer) return;
 				SHGHITS *shGHit = (SHGHITS *)buffer;
-				int profSize = (f->sh.isProfile)?(PROFILE_SIZE*sizeof(llong)):0;
-				double *hits = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize));
 				int w = f->sh.texWidth;
 				int h = f->sh.texHeight;
-
-				switch(mode) {
-
-				case 0: // Element area
-					for(int i=0;i<w;i++) {
-						for(int j=0;j<h;j++) {
-							sprintf(tmp,"%g",f->mesh[i+j*w].area);
-							if( tmp ) fprintf(file,"%s",tmp);
-							if( j<w-1 ) 
-								fprintf(file,"\t");
-						}
-						fprintf(file,"\n");
-					}
-					break;
+				int nbE = w*h;
+				int profSize = (f->sh.isProfile)?(PROFILE_SIZE*sizeof(llong)):0;
+				llong *hits_MC = (llong *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize));
+				double *hits_flux = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize + nbE*sizeof(llong)));
+				double *hits_power = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize+nbE*(sizeof(llong)+sizeof(double))));
+				
 
 
-				/*case 1:  // Pressure
-
-					// Lock during update
-					dCoef = (float)totalOutgassing / (float)shGHit->total.nbDesorbed;
+				for(int i=0;i<w;i++) {
 					for(int j=0;j<h;j++) {
-						for(int i=0;i<w;i++) {
-							sprintf(tmp,"%g",hits[i+j*w]*dCoef);
-							fprintf(file,"%s",tmp);
-							fprintf(file,"\t");
+						int index=i+j*w;
+						switch(mode) {
+
+						case 0: // Element area
+							sprintf(tmp,"%g",f->mesh[index].area);
+							break;
+
+						case 1: // MC_hits
+							sprintf(tmp,"%I64d",hits_MC[index]);
+							break;
+
+						case 2: // Flux
+							sprintf(tmp,"%g",hits_flux[index]*f->mesh[i+j*w].area);
+							break;
+
+						case 3: // Power
+							sprintf(tmp,"%g",hits_power[index]*f->mesh[i+j*w].area);
+							break;
+
+						case 4: // Flux/area
+							sprintf(tmp,"%g",hits_flux[index]);
+							break;
+
+						case 5: // Power/area
+							sprintf(tmp,"%g",hits_power[index]);
+							break;
 						}
-						fprintf(file,"\n");						
-					}
-					break;*/
 
-
-				case 2: // Average velocity
-					for(int i=0;i<w;i++) {
-						for(int j=0;j<h;j++) {
-							if( f->dirCache ) {
-								double n = Norme(&f->dirCache[i+j*w].dir);
-								sprintf(tmp,"%g",n);
-							} else {
-								sprintf(tmp,"None");
-							}
-							fprintf(file,"%s",tmp);
+						if( tmp ) fprintf(file,"%s",tmp);
+						if( j<w-1 ) 
 							fprintf(file,"\t");
-						}
-						fprintf(file,"\n");
 					}
-					break;
-
-				case 3: // Velocity
-					for(int i=0;i<w;i++) {
-						for(int j=0;j<h;j++) {
-							if( f->dirCache ) {
-								sprintf(tmp,"%g,%g,%g",
-									f->dirCache[i+j*w].dir.x,
-									f->dirCache[i+j*w].dir.y,
-									f->dirCache[i+j*w].dir.z);
-							} else {
-								sprintf(tmp,"None");
-							}
-							fprintf(file,"%s",tmp);
-							fprintf(file,"\t");
-						}
-						fprintf(file,"\n");
-					}
-					break;
-
-				case 4: // Count
-					for(int i=0;i<w;i++) {
-						for(int j=0;j<h;j++) {
-							if( f->dirCache ) {
-								sprintf(tmp,"%d",f->dirCache[i+j*w].count);
-							} else {
-								sprintf(tmp,"None");
-							}
-							fprintf(file,"%s",tmp);
-							fprintf(file,"\t");
-						}
-						fprintf(file,"\n");
-					}
-					break;
-
-				case 5:  // Hits
-
-					// Lock during update					
-					//if( shGHit->mode == MC_MODE ) dCoef = 1.0f / (float)shGHit->total.nbDesorbed;
-					for(int i=0;i<h;i++) {
-						for(int j=0;j<w;j++) {
-							sprintf(tmp,"%g",hits[i+j*w]);
-							fprintf(file,"%s",tmp);
-							fprintf(file,"\t");
-						}
-						fprintf(file,"\n");						
-					}
-					break;
-
+					fprintf(file,"\n");
 				}
+				break;
+
+
+
+
+
 			}
 			else {
 				fprintf(file,"No mesh.\n");
@@ -3643,7 +3605,7 @@ void Geometry::SaveTexture(FILE *file,int mode,Dataport *dpHit,BOOL saveSelected
 
 }
 
-void Geometry::SaveDesorption(FILE *file,Dataport *dpHit,BOOL selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr) {
+/*void Geometry::SaveDesorption(FILE *file,Dataport *dpHit,BOOL selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr) {
 
 	if(!IsLoaded()) throw Error("Nothing to save !");
 
@@ -3719,7 +3681,7 @@ void Geometry::SaveDesorption(FILE *file,Dataport *dpHit,BOOL selectedOnly,int m
 	ReleaseDataport(dpHit);
 
 }
-
+*/
 // -----------------------------------------------------------
 
 void Geometry::SaveSTR(Dataport *dpHit,BOOL saveSelected) {
@@ -3779,10 +3741,10 @@ void Geometry::SaveSuper(Dataport *dpHit,int s) {
 		}
 	}
 
-	file->WriteLLong(totHit,"\n");
-	file->WriteInt(gHits->nbLeak,"\n");
-	file->WriteLLong(totDes,"\n");
-	file->WriteLLong(tNbDesorptionMax,"\n");
+	file->WriteLLong(0,"\n");
+	file->WriteInt(0,"\n");
+	file->WriteLLong(0,"\n");
+	file->WriteLLong(0,"\n");
 
 	file->WriteInt(nbV,"\n");
 	file->WriteInt(nbF,"\n");
@@ -4785,7 +4747,7 @@ void Geometry::SaveSYN(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL sav
 	file->Write("version:");file->WriteInt(SYNVERSION,"\n");
 	file->Write("totalHit:");file->WriteLLong(gHits->total.nbHit,"\n");
 	file->Write("totalDes:");file->WriteLLong(gHits->total.nbDesorbed,"\n");
-	file->Write("totalLeak:");file->WriteInt(gHits->nbLeak,"\n");
+	file->Write("totalLeak:");file->WriteLLong(gHits->nbLeakTotal,"\n");
 	file->Write("totalFlux:");file->WriteDouble(gHits->total.fluxAbs,"\n");
 	file->Write("totalPower:");file->WriteDouble(gHits->total.powerAbs,"\n");
 	file->Write("maxDes:");file->WriteLLong(tNbDesorptionMax,"\n");
@@ -4964,8 +4926,8 @@ void Geometry::SaveSYN(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL sav
 				for (ix=0;ix<(f->sh.texWidth);ix++) {
 					int index=iy*(f->sh.texWidth)+ix;
 					file->WriteLLong((!crashSave)?*(hits_MC+index):0,"\t");
-					file->WriteDouble((!crashSave)?*(hits_flux+index):0,"\t");
-					file->WriteDouble((!crashSave)?*(hits_power+index):0,"\t");
+					file->WriteDouble((!crashSave)?*(hits_flux+index)*f->mesh[index].area:0,"\t");
+					file->WriteDouble((!crashSave)?*(hits_power+index)*f->mesh[index].area:0,"\t");
 				}
 				file->Write("\n");
 			}
@@ -5120,6 +5082,7 @@ PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *
 		vertices3[i].x = file->ReadDouble();
 		vertices3[i].y = file->ReadDouble();
 		vertices3[i].z = file->ReadDouble();
+		vertices3[i].selected = FALSE;
 	}
 	file->ReadKeyword("}");
 	prg->SetMessage("Reading leaks and hits...");

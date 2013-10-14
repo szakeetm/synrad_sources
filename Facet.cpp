@@ -992,36 +992,36 @@ DWORD Facet::GetTexRamSizeForRatio(double ratio,BOOL useMesh,BOOL countDir) {
 #define SUM_NEIGHBOR(i,j,we)                      \
 	if( (i)>=0 && (i)<=w && (j)>=0 && (j)<=h ) {    \
 	add = (i)+(j)*sh.texWidth;                    \
-	if( mesh[add].area>0.0f ) {                   \
+	if( mesh[add].area>0.0 ) {                   \
 	sum += we*(texBuffer[add]/mesh[add].area*scaleF);          \
 	W=W+we;                                     \
 	}                                             \
 	}
 
-float Facet::GetSmooth(int i,int j,double *texBuffer,float scaleF) {
+double Facet::GetSmooth(int i,int j,double *texBuffer,float scaleF) {
 
-	float W = 0.0f;
-	float sum=0.0;
+	double W = 0.0;
+	double sum=0.0;
 	int w = sh.texWidth  - 1;
 	int h = sh.texHeight - 1;
 	int add;
 
-	SUM_NEIGHBOR((i-1),(j-1),1.0f);
-	SUM_NEIGHBOR((i-1),(j+1),1.0f);
-	SUM_NEIGHBOR((i+1),(j-1),1.0f);
-	SUM_NEIGHBOR((i+1),(j+1),1.0f);
-	SUM_NEIGHBOR(i  ,(j-1),2.0f);
-	SUM_NEIGHBOR(i  ,(j+1),2.0f);
-	SUM_NEIGHBOR((i-1),j  ,2.0f);
-	SUM_NEIGHBOR((i+1),j  ,2.0f);
+	SUM_NEIGHBOR((i-1),(j-1),1.0);
+	SUM_NEIGHBOR((i-1),(j+1),1.0);
+	SUM_NEIGHBOR((i+1),(j-1),1.0);
+	SUM_NEIGHBOR((i+1),(j+1),1.0);
+	SUM_NEIGHBOR(i  ,(j-1),2.0);
+	SUM_NEIGHBOR(i  ,(j+1),2.0);
+	SUM_NEIGHBOR((i-1),j  ,2.0);
+	SUM_NEIGHBOR((i+1),j  ,2.0);
 
-	if(W==0.0f)
-		return 0.0f;
+	if(W==0.0)
+		return 0.0;
 	else
 		return sum/W;
 }
 
-float Facet::GetSmooth(int i,int j,llong *texBuffer,float scaleF) {
+double Facet::GetSmooth(int i,int j,llong *texBuffer,float scaleF) {
 
 	float W = 0.0f;
 	float sum=0.0;
@@ -1085,9 +1085,9 @@ void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans
 			for(int i=0;i<sh.texWidth;i++) {
 				int idx = i+j*sh.texWidth;
 				if( doLog ) {
-					val = (int)((LOG10(texBuffer[idx]/mesh[idx].area)-LOG10(min))*scaleFactor+0.5f);
+					val = (int)((LOG10(texBuffer[idx])-LOG10(min))*scaleFactor+0.5f);
 				} else {
-					val = (int)((texBuffer[idx]/mesh[idx].area-min)*scaleFactor+0.5f);
+					val = (int)((texBuffer[idx]-min)*scaleFactor+0.5f);
 				}
 				SATURATE(val,0,65535);	
 				buff32[(i+1) + (j+1)*texDimW] = colorMap[val];
@@ -1157,9 +1157,9 @@ void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans
 			for(int i=0;i<sh.texWidth;i++) {
 				int idx = i+j*sh.texWidth;
 				if( doLog ) {
-					val = (int)((LOG10(texBuffer[idx]/mesh[idx].area)-LOG10(min))*scaleFactor+0.5f);
+					val = (int)((LOG10(texBuffer[idx])-LOG10(min))*scaleFactor+0.5f);
 				} else {
-					val = (int)((texBuffer[idx]/mesh[idx].area-min)*scaleFactor+0.5f);
+					val = (int)((texBuffer[idx]-min)*scaleFactor+0.5f);
 				}
 				SATURATE(val,0,255);
 				buff8[(i+1) + (j+1)*texDimW] = val;

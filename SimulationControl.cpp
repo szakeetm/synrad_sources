@@ -95,6 +95,8 @@ void ClearSimulation() {
 			if( f ) {
 				SAFE_FREE(f->indices);
 				SAFE_FREE(f->vertices2);
+				SAFE_FREE(f->inc);
+				SAFE_FREE(f->largeEnough);
 				SAFE_FREE(f->hits_MC);
 				SAFE_FREE(f->hits_flux);
 				SAFE_FREE(f->hits_power);
@@ -391,9 +393,14 @@ BOOL LoadSimulation(Dataport *loader) {
 			f->hits_power = (double *)malloc(nbE*sizeof(double));
 			memset(f->hits_power,0,nbE*sizeof(double));
 
-			f->inc = (double *)malloc(nbE*sizeof(double));
-			f->fullElem = (char *)malloc(nbE*sizeof(char));
-
+			f->inc = (double*)malloc(f->textureSize);
+			f->largeEnough = (BOOL *)malloc(sizeof(BOOL)*nbE);
+			f->fullElem = (char *)malloc(nbE);
+			if (!(f->inc && f->largeEnough && f->fullElem)) {
+				SetErrorSub("Not enough memory to load");
+				return FALSE;
+			}
+			f->fullSizeInc=(float)1E30;
 			for(j=0;j<nbE;j++) {
 				double incVal = ((double *)areaBuff)[j];
 				if( incVal<0 ) {
@@ -403,7 +410,10 @@ BOOL LoadSimulation(Dataport *loader) {
 					f->fullElem[j] = 0;
 					f->inc[j] = incVal;
 				}
-				if ((f->inc[j]>0.0)&&(f->inc[j]<f->fullSizeArea)) f->fullSizeArea = f-> inc[j];
+				if ((f->inc[j]>0.0)&&(f->inc[j]<f->fullSizeInc)) f->fullSizeInc = f-> inc[j];
+			}
+			for(j=0;j<nbE;j++) { //second pass, filter out very small cells
+				f->largeEnough[j]=(f->inc[j]<((5.0f)*f->fullSizeInc));
 			}
 			sHandle->textTotalSize += f->textureSize;
 			areaBuff += nbE*sizeof(double);
@@ -490,7 +500,8 @@ void UpdateHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 // -------------------------------------------------------
 
 long GetHitsSize() {
-	return sHandle->textTotalSize + sHandle->profTotalSize + sHandle->dirTotalSize + sHandle->spectrumTotalSize + sHandle->totalFacet*sizeof(SHHITS) + sizeof(SHGHITS);
+	return sHandle->textTotalSize + sHandle->profTotalSize + sHandle->dirTotalSize +
+		sHandle->spectrumTotalSize + sHandle->totalFacet*sizeof(SHHITS) + sizeof(SHGHITS);
 }
 
 // -------------------------------------------------------
@@ -504,7 +515,8 @@ void ResetCounter() {
 	sHandle->tmpCount.powerAbs = 0.0;
 	sHandle->tmpCount.nbAbsorbed = 0;
 	sHandle->tmpCount.nbDesorbed = 0;
-	sHandle->nbLeak = 0;
+	sHandle->distTraveledSinceUpdate = 0.0;
+	sHandle->nbLeakTotal = 0;
 	//memset(sHandle->wallHits,0,BOUNCEMAX * sizeof(llong));
 
 	for(j=0;j<sHandle->nbSuper;j++) {
@@ -546,8 +558,9 @@ void ResetSimulation() {
 	sHandle->counter.nbAbsorbed = 0;
 	sHandle->counter.nbDesorbed = 0;*/
 	sHandle->totalDesorbed=0;
+	sHandle->distTraveledSinceUpdate=0.0;
 	ResetCounter();
-	if( sHandle->acDensity ) memset(sHandle->acDensity,0,sHandle->nbAC*sizeof(ACFLOAT));
+	//if( sHandle->acDensity ) memset(sHandle->acDensity,0,sHandle->nbAC*sizeof(ACFLOAT));
 
 }
 
@@ -583,10 +596,10 @@ void RecordHit(int type,double dF,double dP) {
 
 void RecordLeakPos() {
 	// Record leak for debugging
-	sHandle->pLeak[sHandle->nbLeak].pos = sHandle->pPos;
-	sHandle->pLeak[sHandle->nbLeak].dir = sHandle->pDir;
-	sHandle->nbLeak++;
-	if((sHandle->nbLeak)>=NBHLEAK) sHandle->nbLeak = 0;
+	sHandle->pLeak[sHandle->nbLastLeak].pos = sHandle->pPos;
+	sHandle->pLeak[sHandle->nbLastLeak].dir = sHandle->pDir;
+	sHandle->nbLastLeak++;
+	if((sHandle->nbLastLeak)>=NBHLEAK) sHandle->nbLastLeak = 0;
 	RecordHit(HIT_REF,sHandle->dF,sHandle->dP);
 	RecordHit(LASTHIT,sHandle->dF,sHandle->dP);
 }

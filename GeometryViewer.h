@@ -69,6 +69,9 @@ typedef struct {
   double   camAngleOx; // Spheric coordinates
   double   camAngleOy; // Spheric coordinates
   double   camDist;    // Camera distance (or zoom in orthographic)
+
+  double   lightAngleOx; //Light direction
+  double   lightAngleOy; //Light direction
   VERTEX3D camOffset;  // Camera target offset
   int      performXY;  // Draw x,y,z coordinates when aligned with axis and orthographic
 

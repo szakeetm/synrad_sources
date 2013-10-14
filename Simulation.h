@@ -47,8 +47,9 @@ typedef struct {
   llong     *hits_MC;      // Number of MC hits
   double    *hits_flux;  //absorbed SR flux
   double    *hits_power; //absorbed SR power
-  double	 fullSizeArea; //Texture FULL element area
-  double   *inc;        //reciprocial of element area
+  double	 fullSizeInc; // 1/Texture FULL element area
+  double   *inc;        // reciprocial of element area
+  BOOL     *largeEnough; //cells that are NOT too small for autoscaling
   VHIT     *direction; // Direction field recording (average)
   char     *fullElem;  // Direction field recording (only on full element) (WHY???)
   llong    *profile_hits;   // MC hits
@@ -107,8 +108,8 @@ typedef struct {
 typedef struct {
 
   SHHITS tmpCount;            // Temporary number of hits (between 2 updates)
-  //SHHITS counter;             // Total number of hits (for the process)  //commented out because not used
-  int    nbLeak;              // Total number of unexpected leak (simulation error)
+  llong nbLeakTotal;          // Total number of unexpected leak (simulation error)
+  int    nbLastLeak;          // Last leaks
   int    nbHHit;              // Last hits
   llong  maxDesorption;       // Maximum number of desorption
   HIT    pHits[NBHHIT];       // Last hit history
@@ -152,10 +153,11 @@ typedef struct {
   VERTEX3D pPos;    // Position
   VERTEX3D pDir;    // Direction
   int      nbPHit;  // Number of hit (current particle)
-  double   distTraveled; //Distance traveled by particle before absorption
   double   dF;  //Flux carried by photon
   double   dP;  //Power carried by photon
   double energy; //energy of the generated photon
+  double   distTraveledCurrentParticle; //Distance traveled by particle before absorption
+  double   distTraveledSinceUpdate;
 
   /*
   //Process info (for calculating timeout)

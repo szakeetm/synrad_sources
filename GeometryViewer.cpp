@@ -62,6 +62,8 @@ GeometryViewer::GeometryViewer(int id):GLComponent(id) {
 	view.projMode = PERSPECTIVE_PROJ;
 	view.camAngleOx = 0.0;
 	view.camAngleOy = 0.0;
+	view.lightAngleOx = 0.0;
+	view.lightAngleOy = 0.0;
 	view.camDist = 100.0;
 	view.camOffset.x = 0.0;
 	view.camOffset.y = 0.0;
@@ -179,10 +181,10 @@ GeometryViewer::GeometryViewer(int id):GLComponent(id) {
 
 	GLfloat ambientLight[]  = { 0.0f, 0.0f, 0.0f, 1.0f   };
 	GLfloat diffuseLight[]  = { 0.8f, 0.8f, 0.8f, 0.0f   };
-	GLfloat specularLight[] = { 1.0f, 1.0f, 1.0f, 1.0f   };
+	GLfloat specularLight[] = { 0.8f, 0.8f, 0.8f, 1.0f   };
 
 	GLfloat ambientLight2[]  = { 0.0f, 0.0f, 0.0f, 1.0f   };
-	GLfloat diffuseLight2[]  = { 0.1f, 0.1f, 0.1f, 0.0f   };
+	GLfloat diffuseLight2[]  = { 0.15f, 0.15f, 0.15f, 0.0f   };
 	GLfloat specularLight2[] = { 0.3f, 0.3f, 0.3f, 0.3f   };
 
 	glLightfv(GL_LIGHT0, GL_AMBIENT,  ambientLight);
@@ -369,24 +371,25 @@ void GeometryViewer::ToFrontView() {
 //-----------------------------------------------------------------------------
 
 void GeometryViewer::UpdateLight() {
-	
+
 	float ratio = 1.0f;
 
 	// Update lights
 	glMatrixMode( GL_MODELVIEW );
 	glLoadIdentity();
-	
+
 	if( view.projMode==PERSPECTIVE_PROJ ) {
-		glRotated(ToDeg(-view.camAngleOx),1.0,0.0,0.0);
-		glRotated(ToDeg(-view.camAngleOy),0.0,1.0,0.0);
+		glRotated(ToDeg(-view.lightAngleOx),1.0,0.0,0.0);
+		glRotated(ToDeg(-view.lightAngleOy),0.0,1.0,0.0);
 		ratio = 1.0f;
 	} else {
-		glScaled(1.0,-1.0,1.0);
-		glRotated(ToDeg(-view.camAngleOx),1.0,0.0,0.0);
-		glRotated(ToDeg(-view.camAngleOy),0.0,1.0,0.0);
+		glScaled(1.0,-1.0,-1.0);
+		glRotated(ToDeg(-view.lightAngleOx),1.0,0.0,0.0);
+		glRotated(ToDeg(-view.lightAngleOy),0.0,1.0,0.0);
 		ratio = (float)view.camDist;
 	}
-	
+
+	//ratio*=1.4;
 
 
 	GLfloat d0[4],d1[4];
@@ -395,9 +398,14 @@ void GeometryViewer::UpdateLight() {
 	d0[2] = 0.8f * ratio;
 	d0[3] = 0.0;
 
-	d1[0] = 0.15f * ratio;
-	d1[1] = 0.15f * ratio;
-	d1[2] = 0.15f * ratio;
+	/*d0[0] = 0.8f;
+	d0[1] = 0.8f;
+	d0[2] = 0.8f;
+	d0[3] = 1.0;*/
+
+	d1[0] = 0.2f * ratio;
+	d1[1] = 0.2f * ratio;
+	d1[2] = 0.2f * ratio;
 	d1[3] = 0.0f;
 
 	if( showBack==1 ) {
@@ -411,7 +419,7 @@ void GeometryViewer::UpdateLight() {
 		glLightfv(GL_LIGHT1, GL_DIFFUSE,   d1);
 		glLightfv(GL_LIGHT1, GL_POSITION,       positionI);
 	}
-	
+
 }
 
 //-----------------------------------------------------------------------------
@@ -784,7 +792,7 @@ void GeometryViewer::DrawLinesAndHits() {
 
 				glDisable(GL_TEXTURE_2D);
 				glDisable(GL_LIGHTING);
-				glDisable(GL_BLEND);
+
 				glDisable(GL_CULL_FACE);
 
 				//Determine MAX dF value
@@ -1771,12 +1779,17 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 				else {
 					// Rotate view
 					double factor=GetWindow()->IsShiftDown()?0.05:1.0;
+					if(GetWindow()->IsAltDown()) {            //Lights direction rotation
+							view.lightAngleOx += diffY * angleStep*factor;
+							view.lightAngleOy += diffX * angleStep*factor;
+					} else {                                  //Camera angle rotation
 					if (view.projMode == PERSPECTIVE_PROJ) {
 						view.camAngleOx += diffY * angleStep*factor;
 						view.camAngleOy += diffX * angleStep*factor;
 					} else {
 						view.camAngleOx -= diffY * angleStep*factor;
 						view.camAngleOy -= diffX * angleStep*factor;
+					}
 					}
 					view.performXY=XYZ_NONE;
 					zoomBtn->SetEnabled(FALSE);

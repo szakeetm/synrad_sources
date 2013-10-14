@@ -114,8 +114,8 @@ public:
   int   RestoreDeviceObjects();
   int   InvalidateDeviceObjects();
   void  DetectOrientation();
-  float GetSmooth(int i,int j,double *texBuffer,float scaleF);
-  float GetSmooth(int i,int j,llong *texBuffer,float scaleF);
+  double GetSmooth(int i,int j,double *texBuffer,float scaleF);
+  double GetSmooth(int i,int j,llong *texBuffer,float scaleF);
   void  glVertex2u(double u,double v);
   void  ShiftVertex();
   void  RenderSelectedElem();

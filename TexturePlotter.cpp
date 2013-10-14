@@ -206,7 +206,7 @@ void TexturePlotter::UpdateTable() {
        
 		for(int i=0;i<w;i++) {
           for(int j=0;j<h;j++) {
-            double val=hits_flux[i+j*w]/no_scans/selFacet->mesh[i+j*w].area; //already divided by area
+            double val=hits_flux[i+j*w]/no_scans; //already divided by area
 				if (val>maxValue) {
 				maxValue=(float)val;
 				maxX=i;maxY=j;
@@ -230,7 +230,7 @@ void TexturePlotter::UpdateTable() {
 
         for(int i=0;i<w;i++) {
           for(int j=0;j<h;j++) {
-            double val=hits_power[i+j*w]/no_scans/selFacet->mesh[i+j*w].area;
+            double val=hits_power[i+j*w]/no_scans;
 				if (val>maxValue) {
 				maxValue=(float)val;
 				maxX=i;maxY=j;

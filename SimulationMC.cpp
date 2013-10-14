@@ -200,10 +200,11 @@ void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 	//for(i=0;i<BOUNCEMAX;i++) gHits->wallHits[i] += sHandle->wallHits[i];
 
 	// Leak
-	nb = gHits->nbLeak;
-	for(i=0;i<sHandle->nbLeak && i<NBHLEAK;i++)
+	nb = gHits->nbLastLeaks;
+	for(i=0;i<sHandle->nbLastLeak && i<NBHLEAK;i++)
 		gHits->pLeak[(i+nb) % NBHLEAK] = sHandle->pLeak[i];
-	gHits->nbLeak += sHandle->nbLeak;
+	gHits->nbLeakTotal += sHandle->nbLeakTotal;
+	gHits->nbLastLeaks += sHandle->nbLastLeak;
 
 	// HHit (Only prIdx 0)
 	if( prIdx==0 ) {
@@ -248,9 +249,10 @@ void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 						for(x=0;x<f->sh.texWidth;x++) {
 							int add = x + y*f->sh.texWidth;
 							llong val = shTexture[add] + f->hits_MC[add];
-							if(val>gHits->maxHit_MC)							
+							if(val>gHits->maxHit_MC)	//no cell size check for MC						
 								gHits->maxHit_MC=val;
-							if (val>0 && val<gHits->minHit_MC) gHits->minHit_MC=val;
+							if (val>0 && val<gHits->minHit_MC)
+								gHits->minHit_MC=val;
 							shTexture[add] = val;
 						}
 					}
@@ -260,10 +262,10 @@ void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 						for(x=0;x<f->sh.texWidth;x++) {
 							int add = x + y*f->sh.texWidth;
 							double val2 = shTexture2[add] + f->hits_flux[add];
-							if(val2>gHits->maxHit_flux) {
+							if(val2>gHits->maxHit_flux&& f->largeEnough[add]) {
 								gHits->maxHit_flux=val2;
 							}
-							if (val2>0.0 && val2<gHits->minHit_flux) gHits->minHit_flux=val2;
+							if (val2>0.0 && val2<gHits->minHit_flux&& f->largeEnough[add]) gHits->minHit_flux=val2;
 							shTexture2[add] = val2;
 						}
 					}
@@ -273,9 +275,9 @@ void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 						for(x=0;x<f->sh.texWidth;x++) {
 							int add = x + y*f->sh.texWidth;
 							double val3 = shTexture3[add] + f->hits_power[add];
-							if(val3>gHits->maxHit_power) 
+							if(val3>gHits->maxHit_power&& f->largeEnough[add]) 
 								gHits->maxHit_power=val3;
-							if (val3>0.0 && val3<gHits->minHit_power) gHits->minHit_power=val3; //disregard very small elements
+							if (val3>0.0 && val3<gHits->minHit_power&& f->largeEnough[add]) gHits->minHit_power=val3; //disregard very small elements
 							shTexture3[add] = val3;
 						}
 					}
@@ -362,7 +364,12 @@ void PerformTeleport(FACET *iFacet) {
 			}
 		}
 	}
-	if (!found) printf("Global Id %d not found",iFacet->sh.teleportDest-1);
+	if (!found) {
+		char err[128];
+		sprintf(err,"Teleport destination of facet %d not found (facet %d does not exist)",iFacet->globalId+1,iFacet->sh.teleportDest-1);
+		SetErrorSub(err);
+		return;
+	}
 
 	// Count this hit as a transparent pass
 	RecordHit(HIT_TELEPORT,sHandle->dF,sHandle->dP);
@@ -379,6 +386,13 @@ void PerformTeleport(FACET *iFacet) {
 	RecordHit(HIT_TELEPORT,sHandle->dF,sHandle->dP);
 	sHandle->lastHit = destination;
 
+	//Count hits on teleport facets
+	iFacet->sh.counter.nbAbsorbed++;
+	destination->sh.counter.nbDesorbed++;
+
+	iFacet->sh.counter.nbHit++;destination->sh.counter.nbHit++;
+	iFacet->sh.counter.fluxAbs+=sHandle->dF;destination->sh.counter.fluxAbs+=sHandle->dF;
+	iFacet->sh.counter.powerAbs+=sHandle->dP;destination->sh.counter.powerAbs+=sHandle->dP;
 }
 
 // -------------------------------------------------------------
@@ -403,7 +417,7 @@ BOOL SimulationMCStep(int nbStep) {
 			sHandle->pPos.x += d*sHandle->pDir.x;
 			sHandle->pPos.y += d*sHandle->pDir.y;
 			sHandle->pPos.z += d*sHandle->pDir.z;
-			sHandle->distTraveled += d;
+			sHandle->distTraveledCurrentParticle += d;
 
 			if (collidedFacet->sh.teleportDest) {
 				PerformTeleport(collidedFacet); 
@@ -495,6 +509,7 @@ BOOL SimulationMCStep(int nbStep) {
 
 			// Leak (simulation error)
 			RecordLeakPos();
+			sHandle->nbLeakTotal++;
 			if( !StartFromSource() )
 				// maxDesorption reached
 				return FALSE;
@@ -539,7 +554,7 @@ BOOL StartFromSource() {
 	if (!(sourceRegion->psimaxX>0.0 && sourceRegion->psimaxY>0.0)) SetErrorSub("psiMaxX or psiMaxY not positive. No photon can be generated");
 	GenPhoton photon=Radiate(pointIdLocal,sourceRegion);
 
-	sHandle->distTraveled=0.0;
+	sHandle->distTraveledCurrentParticle=0.0;
 	sHandle->dF=photon.dF;
 	sHandle->dP=photon.dP;
 	sHandle->energy=photon.energy;
@@ -669,10 +684,8 @@ void RecordHitOnTexture(FACET *f,double dF,double dP) {
 	int tv = (int)(f->colV * f->sh.texHeightD); 
 	int add = tu+tv*f->sh.texWidth;  
 	f->hits_MC[add]++;
-	/*f->hits_flux[add]+=dF*f->inc[add];
-	f->hits_power[add]+=dP*f->inc[add];*/
-	f->hits_flux[add]+=dF;
-	f->hits_power[add]+=dP;
+	f->hits_flux[add]+=dF*f->inc[add]; //normalized by area
+	f->hits_power[add]+=dP*f->inc[add]; //normalized by area
 }
 
 GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon from point number 'sourceId'
@@ -854,6 +867,7 @@ int Stick(FACET* collidedFacet) {
 	sHandle->tmpCount.nbAbsorbed++;
 	sHandle->tmpCount.fluxAbs+=sHandle->dF;
 	sHandle->tmpCount.powerAbs+=sHandle->dP;
+	sHandle->distTraveledSinceUpdate+=sHandle->distTraveledCurrentParticle;
 	//sHandle->counter.nbAbsorbed++;
 	//sHandle->counter.fluxAbs+=sHandle->dF;
 	//sHandle->counter.powerAbs+=sHandle->dP;
