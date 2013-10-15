@@ -142,6 +142,8 @@ public:
   BOOL bigDots;
   BOOL showDir;
   BOOL autoScaleOn;
+  BOOL showTP;
+  BOOL shadeLines;
   
   int dispNumHits; // displayed number of lines and hits
   int dispNumLeaks; // displayed number of leaks

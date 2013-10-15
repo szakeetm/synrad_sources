@@ -25,7 +25,7 @@ GNU General Public License for more details.
 
 extern GLApplication *theApp;
 
-static const char*specMode[] = {"Flux/scan","Power/scan"};
+static const char*specMode[] = {"Flux (ph/sec/mA/.1%)","Power (W/mA/.1%)"};
 
 SpectrumPlotter::SpectrumPlotter():GLWindow() {
 
@@ -121,7 +121,7 @@ void SpectrumPlotter::Refresh() {
 		if(f->sh.hasSpectrum) {
 			char tmp[128];
 			for (int mode=0;mode<2;mode++) { //Flux, power
-				sprintf(tmp,"F#%d %s spectrum",i+1,specMode[mode]);
+				sprintf(tmp,"F#%d %s",i+1,specMode[mode]);
 				specCombo->SetValueAt(nbSpec,tmp,i*2+mode);
 				specCombo->SetSelectedIndex(0);
 				nbSpec++;
@@ -260,7 +260,7 @@ void SpectrumPlotter::addView(int facet,int mode) {
 	if(nbView<32) {
 		Facet *f = geom->GetFacet(facet);
 		GLDataView *v = new GLDataView();
-		sprintf(tmp,"F#%d %s spectrum",facet+1,specMode[mode]);
+		sprintf(tmp,"F#%d %s",facet+1,specMode[mode]);
 		v->SetName(tmp);
 		v->userData1 = facet;
 		v->userData2 = mode;

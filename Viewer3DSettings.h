@@ -60,6 +60,8 @@ private:
   GLToggle      *hiddenVertex;
   GLToggle      *showMesh;
   GLToggle      *showDirection;
+  GLToggle      *showTP;
+  GLToggle      *shadeLines;
   GLToggle      *autoNorme;
   GLToggle      *centerNorme;
   GLToggle		*antiAliasing;
@@ -72,3 +74,4 @@ private:
 };
 
 #endif /* _VIEWER3DSETTINGSH_ */
+

@@ -27,8 +27,8 @@ GNU General Public License for more details.
 
 #define DOWN_MARGIN 25
 
-static const GLfloat position[]  = { -100000.0f, 100000.0f, -120000.0f, 1.0f }; //light1
-static const GLfloat positionI[] = {  100000.0f,-100000.0f,  120000.0f, 1.0f }; //light2
+static const GLfloat position[]  = { -0.3f, 0.3f, -1.0f, 0.0f }; //light1
+static const GLfloat positionI[] = {  1.0f,-0.5f,  -0.2f, 0.0f }; //light2
 
 extern GLApplication *theApp;
 
@@ -78,21 +78,23 @@ GeometryViewer::GeometryViewer(int id):GLComponent(id) {
 	showVertex = FALSE;
 	showNormal = FALSE;
 	showUV = FALSE;
-	showRule = TRUE;
+	showRule = FALSE;
 	showLeak = FALSE;
 	showHit = FALSE;
 	showLine = FALSE;
 	showVolume = FALSE;
 	showTexture = FALSE;
 	showHidden = FALSE;
-	showHiddenVertex = FALSE;
+	showHiddenVertex = TRUE;
 	showMesh = FALSE;
 	showDir = TRUE;
 	autoScaleOn = FALSE;
 	mode = MODE_SELECT;
 	showBack = SHOW_FRONTANDBACK;
 	showFilter = FALSE;
-	showColormap = FALSE;
+	showColormap = TRUE;
+	shadeLines = TRUE;
+	showTP = TRUE;
 	camDistInc = 1.0;
 	transStep = 1.0;
 	angleStep = 0.005;
@@ -105,7 +107,7 @@ GeometryViewer::GeometryViewer(int id):GLComponent(id) {
 	arrowLength = 1.0;
 	dispNumHits = 2048;
 	dispNumLeaks = 2048;
-	dispNumTraj = 100;
+	dispNumTraj = 500;
 
 	// GL Component default
 	SetBorder(BORDER_NONE);
@@ -279,9 +281,9 @@ void GeometryViewer::UpdateMouseCursor(int mode) { //Sets mouse cursor to action
 				else if (GetWindow()->IsShiftDown()) {
 					SetCursor(CURSOR_SELADD);
 				}
-				else if (GetWindow()->IsAltDown()) {
+				/*else if (GetWindow()->IsAltDown()) {
 					SetCursor(CURSOR_HAND);
-				}
+				}*/ //Disabling ALT-zoom for circular selection
 				else {
 					SetCursor(CURSOR_DEFAULT);
 				}
@@ -295,9 +297,10 @@ void GeometryViewer::UpdateMouseCursor(int mode) { //Sets mouse cursor to action
 				else if (GetWindow()->IsShiftDown()) {
 					SetCursor(CURSOR_VERTEX_ADD);
 				}
-				else if (GetWindow()->IsAltDown()) {
+				/*else if (GetWindow()->IsAltDown()) {
 					SetCursor(CURSOR_HAND);
-				}
+				}*/ //Disabling ALT-zoom for circular selection
+				
 				else {
 					SetCursor(CURSOR_VERTEX);
 				}
@@ -801,11 +804,12 @@ void GeometryViewer::DrawLinesAndHits() {
 				int generation_mode=(work->regions.size()>0)?work->regions[0].generation_mode:SYNGEN_MODE_FLUXWISE;
 
 				double opacityMax=0.0;
-				while(count<dispNumHits && pHits[count].type!=0) {
-					if (((generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)>opacityMax) opacityMax=(generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF;
-					count++;
+				if (shadeLines) {
+					while(count<dispNumHits && pHits[count].type!=0) {
+						if (((generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)>opacityMax) opacityMax=(generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF;
+						count++;
+					}
 				}
-
 				count=0;
 				
 
@@ -819,7 +823,8 @@ void GeometryViewer::DrawLinesAndHits() {
 						
 					}
 					else {
-						lineOpacity=(float)((generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)/(float)opacityMax;
+						if (shadeLines) lineOpacity=(float)((generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)/(float)opacityMax;
+						else lineOpacity=1.0;
 						glColor4f(0.5f,1.0f,0.5f,lineOpacity);
 					}
 					if (antiAliasing) {
@@ -833,32 +838,40 @@ void GeometryViewer::DrawLinesAndHits() {
 						if (pHits[count].type==HIT_TELEPORT) {
 							glVertex3d(pHits[count].pos.x , pHits[count].pos.y , pHits[count].pos.z);
 							glEnd();
-							if (!whiteBg) {
-								glColor3f(1.0f,0.7f,0.2f);
-							} else {
-								glColor3f(1.0f,0.0f,1.0f);
-							}
-							glPushAttrib(GL_ENABLE_BIT); 
+							if (showTP) {
+								if (!whiteBg) {
+									glColor3f(1.0f,0.7f,0.2f);
+								} else {
+									glColor3f(1.0f,0.0f,1.0f);
+								}
+								glPushAttrib(GL_ENABLE_BIT); 
 
-							glLineStipple(1, 0x0101);
-							glEnable(GL_LINE_STIPPLE);
-							glBegin(GL_LINE_STRIP);
-							glVertex3d(pHits[count].pos.x , pHits[count].pos.y , pHits[count].pos.z); //source point
-							count++;            
-							glVertex3d(pHits[count].pos.x , pHits[count].pos.y , pHits[count].pos.z);  //teleport dest.
-							glEnd();
-							glPopAttrib();
+								glLineStipple(1, 0x0101);
+								glEnable(GL_LINE_STIPPLE);
+								glBegin(GL_LINE_STRIP);
+								glVertex3d(pHits[count].pos.x , pHits[count].pos.y , pHits[count].pos.z); //source point
+								count++;            
+								glVertex3d(pHits[count].pos.x , pHits[count].pos.y , pHits[count].pos.z);  //teleport dest.
+								glEnd();
+								glPopAttrib();
 
-							if (whiteBg) { //whitebg
-								lineOpacity=1.0f;
-								glColor4f(0.2f,0.7f,0.2f,lineOpacity);
+								if (whiteBg) { //whitebg
+									lineOpacity=1.0f;
+									glColor4f(0.2f,0.7f,0.2f,lineOpacity);
 						
-							} else {
+								} else {
 
-								lineOpacity=(float)((generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)/(float)opacityMax;
-								glColor4f(0.5f,1.0f,0.5f,lineOpacity);
+									lineOpacity=(float)((generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)/(float)opacityMax;
+									glColor4f(0.5f,1.0f,0.5f,lineOpacity);
+								} 
+								glBegin(GL_LINE_STRIP);
+							} else {
+								
+								//glVertex3d(pHits[count].pos.x , pHits[count].pos.y , pHits[count].pos.z); //source point
+								count++;   
+								glBegin(GL_LINE_STRIP);
+								glVertex3d(pHits[count].pos.x , pHits[count].pos.y , pHits[count].pos.z);  //teleport dest.
 							}
-							glBegin(GL_LINE_STRIP);
 						}
 						/*if (pHits[count].type==HIT_DES) {
 							glEnd();glBegin(GL_LINE_STRIP); //pen up pen down for leaks
@@ -876,14 +889,11 @@ void GeometryViewer::DrawLinesAndHits() {
 						count++;
 					}
 					glEnd();
+					if (antiAliasing){glDisable(GL_LINE_SMOOTH);
+					glDisable(GL_BLEND);}
+				}
 
-				}
-				if (antiAliasing) {
-					//glDisable(GL_LINE_SMOOTH);
-					glDisable(GL_BLEND);//glLineWidth(	1.0f);
-				}
 			}
-
 			// Hit
 			if(showHit) {
 
@@ -893,7 +903,6 @@ void GeometryViewer::DrawLinesAndHits() {
 				glDisable(GL_CULL_FACE);
 
 				// Refl
-
 				float pointSize=(bigDots)?2.0f:1.0f;
 				glPointSize(pointSize);
 				if (whiteBg) { //whitebg
@@ -909,7 +918,7 @@ void GeometryViewer::DrawLinesAndHits() {
 				glEnd();
 
 				// Trans
-				pointSize=(bigDots)?4.0f:2.0f;
+				pointSize=(bigDots)?3.0f:2.0f;
 				glPointSize(pointSize);
 				glColor3f(0.5f,1.0f,1.0f);
 				glBegin(GL_POINTS);
@@ -919,18 +928,20 @@ void GeometryViewer::DrawLinesAndHits() {
 				glEnd();
 
 				// Teleport
-				pointSize=(bigDots)?4.0f:2.0f;
-				glPointSize(pointSize);
-				if (!whiteBg) {
-					glColor3f(1.0f,0.7f,0.2f);
-				} else {
-					glColor3f(1.0f,0.0f,1.0f);
+				if (showTP) {
+					//pointSize=(bigDots)?3.0f:2.0f;
+					glPointSize(pointSize);
+					if (!whiteBg) {
+						glColor3f(1.0f,0.7f,0.2f);
+					} else {
+						glColor3f(1.0f,0.0f,1.0f);
+					}
+					glBegin(GL_POINTS);
+					for(int i=0;i<dispNumHits;i++)
+						if(pHits[i].type==HIT_TELEPORT)
+							glVertex3d(pHits[i].pos.x , pHits[i].pos.y , pHits[i].pos.z);
+					glEnd();
 				}
-				glBegin(GL_POINTS);
-				for(int i=0;i<dispNumHits;i++)
-					if(pHits[i].type==HIT_TELEPORT)
-						glVertex3d(pHits[i].pos.x , pHits[i].pos.y , pHits[i].pos.z);
-				glEnd();
 
 				// Abs
 				glPointSize(pointSize);
@@ -1227,7 +1238,7 @@ void GeometryViewer::Zoom() {
 
 		switch(view.performXY) {
 		case XYZ_TOP: // TopView
-			dx = (0.5 - x0/(double)width)  * (view.vRight-view.vLeft);
+			dx = (-0.5 + x0/(double)width)  * (view.vRight-view.vLeft);
 			dz = ( 0.5 - y0/(double)(height-DOWN_MARGIN)) * (view.vBottom-view.vTop);
 			break;
 		case XYZ_SIDE: // Side View
@@ -1240,7 +1251,7 @@ void GeometryViewer::Zoom() {
 			break;
 		}
 
-		view.camOffset.x -= dx/view.camDist;
+		view.camOffset.x += dx/view.camDist;
 		view.camOffset.y += dy/view.camDist;
 		view.camOffset.z += dz/view.camDist;
 		view.camDist *= z;
@@ -1264,7 +1275,7 @@ void GeometryViewer::Paint() {
 	((GLComponent*)this)->GetBounds(&x,&y,&width,&height);
 	if (!whiteBg) { glBegin(GL_QUADS);
 
-	glColor3f(0.7f,0.4f,0.3f); //glColor3f(0.3f,0.5f,0.7f); //blue top
+	glColor3f(0.7f,0.4f,0.3f); //red top
 	glVertex2i(x,y);
 	glVertex2i(x+width,y);
 	glColor3f(0.05f,0.05f,0.05f); //grey bottom
@@ -1355,9 +1366,9 @@ void GeometryViewer::Paint() {
 	glLoadIdentity();
 	GLWindowManager::SetDefault();
 
-	// Draw selection rectangle
-	if( (draggMode==DRAGG_SELECT || draggMode==DRAGG_SELECTVERTEX || draggMode==DRAGG_ZOOM ) && (mode==MODE_SELECT || mode==MODE_SELECTVERTEX || mode==MODE_ZOOM) ) {
-
+	// Draw selection rectangle or circle
+	if( (draggMode==DRAGG_SELECT || draggMode==DRAGG_SELECTVERTEX ) && (mode==MODE_SELECT || mode==MODE_SELECTVERTEX || mode==MODE_ZOOM) ) {
+		BOOL circleMode=GetWindow()->IsAltDown();
 		GLushort dashPattern = 0xCCCC;
 
 		glDisable(GL_TEXTURE_2D);
@@ -1367,12 +1378,32 @@ void GeometryViewer::Paint() {
 		glColor3f(1.0f,0.8f,0.9f);
 		glEnable(GL_LINE_STIPPLE);
 		glLineStipple(1,dashPattern);
+		if (!circleMode) { //normal rectangle
 		glBegin(GL_LINE_LOOP);
 		_glVertex2i(selX1,selY1);
 		_glVertex2i(selX1,selY2);
 		_glVertex2i(selX2,selY2);
 		_glVertex2i(selX2,selY1);
 		glEnd();
+		} else { //draw circle
+			glBegin(GL_POINTS);
+			glVertex2i(selX1,selY1);
+			glEnd();
+			glBegin(GL_LINE_LOOP);
+			glVertex2i(selX1,selY1);
+			glVertex2i(selX2,selY2);
+			glEnd();
+			glBegin(GL_LINE_LOOP);
+			float DEG2RAD = (float)(3.14159/180.0);
+			float radius=sqrt(pow((float)(selX1-selX2),2)+pow((float)(selY1-selY2),2));
+
+			for (int i=0;i<=360;i+=2)    {
+				float degInRad = i*DEG2RAD;
+				glVertex2f(selX1+cos(degInRad)*radius,selY1+sin(degInRad)*radius);
+			}
+			glEnd();
+		}
+		
 		glDisable(GL_LINE_STIPPLE);
 
 	}
@@ -1641,7 +1672,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 				TranslateScale(2.0); //Zoom slower when SHIFT is pressed
 			}
 			else if (GetWindow()->IsCtrlDown()) {
-				TranslateScale(75.0); //Zoom slower when SHIFT is pressed
+				TranslateScale(75.0); //Zoom faster when CTRL is pressed
 			} else {
 				TranslateScale(20.0);
 			}
@@ -1736,15 +1767,15 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 
 		case DRAGG_SELECTVERTEX:
 		case DRAGG_SELECT:
-		case DRAGG_ZOOM:
+		//case DRAGG_ZOOM:
 			// Selection rectangle
-			if( GetWindow()->IsAltDown() ) {
+			/*if( GetWindow()->IsAltDown() ) {
 				draggMode=DRAGG_MOVE;
 			}
-			else{
+			else{*/
 				selX2 = mX;
 				selY2 = mY;
-			}
+			//}
 			break;
 
 		case DRAGG_MOVE:

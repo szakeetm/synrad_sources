@@ -475,7 +475,8 @@ void Geometry::AddToSelectionHistVertex(int f) {
 
 BOOL Geometry::AlreadySelectedVertex(int idx) {
   
-  // Check if the facet has already been selected
+
+  // Check if the vertex is in the selection history
   BOOL found = FALSE;
   int i = 0;
   while(!found && i<nbSelectedHistVertex) {
@@ -613,6 +614,7 @@ void Geometry::PaintSelectedVertices(BOOL hiddenVertex) {
     glDisable(GL_BLEND);
     glDisable(GL_CULL_FACE);
 	if (hiddenVertex) glDisable(GL_DEPTH_TEST);
+	else glEnable(GL_DEPTH_TEST);
     if (!whiteBg) glColor3f(1.0f,0.9f,0.2f);
 	else glColor3f(1.0f,0.5f,0.2f);
 

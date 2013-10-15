@@ -386,13 +386,13 @@ void PerformTeleport(FACET *iFacet) {
 	RecordHit(HIT_TELEPORT,sHandle->dF,sHandle->dP);
 	sHandle->lastHit = destination;
 
-	//Count hits on teleport facets
+	//Count hits on teleport facets (only TP source)
 	iFacet->sh.counter.nbAbsorbed++;
-	destination->sh.counter.nbDesorbed++;
+	//destination->sh.counter.nbDesorbed++;
 
-	iFacet->sh.counter.nbHit++;destination->sh.counter.nbHit++;
-	iFacet->sh.counter.fluxAbs+=sHandle->dF;destination->sh.counter.fluxAbs+=sHandle->dF;
-	iFacet->sh.counter.powerAbs+=sHandle->dP;destination->sh.counter.powerAbs+=sHandle->dP;
+	iFacet->sh.counter.nbHit++;//destination->sh.counter.nbHit++;
+	iFacet->sh.counter.fluxAbs+=sHandle->dF;//destination->sh.counter.fluxAbs+=sHandle->dF;
+	iFacet->sh.counter.powerAbs+=sHandle->dP;//destination->sh.counter.powerAbs+=sHandle->dP;
 }
 
 // -------------------------------------------------------------
