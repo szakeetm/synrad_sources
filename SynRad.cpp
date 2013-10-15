@@ -2,7 +2,7 @@
 File:        SynRad.cpp
 Description: Main application class (GUI management)
 Program:     SynRad
-Author:      Roberto KERSEVAN / Marton Szakacs
+Author:      Roberto KERSEVAN / Marton ADY
 Copyright:   E.S.R.F / CERN
 
 This program is free software; you can redistribute it and/or modify
@@ -2227,6 +2227,7 @@ void SynRad::LoadFile(char *fName) {
 	else strcpy(shortName,fullName);
 
 	try {
+		worker.ClearRegions();
 		worker.LoadGeometry(fullName);
 
 		Geometry *geom = worker.GetGeometry();

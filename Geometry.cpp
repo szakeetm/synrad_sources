@@ -2910,11 +2910,12 @@ PARfileList Geometry::InsertSYNGeom(FileReader *file,int *nbVertex,int *nbFacet,
 		for (int i=0;i<nbHHit2;i++) {
 			int idx = file->ReadInt();
 			//if( idx != i ) throw Error(file->MakeError("Wrong hit cache index !"));
-			file->ReadDouble();
-			file->ReadDouble();
-			file->ReadDouble();
-
-			file->ReadInt();
+			file->ReadDouble(); //x
+			file->ReadDouble(); //y
+			file->ReadDouble(); //z
+			file->ReadDouble(); //dF
+			file->ReadDouble(); //dP
+			file->ReadInt();    //type
 		}
 		file->ReadKeyword("}");
 	
@@ -3403,7 +3404,7 @@ bool Geometry::loadTextures(FileReader *file,GLProgress *prg,Dataport *dpHit,int
 }
 
 // -----------------------------------------------------------
-
+/*
 void Geometry::SaveGEO(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL saveSelected,LEAK *pleak,int *nbleakSave,HIT *pHits,int *nbHHitSave,BOOL crashSave) {
 
 	SynRad *mApp = (SynRad *)theApp;
@@ -3537,7 +3538,7 @@ void Geometry::SaveGEO(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL sav
 	ReleaseDataport(dpHit);
 
 }
-
+*/
 // -----------------------------------------------------------
 
 void Geometry::SaveTXT(FileWriter *file,Dataport *dpHit,BOOL saveSelected) {
@@ -4910,10 +4911,10 @@ void Geometry::SaveSYN(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL sav
 	else no_scans=(double)worker->nbDesorption/(double)worker->nbTrajPoints;
 	texCMin_MC = (!crashSave)?gHits->minHit_MC:0;
 	texCMax_MC = (!crashSave)?gHits->maxHit_MC:1;
-	texCMin_flux = (!crashSave)?gHits->minHit_flux/no_scans:0;
-	texCMax_flux = (!crashSave)?gHits->maxHit_flux/no_scans:1;
-	texCMin_power = (!crashSave)?gHits->minHit_power/no_scans:0;
-	texCMax_power = (!crashSave)?gHits->maxHit_power/no_scans:1;
+	texCMin_flux = (!crashSave)?gHits->minHit_flux:0;
+	texCMax_flux = (!crashSave)?gHits->maxHit_flux:1;
+	texCMin_power = (!crashSave)?gHits->minHit_power:0;
+	texCMax_power = (!crashSave)?gHits->maxHit_power:1;
 
 	prg->SetMessage("Writing geometry details...");
 	file->Write("version:");file->WriteInt(SYNVERSION,"\n");

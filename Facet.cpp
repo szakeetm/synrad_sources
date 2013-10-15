@@ -371,7 +371,7 @@ void Facet::SaveTXT(FileWriter *file) {
 }
 
 // -----------------------------------------------------------
-
+/*
 void Facet::SaveGEO(FileWriter *file,int idx) {
 
 	char tmp[256];
@@ -421,7 +421,7 @@ void Facet::SaveGEO(FileWriter *file,int idx) {
 
 	file->Write("}\n");
 }
-
+*/
 // -----------------------------------------------------------
 
 void Facet::DetectOrientation() {

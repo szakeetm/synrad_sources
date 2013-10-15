@@ -143,7 +143,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 	BOOL isSYN = _stricmp(ext,"syn")==0;
 	BOOL isSYN7Z = _stricmp(ext,"syn7z")==0;
 
-	if(isTXT || isGEO || isGEO7Z || isSYN || isSYN7Z || isSTR) {
+	if(isTXT || isSYN || isSYN7Z || isSTR) {
 
 		if (WAIT_TIMEOUT==WaitForSingleObject(compressProcessHandle,0)) {
 			GLMessageBox::Display("Compressing a previous save file is in progress. Wait until that finishes"
@@ -222,7 +222,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 				}
 				geom->tNbDesorptionMax = maxDesorption;
 				if( isTXT ) geom->SaveTXT(f,dpHit,saveSelected);
-				else if( isGEO || isGEO7Z ) {
+				/*else if( isGEO || isGEO7Z ) {
 					// Retrieve leak cache
 					int nbLeakSave,nbHHitSave;
 					LEAK pLeak[NBHLEAK];
@@ -231,7 +231,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 					HIT pHits[NBHHIT];
 					if (!crashSave) GetHHit(pHits,&nbHHitSave);
 					geom->SaveGEO(f,prg,dpHit,saveSelected,pLeak,&nbLeakSave,pHits,&nbHHitSave,crashSave);
-				} else if( isSYN || isSYN7Z ) {
+				}*/ else if( isSYN || isSYN7Z ) {
 					// Retrieve leak cache
 					int nbLeakSave,nbHHitSave;
 					LEAK pLeak[NBHLEAK];
@@ -261,11 +261,11 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 		}
 	} else {
 		SAFE_DELETE(f);
-		throw Error("SaveGeometry(): Invalid file extension [only geo,txt,str]");
+		throw Error("SaveGeometry(): Invalid file extension [only syn,txt,str]");
 	}
 
 	SAFE_DELETE(f);
-	if (ok && isGEO || isGEO7Z) {
+	/*if (ok && isGEO || isGEO7Z) {
 
 		if (compressSavedFiles) {
 			if (FileUtils::Exist("compress.exe")) { //compress GEO file to GEO7Z using 7-zip launcher "compress.exe"
@@ -282,7 +282,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 			SetFileName(fileName);
 			mApp->UpdateTitle();
 		}
-	} else if (ok && isSYN || isSYN7Z) {
+	} else*/ if (ok && isSYN || isSYN7Z) {
 
 		if (compressSavedFiles) {
 			if (FileUtils::Exist("compress.exe")) { //compress SYN file to SYN7Z using 7-zip launcher "compress.exe"

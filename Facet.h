@@ -86,7 +86,7 @@ public:
   void  LoadTXT(FileReader *file);
   void  SaveTXT(FileWriter *file);
   void  LoadGEO(FileReader *file,int version,int nbVertex);
-  void  SaveGEO(FileWriter *file,int idx);
+  //void  SaveGEO(FileWriter *file,int idx);
   void  LoadSYN(FileReader *file,int version,int nbVertex);
   void  SaveSYN(FileWriter *file,int idx,BOOL crashSave=FALSE);
   BOOL  IsCoplanar(Facet *f,double threshold);

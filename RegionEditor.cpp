@@ -1062,6 +1062,9 @@ void RegionEditor::ApplyChanges() {
 	// Hallelujah, the user filled out the form without any errors
 	// Let's apply his values
 
+	//Deselect point, if has selected
+	cr->selectedPoint=-1;
+
 	startPointXtext->GetNumber(&cr->startPoint.x);
 	startPointYtext->GetNumber(&cr->startPoint.y);
 	startPointZtext->GetNumber(&cr->startPoint.z);
