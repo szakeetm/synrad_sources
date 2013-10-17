@@ -170,7 +170,7 @@ void GLToolkit::SetCursor(int cursor) {
 
 // ---------------------------------------------------------------------
 
-SDL_Cursor *InitCursor(char *pngName,int tx,int ty) {
+SDL_Cursor *InitCursor(char *pngName,const int &tx,const int &ty) {
 
   int i, row, col;
   Uint8 data[4*32];
@@ -230,7 +230,7 @@ void GLToolkit::SetIcon32x32(char *pngName) {
 
 // ---------------------------------------------------------------------
 
-BOOL GLToolkit::RestoreDeviceObjects(int width,int height) {
+BOOL GLToolkit::RestoreDeviceObjects(const int &width,const int &height) {
 
   scrWidth = width;
   scrHeight = height;
@@ -322,13 +322,13 @@ void GLToolkit::GetScreenSize(int *width,int *height) {
 
 // ---------------------------------------------------------------
 
-void GLToolkit::SetViewport(GLVIEWPORT v) {
+void GLToolkit::SetViewport(const GLVIEWPORT &v) {
   GLToolkit::SetViewport(v.x,v.y,v.width,v.height);
 }
 
 // ---------------------------------------------------------------
 
-void GLToolkit::SetViewport(int x,int y,int width,int height) {
+void GLToolkit::SetViewport(const int &x,const int &y,const int &width,const int &height) {
 
   int vy = scrHeight - (y+height);
   int vx = x;
@@ -340,7 +340,7 @@ void GLToolkit::SetViewport(int x,int y,int width,int height) {
 
 #define TW 256.0f
 
-void GLToolkit::DrawButtonBack(int x,int y,int width,int height,int state) {
+void GLToolkit::DrawButtonBack(const int &x,const int &y,const int &width,const int &height,const int &state) {
 
   int w1 = width / 2;
   int w2 = width - w1;
@@ -415,7 +415,8 @@ void GLToolkit::DrawBar(int x,int y,int width,int height) {
 
 // ---------------------------------------------------------------
 
-void GLToolkit::DrawTextBack(int x,int y,int width,int height,int rBack, int gBack, int bBack) {
+void GLToolkit::DrawTextBack(const int &x,const int &y,const int &width,const int &height,
+							 const int &rBack, const int &gBack, const int &bBack) {
 
   int w1 = width / 2;
   int w2 = width - w1;
@@ -614,7 +615,8 @@ void GLToolkit::DrawLumBitmap(int x,int y,int width,int height,BYTE *buffer) {
 
 // ---------------------------------------------------------------------
 
-void GLToolkit::DrawBorder(int x,int y,int width,int height,BOOL shadow,BOOL iShadow,BOOL isEtched) {
+void GLToolkit::DrawBorder(const int &x,const int &y,const int &width,
+						   const int &height,const BOOL &shadow,const BOOL &iShadow,const BOOL &isEtched) {
 
   float rL = 1.0f;
   float gL = 1.0f;
@@ -720,7 +722,9 @@ void GLToolkit::DrawBorder(int x,int y,int width,int height,BOOL shadow,BOOL iSh
 
 // ---------------------------------------------------------------------
 
-void GLToolkit::DrawBox(int x,int y,int width,int height,int r,int g,int b,BOOL shadow,BOOL iShadow,BOOL isEtched) {
+void GLToolkit::DrawBox(const int &x,const int &y,const int &width,const int &height,
+	  const int &r,const int &g,const int &b,const BOOL &shadow,const BOOL &iShadow,
+	  const BOOL &isEtched) {
 
   float rN = (float)r / 255.0f;
   float gN = (float)g / 255.0f;
@@ -805,7 +809,7 @@ void GLToolkit::DrawPoly(int lineWidth,int dashStyle,int r,int g,int b,
 
 // -------------------------------------------
 
-BOOL GLToolkit::IsInsidePoly(int x,int y,int *PointX,int *PointY,int nbPts) {
+BOOL GLToolkit::IsInsidePoly(const int &x,const int &y,int *PointX,int *PointY,const int &nbPts) {
 
    // Fast method to check if a point is inside a polygon or not.
    // Works with convex and concav polys, orientation independant

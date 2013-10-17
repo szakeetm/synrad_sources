@@ -195,7 +195,7 @@ void GLFont2D::InvalidateDeviceObjects() {
 
 // -------------------------------------------
 
-void GLFont2D::SetTextColor(float r,float g,float b) {
+void GLFont2D::SetTextColor(const float &r,const float &g,const float &b) {
   rC = r;
   gC = g;
   bC = b;
@@ -203,7 +203,7 @@ void GLFont2D::SetTextColor(float r,float g,float b) {
 
 // -------------------------------------------
 
-void GLFont2D::DrawText(int cx,int cy,char *text,BOOL loadMatrix) {
+void GLFont2D::DrawText(const int &cx,const int &cy,char *text,const BOOL &loadMatrix) {
 
   int lgth = (int)strlen(text);
   if( lgth==0 ) return;

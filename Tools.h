@@ -17,8 +17,8 @@ public:
 	Vector();
 	Vector(const Vector &src);
 	Vector& operator=(const Vector &src);
-	Vector(double x,double y,double z);
-	~Vector();
+	Vector(const double &x,const double &y,const double &z);
+	//~Vector();
 	Vector Rotate(Vector Axis_dir,double alpha);
 	Vector Normalize();
 };
@@ -30,8 +30,8 @@ public:
 	Vector rho;
 	Trajectory_Point();
 	~Trajectory_Point();
-	double Critical_Energy(double gamma);
-	double dAlpha(double dL);
+	double Critical_Energy(const double &gamma);
+	double dAlpha(const double &dL);
 };
 
 class GenPhoton {
@@ -51,7 +51,7 @@ public:
 	double GetFrequency(int index);
 	double GetNormalized(int index);
 	double GetX(int index);
-	void Add(double x,double dY);
+	void Add(const double &x,const double &dY);
 	bool logarithmic;
 	double max_count,total_count;
 	void ResetCounts();
@@ -67,15 +67,15 @@ public:
 	PARfileList(const PARfileList &src);
 };
 
-double DotProduct(Vector a,Vector b);
-Vector Crossproduct(Vector v1,Vector v2);
-Vector ScalarMult(Vector v,double r);
-Vector Add(Vector v1,Vector v2);
-double Min(double a,double b);
-double Max(double a,double b);
-int Min(int a,int b);
-int Max(int a,int b);
-double Sqr(double x);
-double Gaussian(double sigma);
+double DotProduct(const Vector &a,const Vector &b);
+Vector Crossproduct(const Vector &v1,const Vector &v2);
+Vector ScalarMult(const Vector &v,const double &r);
+Vector Add(const Vector &v1,const Vector &v2);
+double Min(const double &a,const double &b);
+double Max(const double &a,const double &b);
+int Min(const int &a,const int &b);
+int Max(const int &a,const int &b);
+double Sqr(const double &x);
+double Gaussian(const double &sigma);
 
 #endif

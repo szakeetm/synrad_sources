@@ -67,7 +67,7 @@ public:
 	Region(const Region &src);
 	Region& operator=(const Region &src);
 
-	Vector B(Vector position); //returns the B field at position
+	Vector B(const Vector &position); //returns the B field at position
 };
 
 #endif

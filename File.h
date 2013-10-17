@@ -108,9 +108,9 @@ public:
   char *GetName();
 
   // Write function
-  void WriteLLong(llong v,char *sep=NULL);
-  void WriteInt(int v,char *sep=NULL);
-  void WriteDouble(double v,char *sep=NULL);
+  void WriteLLong(const llong &v,char *sep=NULL);
+  void WriteInt(const int &v,char *sep=NULL);
+  void WriteDouble(const double &v,char *sep=NULL);
   void Write(char *s);
 
 private:

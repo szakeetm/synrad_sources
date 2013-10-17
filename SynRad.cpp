@@ -67,7 +67,7 @@ extern int numCPU;
 #define MENU_FILE_INSERTGEO  140
 #define MENU_FILE_INSERTGEO_NEWSTR  141
 #define MENU_FILE_EXPORTMESH      15
-//#define MENU_FILE_EXPORT_DESORP 18
+#define MENU_FILE_EXPORT_DESORP 18
 
 #define MENU_FILE_EXPORTTEXTURE_AREA 151
 #define MENU_FILE_EXPORTTEXTURE_MCHITS 152
@@ -252,7 +252,7 @@ SynRad::SynRad()
 	regionInfo = NULL;
 	selectDialog = NULL;
 	moveFacet = NULL;
-	//exportDesorption = NULL;
+	exportDesorption = NULL;
 	mirrorFacet = NULL;
 	rotateFacet = NULL;
 	alignFacet = NULL;
@@ -293,7 +293,7 @@ int SynRad::OneTimeSceneInit()
 		viewer[i] = new GeometryViewer(i);
 		Add(viewer[i]);
 	}
-	modeSolo = FALSE;
+	modeSolo = TRUE;
 	//nbSt = 0;
 
 	LoadConfig();
@@ -309,7 +309,7 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("File")->Add("&Load",MENU_FILE_LOAD,SDLK_o,CTRL_MODIFIER);
 	menu->GetSubMenu("File")->Add("&Save",MENU_FILE_SAVE,SDLK_s,CTRL_MODIFIER);
 	menu->GetSubMenu("File")->Add("Save as",MENU_FILE_SAVEAS);
-	//menu->GetSubMenu("File")->Add("Export desorption file",MENU_FILE_EXPORT_DESORP);
+	menu->GetSubMenu("File")->Add("Export desorption file",MENU_FILE_EXPORT_DESORP);
 	menu->GetSubMenu("File")->Add(NULL); //separator
 	menu->GetSubMenu("File")->Add("&Insert geometry");
 	menu->GetSubMenu("File")->GetSubMenu("Insert geometry")->Add("&To current structure",MENU_FILE_INSERTGEO);
@@ -726,7 +726,7 @@ int SynRad::OneTimeSceneInit()
 		GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
 	}
 
-	AnimateViewerChange(0,TRUE);
+	//AnimateViewerChange(0,TRUE);
 
 	PlaceComponents();
 	SelectViewer(0);
@@ -1127,12 +1127,12 @@ void SynRad::ApplyFacetParams() {
 			if(rType>=0) {
 				f->sh.profileType = rType;
 				f->sh.isProfile = (rType!=REC_NONE);
-				if (profilePlotter) profilePlotter->Refresh();
-			}
+				
+			} if (profilePlotter) profilePlotter->Refresh();
 			if(specType>=0) {
 				f->sh.hasSpectrum = specType;
-				if (spectrumPlotter) spectrumPlotter->Refresh();
-			}
+				
+			} if (spectrumPlotter) spectrumPlotter->Refresh();
 			if(is2Sided>=0) f->sh.is2sided = is2Sided;
 			if(doSuperStruct) {
 				if (f->sh.superIdx != (superStruct-1)) {
@@ -1859,7 +1859,7 @@ int SynRad::RestoreDeviceObjects()
 	RVALIDATE_DLG(scaleFacet);
 	RVALIDATE_DLG(selectDialog);
 	RVALIDATE_DLG(moveFacet);
-	//RVALIDATE_DLG(exportDesorption);
+	RVALIDATE_DLG(exportDesorption);
 	RVALIDATE_DLG(mirrorFacet);
 	RVALIDATE_DLG(rotateFacet);
 	RVALIDATE_DLG(alignFacet);
@@ -1901,7 +1901,7 @@ int SynRad::InvalidateDeviceObjects()
 	IVALIDATE_DLG(scaleFacet);
 	IVALIDATE_DLG(selectDialog);
 	IVALIDATE_DLG(moveFacet);
-	//IVALIDATE_DLG(exportDesorption);
+	IVALIDATE_DLG(exportDesorption);
 	IVALIDATE_DLG(mirrorFacet);
 	IVALIDATE_DLG(rotateFacet);
 	IVALIDATE_DLG(alignFacet);
@@ -2607,14 +2607,14 @@ void SynRad::ProcessMessage(GLComponent *src,int message)
 		case MENU_FILE_EXPORTTEXTURE_POWERPERAREA:
 			ExportTexture(5);
 			break;
-		/*case MENU_FILE_EXPORT_DESORP:
+		case MENU_FILE_EXPORT_DESORP:
 			if (!geom->IsLoaded()) {
 				GLMessageBox::Display("No geometry loaded.","Error",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 			}
 			if( !exportDesorption ) exportDesorption = new ExportDesorption(geom,&worker);
 			exportDesorption->SetVisible(TRUE);
-			break;*/
+			break;
 		case MENU_FILE_SAVE:
 			if( geom->IsLoaded() ) SaveFile();
 			else GLMessageBox::Display("No geometry loaded.","No geometry",GLDLG_OK,GLDLG_ICONERROR);
@@ -2723,6 +2723,7 @@ void SynRad::ProcessMessage(GLComponent *src,int message)
 					if (vertexCoordinates) vertexCoordinates->Update();
 					if (facetCoordinates) facetCoordinates->UpdateFromSelection();
 					if (profilePlotter) profilePlotter->Refresh();
+					if (spectrumPlotter) spectrumPlotter->Refresh();
 					//if (pressureEvolution) pressureEvolution->Refresh();
 					//if (timewisePlotter) timewisePlotter->Refresh();
 					// Send to sub process
@@ -3014,7 +3015,8 @@ void SynRad::ProcessMessage(GLComponent *src,int message)
 					UpdateModelParams();
 					if (vertexCoordinates) vertexCoordinates->Update();
 					if (facetCoordinates) facetCoordinates->UpdateFromSelection();
-					if (profilePlotter) profilePlotter->Refresh();
+					if (profilePlotter) profilePlotter->Refresh();	
+					if (spectrumPlotter) spectrumPlotter->Refresh();
 					//if (pressureEvolution) pressureEvolution->Refresh();
 					//if (timewisePlotter) timewisePlotter->Refresh();
 					// Send to sub process
@@ -3286,6 +3288,8 @@ void SynRad::AnimateViewerChange(int next,BOOL init) {
 	int Height2 = fHeight/2-1;
 
 	// Reset to layout and make all visible
+
+	if (!init) {
 	for(int i=0;i<MAX_VIEWER;i++)  viewer[i]->SetVisible(TRUE);
 	viewer[0]->SetBounds(3       ,3        ,Width2,Height2);
 	viewer[1]->SetBounds(6+Width2,3        ,Width2,Height2);
@@ -3375,7 +3379,7 @@ void SynRad::AnimateViewerChange(int next,BOOL init) {
 		t1 = (double)SDL_GetTicks()/1000.0;
 	}
 
-	if (init) {
+	} else {
 		wnd->Paint();
 		viewer[0]->Paint();
 		int n = GLWindowManager::GetNbWindow();
@@ -3502,6 +3506,13 @@ void SynRad::BuildPipe(double ratio) {
 		viewer[i]->SetWorker(&worker);
 	startSimu->SetEnabled(TRUE);
 	ClearFacetParams();
+	if(profilePlotter) profilePlotter->Refresh();
+	if(spectrumPlotter) spectrumPlotter->Refresh();
+	if(texturePlotter) texturePlotter->Update(m_fTime,TRUE);
+		//if(outgassingMap) outgassingMap->Update(m_fTime,TRUE);
+	if(facetDetails) facetDetails->Update();
+	if(facetCoordinates) facetCoordinates->UpdateFromSelection();
+	if(vertexCoordinates) vertexCoordinates->Update();
 	if( nbFormula==0 ) {
 		GLParser *f = new GLParser();
 		f->SetExpression("A2/SUMDES");

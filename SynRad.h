@@ -34,7 +34,7 @@
 #include "ScaleVertex.h"
 #include "ScaleFacet.h"
 #include "MoveFacet.h"
-//#include "ExportDesorption.h"
+#include "ExportDesorption.h"
 #include "MirrorFacet.h"
 #include "RotateFacet.h"
 #include "AlignFacet.h"
@@ -305,7 +305,7 @@ public:
 	ScaleFacet       *scaleFacet;
 	SelectDialog     *selectDialog;
 	MoveFacet		 *moveFacet;
-	//ExportDesorption *exportDesorption;
+	ExportDesorption *exportDesorption;
 	MirrorFacet	     *mirrorFacet;
 	RotateFacet      *rotateFacet;
 	AlignFacet       *alignFacet;

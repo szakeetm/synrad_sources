@@ -5,6 +5,7 @@
 #include "Tools.h"
 #include "Random.h"
 #include "GLApp\GLTypes.h"
+#include <math.h>
 
 Distribution2D K_1_3_distribution=Generate_K_Distribution(1.0/3.0);
 Distribution2D K_2_3_distribution=Generate_K_Distribution(2.0/3.0);
@@ -50,7 +51,7 @@ Distribution2D& Distribution2D::operator= (const Distribution2D &copy_src) {
 	return *this;
 }
 
-double Distribution2D::InterpolateY(double x) {
+double Distribution2D::InterpolateY(const double &x) {
 	int inferior_index,superior_index;
 	double slope, overshoot;
 
@@ -67,7 +68,7 @@ double Distribution2D::InterpolateY(double x) {
 	return valuesY[inferior_index]+slope*overshoot;
 }
 
-double Distribution2D::InterpolateX(double y) {
+double Distribution2D::InterpolateX(const double &y) {
 	int inferior_index,superior_index;
 	double slope, overshoot;
 
@@ -85,7 +86,7 @@ double Distribution2D::InterpolateX(double y) {
 	return valuesX[inferior_index]+overshoot/slope;
 }
 
-double Distribution2D::Interval_Mean(double x1,double x2) { //average of an INTEGRAL of a distribution (differentiation included)
+double Distribution2D::Interval_Mean(const double &x1,const double &x2) { //average of an INTEGRAL of a distribution (differentiation included)
 	
 	int i1=integral_N_photons.findXindex(log(x1))+1;
 	int i2=integral_N_photons.findXindex(log(x2))+1;
@@ -125,7 +126,7 @@ double Distribution2D::Interval_Mean(double x1,double x2) { //average of an INTE
 	return temp3;
 }
 
-int Distribution2D::findXindex(double x) {
+int Distribution2D::findXindex(const double &x) {
 	int superior_index;
 	for (superior_index=0;valuesX[superior_index]<x && superior_index<size;superior_index++);
 	return superior_index;
@@ -442,7 +443,7 @@ double SYNGEN1(double x_min,double x_max,int mode) {
 	return exp(generated_energy);
 }
 
-double SYNRAD_FAST(double x) {
+double SYNRAD_FAST(const double &x) {
 /*
 { Adapted from H.H. Umstaetter, CERN/PS/SM/81-13. }
 { Works as g0ki(x,5/3,1), but about 2.5x faster }
@@ -497,7 +498,7 @@ double Y,Z,A,B,P,Q;
       B=   Z*A-B -0.0028763680;
       A=   Z*B-A +0.0623959136;
       P=0.5*Z*A-B+1.0655239080;
-      return P*sqrt(1.5707963268/x)/exp(x);
+      return P*sqrt(1.57079632679/x)/exp(x);
   }
   else return 0.0;
 }
@@ -526,7 +527,7 @@ void Material::LoadCSV(FileReader *file){
 	} while (!file->IsEof());
 }
 
-double Material::Interpolate(double energy,double angle) {
+double Material::Interpolate(const double &energy,const double &angle) {
 	int angleLowerIndex,energyLowerIndex;
 	for (angleLowerIndex=0;angleLowerIndex<((int)angleVals.size()-1)&&angle>angleVals[angleLowerIndex+1];angleLowerIndex++);
 	for (energyLowerIndex=0;energyLowerIndex<((int)energyVals.size()-1)&&energy>energyVals[energyLowerIndex+1];energyLowerIndex++);

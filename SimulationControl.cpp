@@ -324,7 +324,7 @@ BOOL LoadSimulation(Dataport *loader) {
 		sHandle->str[i].nbFacet = 0;
 	}
 	areaBuff = buffer;
-	buffer = (BYTE *)loader->buff;
+	//buffer = (BYTE *)loader->buff;
 
 	// Name
 	memcpy(sHandle->name,shGeom->name,64);
@@ -477,7 +477,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	printf("  Geom size: %d bytes\n",(int)(buffer-bufferStart));
 	printf("  Number of stucture: %d\n",sHandle->nbSuper);
 	printf("  Global Hit: %d bytes\n",sizeof(SHGHITS));
-	printf("  Facet Hit : %d bytes\n",sHandle->totalFacet*sizeof(SHHITS));
+	printf("  Facet Hit : %d bytes\n",sHandle->totalFacet*(int)sizeof(SHHITS));
 	printf("  Texture   : %d bytes\n",sHandle->textTotalSize);
 	printf("  Profile   : %d bytes\n",sHandle->profTotalSize);
 	printf("  Direction : %d bytes\n",sHandle->dirTotalSize);
@@ -583,7 +583,7 @@ BOOL StartSimulation(int mode) {
 
 // -------------------------------------------------------
 
-void RecordHit(int type,double dF,double dP) {
+void RecordHit(const int &type,const double &dF,const double &dP) {
 
 	sHandle->pHits[sHandle->nbHHit].pos = sHandle->pPos;
 	sHandle->pHits[sHandle->nbHHit].type = type;

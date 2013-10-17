@@ -366,7 +366,7 @@ void PerformTeleport(FACET *iFacet) {
 	}
 	if (!found) {
 		char err[128];
-		sprintf(err,"Teleport destination of facet %d not found (facet %d does not exist)",iFacet->globalId+1,iFacet->sh.teleportDest-1);
+		sprintf(err,"Teleport destination of facet %d not found (facet %d does not exist)",iFacet->globalId+1,iFacet->sh.teleportDest);
 		SetErrorSub(err);
 		return;
 	}
@@ -453,7 +453,7 @@ BOOL SimulationMCStep(int nbStep) {
 								//Bending surface base vectors
 								nU_rotated=nU_facet.Rotate(nV_facet,thetaOffset);
 								N_rotated=N_facet.Rotate(nV_facet,thetaOffset);
-								nU_rotated=nU_facet.Rotate(nU_facet,thetaOffset); //check if correct
+								nU_rotated=nU_rotated.Rotate(nU_facet,phiOffset); //check if correct
 								nV_rotated=nV_facet.Rotate(nU_facet,phiOffset);
 								N_rotated=N_rotated.Rotate(nU_facet,phiOffset);
 
@@ -848,7 +848,7 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 	return result;
 }
 
-double Gaussian(double sigma) {
+double Gaussian(const double &sigma) {
 	//Generates a random number following the Gaussian distribution around 0 with 'sigma' standard deviation
 	double v1,v2,r,fac;
 	do {

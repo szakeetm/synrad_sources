@@ -28,20 +28,20 @@ public:
 	Distribution2D::Distribution2D(const Distribution2D &copy_src); //copy constructor
 	Distribution2D& operator= (const Distribution2D & other); //assignment op
 	~Distribution2D();
-	double InterpolateY(double x); //interpolates the Y value corresponding to X (allows extrapolation)
-	double InterpolateX(double y); //(no extrapolation, first/last X values are the output limits)
+	double InterpolateY(const double &x); //interpolates the Y value corresponding to X (allows extrapolation)
+	double InterpolateX(const double &y); //(no extrapolation, first/last X values are the output limits)
 	double *valuesX,*valuesY;
-	int findXindex(double x);
+	int findXindex(const double &x);
 	int size;
 	double average,average1;
-	double Interval_Mean(double x1,double x2);
+	double Interval_Mean(const double &x1,const double &x2);
 };
 
 class Material { //2-variable interpolation
 public:
 	//ReflectivityTable(const ReflectivityTable &copy_src); //copy constructor
 	//ReflectivityTable& operator= (const ReflectivityTable & other); //assignment op
-	double Interpolate(double energy,double angle);
+	double Interpolate(const double &energy,const double &angle);
 	std::vector<double> energyVals,angleVals; //energy and angle values (table headers)
 	std::vector<std::vector<double>> reflVals; //actual table values
 	void LoadCSV(FileReader *file);
@@ -55,7 +55,7 @@ public:
 };
 
 double g0ki(double x, double order, int kind);
-double SYNRAD_FAST(double x);
+double SYNRAD_FAST(const double &x);
 double Gi(double x,int order);
 double H(double x, int order);
 double calc_polarization_percentage(double energy,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);

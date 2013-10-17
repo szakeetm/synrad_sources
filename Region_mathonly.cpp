@@ -7,7 +7,7 @@
 #include <string>
 
 
-Vector Region::B(Vector position) {
+Vector Region::B(const Vector &position) {
 	Vector result;
 	//Creating references to components
 	double* result_ptr[3]={&result.x,&result.y,&result.z};

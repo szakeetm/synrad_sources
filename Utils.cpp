@@ -136,7 +136,7 @@ void Rotate(VERTEX3D *P, VERTEX3D AXIS_P0, VERTEX3D AXIS_DIR, double theta) {
 	P->z=(c*(u*u+v*v)-w*(a*u+b*v+precalc1))*(1-costh)+z*costh+(-b*u+a*v-v*x+u*y)*sinth;
 }
 
-double Gaussian(double sigma) {
+double Gaussian(const double &sigma) {
 	double v1,v2,r,fac;
 	do {
 		v1=2.0*rnd()-1.0;
@@ -439,7 +439,7 @@ int AddNode(POLYGRAPH *g,VERTEX2D *p) {
 
 // -----------------------------------------------------------
 
-int AddArc(POLYGRAPH *g,int i1,int i2,int source) {
+int AddArc(POLYGRAPH *g,const int &i1,const int &i2,const int &source) {
 
   // Add an arc to the polygraph and returns its id
 
@@ -479,7 +479,7 @@ void CutArc(POLYGRAPH *g,int idx,int ni) {
 
 // -----------------------------------------------------------
 
-void InsertEdge(POLYGRAPH *g,VERTEX2D *p1,VERTEX2D *p2,int a0) {
+void InsertEdge(POLYGRAPH *g,VERTEX2D *p1,VERTEX2D *p2,const int &a0) {
 
   // Insert a polygon edge in the polygraph, a0 = first arc to be checked
 
@@ -609,6 +609,7 @@ void CreateGraph(POLYGRAPH *g,POLYGON *inP1,POLYGON *inP2,int *visible2) {
         {
           g->arcs[i].s = 0;
           g->arcs[j].s = 0;
+		  //found=TRUE??
         }
         if(!found) j++;
       }

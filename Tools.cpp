@@ -7,7 +7,7 @@
 #define SAFE_FREE(x) if(x) { free(x);x=NULL; }
 #define SAFE_DELETE(x) if(x) { delete x;x=NULL; }
 
-double DotProduct(Vector a,Vector b) {
+double DotProduct(const Vector &a,const Vector &b) {
 	double result=0.0;
 	result+=a.x*b.x;
 	result+=a.y*b.y;
@@ -15,7 +15,7 @@ double DotProduct(Vector a,Vector b) {
 	return result;
 }
 
-Vector Crossproduct(Vector v1,Vector v2) {
+Vector Crossproduct(const Vector &v1,const Vector &v2) {
 	Vector result;
 	result.x = (v1.y)*(v2.z) - (v1.z)*(v2.y);
 	result.y = (v1.z)*(v2.x) - (v1.x)*(v2.z);
@@ -23,7 +23,7 @@ Vector Crossproduct(Vector v1,Vector v2) {
 	return result;
 }
 
-Vector ScalarMult(Vector v,double r) {
+Vector ScalarMult(const Vector &v,const double &r) {
   Vector result;
   result.x =v.x* r;
   result.y =v.y* r;
@@ -31,7 +31,7 @@ Vector ScalarMult(Vector v,double r) {
   return result;
 }
 
-Vector Add(Vector v1,Vector v2) {
+Vector Add(const Vector &v1,const Vector &v2) {
   Vector result;
   result.x = (v1.x) + (v2.x);
   result.y = (v1.y) + (v2.y);
@@ -39,31 +39,31 @@ Vector Add(Vector v1,Vector v2) {
   return result;
 }
 
-double Min(double a,double b){
+double Min(const double &a,const double &b){
 	return (a>b)?b:a;
 }
 
-double Max(double a,double b){
+double Max(const double &a,const double &b){
 	return (a>b)?a:b;
 }
 
-int Min(int a,int b){
+int Min(const int &a,const int &b){
 	return (a>b)?b:a;
 }
 
-int Max(int a,int b){
+int Max(const int &a,const int &b){
 	return (a>b)?a:b;
 }
 
-double Sqr(double x) {
-	return pow(x,2);
+double Sqr(const double &x) {
+	return x*x;
 }
 
 double Vector::Norme() {
 	return sqrt(DotProduct(*this,*this));
 }
 
-Vector::Vector(double x,double y,double z) {
+Vector::Vector(const double &x,const double &y,const double &z) {
 	this->x=x;
 	this->y=y;
 	this->z=z;
@@ -72,8 +72,8 @@ Vector::Vector(double x,double y,double z) {
 Vector::Vector() {
 }
 
-Vector::~Vector() {
-}
+/*Vector::~Vector() {
+}*/
 
 Vector::Vector(const Vector &src){
 	this->x=src.x;
@@ -88,13 +88,13 @@ Vector& Vector::operator=(const Vector &src){
 	return *this;
 }
 
-double Trajectory_Point::Critical_Energy(double gamma) {
+double Trajectory_Point::Critical_Energy(const double &gamma) {
 	double crit_en=2.959E-5*pow(gamma,3)/rho.Norme();
 	//if (!(crit_en==crit_en)) __debugbreak();
 	return crit_en;
 }
 
-double Trajectory_Point::dAlpha(double dL) {
+double Trajectory_Point::dAlpha(const double &dL) {
 	return dL/rho.Norme();
 }
 
@@ -147,7 +147,7 @@ Histogram::~Histogram() {
 	free(counts);
 }
 
-void Histogram::Add(double x,double dY) {
+void Histogram::Add(const double &x,const double &dY) {
 	if (x<max && x>=min) {
 		int bin;
 		if (!logarithmic) {
@@ -190,8 +190,10 @@ void Histogram::ResetCounts(){
 
 PARfileList::PARfileList(int N){
 	fileNames=new char*[N];
-	for (int i=0;i<N;i++)
+	for (int i=0;i<N;i++) {
 		fileNames[i]=new char[512];
+		*(fileNames[i])=NULL;
+	}
 	nbFiles=N;
 }
 

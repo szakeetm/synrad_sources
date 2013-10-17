@@ -262,7 +262,7 @@ lab:
 
 // -----------------------------------------------------------
 
-void ProfileFacet(FACET *f,double dF,double dP,double E) {
+void ProfileFacet(FACET *f,const double &dF,const double &dP,const double &E) {
 
   int pos;
 
@@ -531,7 +531,7 @@ void IntersectTree(struct AABBNODE *node) {
                 // This check could be avoided on rectangular facet.
                 if( IsInFacet(f,u,v) ) {
 
-					if( (f->sh.opacity == 1.0) || (rnd()<f->sh.opacity) ) {
+					if( (f->sh.opacity > 0.999999) || (rnd()<f->sh.opacity) ) {
 
 						// Hard hit
 						if( d < intMinLgth ) {
@@ -569,7 +569,7 @@ void IntersectTree(struct AABBNODE *node) {
 
 }
 
-BOOL IsInFacet(FACET *f,double u,double v) {
+BOOL IsInFacet(FACET *f,const double &u,const double &v) {
 
    // 2D polygon "is inside" solving
    // Using the "Jordan curve theorem" (we intersect in v direction here)

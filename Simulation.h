@@ -207,7 +207,7 @@ BOOL StartSimulation(int mode);
 void ResetSimulation();
 BOOL SimulationRun();
 BOOL SimulationMCStep(int nbStep);
-void RecordHit(int type,double dF,double dP);
+void RecordHit(const int &type,const double &dF,const double &dP);
 void RecordLeakPos();
 BOOL StartFromSource();
 void ComputeSourceArea();
@@ -229,11 +229,10 @@ void DestroyAABB(struct AABBNODE *node);
 void IntersectTree(struct AABBNODE *node);
 BOOL Intersect(VERTEX3D *rayPos,VERTEX3D *rayDir,double *dist,FACET **iFact,FACET *last);
 BOOL Visible(VERTEX3D *c1,VERTEX3D *c2,FACET *f1,FACET *f2);
-void ProfileFacet(FACET *f,double dF,double dP,double E);
-BOOL IsInFacet(FACET *f,double u,double v);
+void ProfileFacet(FACET *f,const double &dF,const double &dP,const double &E);
+BOOL IsInFacet(FACET *f,const double &u,const double &v);
 double GetTick();
 long   GetHitsSize();
 GenPhoton Radiate(int sourceId,Region *reg);
-double Gaussian(double sigma);
 
 #endif /* _SIMULATIONH_ */

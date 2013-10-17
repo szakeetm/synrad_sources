@@ -365,7 +365,7 @@ void Worker::ExportRegionPoints(char *fileName,GLProgress *prg,int regionId,int 
 	}
 }
 
-/*void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr) {
+void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr) {
 
 	// Read a file
 	FILE *f = NULL;
@@ -391,7 +391,7 @@ void Worker::ExportRegionPoints(char *fileName,GLProgress *prg,int regionId,int 
 	geom->SaveDesorption(f,dpHit,selectedOnly,mode,eta0,alpha,distr);
 	fclose(f);
 
-}*/
+}
 
 // -------------------------------------------------------------
 

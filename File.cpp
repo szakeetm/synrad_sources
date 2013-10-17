@@ -412,13 +412,13 @@ FileWriter::~FileWriter() {
   fclose(file);
 }
 
-void FileWriter::WriteInt(int v,char *sep) {
+void FileWriter::WriteInt(const int &v,char *sep) {
   if( !fprintf(file,"%d",v) )
     throw Error("Error while writing to file");
   if(sep) fprintf(file,"%s",sep);
 }
 
-void FileWriter::WriteLLong(llong v,char *sep) {
+void FileWriter::WriteLLong(const llong &v,char *sep) {
 #ifdef WIN32
   if( !fprintf(file,"%I64d",v) )
     throw Error("Error while writing to file");
@@ -428,7 +428,7 @@ void FileWriter::WriteLLong(llong v,char *sep) {
   if(sep) fprintf(file,"%s",sep);
 }
 
-void FileWriter::WriteDouble(double v,char *sep) {
+void FileWriter::WriteDouble(const double &v,char *sep) {
   //if(v>=0.0) fprintf(file," ");
 	fprintf(file," ");
   if( !fprintf(file,"%.14E",v) )

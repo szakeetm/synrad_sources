@@ -45,7 +45,7 @@ public:
   // Export textures (throws Error)
   void ExportTextures(char *fileName,int mode,BOOL askConfirm=TRUE,BOOL saveSelected=FALSE);
   void ExportRegionPoints(char *fileName,GLProgress *prg,int regionId,int exportFrequency,BOOL doFullScan);
-  //void ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr);
+  void ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr);
 
   // Save a geometry using the current file name (throws Error)
   void SaveGeometry(GLProgress *prg);
