@@ -112,7 +112,14 @@ std::string execCMD(char* cmd);
 
 void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL saveSelected,BOOL autoSave,BOOL crashSave) {
 
-	if (needsReload&&(!crashSave)) RealReload();
+	try {
+		if (needsReload&&(!crashSave)) RealReload();
+	} catch (Error &e) {
+		char errMsg[512];
+		sprintf(errMsg,"Error reloading worker. Trying crash save:\n%s",e.GetMsg());
+		GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
+		crashSave=TRUE;
+	} 
 	char tmp[10000]; //compress.exe command line
 	char fileNameWithGeo[2048]; //file name with .geo extension (instead of .geo7z)
 	char fileNameWithGeo7z[2048];
@@ -387,8 +394,14 @@ void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double e
 	}
 	if (!ok) return;
 	f=fopen(fileName,"w");
+	try {
 	if (needsReload) RealReload();
 	geom->SaveDesorption(f,dpHit,selectedOnly,mode,eta0,alpha,distr);
+	} catch (Error &e) {
+		char errMsg[512];
+		sprintf(errMsg,"Save error:\n%s",e.GetMsg());
+		GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
+	}
 	fclose(f);
 
 }
@@ -1018,12 +1031,13 @@ void Worker::StartStop(float appTime,int mode) {
 	} else {
 
 		// Start
-		if (needsReload) RealReload();
-		startTime = appTime;
-		running = TRUE;
-		calcAC = FALSE;
-		this->mode = mode;
 		try {
+			if (needsReload) RealReload();
+			startTime = appTime;
+			running = TRUE;
+			calcAC = FALSE;
+			this->mode = mode;
+		
 			Start();
 		} catch(Error &e) {
 			running = FALSE;
@@ -1195,7 +1209,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 	int loadSize = geom->GetGeometrySize(&regions,&materials);
 	Dataport *loader = CreateDataport(loadDpName,loadSize);
 	if( !loader )
-		throw Error("Failed to create 'loader' dataport");
+		throw Error("Failed to create 'loader' dataport.\nMost probably out of memory.\nReduce number of subprocesses or texture size.");
 	progressDlg->SetMessage("Accessing dataport...");
 	AccessDataportTimed(loader,3000+nbProcess*(int)((double)loadSize/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");

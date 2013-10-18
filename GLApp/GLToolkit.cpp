@@ -1147,5 +1147,6 @@ void GLToolkit::CheckGLErrors(char *compname) {
 			 savedOnGLError = TRUE;
 		 }*/
 		 throw Error(tmp);
+		 //return;
        }
 }

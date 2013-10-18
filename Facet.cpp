@@ -549,6 +549,7 @@ void Facet::SetTexture(double width,double height,BOOL useMesh) {
 		if( sh.countDirection ) {
 			int dirSize = sh.texWidth*sh.texHeight*sizeof(VHIT);
 			dirCache = (VHIT *)malloc(dirSize);
+			if (!dirCache) throw Error("Direction texture memory alloc failed. Out of memory.");
 			memset(dirCache,0,dirSize);
 		}
 
@@ -573,7 +574,13 @@ void Facet::glVertex2u(double u,double v) {
 void Facet::BuildMesh() {
 
 	mesh = (SHELEM *)malloc(sh.texWidth * sh.texHeight * sizeof(SHELEM));
+	if (!mesh) {
+		throw Error("Couldn't allocate memory for texture mesh.");
+	}
 	meshPts = (MESH *)malloc(sh.texWidth * sh.texHeight * sizeof(MESH));
+	if (!meshPts) {
+		throw Error("Couldn't allocate memory for texture mesh points.");
+	}
 	hasMesh = TRUE;
 	memset(mesh,0,sh.texWidth * sh.texHeight * sizeof(SHELEM));
 	memset(meshPts,0,sh.texWidth * sh.texHeight * sizeof(MESH));
@@ -589,6 +596,9 @@ void Facet::BuildMesh() {
 	int    nbv;
 
 	P1.pts = (VERTEX2D *)malloc(4*sizeof(VERTEX2D));
+	if (!P1.pts) {
+		throw Error("Couldn't allocate memory for texture mesh points.");
+	}
 	P1.nbPts = 4;
 	P1.sign = 1.0;
 	P2.nbPts = sh.nbIndex;
@@ -656,6 +666,9 @@ void Facet::BuildMesh() {
 						// Mesh coordinates
 						meshPts[nbElem].nbPts = nbv;
 						meshPts[nbElem].pts = (VERTEX2D *)malloc(nbv * sizeof(VERTEX2D));
+						if (!meshPts[nbElem].pts) {
+							throw Error("Couldn't allocate memory for texture mesh points.");
+						}
 						for(int n=0;n<nbv;n++) {
 							meshPts[nbElem].pts[n].u = vList[2*n];
 							meshPts[nbElem].pts[n].v = vList[2*n+1];
@@ -678,6 +691,9 @@ void Facet::BuildMesh() {
 				// Mesh coordinates
 				meshPts[nbElem].nbPts = 4;
 				meshPts[nbElem].pts = (VERTEX2D *)malloc(4 * sizeof(VERTEX2D));
+				if (!meshPts[nbElem].pts) {
+					throw Error("Couldn't allocate memory for texture mesh points.");
+				}
 				meshPts[nbElem].pts[0].u = u0;
 				meshPts[nbElem].pts[0].v = v0;
 				meshPts[nbElem].pts[1].u = u1;
@@ -953,7 +969,7 @@ DWORD Facet::GetNbCellForRatio(double ratio) {
 DWORD Facet::GetTexRamSize() {
 
 	int size = 2*sizeof(double)+sizeof(llong);
-	if(mesh) size += sizeof(SHELEM);
+	if(mesh) size += sizeof(SHELEM)+sizeof(MESH);
 	if(sh.countDirection) size += sizeof(VHIT);
 	return (sh.texWidth*sh.texHeight*size);
 
@@ -975,7 +991,7 @@ DWORD Facet::GetTexRamSizeForRatio(double ratio,BOOL useMesh,BOOL countDir) {
 		int iwidth  = (int)ceil(width);
 		int iheight = (int)ceil(height);
 		int size = 2*sizeof(double)+sizeof(llong);
-		if(useMesh) size += sizeof(SHELEM);
+		if(useMesh) size += sizeof(SHELEM)+sizeof(MESH);
 		if(countDir) size += sizeof(VHIT);
 		return iwidth * iheight * size;
 
@@ -1052,8 +1068,8 @@ double Facet::GetSmooth(const int &i,const int &j,llong *texBuffer,const float &
 void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans,BOOL useColorMap,BOOL doLog,BOOL normalize) {
 	min=min*no_scans;
 	max=max*no_scans;
-	int size  = sh.texWidth*sh.texHeight;
-	int tSize = texDimW*texDimH;
+	size_t size  = sh.texWidth*sh.texHeight;
+	size_t tSize = texDimW*texDimH;
 	if( size==0 || tSize==0 ) return;
 
 	float scaleFactor = 1.0f;
@@ -1080,6 +1096,7 @@ void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans
 		}
 
 		int *buff32 = (int *)malloc(tSize*4);
+		if (!buff32) throw Error("Cannot allocate memory for texture buffer");
 		memset(buff32,0,tSize*4);
 		for(int j=0;j<sh.texHeight;j++) {
 			for(int i=0;i<sh.texWidth;i++) {
@@ -1150,6 +1167,7 @@ void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans
 		}
 
 		unsigned char *buff8 = (unsigned char *)malloc(tSize*sizeof(unsigned char));
+		if (!buff8) throw Error("Cannot allocate memory for texture buffer");
 		memset(buff8,0,tSize*sizeof(unsigned char));
 		float fmin = (float)min;
 
@@ -1204,8 +1222,8 @@ void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans
 
 void Facet::BuildTexture(llong *texBuffer,llong min,llong max,BOOL useColorMap,BOOL doLog) {
 
-	int size  = sh.texWidth*sh.texHeight;
-	int tSize = texDimW*texDimH;
+	size_t size  = sh.texWidth*sh.texHeight;
+	size_t tSize = texDimW*texDimH;
 	if( size==0 || tSize==0 ) return;
 
 	float scaleFactor = 1.0f;
@@ -1232,6 +1250,7 @@ void Facet::BuildTexture(llong *texBuffer,llong min,llong max,BOOL useColorMap,B
 		}
 
 		int *buff32 = (int *)malloc(tSize*4);
+		if (!buff32) throw Error("Cannot allocate memory for texture buffer");
 		memset(buff32,0,tSize*4);
 		for(int j=0;j<sh.texHeight;j++) {
 			for(int i=0;i<sh.texWidth;i++) {
@@ -1302,6 +1321,7 @@ void Facet::BuildTexture(llong *texBuffer,llong min,llong max,BOOL useColorMap,B
 		}
 
 		unsigned char *buff8 = (unsigned char *)malloc(tSize*sizeof(unsigned char));
+		if (!buff8) throw Error("Cannot allocate memory for texture buffer");
 		memset(buff8,0,tSize*sizeof(unsigned char));
 		float fmin = (float)min;
 

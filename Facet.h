@@ -52,7 +52,7 @@ public:
   int      *indices;      // Indices (Reference to geometry vertex)
   VERTEX2D *vertices2;    // Vertices (2D plane space, UV coordinates)
   MESH     *meshPts;      // Mesh poly
-  int       nbElem;       // Number of mesh elem
+  size_t       nbElem;       // Number of mesh elem
 
   // Normalized plane equation (ax + by + cz + d = 0)
   double a;
