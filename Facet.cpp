@@ -998,7 +998,7 @@ DWORD Facet::GetTexRamSizeForRatio(double ratio,BOOL useMesh,BOOL countDir) {
 	}                                             \
 	}
 
-double Facet::GetSmooth(int i,int j,double *texBuffer,float scaleF) {
+double Facet::GetSmooth(const int &i,const int &j,double *texBuffer,const float &scaleF) {
 
 	double W = 0.0;
 	double sum=0.0;
@@ -1021,7 +1021,7 @@ double Facet::GetSmooth(int i,int j,double *texBuffer,float scaleF) {
 		return sum/W;
 }
 
-double Facet::GetSmooth(int i,int j,llong *texBuffer,float scaleF) {
+double Facet::GetSmooth(const int &i,const int &j,llong *texBuffer,const float &scaleF) {
 
 	float W = 0.0f;
 	float sum=0.0;

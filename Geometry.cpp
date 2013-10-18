@@ -401,7 +401,7 @@ void Geometry::CreatePolyFromVertices_Convex() {
 	SAFE_FREE(debug);
 	SAFE_FREE(returnList);
 
-	InitializeGeometry();
+	InitializeGeometry(sh.nbFacet-1);
 	mApp->UpdateFacetParams(TRUE);
 	UpdateSelection();
 	mApp->facetList->SetSelectedRow(sh.nbFacet-1);
@@ -497,7 +497,7 @@ void Geometry::CreatePolyFromVertices_Order() {
 	SAFE_FREE(debug);
 	SAFE_FREE(returnList);*/
 
-	InitializeGeometry();
+	InitializeGeometry(sh.nbFacet-1);
 	mApp->UpdateFacetParams(TRUE);
 	UpdateSelection();
 	mApp->facetList->SetSelectedRow(sh.nbFacet-1);
@@ -551,7 +551,7 @@ void Geometry::CreateDifference() {
 	//close circle by adding the first vertex again
 	facets[sh.nbFacet-1]->indices[counter++]=facets[secondFacet]->indices[0];
 	 
-	InitializeGeometry();
+	InitializeGeometry(sh.nbFacet-1);
 	mApp->UpdateFacetParams(TRUE);
 	UpdateSelection();
 	mApp->facetList->SetSelectedRow(sh.nbFacet-1);
@@ -1775,7 +1775,7 @@ void Geometry::MergecollinearSides(Facet *f,double lT) {
 	for(int k=0;(k<f->sh.nbIndex&&f->sh.nbIndex>3);k++){
 		k=k;
 		do {
-			collinear=FALSE;
+			//collinear=FALSE;
 			int p0=f->indices[k];
 			int p1=f->indices[(k+1)%f->sh.nbIndex];
 			int p2=f->indices[(k+2)%f->sh.nbIndex]; //to compare last side with first too
@@ -1837,7 +1837,7 @@ void Geometry::SwapNormal() {
 		Facet *f = facets[i];
 		if( f->selected ) f->SwapNormal();
 		InitializeGeometry(i);
-		//SetFacetTexture(i,f->tRatio,f->hasMesh);
+		SetFacetTexture(i,f->tRatio,f->hasMesh);
 	}
 
 	DeleteGLLists(TRUE,TRUE);
@@ -1861,7 +1861,7 @@ void Geometry::ShiftVertex() {
 		if( f->selected ) {
 			f->ShiftVertex();
 			InitializeGeometry(i);// Reinitialise geom
-			//SetFacetTexture(i,f->tRatio,f->hasMesh);
+			SetFacetTexture(i,f->tRatio,f->hasMesh);
 		}
 	}
 	// Delete old resource
@@ -1935,6 +1935,7 @@ void Geometry::SetFacetTexture(int facet,double ratio,BOOL mesh) {
 	Facet *f = facets[facet];
 	double nU = Norme(&(f->sh.U));
 	double nV = Norme(&(f->sh.V));
+	
 	f->SetTexture(nU*ratio,nV*ratio,mesh);
 	f->tRatio = ratio;
 	BuildFacetList(f);
@@ -1959,6 +1960,7 @@ void  Geometry::BuildPipe(double L,double R,double s,int step) {
 
 	sh.nbVertex  = 2*step + nbTV;
 	vertices3 = (VERTEX3D *)malloc(sh.nbVertex * sizeof(VERTEX3D));
+	memset(vertices3,0,sh.nbVertex * sizeof(VERTEX3D));
 
 	sh.nbFacet   = step + 2 + nbTF;
 	sh.nbSuper = 1;
@@ -2426,6 +2428,7 @@ void Geometry::LoadTXTGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet
 	Facet   **f = (Facet **)malloc(nF * sizeof(Facet *));
 	memset(f,0,nF * sizeof(Facet *));
 	VERTEX3D *v = (VERTEX3D *)malloc(nV * sizeof(VERTEX3D));
+	memset(v,0,nV * sizeof(VERTEX3D));
 
 	// Read geometry vertices
 	for(int i=0;i<nV;i++) {
@@ -3221,6 +3224,7 @@ void Geometry::LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleak,
 	facets = (Facet **)malloc(sh.nbFacet * sizeof(Facet *));
 	memset(facets,0,sh.nbFacet * sizeof(Facet *));
 	vertices3 = (VERTEX3D *)malloc(sh.nbVertex * sizeof(VERTEX3D));
+	memset(vertices3,0,sh.nbVertex * sizeof(VERTEX3D));
 
 	// Read vertices
 	prg->SetMessage("Reading vertices...");
@@ -3298,17 +3302,17 @@ void Geometry::LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleak,
 	//isLoaded=TRUE;
 	UpdateName(file);
 
-	// Update mesh
-	prg->SetMessage("Building mesh...");
+	// Update mesh //Unnecessary in SynRad
+	/*prg->SetMessage("Building mesh...");
 	for(int i=0;i<sh.nbFacet;i++) {
 		double p = (double)i/(double)sh.nbFacet;
 		prg->SetProgress(p);
 		Facet *f = facets[i];
-		f->SetTexture(f->sh.texWidthD,f->sh.texHeightD,f->hasMesh);
+		f->SetTexture(f->sh.texWidthD,f->sh.texHeightD,f->hasMesh); //here texWidthD
 		BuildFacetList(f);
 		double nU = Norme(&(f->sh.U));
 		f->tRatio = f->sh.texWidthD / nU;
-	}
+	}*/
 
 }
 
@@ -3702,7 +3706,7 @@ void Geometry::ExportTexture(FILE *file,int mode,double no_scans,Dataport *dpHit
 
 }
 
-/*void Geometry::SaveDesorption(FILE *file,Dataport *dpHit,BOOL selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr) {
+void Geometry::SaveDesorption(FILE *file,Dataport *dpHit,BOOL selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr) {
 
 	if(!IsLoaded()) throw Error("Nothing to save !");
 
@@ -3753,7 +3757,7 @@ void Geometry::ExportTexture(FILE *file,int mode,double no_scans,Dataport *dpHit
 								val=dose;
 							} else if (mode==2) { //use equation
 								double eta;
-								if (dose == 0.0) eta=0.0;	
+								if (dose < VERY_SMALL) eta=0.0;	
 								else eta=eta0*pow(dose,alpha);
 								val=dose*eta;
 							} else if (mode==3) {  //use file
@@ -3778,7 +3782,7 @@ void Geometry::ExportTexture(FILE *file,int mode,double no_scans,Dataport *dpHit
 	ReleaseDataport(dpHit);
 
 }
-*/
+
 // -----------------------------------------------------------
 
 void Geometry::SaveSTR(Dataport *dpHit,BOOL saveSelected) {
@@ -4383,7 +4387,7 @@ void Geometry::AlignFacets(int* selection,int nbSelected,int Facet_source,int Fa
 		SynRad *mApp = (SynRad *)theApp;
 		double counter=0.0;	
 		double selected=(double)GetNbSelected();
-		if (selected==0.0) return;
+		if (selected<VERY_SMALL) return;
 		GLProgress *prgAlign = new GLProgress("Aligning facets...","Please wait");
 		prgAlign->SetProgress(0.0);
 		prgAlign->SetVisible(TRUE);
@@ -4519,8 +4523,8 @@ void Geometry::AlignFacets(int* selection,int nbSelected,int Facet_source,int Fa
 
 		InitializeGeometry();
 		//update textures
-		for(int i=0;i<nbSelected;i++)
-			SetFacetTexture(selection[i],facets[selection[i]]->tRatio,facets[selection[i]]->hasMesh);	   
+		/*for(int i=0;i<nbSelected;i++)
+			SetFacetTexture(selection[i],facets[selection[i]]->tRatio,facets[selection[i]]->hasMesh);	 */  
 		prgAlign->SetVisible(FALSE);
 		SAFE_DELETE(prgAlign);
 }
@@ -4615,7 +4619,7 @@ void Geometry::MirrorSelectedFacets(VERTEX3D P0,VERTEX3D N,BOOL copy,Worker *wor
 }
 
 // -------------------------------------------------------------
-void Geometry::RotateSelectedFacets(VERTEX3D AXIS_P0,VERTEX3D AXIS_DIR,double theta,BOOL copy,Worker *worker) {
+void Geometry::RotateSelectedFacets(const VERTEX3D &AXIS_P0,const VERTEX3D &AXIS_DIR,double theta,BOOL copy,Worker *worker) {
 	SynRad *mApp = (SynRad *)theApp;
 	double selected=(double)GetNbSelected();
 	double counter=0.0;
@@ -5244,6 +5248,7 @@ PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *
 	facets = (Facet **)malloc(sh.nbFacet * sizeof(Facet *));
 	memset(facets,0,sh.nbFacet * sizeof(Facet *));
 	vertices3 = (VERTEX3D *)malloc(sh.nbVertex * sizeof(VERTEX3D));
+	memset(vertices3,0,sh.nbVertex * sizeof(VERTEX3D));
 
 	// Read vertices
 	prg->SetMessage("Reading vertices...");
@@ -5319,17 +5324,17 @@ PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *
 	isLoaded = TRUE;
 	UpdateName(file);
 
-	// Update mesh
-	prg->SetMessage("Drawing textures...");
+	// Update mesh //InitializeGeometry will do it for us
+	/*prg->SetMessage("Drawing textures...");
 	for(int i=0;i<sh.nbFacet;i++) {
 		double p = (double)i/(double)sh.nbFacet;
 		prg->SetProgress(p);
 		Facet *f = facets[i];
-		//f->SetTexture(f->sh.texWidthD,f->sh.texHeightD,f->hasMesh);
+		//f->sh.texWidthD,f->sh.texHeightD,f->hasMesh);
 		BuildFacetList(f);
 		//double nU = Norme(&(f->sh.U));
 		//f->tRatio = f->sh.texWidthD / nU;
-	}
+	}*/
 	return result;
 }
 

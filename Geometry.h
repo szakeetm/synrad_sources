@@ -74,7 +74,7 @@ public:
   // Save
   void SaveTXT(FileWriter *file,Dataport *dhHit,BOOL saveSelected);
   void ExportTexture(FILE *file,int mode,double no_scans,Dataport *dhHit,BOOL saveSelected);
-  //void SaveDesorption(FILE *file,Dataport *dhHit,BOOL selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr);
+  void SaveDesorption(FILE *file,Dataport *dhHit,BOOL selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr);
   //void SaveGEO(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL saveSelected,LEAK *pleak,int *nbleakSave,HIT *pHits,int *nbHHitSave,BOOL crashSave=FALSE);
   void SaveSYN(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL saveSelected,LEAK *pleak,int *nbleakSave,HIT *pHits,int *nbHHitSave,BOOL crashSave=FALSE);
   void SaveSTR(Dataport *dhHit,BOOL saveSelected);
@@ -105,7 +105,7 @@ public:
   void ScaleSelectedFacets(VERTEX3D invariant,double factorX,double factorY,double factorZ,BOOL copy,Worker *worker);
   void MoveSelectedFacets(double dX,double dY,double dZ,BOOL copy,Worker *worker);
   void MirrorSelectedFacets(VERTEX3D P0,VERTEX3D N,BOOL copy,Worker *worker);
-  void RotateSelectedFacets(VERTEX3D AXIS_P0,VERTEX3D AXIS_DIR,double theta,BOOL copy,Worker *worker);
+  void RotateSelectedFacets(const VERTEX3D &AXIS_P0,const VERTEX3D &AXIS_DIR,double theta,BOOL copy,Worker *worker);
   void AlignFacets(int* selection,int nbSelected,int Facet_source,int Facet_dest,int Anchor_source,int Anchor_dest,
 	  int Aligner_source,int Aligner_dest,BOOL invertNormal,BOOL invertDir1,BOOL invertDir2,BOOL copy,Worker *worker);
   void CloneSelectedFacets();
