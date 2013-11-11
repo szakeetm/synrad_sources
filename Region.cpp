@@ -78,7 +78,7 @@ Vector Region::B(Vector position) {
 			break;
 		case B_MODE_QUADRUPOLE: //mode 4
 			Bset=true;
-			result=quad.B(position,0.0,0.0,0.0);
+			result=quad.B(position);
 			break;
 		case B_MODE_ANALYTIC: //mode 5
 			K_=2*PI/Bx_period;
@@ -115,7 +115,7 @@ Trajectory_Point Region::OneStep(Trajectory_Point p0,double dL,double E) {
 	//Calculate new point
 	Trajectory_Point p;
 	p.direction=p0.direction.Rotate(rotation_axis,dL/p0.rho.Norme());
-	p.position=Add(p0.position,ScalarMult(p.direction,dL));
+	p.position=Add(p0.position,ScalarMult(p.direction,dL/p.direction.Norme()));
 
 	Vector B_local=B(p.position);
 	if (B_local.Norme()<VERY_SMALL) {//straight line
@@ -210,7 +210,7 @@ void Region::LoadPAR(FileReader *file,GLProgress *prg){
 			else filebegin=fileName;
 			sprintf(filebegin,"%d.mag",fileInt); //append .MAG extension
 
-			try {
+			
 				if (!FileUtils::Exist(fileName)) { //no .MAG file
 					char tmperr[256];
 					sprintf(tmperr,"Referenced MAG file doesn't exist:\n%s\nReferred to: ",fileName);
@@ -220,10 +220,7 @@ void Region::LoadPAR(FileReader *file,GLProgress *prg){
 				FileReader MAGfile(fileName);
 				MagFileNamePtr[i]->assign(fileName);
 				*(distr_ptr[i])=LoadMAGFile(&MAGfile,Bdir_ptr[i],Bperiod_ptr[i],Bphase_ptr[i],*Bmode_ptr[i]);
-			} catch(Error &e) {
-				throw e;
-				return;
-			}
+			
 		}
 	}
 
@@ -261,7 +258,7 @@ void Region::LoadPAR(FileReader *file,GLProgress *prg){
 		if (filebegin) filebegin++;
 		else filebegin=fileName;
 		sprintf(filebegin,"%d.bxy",(int)(fileDouble+0.5)); //append .BXY extension
-		try {
+		
 			if (!FileUtils::Exist(fileName)) { //no .BXY file
 				char tmperr[256];
 				sprintf(tmperr,"Referenced BXY file doesn't exist:\n%s\nReferred to: ",fileName);
@@ -271,10 +268,7 @@ void Region::LoadPAR(FileReader *file,GLProgress *prg){
 			FileReader BXYfile(fileName);
 			BXYfileName.assign(fileName);
 			nbDistr_BXY=LoadBXY(&BXYfile,beta_x_distr,beta_y_distr,eta_distr,etaprime_distr,coupling_distr,e_spread_distr);
-		} catch(Error &e) {
-			throw e;
-			return;
-		}
+		
 	}
 
 	prg->SetMessage("Calculating trajectory...");
@@ -871,8 +865,8 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 
 			//trajectory direction angles
 			if (source->direction.z==0) {
-				if (source->direction.x>=0) theta=PI/2;
-				else theta=-PI/2;
+				if (source->direction.x>=0) theta=-PI/2;
+				else theta=PI/2;
 			} else theta=-atan(source->direction.x/source->direction.z);
 			alpha=-asin(source->direction.y);
 
@@ -920,9 +914,15 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 				divx_offset=Gaussian(sigmaxprime);
 				divy_offset=Gaussian(sigmayprime);
 
+				//Calculate local base vectors
 				Vector Z_local=source->direction.Normalize(); //Z' base vector
-				Vector X_local=source->rho.Normalize(); //X' base vector
-				Vector Y_local=Crossproduct(Z_local,X_local); //Y' base vector
+	/*if (source->rho.Norme()<1E29) {
+		X_local=source->rho.Normalize(); //X' base vector
+	} else {
+		X_local=RandomPerpendicularVector(Z_local,1.0);
+		}*/
+				Vector Y_local=Vector(0.0,1.0,0.0); //same as absolute Y - assuming that machine's orbit is in the XZ plane
+				Vector X_local=Crossproduct(Z_local,Y_local);
 
 				Vector offset_pos=source->position; //choose ideal beam as origin
 				offset_pos=Add(offset_pos,ScalarMult(X_local,x_offset)); //apply dX offset
@@ -953,7 +953,7 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 				-exp(integral_N_photons.InterpolateY(log(current_region->energy_low/critical_energy))))
 				/exp(integral_N_photons.valuesY[integral_N_photons.size-1]);
 
-			SR_flux=source->dAlpha(current_region->dL)/(2*PI)*current_region->gamma*4.1289E14*B_factor;
+			SR_flux=current_region->dL/radius/(2*PI)*current_region->gamma*4.1289E14*B_factor;
 
 			//if (generation_mode==SYNGEN_MODE_POWERWISE) {
 			if (critical_energy==last_critical_energy)
@@ -1148,7 +1148,7 @@ void Region::LoadParam(FileReader *file,GLProgress *prg){
 		beta_kind=0;
 		if (betax<0.0) {//use BXY file
 			file->ReadKeyword("BXYfileName");file->ReadKeyword(":");
-			try {
+			
 				char tmp[512];
 				char tmp2[512];
 				char CWD [MAX_PATH];
@@ -1158,20 +1158,18 @@ void Region::LoadParam(FileReader *file,GLProgress *prg){
 				if (FileUtils::Exist(tmp)) //file found in tmp directory
 					BXYfileName.assign(tmp);
 				else {//not found, look for it in current directory (syn files)				
-					sprintf(tmp,"%s\\%s",SplitPath(file->GetName()),tmp2);
+					std::string path=SplitPath(file->GetName());
+					sprintf(tmp,"%s\\%s",path.c_str(),tmp2);
 					if (FileUtils::Exist(tmp)) //file found in current directory
 						BXYfileName.assign(tmp);
 					else {//not in tmp, nor in current, error.
-						sprintf(tmp,"Referenced MAG file not found in current directory\n%s",tmp2);
-						throw Error(tmp);
+						sprintf(tmp2,"Referenced BXY file not found:\n%s",tmp);
+						throw Error(tmp2);
 					}
 				}
 				FileReader BXYfile((char*)BXYfileName.c_str());
 				nbDistr_BXY=LoadBXY(&BXYfile,beta_x_distr,beta_y_distr,eta_distr,etaprime_distr,coupling_distr,e_spread_distr);
-			} catch(Error &e) {
-				throw e;
-				return;
-			} 
+			 
 		} else { //constants
 			file->ReadKeyword("beta_y");file->ReadKeyword(":");betay=file->ReadDouble();
 			file->ReadKeyword("eta");file->ReadKeyword(":");eta=file->ReadDouble();
@@ -1193,7 +1191,7 @@ void Region::LoadParam(FileReader *file,GLProgress *prg){
 			*Bconst_ptr[i]=file->ReadDouble();
 		} else {
 			file->ReadKeyword((char*)MagFileNameStr[i].c_str());file->ReadKeyword(":");
-			try{
+			
 				char tmp[512];
 				char tmp2[512];
 				char CWD [MAX_PATH];
@@ -1203,20 +1201,18 @@ void Region::LoadParam(FileReader *file,GLProgress *prg){
 				if (FileUtils::Exist(tmp)) //file found in tmp directory
 					MagFileNamePtr[i]->assign(tmp);
 				else {//not found, look for it in current directory (syn files)
-					sprintf(tmp,"%s\\%s",SplitPath(file->GetName()),tmp2);
+					std::string path=SplitPath(file->GetName());
+					sprintf(tmp,"%s\\%s",path.c_str(),tmp2);
 					if (FileUtils::Exist(tmp)) //file found in current directory
 						MagFileNamePtr[i]->assign(tmp);
 					else {//not in tmp, nor in current, error.
-						sprintf(tmp,"Referenced MAG file not found in current directory\n%s",tmp2);
-						throw Error(tmp);
+						sprintf(tmp2,"Referenced MAG file not found: %s",tmp);
+						throw Error(tmp2);
 					}
 				}
 				FileReader MAGfile((char*)MagFileNamePtr[i]->c_str());
 				*(distr_ptr[i])=LoadMAGFile(&MAGfile,Bdir_ptr[i],Bperiod_ptr[i],Bphase_ptr[i],*Bmode_ptr[i]);
-			} catch(Error &e) {
-				throw e;
-				return;
-			}
+			
 		}
 	}
 	gamma=abs(E/particleMass);

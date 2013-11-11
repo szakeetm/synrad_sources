@@ -968,9 +968,10 @@ DWORD Facet::GetNbCellForRatio(double ratio) {
 
 DWORD Facet::GetTexRamSize() {
 
-	int size = 2*sizeof(double)+sizeof(llong);
+	/*int size = 2*sizeof(double)+sizeof(llong);
 	if(mesh) size += sizeof(SHELEM)+sizeof(MESH);
-	if(sh.countDirection) size += sizeof(VHIT);
+	if(sh.countDirection) size += sizeof(VHIT);*/
+	int size=220; //estimation
 	return (sh.texWidth*sh.texHeight*size);
 
 }
@@ -990,9 +991,10 @@ DWORD Facet::GetTexRamSizeForRatio(double ratio,BOOL useMesh,BOOL countDir) {
 
 		int iwidth  = (int)ceil(width);
 		int iheight = (int)ceil(height);
-		int size = 2*sizeof(double)+sizeof(llong);
+		/*int size = 2*sizeof(double)+sizeof(llong);
 		if(useMesh) size += sizeof(SHELEM)+sizeof(MESH);
-		if(countDir) size += sizeof(VHIT);
+		if(countDir) size += sizeof(VHIT);*/
+		int size=220; //estimation
 		return iwidth * iheight * size;
 
 	} else {

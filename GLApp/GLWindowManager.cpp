@@ -419,7 +419,8 @@ void GLWindowManager::Resize() {
 
   for(int i=1;i<nbWindow;i++) 
     allWin[i]->UpdateOnResize();
-
+	SynRad *mApp = (SynRad *)theApp;
+  mApp->worker.Update(0.0f);
 }
 
 // ---------------------------------------------------------------

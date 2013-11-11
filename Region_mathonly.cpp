@@ -42,7 +42,7 @@ Vector Region::B(const Vector &position) {
 			break;
 		case B_MODE_QUADRUPOLE: //mode 4
 			Bset=true;
-			result=quad.B(position,0.0,0.0,0.0);
+			result=quad.B(position);
 			break;
 		case B_MODE_ANALYTIC: //mode 5
 			K_=2*PI/Bx_period;

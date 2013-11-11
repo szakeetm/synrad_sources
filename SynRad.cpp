@@ -309,7 +309,7 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("File")->Add("&Load",MENU_FILE_LOAD,SDLK_o,CTRL_MODIFIER);
 	menu->GetSubMenu("File")->Add("&Save",MENU_FILE_SAVE,SDLK_s,CTRL_MODIFIER);
 	menu->GetSubMenu("File")->Add("Save as",MENU_FILE_SAVEAS);
-	menu->GetSubMenu("File")->Add("Export desorption file",MENU_FILE_EXPORT_DESORP);
+	menu->GetSubMenu("File")->Add("Export DES file (deprecated)",MENU_FILE_EXPORT_DESORP);
 	menu->GetSubMenu("File")->Add(NULL); //separator
 	menu->GetSubMenu("File")->Add("&Insert geometry");
 	menu->GetSubMenu("File")->GetSubMenu("Insert geometry")->Add("&To current structure",MENU_FILE_INSERTGEO);

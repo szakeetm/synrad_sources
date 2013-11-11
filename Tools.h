@@ -36,7 +36,8 @@ public:
 
 class GenPhoton {
 public:
-	double dX,dY,divX,divY,dF,dP,energy;
+	Vector start_pos,start_dir;
+	double dF,dP,energy;
 };
 
 class Histogram {
@@ -70,6 +71,7 @@ public:
 double DotProduct(const Vector &a,const Vector &b);
 Vector Crossproduct(const Vector &v1,const Vector &v2);
 Vector ScalarMult(const Vector &v,const double &r);
+Vector RandomPerpendicularVector(const Vector &v,const double &length);
 Vector Add(const Vector &v1,const Vector &v2);
 double Min(const double &a,const double &b);
 double Max(const double &a,const double &b);

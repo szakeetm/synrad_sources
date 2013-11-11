@@ -402,6 +402,7 @@ void Geometry::CreatePolyFromVertices_Convex() {
 	SAFE_FREE(returnList);
 
 	InitializeGeometry(sh.nbFacet-1);
+	mApp->UpdateModelParams();
 	mApp->UpdateFacetParams(TRUE);
 	UpdateSelection();
 	mApp->facetList->SetSelectedRow(sh.nbFacet-1);
@@ -498,6 +499,7 @@ void Geometry::CreatePolyFromVertices_Order() {
 	SAFE_FREE(returnList);*/
 
 	InitializeGeometry(sh.nbFacet-1);
+	mApp->UpdateModelParams();
 	mApp->UpdateFacetParams(TRUE);
 	UpdateSelection();
 	mApp->facetList->SetSelectedRow(sh.nbFacet-1);
@@ -1527,7 +1529,9 @@ void Geometry::CollapseVertex(GLProgress *prg,double totalWork) {
 	if(!isLoaded) return;
 	// Collapse neighbor vertices
 	VERTEX3D *refs = (VERTEX3D *)malloc(sh.nbVertex*sizeof(VERTEX3D));
+	if (!refs) throw Error("Out of memory: CollapseVertex");
 	int      *idx  = (int *)malloc(sh.nbVertex*sizeof(int));
+	if (!idx) throw Error("Out of memory: CollapseVertex");
 	int       nbRef=0;
 
 	// Collapse
@@ -1540,6 +1544,7 @@ void Geometry::CollapseVertex(GLProgress *prg,double totalWork) {
 	// Create the new vertex array
 	SAFE_FREE(vertices3);
 	vertices3 = (VERTEX3D *)malloc(nbRef * sizeof(VERTEX3D));
+	if (!vertices3) throw Error("Out of memory: CollapseVertex");
 	//UnselectAllVertex();
 
 	memcpy(vertices3,refs,nbRef * sizeof(VERTEX3D));
@@ -1960,11 +1965,13 @@ void  Geometry::BuildPipe(double L,double R,double s,int step) {
 
 	sh.nbVertex  = 2*step + nbTV;
 	vertices3 = (VERTEX3D *)malloc(sh.nbVertex * sizeof(VERTEX3D));
+	if (!vertices3) throw Error("Out of memory: BuildPipe");
 	memset(vertices3,0,sh.nbVertex * sizeof(VERTEX3D));
 
 	sh.nbFacet   = step + 2 + nbTF;
 	sh.nbSuper = 1;
 	facets    = (Facet **)malloc(sh.nbFacet * sizeof(Facet *));
+	if (!facets) throw Error("Out of memory: BuildPipe");
 	memset(facets,0,sh.nbFacet * sizeof(Facet *));
 
 	// Vertices
@@ -2259,8 +2266,10 @@ void Geometry::LoadSTL(FileReader *file,GLProgress *prg,double scaleFactor) {
 	// Allocate mem
 	sh.nbVertex = 3*sh.nbFacet;
 	facets = (Facet **)malloc(sh.nbFacet * sizeof(Facet *));
+	if (!facets) throw Error("Out of memory: LoadSTL");
 	memset(facets,0,sh.nbFacet * sizeof(Facet *));
 	vertices3 = (VERTEX3D *)malloc(sh.nbVertex * sizeof(VERTEX3D));
+	if (!vertices3) throw Error("Out of memory: LoadSTL");
 	memset(vertices3,0,sh.nbVertex * sizeof(VERTEX3D));
 
 	// Second pass
@@ -2659,6 +2668,7 @@ void Geometry::InsertGEOGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3
 	memset(*facets+*nbFacet,0,nbNewFacets * sizeof(Facet *));
 	//*vertices3 = (VERTEX3D*)realloc(*vertices3,(nbNewVertex+*nbVertex) * sizeof(VERTEX3D));
 	VERTEX3D *tmp_vertices3 = (VERTEX3D *)malloc((nbNewVertex+*nbVertex) * sizeof(VERTEX3D));
+	if (!tmp_vertices3) throw Error("Out of memory: InsertGEOGeom");
 	memmove(tmp_vertices3,*vertices3,(*nbVertex)*sizeof(VERTEX3D));
 	memset(tmp_vertices3+*nbVertex,0,nbNewVertex * sizeof(VERTEX3D));
 	SAFE_FREE(*vertices3);

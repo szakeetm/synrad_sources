@@ -193,7 +193,7 @@ RegionEditor::RegionEditor():GLWindow() {
 	startDirDefinitionCombo->SetSize(2);
 	startDirDefinitionCombo->SetValueAt(0,"By angle:");
 	startDirDefinitionCombo->SetValueAt(1,"By vector:");
-	startDirDefinitionCombo->SetSelectedIndex(0);
+	startDirDefinitionCombo->SetSelectedIndex(1); //Defining by direction vector is always well-defined
 
 	//---- label6 ----
 	label6->SetText("Theta0:");
@@ -897,8 +897,8 @@ void RegionEditor::FillValues() {
 
 	double t0;
 	if (cr->startDir.z==0) {
-		if (cr->startDir.x>=0) t0=PI/2;
-		else t0=-PI/2;
+		if (cr->startDir.x>=0) t0=-PI/2;
+		else t0=PI/2;
 	} else t0=-atan(cr->startDir.x/cr->startDir.z);
 	sprintf(tmp,"%g",t0);theta0text->SetText(tmp);
 	sprintf(tmp,"%g",-asin(cr->startDir.y));alpha0text->SetText(tmp);
@@ -1087,6 +1087,7 @@ void RegionEditor::ApplyChanges() {
 	if (particleChargeCombo->GetSelectedIndex()==1) //negative charge
 		cr->particleMass*=-1;
 	beamEnergyText->GetNumber(&cr->E);
+	cr->gamma=abs(cr->E/cr->particleMass);
 	if (idealBeamToggle->IsChecked()) cr->emittance=0.0;
 	else {
 		emittanceText->GetNumber(&cr->emittance);
@@ -1106,7 +1107,9 @@ void RegionEditor::ApplyChanges() {
 				cr->nbDistr_BXY=cr->LoadBXY(&BXYfile,cr->beta_x_distr,cr->beta_y_distr,
 					cr->eta_distr,cr->etaprime_distr,cr->coupling_distr,cr->e_spread_distr);
 			} catch(Error &e) {
-				throw e;
+				char tmp[256];
+				sprintf(tmp,"Couldn't load BXY file. Error message:\n%s",e.GetMsg());
+				GLMessageBox::Display(tmp,"BXY file problem",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 			}
 		}

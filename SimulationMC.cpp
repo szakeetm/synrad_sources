@@ -559,29 +559,29 @@ BOOL StartFromSource() {
 	sHandle->dP=photon.dP;
 	sHandle->energy=photon.energy;
 
-	Vector Z_local=source->direction.Normalize(); //Z' base vector
+	/*Vector Z_local=source->direction.Normalize(); //Z' base vector
 	Vector X_local=source->rho.Normalize(); //X' base vector
-	Vector Y_local=Crossproduct(Z_local,X_local);
+	Vector Y_local=Crossproduct(Z_local,X_local);*/
 
-	Vector start_pos=source->position;
+	/*Vector start_pos=source->position;
 	start_pos=Add(start_pos,ScalarMult(X_local,photon.dX)); //apply dX offset
-	start_pos=Add(start_pos,ScalarMult(Y_local,photon.dY)); //apply dY offset
+	start_pos=Add(start_pos,ScalarMult(Y_local,photon.dY)); //apply dY offset*/
 
 	//starting position
-	sHandle->pPos.x = start_pos.x;
-	sHandle->pPos.y = start_pos.y;
-	sHandle->pPos.z = start_pos.z;
+	sHandle->pPos.x = photon.start_pos.x;
+	sHandle->pPos.y = photon.start_pos.y;
+	sHandle->pPos.z = photon.start_pos.z;
 	
 	RecordHit(HIT_DES,sHandle->dF,sHandle->dP);
 
 	//angle
-	Vector start_dir=Z_local;
+	/*Vector start_dir=Z_local;
 	start_dir=start_dir.Rotate(Y_local,photon.divX);
-	start_dir=start_dir.Rotate(X_local,photon.divY);
+	start_dir=start_dir.Rotate(X_local,photon.divY);*/
 
-	sHandle->pDir.x = start_dir.x;
-	sHandle->pDir.y = start_dir.y;
-	sHandle->pDir.z = start_dir.z;
+	sHandle->pDir.x = photon.start_dir.x;
+	sHandle->pDir.y = photon.start_dir.y;
+	sHandle->pDir.z = photon.start_dir.z;
 
 	//_ASSERTE(Norme(&sHandle->pDir)<=1.0);
 	// Current structure = 0
@@ -697,7 +697,19 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 	double emittance_x_,emittance_y_;
 	double B_factor,B_factor_power;
 	double x_offset,y_offset,divx_offset,divy_offset;
+	double radius=1E30;
+	GenPhoton result;
+	Vector X_local,Y_local,Z_local;
 
+	//Calculate local base vectors
+	Z_local=source->direction.Normalize(); //Z' base vector
+	/*if (source->rho.Norme()<1E29) {
+		X_local=source->rho.Normalize(); //X' base vector
+	} else {
+		X_local=RandomPerpendicularVector(Z_local,1.0);
+		}*/
+	Y_local=Vector(0.0,1.0,0.0); //same as absolute Y - assuming that machine's orbit is in the XZ plane
+	X_local=Crossproduct(Z_local,Y_local);
 
 	double critical_energy;
 	if (current_region->emittance>0.0) { //if beam is not ideal
@@ -745,19 +757,16 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 		divx_offset=Gaussian(sigmaxprime);
 		divy_offset=Gaussian(sigmayprime);
 
-		Vector Z_local=source->direction.Normalize(); //Z' base vector
-		Vector X_local=source->rho.Normalize(); //X' base vector
-		Vector Y_local=Crossproduct(Z_local,X_local);
-
 		Vector offset_pos=source->position; //choose ideal beam as origin
 		offset_pos=Add(offset_pos,ScalarMult(X_local,x_offset)); //apply dX offset
 		offset_pos=Add(offset_pos,ScalarMult(Y_local,y_offset)); //apply dY offset
+		result.start_pos=offset_pos;
 
 		Vector B_local=current_region->B(offset_pos); //recalculate B at offset position
 		double B_parallel=DotProduct(source->direction,B_local);
 		double B_orthogonal=sqrt(Sqr(B_local.Norme())-Sqr(B_parallel));
 
-		double radius;
+		
 		if (B_orthogonal>VERY_SMALL)
 			radius=current_region->E/0.00299792458/B_orthogonal; //Energy in GeV divided by speed of light/1E9 converted to centimeters
 		else radius=1.0E30;
@@ -766,6 +775,8 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 	} else {
 		//0 emittance, ideal beam
 		critical_energy=source->Critical_Energy(current_region->gamma);
+		result.start_pos=source->position;
+		radius=source->rho.Norme();
 	}
 
 	double generated_energy=SYNGEN1(current_region->energy_low/critical_energy,current_region->energy_hi/critical_energy,
@@ -778,7 +789,7 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 		/exp(integral_N_photons.valuesY[integral_N_photons.size-1]);
 
 	double SR_flux,SR_power;
-	SR_flux=source->dAlpha(current_region->dL)/(2*PI)*current_region->gamma*4.1289E14*B_factor;
+	SR_flux=current_region->dL/(radius*2*PI)*current_region->gamma*4.1289E14*B_factor;
 	//Total flux per revolution for electrons: 8.08E17*E[GeV]*I[mA] photons/sec
 	//8.08E17 * 0.000511GeV = 4.1289E14
 
@@ -827,18 +838,16 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 	last_average_ans=average_;
 
 	//return values
-	GenPhoton result;
+	
 	if (current_region->emittance>0.0) {
 		//do the transf
-		result.dX=x_offset;
-		result.dY=y_offset;
-		result.divX=natural_divx+divx_offset;
-		result.divY=natural_divy+divy_offset;
+		result.start_dir=Z_local;
+		result.start_dir=result.start_dir.Rotate(Y_local,natural_divx+divx_offset);
+		result.start_dir=result.start_dir.Rotate(X_local,natural_divy+divy_offset);
 	} else {
-		result.dX=0.0;
-		result.dY=0.0;
-		result.divX=natural_divx;
-		result.divY=natural_divy;
+		result.start_dir=Z_local;
+		result.start_dir=result.start_dir.Rotate(Y_local,natural_divx);
+		result.start_dir=result.start_dir.Rotate(X_local,natural_divy);
 	}
 	result.dF=SR_flux;
 	//if (!(SR_flux==SR_flux)) __debugbreak();

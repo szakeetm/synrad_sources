@@ -31,6 +31,13 @@ Vector ScalarMult(const Vector &v,const double &r) {
   return result;
 }
 
+Vector RandomPerpendicularVector(const Vector &v,const double &length){
+	Vector randomVector=Vector(rnd(),rnd(),rnd());
+	Vector perpendicularVector=Crossproduct(randomVector,v);
+	perpendicularVector=perpendicularVector.Normalize();
+	return ScalarMult(perpendicularVector,length);
+}
+
 Vector Add(const Vector &v1,const Vector &v2) {
   Vector result;
   result.x = (v1.x) + (v2.x);

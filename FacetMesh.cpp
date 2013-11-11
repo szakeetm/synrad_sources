@@ -371,6 +371,8 @@ BOOL FacetMesh::Apply() {
 					char errMsg[512];
 					sprintf(errMsg,"Error setting textures:\n%s",e.GetMsg());
 					GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
+					progressDlg->SetVisible(FALSE);
+					SAFE_DELETE(progressDlg);
 					return FALSE;
 				}
 				nbPerformed+=1.0;

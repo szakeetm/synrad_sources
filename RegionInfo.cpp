@@ -178,7 +178,14 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
 	} else if (src==reloadButton) {
 		char tmp[512];
 		sprintf(tmp,"%s",work->regions[regionSelector->GetSelectedIndex()].fileName.c_str());
-		work->AddRegion(tmp,regionSelector->GetSelectedIndex());
+		try {
+			work->AddRegion(tmp,regionSelector->GetSelectedIndex());
+		} catch (Error &e) {
+			char errMsg[512];
+			sprintf(errMsg,"%s\nFile:%s",e.GetMsg(),tmp);
+			GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
+			return;
+		}
 		Update();
 	} else if (src==editButton) {
 		if( regionEditor==NULL ) regionEditor = new RegionEditor();
@@ -225,8 +232,8 @@ void RegionInfo::Update() {
 		sprintf(tmp2,"Region %d",i+1);
 		regionSelector->SetValueAt(i,tmp2);
 	}
-	regionSelector->SetSelectedIndex(regionSelector->GetSelectedIndex()); //update text
 	if (regionSelector->GetSelectedIndex()>(nbRegion-1)) regionSelector->SetSelectedIndex(nbRegion-1);
+	regionSelector->SetSelectedIndex(regionSelector->GetSelectedIndex()); //update text
 	selectedRegion=&(work->regions[regionSelector->GetSelectedIndex()]);
 	if (!selectedRegion->isLoaded) return;
 

@@ -1,8 +1,8 @@
 /*
   File:        Process.cpp
   Description: Process management
-  Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS
+  Program:     MolFlow
+  Author:      R. KERSEVAN / J-L PONS / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify
@@ -32,6 +32,7 @@ static BOOL EnablePrivilege() {
   HANDLE  hToken;
   LUID    DebugValue;
   TOKEN_PRIVILEGES tkp;
+  DWORD err_code;
 
   if( !privilegeEnabled ) {
 
@@ -61,10 +62,12 @@ static BOOL EnablePrivilege() {
         (PTOKEN_PRIVILEGES) NULL,
         (PDWORD) NULL);
 
-    if (GetLastError() != ERROR_SUCCESS) {
+	err_code=GetLastError();
+
+    /*if (err_code != ERROR_SUCCESS) {
       CloseHandle(hToken);
   	  return FALSE;
-    }
+    }*/ //Caused privilege error codes when didn't run as administrator
 
     privilegeEnabled = TRUE;
 

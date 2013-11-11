@@ -321,7 +321,7 @@ void GLList::SetSize(int nbColumn,int nbRow,BOOL showProgress) {
 	nbCol = nbColumn;
 	this->nbRow = nbRow;
 	cEdits = (int *)malloc(nbCol*sizeof(int));
-	for(int i=0;i<nbCol;i++) cEdits[i]=0;
+	memset(cEdits,0,nbCol*sizeof(int));
 	cWidths = (int *)malloc(nbCol*sizeof(int));
 	for(int i=0;i<nbCol;i++) cWidths[i]=50;
 	cAligns = (int *)malloc(nbCol*sizeof(int));
@@ -440,17 +440,20 @@ void GLList::SetColumnWidths(int *widths) {
 }
 
 void GLList::AutoSizeColumn() {
+    int w=0;
 
 	if( cWidths ) {
 		GLFont2D *fnt = GLToolkit::GetDialogFont();
 		for(int i=0;i<nbCol;i++) {
-			int maxWidth = 0;
+			int maxWidth = 10;
 			for(int j=0;j<nbRow;j++) {
 				char *v = GetValueAt(i,j);
 				int w = fnt->GetTextWidth(v);
 				if( w>maxWidth ) maxWidth = w;
 			}
-			cWidths[i] = maxWidth+10;
+			if (cNames && cNames[i] && (w=fnt->GetTextWidth(cNames[i]))>maxWidth)
+					maxWidth=w;
+				cWidths[i] = maxWidth+10;
 		}
 		UpdateSBRange();
 	}
@@ -518,9 +521,9 @@ void GLList::SetRow(int row,char **vals) {
 void GLList::SetValueAt(int col,int row,char *value,int userData,BOOL searchIndex) {
 	if(this->values) {
 		if(col>=0 && col<this->nbCol && row>=0 && row<this->nbRow) {
-			int rowIndex;
+			int rowIndex=row;
 			if (searchIndex) rowIndex= FindIndex(row,0);
-			else rowIndex=row;
+
 			char *cell = this->values[(rowIndex*this->nbCol) + col];
 			if( value==NULL ) {
 				SAFE_FREE(cell);
@@ -547,6 +550,7 @@ void GLList::ScrollToVisible(int row,int col,BOOL searchIndex) {
 	int rowIndex;
 	if (searchIndex) rowIndex=FindIndex(row,0);
 	else rowIndex = row;
+	if (rowIndex>=0 && rowIndex<nbRow) {
 	int sy = rowIndex*cHeight;
 	int pos = sbV->GetPosition();
 
@@ -562,12 +566,13 @@ void GLList::ScrollToVisible(int row,int col,BOOL searchIndex) {
 	if(sy<pos) 
 		sbV->SetPosition(sy);
 
+	}
 
 	// Horizontal scroll ----------------
 
 	int labW = (showRLabel)?labWidth+labelRowMargin:0;
 	int _width = sbWidth?(width - sbWidth - labW):width - 2 - labW;
-	pos = sbH->GetPosition();
+	int pos = sbH->GetPosition();
 
 	if( selectionMode == SINGLE_CELL && col>=0 ) {
 
@@ -743,18 +748,18 @@ void GLList::AddSelectedRow(int row,BOOL searchIndex) {
 
 // ---------------------------------------------------------------
 
-void GLList::SetSelectedRows(int *rows,int nbRow,BOOL searchIndex) {
+void GLList::SetSelectedRows(int *rows,int nbRowToSet,BOOL searchIndex) {
 	SAFE_FREE(selectedRows);
-	if( nbRow<=0 ) {
+	if( nbRowToSet<=0 ) {
 		this->nbSelectedRow = 0;
 	} else {
-		this->selectedRows = (int *)malloc(nbRow*sizeof(int));
+		this->selectedRows = (int *)malloc(nbRowToSet*sizeof(int));
 		if (searchIndex) {
-			for (int i=0;i<nbRow;i++) 
+			for (int i=0;i<nbRowToSet;i++) 
 				this->selectedRows[i]=FindIndex(rows[i],0);
 		} else
-			memcpy(this->selectedRows,rows,nbRow*sizeof(int));
-		this->nbSelectedRow = nbRow;
+			memcpy(this->selectedRows,rows,nbRowToSet*sizeof(int));
+		this->nbSelectedRow = nbRowToSet;
 	}
 }
 
@@ -789,7 +794,7 @@ void GLList::Paint() {
 	int maxX = MIN(wT-sX,_width);
 	int sx=-sX,sy=-sY+labHeight-2;
 
-	// Vertical scrool
+	// Vertical scroll
 	if(sbWidth) {
 		sbV->Paint();
 		glColor3f(0.5f,0.5f,0.5f);
@@ -878,7 +883,7 @@ void GLList::Paint() {
 				GLToolkit::DrawBox(0,selectedRows[i]*cHeight-sY,maxX-1,cHeight,160,160,255);
 			}
 		}
-		if( (lastRowSel+1)*cHeight>=sY && lastRowSel*cHeight<=sY+_height ) {
+		if( nbSelectedRow && (lastRowSel+1)*cHeight>=sY && lastRowSel*cHeight<=sY+_height ) {
 			GLToolkit::DrawBox(0,lastRowSel*cHeight-sY,maxX-1,cHeight,100,100,255);
 		}
 		break;
@@ -1264,7 +1269,7 @@ int GLList::GetColumnStart(int colIdx) {
 
 void GLList::MapEditText() {
 
-	if( edit ) {
+	if( edit && selectedRows) {
 
 		ScrollToVisible(selectedRows[0],selectedCol,FALSE);
 		//int sx = GetColumnStart(selectedCol) - sbH->GetPosition() + labWidth+ labelRowMargin;
@@ -1315,7 +1320,7 @@ void GLList::UpdateCell() {
 			} else {
 				sprintf(tmp,"Wrong number format at line %d (%d)",selectedRows[0]+1,selectedCol+1);
 			}
-			GLMessageBox::Display(tmp,"Error",GLDLG_OK,GLDLG_ICONERROR);
+			GLMessageBox::Display(tmp,"Error",GLDLG_OK,GLDLG_ICONWARNING);
 		} else {
 			sprintf(tmp,"%.10g",val);
 			SetValueAt(selectedCol,selectedRows[0],tmp);
@@ -1494,6 +1499,7 @@ void GLList::HandleWheel(SDL_Event *evt) {
 
 void GLList::CopyToClipboard(int row,int col,int rowLght,int colLgth) {
 	SynRad *mApp = (SynRad *)theApp;
+	mApp->UpdateFacetHits(TRUE);
 	// Compute data length
 	size_t totalLength = 0;
 	for(int i=row;i<row+rowLght;i++) {
@@ -2015,6 +2021,7 @@ void GLList::ManageEvent(SDL_Event *evt) {
 					int menuId = menu->Track( GetWindow() , mx+posX , my+posY );
 					if( menuId==0 ) {
 						CopyAllToClipboard();
+					} else if (menuId==1) {
 					
 						if( selectionMode == SINGLE_CELL )
 							CopyToClipboard(selectedRows[0],selectedCol,1,1);
