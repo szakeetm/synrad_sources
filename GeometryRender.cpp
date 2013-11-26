@@ -773,7 +773,7 @@ void Geometry::BuildTexture(BYTE *hits) {
     int tSize = nbElem*sizeof(double);
     int dSize = nbElem*sizeof(VHIT);
 	
-	if( f->sh.isTextured && f->textureVisible ) {
+	if( f->sh.isTextured ) {
        // Retrieve texture from shared memory (every seconds)
        llong *hits_MC = (llong *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(SHHITS) + profSize));
 	   double *hits_flux = (double *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(SHHITS) + profSize+nbElem*sizeof(llong)));

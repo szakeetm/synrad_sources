@@ -60,8 +60,8 @@ TexturePlotter::TexturePlotter():GLWindow() {
 	viewCombo = new GLCombo(0);
 	viewCombo->SetSize(4);
 	viewCombo->SetValueAt(0,"Elem. area");
-	viewCombo->SetValueAt(1,"SR Flux/scan/cm2/mA");
-	viewCombo->SetValueAt(2,"SR Power/scan/cm2/mA");
+	viewCombo->SetValueAt(1,"SR Flux/scan/cm2");
+	viewCombo->SetValueAt(2,"SR Power/scan/cm2");
 	viewCombo->SetValueAt(3,"MC Hits");
 
 

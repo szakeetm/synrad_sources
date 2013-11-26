@@ -88,13 +88,12 @@ Region::Region(){
 	beta_y_distr = new Distribution2D(1);
 	eta_distr = new Distribution2D(1);
 	etaprime_distr = new Distribution2D(1);
-	coupling_distr = new Distribution2D(1);
 	e_spread_distr = new Distribution2D(1);
 }
 
 Region::~Region(){
 	Distribution2D* distr_ptr[9]={Bx_distr,By_distr,Bz_distr,beta_x_distr,beta_y_distr,eta_distr,
-		etaprime_distr,coupling_distr,e_spread_distr};
+		etaprime_distr,e_spread_distr};
 	for (int i=0;i<9;i++)
 		SAFE_DELETE(distr_ptr[i]);
 	//if ((int)Points.size()>0) Points.clear();
@@ -136,12 +135,12 @@ Region::Region(const Region &src) {
 	//*eta_distr=*(src.eta_distr);
 	etaprime_distr=new Distribution2D(src.nbDistr_BXY);
 	//*etaprime_distr=*(src.etaprime_distr);
-	coupling_distr=new Distribution2D(src.nbDistr_BXY);
 	e_spread_distr=new Distribution2D(src.nbDistr_BXY);
 
 	this->B_const=Vector(src.B_const.x,src.B_const.y,src.B_const.z);
 	this->dL=src.dL;
 	this->E=src.E;
+	this->current=src.current;
 	this->emittance=src.emittance;
 	this->coupling=src.coupling;
 	this->energy_spread=src.energy_spread;
@@ -213,13 +212,13 @@ Region& Region::operator=(const Region &src) {
 	//*eta_distr=*(src.eta_distr);
 	etaprime_distr=new Distribution2D(src.nbDistr_BXY);
 	//*etaprime_distr=*(src.etaprime_distr);
-	coupling_distr=new Distribution2D(src.nbDistr_BXY);
 	e_spread_distr=new Distribution2D(src.nbDistr_BXY);
 
 
 	this->B_const=Vector(src.B_const.x,src.B_const.y,src.B_const.z);
 	this->dL=src.dL;
 	this->E=src.E;
+	this->current=src.current;
 	this->emittance=src.emittance;
 	this->coupling=src.coupling;
 	this->energy_spread=src.energy_spread;

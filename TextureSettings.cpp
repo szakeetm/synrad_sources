@@ -116,8 +116,8 @@ TextureSettings::TextureSettings():GLWindow() {
   modeCombo = new GLCombo(0);
   modeCombo->SetSize(3);
   modeCombo->SetValueAt(0,"MC Hits");
-  modeCombo->SetValueAt(1,"Flux");
-  modeCombo->SetValueAt(2,"Power");
+  modeCombo->SetValueAt(1,"Flux (ph/sec/cm\262");
+  modeCombo->SetValueAt(2,"Power (W/cm\262");
   modeCombo->SetBounds(10,180,100,25);
   modeCombo->SetSelectedIndex(1);
   Add(modeCombo);

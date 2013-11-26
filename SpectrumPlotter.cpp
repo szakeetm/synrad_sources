@@ -25,7 +25,7 @@ GNU General Public License for more details.
 
 extern GLApplication *theApp;
 
-static const char*specMode[] = {"Flux (ph/sec/mA/.1%)","Power (W/mA/.1%)"};
+static const char*specMode[] = {"Flux (ph/sec/.1%)","Power (W/.1%)"};
 
 SpectrumPlotter::SpectrumPlotter():GLWindow() {
 

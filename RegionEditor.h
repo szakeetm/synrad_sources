@@ -51,12 +51,12 @@ private:
 	GLCombo    *startDirDefinitionCombo;
 	GLTextField *theta0text,*alpha0text,*startDirXtext,*startDirYtext,*startDirZtext;
 	GLTextField *dLtext,*limitsXtext,*limitsYtext,*limitsZtext;
-	GLButton *startDirInfoButton,*dlInfoButton,*limitsInfoButton;
+	GLButton *startDirInfoButton,*dlInfoButton,*limitsInfoButton,*beamsizeInfoButton;
 	GLButton *bxyBrowseButton,*magxBrowseButton,*magyBrowseButton,*magzBrowseButton;
 	GLButton *bxyEditButton,*magxEditButton,*magyEditButton,*magzEditButton;
 
 	//beam properties
-	GLTextField *particleMassText,*beamEnergyText;
+	GLTextField *particleMassText,*beamEnergyText,*beamCurrentText;
 	GLCombo *particleChargeCombo;
 	GLButton *setParticleElectronButton,*setParticlePositronButton,*setParticleProtonButton;
 

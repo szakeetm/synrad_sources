@@ -197,7 +197,7 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
 				GLMessageBox::Display("Invalid export frequency","Error",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 		}
-		ExportPoints(regionSelector->GetSelectedIndex(),exportFrequency,calcIntegrals);
+		ExportPoints(regionSelector->GetSelectedIndex(),exportFrequency,integrateToggle->IsChecked());
 	} else if (src==saveAsButton) {
 		FILENAME *fn = GLFileBox::SaveFile(NULL,NULL,"Save Region","param files\0*.param\0All files\0*.*\0",2);
 		if (!fn || !fn->fullName) return;
@@ -214,9 +214,9 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
     }
     break;
 	case MSG_TOGGLE:
-	if (src==integrateToggle) {
+	/*if (src==integrateToggle) {
 		calcIntegrals=integrateToggle->IsChecked();
-	}
+	}*/
 	break;
   }
   GLWindow::ProcessMessage(src,message);

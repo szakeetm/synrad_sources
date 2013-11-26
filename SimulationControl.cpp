@@ -255,7 +255,6 @@ BOOL LoadSimulation(Dataport *loader) {
 				sHandle->regions[r].beta_y_distr->valuesX[j]=
 				sHandle->regions[r].eta_distr->valuesX[j]=
 				sHandle->regions[r].etaprime_distr->valuesX[j]=
-				sHandle->regions[r].coupling_distr->valuesX[j]=
 				sHandle->regions[r].e_spread_distr->valuesX[j]=
 				*((double*)(buffer));
 			buffer+=sizeof(double);
@@ -266,8 +265,6 @@ BOOL LoadSimulation(Dataport *loader) {
 			sHandle->regions[r].eta_distr->valuesY[j]=*((double*)(buffer));
 			buffer+=sizeof(double);
 			sHandle->regions[r].etaprime_distr->valuesY[j]=*((double*)(buffer));
-			buffer+=sizeof(double);
-			sHandle->regions[r].coupling_distr->valuesY[j]=*((double*)(buffer));
 			buffer+=sizeof(double);
 			sHandle->regions[r].e_spread_distr->valuesY[j]=*((double*)(buffer));
 			buffer+=sizeof(double);

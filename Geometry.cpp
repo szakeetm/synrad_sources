@@ -553,7 +553,7 @@ void Geometry::CreateDifference() {
 	//close circle by adding the first vertex again
 	facets[sh.nbFacet-1]->indices[counter++]=facets[secondFacet]->indices[0];
 	 
-	InitializeGeometry(sh.nbFacet-1);
+	InitializeGeometry();
 	mApp->UpdateFacetParams(TRUE);
 	UpdateSelection();
 	mApp->facetList->SetSelectedRow(sh.nbFacet-1);
@@ -982,7 +982,7 @@ DWORD Geometry::GetGeometrySize(std::vector<Region> *regions,std::vector<Materia
 		memoryUsage += 2*sizeof(double)*(*regions)[i].Bx_distr->size;
 		memoryUsage += 2*sizeof(double)*(*regions)[i].By_distr->size;
 		memoryUsage += 2*sizeof(double)*(*regions)[i].Bz_distr->size;
-		memoryUsage += 7*sizeof(double)*(*regions)[i].nbDistr_BXY;
+		memoryUsage += 6*sizeof(double)*(*regions)[i].nbDistr_BXY;
 	}
 	//Material library
 	memoryUsage+=sizeof(int); //number of (*materials)
@@ -1056,8 +1056,6 @@ void Geometry::CopyGeometryBuffer(BYTE *buffer,std::vector<Region> *regions,std:
 			(*((double*)(buffer)))=(*regions)[i].eta_distr->valuesY[j];
 			buffer+=sizeof(double);
 			(*((double*)(buffer)))=(*regions)[i].etaprime_distr->valuesY[j];
-			buffer+=sizeof(double);
-			(*((double*)(buffer)))=(*regions)[i].coupling_distr->valuesY[j];
 			buffer+=sizeof(double);
 			(*((double*)(buffer)))=(*regions)[i].e_spread_distr->valuesY[j];
 			buffer+=sizeof(double);
@@ -1910,8 +1908,8 @@ int Geometry::RestoreDeviceObjects() {
 void Geometry::BuildFacetList(Facet *f) {
 
 	// Rebuild OpenGL geomtetry with texture
-	if( f->sh.isTextured && f->textureVisible ) {
-
+	//if( f->sh.isTextured && f->textureVisible ) {
+	if( f->sh.isTextured ) {
 		// Facet geometry
 		glNewList(f->glList,GL_COMPILE);
 		if( f->sh.nbIndex == 3 ) {

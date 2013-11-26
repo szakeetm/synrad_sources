@@ -30,6 +30,7 @@ public:
 	double dL;
 	double particleMass;
 	double E;
+	double current;
 	/*
 	double x0,y0,z0;
 	double teta0,alfa0;
@@ -58,8 +59,7 @@ public:
 	Vector nbDistr_MAG; //MAG file points
 	int nbDistr_BXY; //BXY file points
 	Distribution2D *Bx_distr,*By_distr,*Bz_distr; //pointer to the B field distribution (if file-based)
-	Distribution2D *beta_x_distr,*beta_y_distr,*eta_distr,*etaprime_distr,
-		*coupling_distr,*e_spread_distr; //pointer to the beta field distribution (if file-based)
+	Distribution2D *beta_x_distr,*beta_y_distr,*eta_distr,*etaprime_distr,*e_spread_distr; //pointer to the beta field distribution (if file-based)
 	Vector Bx_dir,By_dir,Bz_dir; //direction in which MAG files are oriented (in their second line)
 	double Bx_period,By_period,Bz_period; //first line of length files
 	double Bx_phase,By_phase,Bz_phase; //phase in case of helicoidal B file
@@ -88,8 +88,7 @@ public:
 	void LoadRegion(FileReader *file,GLProgress *prg);
 	Distribution2D LoadMAGFile(FileReader *file,Vector *dir,double *period,double *phase,int mode);
 	int LoadBXY(FileReader *file,Distribution2D *beta_x_distr,Distribution2D *beta_y_distr,
-		Distribution2D *eta_distr,Distribution2D *etaprime_distr,
-		Distribution2D *coupling_distr,Distribution2D *e_spread_distr);
+		Distribution2D *eta_distr,Distribution2D *etaprime_distr,Distribution2D *e_spread_distr);
 	void Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLength);
 	void SelectTrajPoint(int x,int y);
 	void ExportPoints(FileWriter *f,GLProgress *prg,int frequency=1,BOOL doFullScan=FALSE);

@@ -86,7 +86,8 @@ double Distribution2D::InterpolateX(const double &y) {
 	return valuesX[inferior_index]+overshoot/slope;
 }
 
-double Distribution2D::Interval_Mean(const double &x1,const double &x2) { //average of an INTEGRAL of a distribution (differentiation included)
+double Distribution2D::Interval_Mean(const double &x1,const double &x2) {
+	//average of a cumulative distribution (differentiation included)
 	
 	int i1=integral_N_photons.findXindex(log(x1))+1;
 	int i2=integral_N_photons.findXindex(log(x2))+1;

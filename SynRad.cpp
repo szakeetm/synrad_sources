@@ -553,7 +553,7 @@ int SynRad::OneTimeSceneInit()
 	modeCombo->SetSize(2);
 	modeCombo->SetValueAt(0,"Fluxwise");
 	modeCombo->SetValueAt(1,"Powerwise");
-	modeCombo->SetSelectedIndex(0);
+	modeCombo->SetSelectedIndex(1);
 	simuPanel->Add(modeCombo);
 
 	singleACBtn = new GLButton(0,"1");

@@ -714,7 +714,7 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 	double critical_energy;
 	if (current_region->emittance>0.0) { //if beam is not ideal
 		//calculate non-ideal beam's offset (the four sigmas)
-		double betax_,betay_,eta_,etaprime_,coupling_,e_spread_;
+		double betax_,betay_,eta_,etaprime_,e_spread_;
 		if (current_region->betax<0.0) { //negative betax value: load BXY file
 			double coordinate; //interpolation X value (first column of BXY file)
 			if (current_region->beta_kind==0) coordinate=sourceId*current_region->dL;
@@ -726,7 +726,6 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 			betay_=current_region->beta_y_distr->InterpolateY(coordinate);
 			eta_=current_region->eta_distr->InterpolateY(coordinate);
 			etaprime_=current_region->etaprime_distr->InterpolateY(coordinate);
-			coupling_=current_region->coupling_distr->InterpolateY(coordinate);
 			e_spread_=current_region->e_spread_distr->InterpolateY(coordinate);
 			//the six above distributions are the ones that are read from the BXY file
 			//interpolateY finds the Y value corresponding to X input
@@ -736,12 +735,11 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 			betay_=current_region->betay;
 			eta_=current_region->eta;
 			etaprime_=current_region->etaprime;
-			coupling_=current_region->coupling;
 			e_spread_=current_region->energy_spread;
 		}
 
-		emittance_x_=current_region->emittance/(1.0+coupling_);
-		emittance_y_=emittance_x_*coupling_;
+		emittance_x_=current_region->emittance/(1.0+current_region->coupling);
+		emittance_y_=emittance_x_*current_region->coupling;
 
 		double sigmaxprime=sqrt(emittance_x_/betax_+Sqr(etaprime_*e_spread_));
 		//{ hor lattice-dependent divergence, radians }
@@ -789,7 +787,7 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 		/exp(integral_N_photons.valuesY[integral_N_photons.size-1]);
 
 	double SR_flux,SR_power;
-	SR_flux=current_region->dL/(radius*2*PI)*current_region->gamma*4.1289E14*B_factor;
+	SR_flux=current_region->dL/(radius*2*PI)*current_region->gamma*4.1289E14*B_factor*current_region->current;
 	//Total flux per revolution for electrons: 8.08E17*E[GeV]*I[mA] photons/sec
 	//8.08E17 * 0.000511GeV = 4.1289E14
 
@@ -805,7 +803,7 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 	else average_=integral_N_photons.Interval_Mean(current_region->energy_low/critical_energy,current_region->energy_hi/critical_energy);
 
 	double average=integral_N_photons.average;
-	double average1=integral_N_photons.average1;
+	//double average1=integral_N_photons.average1; //unused
 
 	if (current_region->generation_mode==SYNGEN_MODE_POWERWISE)
 		SR_flux=SR_flux/generated_energy*average_;
@@ -829,7 +827,7 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 	if (rnd()<0.5) natural_divy=-natural_divy;
 
 	if (B_factor>0.0 && average_>VERY_SMALL) {
-		SR_power=SR_flux*generated_energy*critical_energy*1.602189E-19*average/average_*B_factor_power/B_factor;
+		SR_power=SR_flux*generated_energy*critical_energy*1.602189E-19*average/average_*B_factor_power/B_factor; //flux already multiplied by current
 	} else SR_power=0.0;
 
 	last_critical_energy=critical_energy;

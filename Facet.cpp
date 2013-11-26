@@ -530,8 +530,10 @@ void Facet::SetTexture(double width,double height,BOOL useMesh) {
 	DELETE_TEX(glTex);
 	DELETE_LIST(glList);
 	DELETE_LIST(glElem);
-	for(int i=0;i<nbElem;i++)
-		SAFE_FREE(meshPts[i].pts);
+	if (meshPts) {
+		for(int i=0;i<nbElem;i++)
+			SAFE_FREE(meshPts[i].pts);
+	}
 	SAFE_FREE(meshPts);
 	nbElem = 0;
 	UnselectElem();

@@ -86,6 +86,9 @@ RegionEditor::RegionEditor():GLWindow() {
 	GLLabel* label30 = new GLLabel("");
 	GLLabel* label301 = new GLLabel("Beam energy:");
 	beamEnergyText = new GLTextField(0,"");
+	GLLabel *currentLabel=new GLLabel("Current:");
+	beamCurrentText = new GLTextField(0,"");
+	GLLabel *mALabel=new GLLabel("mA");
 	GLLabel* label302 = new GLLabel("GeV");
 	idealBeamToggle = new GLToggle(0,"Ideal Beam");
 	betaOrBXYCombo = new GLCombo(0);
@@ -141,6 +144,7 @@ RegionEditor::RegionEditor():GLWindow() {
 	limitsInfoButton = new GLButton(0,"Info");
 	dlInfoButton = new GLButton(0,"Info");
 	startDirInfoButton = new GLButton(0,"Info");
+	beamsizeInfoButton = new GLButton(0,"Info");
 	bxyBrowseButton = new GLButton(0,"...");
 	magxBrowseButton = new GLButton(0,"...");
 	magyBrowseButton = new GLButton(0,"...");
@@ -388,7 +392,7 @@ RegionEditor::RegionEditor():GLWindow() {
 	beamPanel->SetBounds(10,235,wD-20,150);
 	Add(beamPanel);
 
-	label301->SetBounds(30,250,100,18);//Beam energy:
+	label301->SetBounds(165,250,100,18);//Beam energy:
 	Add(label301);
 
 	beamEnergyText->SetBounds(240,250,80,18);
@@ -396,6 +400,15 @@ RegionEditor::RegionEditor():GLWindow() {
 
 	label302->SetBounds(325,250,20,18);//GeV
 	Add(label302);
+
+	currentLabel->SetBounds(365,250,50,18);
+	Add(currentLabel);
+
+	beamCurrentText->SetBounds(425,250,80,18);
+	Add(beamCurrentText);
+
+	mALabel->SetBounds(510,250,30,18);
+	Add(mALabel);
 
 	//---- idealBeamToggle ----
 	//idealBeamToggle->SetText("Ideal beam");
@@ -460,36 +473,40 @@ RegionEditor::RegionEditor():GLWindow() {
 	Add(betaYtext);
 	betaYtext->SetBounds(605, 309, 80, 18);
 
-	//---- label34 ----
-	label34->SetText("Eta:");
-	Add(label34);
-	label34->SetBounds(180, 335, 23, 18);
-
-	//---- etaText ----
-	etaText->SetEditable(FALSE);
-	Add(etaText);
-	etaText->SetBounds(240, 334, 80, 18);
-
-	//---- label37 ----
-	label37->SetText("EtaPrime:");
-	Add(label37);
-	label37->SetBounds(365, 335, 58, 18);
-
-	//---- etaPrimeText ----
-	etaPrimeText->SetEditable(FALSE);
-	Add(etaPrimeText);
-	etaPrimeText->SetBounds(425, 334, 80, 18);
-
 	//Couplinglabel
 	GLLabel *couplingLabel = new GLLabel("Coupling:");
-	couplingLabel->SetBounds(180,360,60,18);
+	couplingLabel->SetBounds(180,335,60,18);
 	Add(couplingLabel);
 
 	//couplingText
 	couplingText = new GLTextField(0,"");
 	couplingText->SetEditable(FALSE);
-	couplingText->SetBounds(240,359,80,18);
+	couplingText->SetBounds(240,334,80,18);
 	Add(couplingText);
+
+	//---- label34 ----
+	label34->SetText("Eta:");
+	Add(label34);
+	label34->SetBounds(365, 335, 23, 18);
+
+	//---- etaText ----
+	etaText->SetEditable(FALSE);
+	Add(etaText);
+	etaText->SetBounds(425, 334, 80, 18);
+
+	//---- label37 ----
+	label37->SetText("EtaPrime:");
+	Add(label37);
+	label37->SetBounds(555, 335, 58, 18);
+
+	//---- etaPrimeText ----
+	etaPrimeText->SetEditable(FALSE);
+	Add(etaPrimeText);
+	etaPrimeText->SetBounds(605, 334, 80, 18);
+
+	//---- beamsizeInfoButton ----
+	Add(beamsizeInfoButton);
+	beamsizeInfoButton->SetBounds(240, 359, 80, 18);
 
 	//energySpreadLabel
 	GLLabel *energySpreadLabel = new GLLabel("E_Spread:");
@@ -809,6 +826,18 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 				"Y=-sin(alpha)\n"
 				"Z=cos(alpha)*cos(theta)\n";
 			GLMessageBox::Display(tmp,"Beam start direction",GLDLG_OK,GLDLG_ICONINFO);
+		} else if (src==this->beamsizeInfoButton) {
+			char tmp[]="horizontal_emittance = emittance * (1 + coupling)\n"
+				"vertical_emittance = horizontal_emittance * coupling\n\n"
+				"sigma_x = sqrt( horizontal_emittance * beta_X + (eta * energy_spread)^2 )\n"
+				"sigma_y = vertical_emittance * beta_Y\n"
+				"sigma_x_prime = sqrt( horizontal_emittance / beta_X + (eta_prime / energy_spread)^2 )\n"
+				"sigma_y_prime=sqrt( vertical_emittance / beta_Y )\n\n"
+				"The beam size follows a bivariate Gaussian distribution with "
+				"sigma_x and sigma_y standard deviations.\n"
+				"The beam (angular) divergence follows a Gaussian distribution with "
+				"sigma_x_prime and sigma_y_prime distributions.";
+			GLMessageBox::Display(tmp,"Beam size info",GLDLG_OK,GLDLG_ICONINFO);
 		} else if (src==this->dlInfoButton) {
 			char tmp[]="The trajectory will consist of N calculated points situated 'dL' distance from each other.\n\n"
 				"The calculation algorithm supposes that the trajectory is straight for 'dL' distance, after which\n"
@@ -828,9 +857,9 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 		} else if (src==applyButton) {
 			//read values, apply them and reload region
 			//close the window
-			if (mApp->AskToReset()){
+			
 				ApplyChanges();
-			}
+			
 
 			return;
 
@@ -878,11 +907,11 @@ void RegionEditor::EnableDisableControls() {
 	bxyBrowseButton->SetEnabled(!useIdealBeam && useBXYfile);
 	bxyEditButton->SetEnabled(!useIdealBeam && useBXYfile);
 	emittanceText->SetEditable(!useIdealBeam);
+	couplingText->SetEditable(!useIdealBeam);
 	betaXtext->SetEditable(!useIdealBeam && !useBXYfile);
 	betaYtext->SetEditable(!useIdealBeam && !useBXYfile);
 	etaText->SetEditable(!useIdealBeam && !useBXYfile);
 	etaPrimeText->SetEditable(!useIdealBeam && !useBXYfile);			
-	couplingText->SetEditable(!useIdealBeam && !useBXYfile);
 	energySpreadText->SetEditable(!useIdealBeam && !useBXYfile);			
 	BOOL limitAngle=limitAngleToggle->IsChecked();
 	psiMaxXtext->SetEditable(limitAngle);
@@ -916,7 +945,7 @@ void RegionEditor::FillValues() {
 	particleChargeCombo->SetSelectedIndex(cr->particleMass<0);
 
 	sprintf(tmp,"%g",cr->E);beamEnergyText->SetText(tmp);
-
+	sprintf(tmp,"%g",cr->current);beamCurrentText->SetText(tmp);
 	idealBeamToggle->SetCheck(cr->emittance==0.0);
 
 	if (cr->emittance==0.0) { //ideal beam
@@ -930,19 +959,19 @@ void RegionEditor::FillValues() {
 		couplingText->SetText("0");
 		energySpreadText->SetText("0");
 	}
+	
+	sprintf(tmp,"%g",cr->emittance);emittanceText->SetText(tmp);
+	sprintf(tmp,"%g",cr->coupling);couplingText->SetText(tmp);
 
 	if (cr->betax>=0.0) { //don't use BXY file
 		betaOrBXYCombo->SetSelectedIndex(0);
 		BXYfileNameText->SetText("");
-		sprintf(tmp,"%g",cr->emittance);emittanceText->SetText(tmp);
 		sprintf(tmp,"%g",cr->betax);betaXtext->SetText(tmp);
 		sprintf(tmp,"%g",cr->betay);betaYtext->SetText(tmp);
 		sprintf(tmp,"%g",cr->eta);etaText->SetText(tmp);
 		sprintf(tmp,"%g",cr->etaprime);etaPrimeText->SetText(tmp);
-		sprintf(tmp,"%g",cr->coupling);couplingText->SetText(tmp);
 		sprintf(tmp,"%g",cr->energy_spread);energySpreadText->SetText(tmp);
 	} else {
-		sprintf(tmp,"%g",cr->emittance);emittanceText->SetText(tmp);
 		betaOrBXYCombo->SetSelectedIndex(1);
 		BXYfileNameText->SetText((char*)cr->BXYfileName.c_str());
 	}
@@ -977,7 +1006,7 @@ void RegionEditor::FillValues() {
 
 void RegionEditor::ApplyChanges() {
 	double tmp;
-
+	SynRad *mApp = (SynRad *)theApp;
 	//First step:: error check
 	if (!startPointXtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid X0","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	if (!startPointYtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid Y0","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
@@ -1004,10 +1033,14 @@ void RegionEditor::ApplyChanges() {
 	if (!beamEnergyText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid beam energy","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	if (tmp<=0.0) {GLMessageBox::Display("Beam energy must be positive","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 
+	if (!beamCurrentText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid beam current","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
+	if (tmp<=0.0) {GLMessageBox::Display("Beam current must be positive","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 
 	if(!idealBeamToggle->IsChecked()) { //non-ideal beam
 		if (!emittanceText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid emittance","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		if (tmp<=0.0) {GLMessageBox::Display("Emittance must be positive","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
+		if (!couplingText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid Coupling","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
+		if (tmp<0.0) {GLMessageBox::Display("Coupling must be non-negative","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		if (betaOrBXYCombo->GetSelectedIndex()==0) { //constant values
 			if (!betaXtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid BetaX","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 			if (tmp<0.0) {GLMessageBox::Display("BetaX must be non-negative","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
@@ -1017,8 +1050,6 @@ void RegionEditor::ApplyChanges() {
 			if (tmp<0.0) {GLMessageBox::Display("Eta must be non-negative","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 			if (!etaPrimeText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid EtaPrime","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 			if (tmp<0.0) {GLMessageBox::Display("EtaPrime must be non-negative","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
-			if (!couplingText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid Coupling","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
-			if (tmp<0.0) {GLMessageBox::Display("Coupling must be non-negative","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 			if (!energySpreadText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid E_spread","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 			if (tmp<0.0) {GLMessageBox::Display("E_Spread must be non-negative","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		} else { //use BXY file
@@ -1061,7 +1092,7 @@ void RegionEditor::ApplyChanges() {
 
 	// Hallelujah, the user filled out the form without any errors
 	// Let's apply his values
-
+	if (!mApp->AskToReset()) return;
 	//Deselect point, if has selected
 	cr->selectedPoint=-1;
 
@@ -1087,16 +1118,17 @@ void RegionEditor::ApplyChanges() {
 	if (particleChargeCombo->GetSelectedIndex()==1) //negative charge
 		cr->particleMass*=-1;
 	beamEnergyText->GetNumber(&cr->E);
+	beamCurrentText->GetNumber(&cr->current);
 	cr->gamma=abs(cr->E/cr->particleMass);
 	if (idealBeamToggle->IsChecked()) cr->emittance=0.0;
 	else {
 		emittanceText->GetNumber(&cr->emittance);
+		couplingText->GetNumber(&cr->coupling);
 		if (betaOrBXYCombo->GetSelectedIndex()==0) { //constant values
 			betaXtext->GetNumber(&cr->betax);
 			betaYtext->GetNumber(&cr->betay);
 			etaText->GetNumber(&cr->eta);
-			etaPrimeText->GetNumber(&cr->etaprime);
-			couplingText->GetNumber(&cr->coupling);
+			etaPrimeText->GetNumber(&cr->etaprime);	
 			energySpreadText->GetNumber(&cr->energy_spread);
 		} else { //load BXY file
 			cr->betax=-1.0; //negative value: use BXY file
@@ -1105,7 +1137,7 @@ void RegionEditor::ApplyChanges() {
 			try {
 				FileReader BXYfile(BXYfileNameText->GetText());
 				cr->nbDistr_BXY=cr->LoadBXY(&BXYfile,cr->beta_x_distr,cr->beta_y_distr,
-					cr->eta_distr,cr->etaprime_distr,cr->coupling_distr,cr->e_spread_distr);
+					cr->eta_distr,cr->etaprime_distr,cr->e_spread_distr);
 			} catch(Error &e) {
 				char tmp[256];
 				sprintf(tmp,"Couldn't load BXY file. Error message:\n%s",e.GetMsg());
@@ -1172,7 +1204,7 @@ void RegionEditor::ApplyChanges() {
 		}
 	}
 
-	SynRad *mApp = (SynRad *)theApp;
+	
 	worker->RecalcRegion(regionId);
 	if (mApp->regionInfo) mApp->regionInfo->Update();
 	if (mApp->spectrumPlotter) mApp->spectrumPlotter->SetScale();
