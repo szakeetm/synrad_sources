@@ -76,7 +76,7 @@ Vector Region::B(const Vector &position) {
 
 Region::Region(){
 	
-	generation_mode=SYNGEN_MODE_FLUXWISE;
+	generation_mode=SYNGEN_MODE_POWERWISE;
 	selectedPoint=-1;
 	isLoaded=false;
 	//object placeholders until MAG files are loaded

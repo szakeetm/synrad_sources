@@ -332,7 +332,7 @@ Distribution2D Region::LoadMAGFile(FileReader *file,Vector *dir,double *period,d
 
 Region::Region(){
 
-	generation_mode=SYNGEN_MODE_FLUXWISE;
+	generation_mode=SYNGEN_MODE_POWERWISE;
 	emittance=eta=etaprime=energy_spread=betax=betay=0.0;
 	coupling=1.0;
 	selectedPoint=-1;

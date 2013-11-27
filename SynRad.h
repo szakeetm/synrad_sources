@@ -64,7 +64,7 @@
 #define APP_NAME "SynRad+ development version (Compiled "__DATE__" "__TIME__") DEBUG MODE"
 #else
 //#define APP_NAME "SynRad+ development version ("__DATE__")"
-#define APP_NAME "Synrad+ 1.1.0.4 ("__DATE__")"
+#define APP_NAME "Synrad+ 1.2.0.1 ("__DATE__")"
 #endif
 
 extern int changedSinceSave;

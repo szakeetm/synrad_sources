@@ -3190,6 +3190,7 @@ void SynRad::ProcessMessage(GLComponent *src,int message)
 		} else if ( src == facetRecType || src == facetSideType || src == facetSpectrumCombo) {
 			facetApplyBtn->SetEnabled(TRUE);
 		} else if ( src == modeCombo ) {
+			changedSinceSave = TRUE;
 			for (int i=0;i<(int)worker.regions.size();i++)
 				worker.regions[i].generation_mode=modeCombo->GetSelectedIndex(); //fluxwise or powerwise
 			worker.Reload();
