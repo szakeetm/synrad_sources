@@ -401,8 +401,7 @@ void Geometry::CreatePolyFromVertices_Convex() {
 	SAFE_FREE(debug);
 	SAFE_FREE(returnList);
 
-	InitializeGeometry(sh.nbFacet-1);
-	mApp->UpdateModelParams();
+	InitializeGeometry();
 	mApp->UpdateFacetParams(TRUE);
 	UpdateSelection();
 	mApp->facetList->SetSelectedRow(sh.nbFacet-1);
@@ -498,8 +497,7 @@ void Geometry::CreatePolyFromVertices_Order() {
 	SAFE_FREE(debug);
 	SAFE_FREE(returnList);*/
 
-	InitializeGeometry(sh.nbFacet-1);
-	mApp->UpdateModelParams();
+	InitializeGeometry();
 	mApp->UpdateFacetParams(TRUE);
 	UpdateSelection();
 	mApp->facetList->SetSelectedRow(sh.nbFacet-1);
@@ -2381,7 +2379,7 @@ void Geometry::InsertSTL(FileReader *file,GLProgress *prg,BOOL newStr,double sca
 	char *e = strrchr(strName[0],'.');
 	if(e) *e=0;
 	InitializeGeometry();
-	AdjustProfile();
+	//AdjustProfile();
 	//isLoaded = TRUE;
 
 }
@@ -2401,7 +2399,7 @@ void Geometry::InsertGEO(FileReader *file,GLProgress *prg,BOOL newStr) {
 	char *e = strrchr(strName[0],'.');
 	if(e) *e=0;
 	InitializeGeometry();
-	AdjustProfile();
+	//AdjustProfile();
 	//isLoaded = TRUE;
 
 }
@@ -2414,7 +2412,7 @@ PARfileList Geometry::InsertSYN(FileReader *file,GLProgress *prg,BOOL newStr) {
 	char *e = strrchr(strName[0],'.');
 	if(e) *e=0;
 	InitializeGeometry();
-	AdjustProfile();
+	//AdjustProfile();
 	return result;
 }
 
@@ -3306,7 +3304,7 @@ void Geometry::LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleak,
 	}
 
 	InitializeGeometry();
-	AdjustProfile();
+	//AdjustProfile();
 	//isLoaded=TRUE;
 	UpdateName(file);
 
@@ -5328,7 +5326,7 @@ PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *
 
 	prg->SetMessage("Initalizing geometry and building mesh...");
 	InitializeGeometry();
-	AdjustProfile();
+	//AdjustProfile();
 	isLoaded = TRUE;
 	UpdateName(file);
 

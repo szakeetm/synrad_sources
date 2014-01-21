@@ -991,42 +991,43 @@ GLChart::~GLChart() {
         
         // Get DataList handle and write dataview name
         DataList *ptr[MAX_VIEWS];
-        int j=0;
-        for(int i=0;i<nbv1;i++) {
-          ptr[j++] = y1Axis->GetDataView(i)->GetData();
-          sprintf(tmp,"%s",y1Axis->GetDataView(i)->GetName());
-          int l = (int)strlen(tmp)-1;
-          if( l>=0 && tmp[l]>=128 ) tmp[l]=0;
-          fprintf(f,tmp);
-          if(j<nbView-1) fprintf(f,"\t");
-        }
-        for(int i=0;i<nbv2;i++) {
-          ptr[j++] = y2Axis->GetDataView(i)->GetData();
-          sprintf(tmp,"%s",y2Axis->GetDataView(i)->GetName());
-          int l = (int)strlen(tmp)-1;
-          if( l>=0 && tmp[l]>=128 ) tmp[l]=0;
-          fprintf(f,tmp);
-          if(j<nbView) fprintf(f,"\t");
-        }
-        fprintf(f,"\n");
+			int j=0;
+			fprintf(f,"X axis\t");
+			for(int i=0;i<nbv1;i++) {
+				ptr[j++] = y1Axis->GetDataView(i)->GetData();
+				sprintf(tmp,"%s",y1Axis->GetDataView(i)->GetName());
+				int l = (int)strlen(tmp)-1;
+				if( l>=0 && tmp[l]>=128 ) tmp[l]=0;
+				fprintf(f,tmp);
+				if(j<nbView) fprintf(f,"\t");
+			}
+			for(int i=0;i<nbv2;i++) {
+				ptr[j++] = y2Axis->GetDataView(i)->GetData();
+				sprintf(tmp,"%s",y2Axis->GetDataView(i)->GetName());
+				int l = (int)strlen(tmp)-1;
+				if( l>=0 && tmp[l]>=128 ) tmp[l]=0;
+				fprintf(f,tmp);
+				if(j<nbView) fprintf(f,"\t");
+			}
+			fprintf(f,"\n");
 
-        BOOL eof = FALSE;
-        while(!eof) {
-          eof = TRUE;
-          for(int i=0;i<nbView;i++) if( ptr[i] ) eof = FALSE;
-          if( !eof ) {
-            for(int i=0;i<nbView;i++) {
-              if( ptr[i] ) {
-                fprintf(f,"%g",ptr[i]->y);
-                ptr[i]=ptr[i]->next;
-              }
-              if(i<nbView) fprintf(f,"\t");
-            }
-            fprintf(f,"\n");
-          }
-        }
-        fclose(f);
-
+			BOOL eof = FALSE;
+			while(!eof) {
+				eof = TRUE;
+				for(int i=0;i<nbView;i++) if( ptr[i] ) eof = FALSE;
+				if( !eof ) {
+					for(int i=0;i<nbView;i++) {
+						if( ptr[i] ) {
+							if (i==0) fprintf(f,"%g\t",ptr[i]->x);
+							fprintf(f,"%g",ptr[i]->y);
+							ptr[i]=ptr[i]->next;
+						}
+						if(i<nbView-1) fprintf(f,"\t");
+					}
+					fprintf(f,"\n");
+				}
+			}
+			fclose(f);
       } else {
         GLMessageBox::Display("Cannot open file for writing","Error",GLDLG_OK,GLDLG_ICONERROR);
       }

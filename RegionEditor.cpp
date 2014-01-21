@@ -827,7 +827,7 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 				"Z=cos(alpha)*cos(theta)\n";
 			GLMessageBox::Display(tmp,"Beam start direction",GLDLG_OK,GLDLG_ICONINFO);
 		} else if (src==this->beamsizeInfoButton) {
-			char tmp[]="horizontal_emittance = emittance * (1 + coupling)\n"
+			char tmp[]="horizontal_emittance = emittance / (1 + coupling)\n"
 				"vertical_emittance = horizontal_emittance * coupling\n\n"
 				"sigma_x = sqrt( horizontal_emittance * beta_X + (eta * energy_spread)^2 )\n"
 				"sigma_y = vertical_emittance * beta_Y\n"

@@ -1303,7 +1303,7 @@ void GeometryViewer::Paint() {
 		case XYZ_TOP: // TopView
 			x = -view.vLeft - (1.0-(double)mXOrg/(double)width) * (view.vRight-view.vLeft) + (org.x+view.camOffset.x)*view.camDist;
 			z = -view.vTop - ((double)mYOrg/(double)(height-DOWN_MARGIN)) * (view.vBottom-view.vTop) + (org.z+view.camOffset.z)*view.camDist;
-			sprintf(tmp,"X=%g, Z=%g",x/view.camDist,z/view.camDist);
+			sprintf(tmp,"X=%g, Z=%g",-x/view.camDist,z/view.camDist);
 			topBtn->SetCheck(TRUE);
 			break;
 		case XYZ_SIDE: // Side View

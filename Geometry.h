@@ -36,7 +36,7 @@ class Worker;
 
 #define SEL_HISTORY  100
 #define MAX_SUPERSTR 256
-#define SYNVERSION   5
+#define SYNVERSION   6
 #define GEOVERSION   12
 #define PARAMVERSION 2
 

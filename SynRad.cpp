@@ -305,7 +305,7 @@ int SynRad::OneTimeSceneInit()
 
 	menu = new GLMenuBar(0);
 	wnd->SetMenuBar(menu);
-	menu->Add("&File");
+	menu->Add("File");
 	menu->GetSubMenu("File")->Add("&Load",MENU_FILE_LOAD,SDLK_o,CTRL_MODIFIER);
 	menu->GetSubMenu("File")->Add("&Save",MENU_FILE_SAVE,SDLK_s,CTRL_MODIFIER);
 	menu->GetSubMenu("File")->Add("Save as",MENU_FILE_SAVEAS);
@@ -344,7 +344,7 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("File")->SetIcon(MENU_FILE_SAVE,83,24);
 	menu->GetSubMenu("File")->SetIcon(MENU_FILE_SAVEAS,101,24);
 
-	menu->Add("&Regions");
+	menu->Add("Regions");
 	menu->GetSubMenu("Regions")->Add("New...",MENU_REGIONS_NEW);
 	menu->GetSubMenu("Regions")->Add("Load...",MENU_REGIONS_LOADPAR);
 	menu->GetSubMenu("Regions")->Add("Load recent",MENU_REGIONS_LOADRECENT);
@@ -359,7 +359,7 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("Regions")->Add(NULL); // Separator
 	menu->GetSubMenu("Regions")->Add("Region Info ...",MENU_REGIONS_REGIONINFO);
 
-	menu->Add("&Selection");
+	menu->Add("Selection");
 	menu->GetSubMenu("Selection")->Add("Select All Facets",MENU_FACET_SELECTALL,SDLK_a,CTRL_MODIFIER);
 	menu->GetSubMenu("Selection")->Add("Select by Facet Number...",MENU_SELECTION_SELECTFACETNUMBER,SDLK_n,ALT_MODIFIER);
 	menu->GetSubMenu("Selection")->Add("Select Sticking",MENU_FACET_SELECTSTICK);
@@ -400,14 +400,14 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("Selection")->Add("Select Coplanar vertex (visible on screen)",MENU_VERTEX_SELECT_COPLANAR);
 
 
-	menu->Add("&Tools");
+	menu->Add("Tools");
 	menu->GetSubMenu("Tools")->Add("3D Settings ..."   ,MENU_EDIT_3DSETTINGS,SDLK_b,CTRL_MODIFIER);
 	menu->GetSubMenu("Tools")->Add("Texture scaling...",MENU_EDIT_TSCALING,SDLK_d,CTRL_MODIFIER);
 	menu->GetSubMenu("Tools")->Add("Add formula ..."   ,MENU_EDIT_ADDFORMULA);
 	menu->GetSubMenu("Tools")->Add("Global Settings ..."   ,MENU_EDIT_GLOBALSETTINGS);
 	menu->GetSubMenu("Tools")->Add(NULL); // Separator
-	menu->GetSubMenu("Tools")->Add("Texture Plotter ...",MENU_FACET_TEXPLOTTER);
-	menu->GetSubMenu("Tools")->Add("Profile Plotter ...",MENU_FACET_PROFPLOTTER);
+	menu->GetSubMenu("Tools")->Add("Texture Plotter ...",MENU_FACET_TEXPLOTTER,SDLK_t,ALT_MODIFIER);
+	menu->GetSubMenu("Tools")->Add("Profile Plotter ...",MENU_FACET_PROFPLOTTER,SDLK_p,ALT_MODIFIER);
 	menu->GetSubMenu("Tools")->Add("Spectrum Plotter ...",MENU_FACET_SPECTRUMPLOTTER);
 
 
@@ -415,7 +415,7 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("Tools")->SetIcon(MENU_EDIT_TSCALING,137,24);
 	menu->GetSubMenu("Tools")->SetIcon(MENU_EDIT_ADDFORMULA,155,24);
 
-	menu->Add("F&acet");
+	menu->Add("Facet");
 	menu->GetSubMenu("Facet")->Add("Collapse ...",MENU_FACET_COLLAPSE);
 	menu->GetSubMenu("Facet")->Add("Swap normal",MENU_FACET_SWAPNORMAL,SDLK_n,CTRL_MODIFIER);
 	menu->GetSubMenu("Facet")->Add("Shift vertex",MENU_FACET_SHIFTVERTEX,SDLK_h,CTRL_MODIFIER);
@@ -445,7 +445,7 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("Facet")->SetIcon(MENU_FACET_MESH,72,77);
 	menu->GetSubMenu("Facet")->SetIcon(MENU_FACET_TEXPLOTTER,108,77);
 
-	menu->Add("&Vertex");
+	menu->Add("Vertex");
 	menu->GetSubMenu("Vertex")->Add("Create Facet from Selected");
 	menu->GetSubMenu("Vertex")->GetSubMenu("Create Facet from Selected")->Add("Convex Hull",MENU_VERTEX_CREATE_POLY_CONVEX,SDLK_v,ALT_MODIFIER);
 	menu->GetSubMenu("Vertex")->GetSubMenu("Create Facet from Selected")->Add("Keep selection order",MENU_VERTEX_CREATE_POLY_ORDER);
@@ -455,7 +455,7 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("Vertex")->Add("Scale selected...",MENU_VERTEX_SCALE);
 	menu->GetSubMenu("Vertex")->Add("Add new...",MENU_VERTEX_ADD);
 
-	menu->Add("&View");
+	menu->Add("View");
 
 	menu->GetSubMenu("View")->Add("Structure",MENU_VIEW_STRUCTURE_P);
 	structMenu = menu->GetSubMenu("View")->GetSubMenu("Structure");
