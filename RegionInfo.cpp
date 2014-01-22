@@ -20,7 +20,7 @@
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLWindowManager.h"
 #include "GLApp/GLMessageBox.h"
-#include "Region.h"
+#include "Region_full.h"
 #include "SynRad.h"
 #include "GLApp/GLFileBox.h"
 
@@ -261,7 +261,7 @@ void RegionInfo::Update() {
 	t4->SetText(tmp);
 	
 	if (selectedRegion->selectedPoint!=-1) {
-		Vector B=selectedRegion->B(selectedRegion->Points[selectedRegion->selectedPoint].position);
+		Vector B=selectedRegion->B((double)selectedRegion->selectedPoint,Vector(0,0,0));
 		sprintf(tmp,"B=%g T (%g , %g , %g)",B.Norme(),B.x,B.y,B.z);
 	} else sprintf(tmp,"");
 	t5->SetText(tmp);

@@ -52,6 +52,7 @@
 #define MAX(x,y) (((x)<(y))?(y):(x))
 #define MIN(x,y) (((x)<(y))?(x):(y))
 #define SATURATE(x,min,max) {if(x<(min)) x=(min); if(x>(max)) x=(max);}
+#define WEIGH(a,b,weigh) a+(b-a)*weigh
 #define DELETE_LIST(l) if(l) { glDeleteLists(l,1);l=0; }
 #define DELETE_TEX(t)  if(t) { glDeleteTextures(1,&t);t=0; }
 #define SAFE_DELETE(x) if(x) { delete x;x=NULL; }

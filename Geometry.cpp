@@ -26,12 +26,9 @@ GNU General Public License for more details.
 #include "GLApp\GLMessageBox.h"
 #include "Synrad.h"
 #include "GLApp\GLWindowManager.h"
-#include "Region.h"
+#include "Region_full.h"
 
 extern GLApplication *theApp;
-extern double totalOutgassing;
-extern double gasMass;
-extern int nonIsothermal;
 //extern HANDLE synradHandle;
 extern int needsReload;
 
@@ -964,7 +961,7 @@ void Geometry::RebuildLists() {
 
 // -----------------------------------------------------------
 
-DWORD Geometry::GetGeometrySize(std::vector<Region> *regions,std::vector<Material> *materials) {
+DWORD Geometry::GetGeometrySize(std::vector<Region_full> *regions,std::vector<Material> *materials) {
 
 	// Compute number of bytes allocated
 	DWORD memoryUsage = 0;
@@ -974,7 +971,7 @@ DWORD Geometry::GetGeometrySize(std::vector<Region> *regions,std::vector<Materia
 		memoryUsage += facets[i]->GetGeometrySize();
 	}
 	//Regions
-	memoryUsage += (int)(*regions).size()*sizeof(Region);
+	memoryUsage += (int)(*regions).size()*sizeof(Region_mathonly);
 	for (int i=0;i<(int)(*regions).size();i++) {
 		memoryUsage += sizeof(Trajectory_Point)*(*regions)[i].Points.size();
 		memoryUsage += 2*sizeof(double)*(*regions)[i].Bx_distr->size;
@@ -996,27 +993,27 @@ DWORD Geometry::GetGeometrySize(std::vector<Region> *regions,std::vector<Materia
 
 // -----------------------------------------------------------
 
-void Geometry::CopyGeometryBuffer(BYTE *buffer,std::vector<Region> *regions,std::vector<Material> *materials) {
+void Geometry::CopyGeometryBuffer(BYTE *buffer,std::vector<Region_full> *regions,std::vector<Material> *materials,int generation_mode) {
 
 	// Build shared buffer for geometry (see Shared.h)
 	int fOffset = sizeof(SHGHITS);
 	SHGEOM *shGeom = (SHGEOM *)buffer;
 	sh.nbRegion=(*regions).size();
+	sh.generation_mode=generation_mode;
 	memcpy(shGeom,&(this->sh),sizeof(SHGEOM));
 	buffer += sizeof(SHGEOM);
 
 	// Build shared buffer for trajectory (see Shared.h)
 	for (int i=0;i<sh.nbRegion;i++) {
-		Region *reg = (Region *)buffer;
+		Region_mathonly *reg = (Region_mathonly *)buffer;
 		(*regions)[i].nbDistr_MAG=Vector((*regions)[i].Bx_distr->size,(*regions)[i].By_distr->size,(*regions)[i].Bz_distr->size);
-		//(*regions)[i].nbDistr_BXY=(*regions)[i].beta_x_distr->size;
-		(*regions)[i].nbPoints=(int)(*regions)[i].Points.size();
+		(*regions)[i].nbPointsToCopy=(int)(*regions)[i].Points.size();
 		*reg=(*regions)[i];
-		buffer +=sizeof(Region);
+		buffer +=sizeof(Region_mathonly);
 	}	
 		//copy trajectory points
 	for (int i=0;i<sh.nbRegion;i++) {
-		for (int j=0;j<(*regions)[i].nbPoints;j++) {
+		for (int j=0;j<(*regions)[i].nbPointsToCopy;j++) {
 			(*((Trajectory_Point*)(buffer)))=(*regions)[i].Points[j];
 			buffer+=sizeof(Trajectory_Point);
 		}
@@ -2572,7 +2569,7 @@ void Geometry::InsertGEOGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3
 	}
 	if (version2>=7) {
 		file->ReadKeyword("gasMass");file->ReadKeyword(":");
-		gasMass = file->ReadDouble();
+		file->ReadDouble();
 	}
 	if (version2>=10) { //time-dependent version
 		file->ReadKeyword("userMoments");file->ReadKeyword("{");
@@ -3131,7 +3128,7 @@ void Geometry::LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleak,
 	}
 	if (*version>=7) {
 		file->ReadKeyword("gasMass");file->ReadKeyword(":");
-		gasMass = file->ReadDouble();
+		file->ReadDouble();
 	}
 		if (*version>=10) { //time-dependent version
 		file->ReadKeyword("userMoments");file->ReadKeyword("{");

@@ -41,7 +41,7 @@ public:
 private:
 
 	Worker      *worker;
-	Region      *cr; //current region
+	Region_full      *cr; //current region
 	int regionId;
 	
 	GLTitledPanel *trajectoryPanel,*beamPanel,*generationPanel,*magneticPanel;

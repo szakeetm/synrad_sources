@@ -46,6 +46,22 @@ Vector Add(const Vector &v1,const Vector &v2) {
   return result;
 }
 
+Vector Subtract(const Vector &v1,const Vector &v2) {
+  Vector result;
+  result.x = (v1.x) - (v2.x);
+  result.y = (v1.y) - (v2.y);
+  result.z = (v1.z) - (v2.z);
+  return result;
+}
+
+Vector Weigh(const Vector &v1,const Vector &v2,const double &weight){ //interpolate between vectors A and B. weight is [0..1]
+	return Vector(
+		WEIGH(v1.x,v2.x,weight),
+		WEIGH(v1.y,v2.y,weight),
+		WEIGH(v1.z,v2.z,weight)
+		);
+}
+
 double Min(const double &a,const double &b){
 	return (a>b)?b:a;
 }

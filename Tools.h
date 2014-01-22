@@ -8,6 +8,8 @@ typedef  unsigned __int64 LONGINT;
 #define proton_charge 1.602E-19 //in Coulombs
 #define proton_mass 1.67E-27 //in kg
 
+#define WEIGH(a,b,weigh) a+(b-a)*weigh
+
 class Vector {
 public:
 	double x;
@@ -73,6 +75,8 @@ Vector Crossproduct(const Vector &v1,const Vector &v2);
 Vector ScalarMult(const Vector &v,const double &r);
 Vector RandomPerpendicularVector(const Vector &v,const double &length);
 Vector Add(const Vector &v1,const Vector &v2);
+Vector Subtract(const Vector &v1,const Vector &v2);
+Vector Weigh(const Vector &v1,const Vector &v2,const double &weigh);
 double Min(const double &a,const double &b);
 double Max(const double &a,const double &b);
 int Min(const int &a,const int &b);

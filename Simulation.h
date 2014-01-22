@@ -115,7 +115,8 @@ typedef struct {
   HIT    pHits[NBHHIT];       // Last hit history
   LEAK   pLeak[NBHLEAK];      // Leak history
   //llong  wallHits[BOUNCEMAX]; // 'Wall collision count before absoprtion' density histogram
-  llong totalDesorbed;        //total number of desorbed particles, for process state reporting and simulation end check
+  llong totalDesorbed;        //total number of generated photons, for process state reporting and simulation end check
+  int   generation_mode;      //fluxwise or powerwise
 
   // Geometry
   char        name[64];         // Global name
@@ -132,7 +133,7 @@ typedef struct {
   int         curStruct;        // Current structure
   SUPERSTRUCT str[MAX_STRUCT];
 
-  std::vector<Region> regions;// Regions
+  std::vector<Region_mathonly> regions;// Regions
   std::vector<Material> materials;//materials
 
   FACET *lastHit;     // Last hitted facet
@@ -146,8 +147,6 @@ typedef struct {
   BOOL lastUpdateOK;  // Last hit update timeout
   BOOL hasVolatile;   // Contains volatile facet
   BOOL hasDirection;  // Contains direction field
-  int  sMode;         // Simulation mode (MC_MODE or AC_MODE)
-  double calcACTime;  // AC matrix calculation time
 
   // Particle coordinates (MC)
   VERTEX3D pPos;    // Position
@@ -155,37 +154,9 @@ typedef struct {
   int      nbPHit;  // Number of hit (current particle)
   double   dF;  //Flux carried by photon
   double   dP;  //Power carried by photon
-  double energy; //energy of the generated photon
+  double   energy; //energy of the generated photon
   double   distTraveledCurrentParticle; //Distance traveled by particle before absorption
   double   distTraveledSinceUpdate;
-
-  /*
-  //Process info (for calculating timeout)
-  int nbProcess;
-  int loadSize;
-  */
-
-  // Angular coefficient (opaque facets)
-  int     nbAC;
-  ACFLOAT *acMatrix;
-  ACFLOAT *acDensity;
-  ACFLOAT *acDesorb;
-  ACFLOAT *acAbsorb;
-  ACFLOAT *acRho;
-  ACFLOAT *acArea;
-  double  *acLines;
-  int     prgAC;
-
-  // Angular coefficient (transparent facets)
-  int     nbACT; 
-  ACFLOAT *acTMatrix;
-  ACFLOAT *acTDensity;
-  ACFLOAT *acTArea;
-  double  *acTLines;
-
-#ifdef JACOBI_ITERATION
-  ACFLOAT *acDensityTmp;
-#endif
 
 } SIMULATION;
 
@@ -203,7 +174,7 @@ void RecordHitOnTexture(FACET *f,double dF,double dP);
 void InitSimulation();
 void ClearSimulation();
 BOOL LoadSimulation(Dataport *loader);
-BOOL StartSimulation(int mode);
+BOOL StartSimulation();
 void ResetSimulation();
 BOOL SimulationRun();
 BOOL SimulationMCStep(int nbStep);
@@ -233,6 +204,6 @@ void ProfileFacet(FACET *f,const double &dF,const double &dP,const double &E);
 BOOL IsInFacet(FACET *f,const double &u,const double &v);
 double GetTick();
 long   GetHitsSize();
-GenPhoton Radiate(int sourceId,Region *reg);
+GenPhoton Radiate(double sourceId,Region_mathonly *reg);
 
 #endif /* _SIMULATIONH_ */

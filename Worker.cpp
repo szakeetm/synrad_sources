@@ -28,7 +28,6 @@ GNU General Public License for more details.
 
 extern GLApplication *theApp;
 extern HANDLE compressProcessHandle;
-extern double totalOutgassing;
 extern int autoSaveSimuOnly;
 extern int needsReload;
 extern int compressSavedFiles;
@@ -47,7 +46,8 @@ Worker::Worker() {
 	distTraveledTotal=0.0;
 	ResetWorkerStats();
 	geom = new Geometry();
-	regions = std::vector<Region>();
+	regions = std::vector<Region_full>();
+	generation_mode=SYNGEN_MODE_POWERWISE;
 	dpControl = NULL;
 	dpHit = NULL;
 	nbHHit = 0;
@@ -59,7 +59,6 @@ Worker::Worker() {
 	simuTime = 0.0f;
 	nbTrajPoints=0;
 	running = FALSE;
-	calcAC = FALSE;
 	strcpy(fullFileName,"");
 }
 
@@ -994,8 +993,6 @@ void Worker::InnerStop(float appTime) {
 	stopTime =appTime;
 	simuTime+=appTime-startTime;
 	running  = FALSE;
-	calcAC = FALSE;
-
 }
 
 
@@ -1035,7 +1032,6 @@ void Worker::StartStop(float appTime,int mode) {
 			if (needsReload) RealReload();
 			startTime = appTime;
 			running = TRUE;
-			calcAC = FALSE;
 			this->mode = mode;
 		
 			Start();
@@ -1213,7 +1209,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 	progressDlg->SetMessage("Accessing dataport...");
 	AccessDataportTimed(loader,3000+nbProcess*(int)((double)loadSize/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");
-	geom->CopyGeometryBuffer((BYTE *)loader->buff,&regions,&materials);
+	geom->CopyGeometryBuffer((BYTE *)loader->buff,&regions,&materials,generation_mode);
 	progressDlg->SetMessage("Releasing dataport...");
 	ReleaseDataport(loader);
 
@@ -1415,11 +1411,6 @@ void Worker::ResetWorkerStats() {
 
 void Worker::Reset(float appTime) {
 
-	if( calcAC ) {
-		GLMessageBox::Display("Reset not allowed while calculating AC","Error",GLDLG_OK,GLDLG_ICONERROR);
-		return;
-	}
-
 	stopTime = 0.0f;
 	startTime = 0.0f;
 	simuTime = 0.0f;
@@ -1442,22 +1433,7 @@ void Worker::Reset(float appTime) {
 // -------------------------------------------------------------
 
 void Worker::Start() {
-	/*
-	// Check that at least one desortion facet exists
-	BOOL found = FALSE;
-	int nbF = geom->GetNbFacet();
-	int i=0;
-	while(i<nbF && !found) {
-	found = (geom->GetFacet(i)->sh.desorbType!=DES_NONE);
-	if(!found) i++;
-	}
 
-	if( !found )
-	throw Error("No desorption facet found");
-
-	if(!(totalOutgassing>0.0))
-	throw Error("Total outgassing is zero.");
-	*/
 	if( nbProcess==0 )
 		throw Error("No sub process found. (Simulation not available)");
 
@@ -1592,7 +1568,7 @@ void Worker::AddRegion(char *fileName,int position) {
 
 		try {
 			f = new FileReader(fileName);
-			Region newtraj;
+			Region_full newtraj;
 			if (isPAR) newtraj.LoadPAR(f,progressDlg);
 			else newtraj.LoadParam(f,progressDlg);
 			newtraj.fileName=fileName;
@@ -1628,10 +1604,9 @@ void Worker::RecalcRegion(int regionId) {
 	SynRad *mApp = (SynRad *)theApp;
 	try {
 			
-			Region newtraj;
+			Region_full newtraj;
 			newtraj=regions[regionId]; //copy all except the points
-			newtraj.Points=newtraj.CalculateTrajectory(newtraj.dL,newtraj.E,newtraj.limits,
-				newtraj.startPoint,newtraj.startDir,1000000); //points calculated
+			newtraj.CalculateTrajectory(1000000); //points calculated
 				nbTrajPoints-=(int)regions[regionId].Points.size();
 				regions[regionId]=newtraj;
 				regions[regionId].Points=newtraj.Points; //need to force because of operator=
@@ -1645,7 +1620,7 @@ void Worker::RecalcRegion(int regionId) {
 
 void Worker::ClearRegions() {
 	//if ((int)regions.size()>0) regions.clear();
-	regions=std::vector<Region>();
+	regions=std::vector<Region_full>();
 	geom->InitializeGeometry(); //recalculate bounding box
 	nbTrajPoints=0;
 	Reload();

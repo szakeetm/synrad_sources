@@ -53,8 +53,6 @@ static const char *cName[] = {"#","Hits","Flux","Power","Abs"};
 BOOL EndsWithParam(const char* s);
 BOOL changedSinceSave;
 SynRad *theApp;
-extern double gasMass;
-extern double totalOutgassing;
 extern double autoSaveFrequency;
 extern int checkForUpdates;
 extern int compressSavedFiles;
@@ -275,8 +273,6 @@ SynRad::SynRad()
 	m_minScreenWidth  = 800;
 	m_minScreenHeight = 600;
 	tolerance=1e-8;
-	totalOutgassing=1.0;
-	gasMass=28;
 }
 
 //-----------------------------------------------------------------------------
@@ -3191,8 +3187,7 @@ void SynRad::ProcessMessage(GLComponent *src,int message)
 			facetApplyBtn->SetEnabled(TRUE);
 		} else if ( src == modeCombo ) {
 			changedSinceSave = TRUE;
-			for (int i=0;i<(int)worker.regions.size();i++)
-				worker.regions[i].generation_mode=modeCombo->GetSelectedIndex(); //fluxwise or powerwise
+			worker.generation_mode=modeCombo->GetSelectedIndex(); //fluxwise or powerwise
 			worker.Reload();
 			UpdateFacetHits();
 		}
@@ -4033,8 +4028,6 @@ void SynRad::LoadConfig() {
 		checkForUpdates = f->ReadInt();
 		f->ReadKeyword("compressSavedFiles");f->ReadKeyword(":");
 		compressSavedFiles = f->ReadInt();
-		f->ReadKeyword("gasMass");f->ReadKeyword(":");
-		gasMass = f->ReadDouble();
 
 	} catch (Error &err) {
 		printf("Warning, load config file (one or more feature not supported) %s\n",err.GetMsg());
@@ -4146,7 +4139,6 @@ void SynRad::SaveConfig() {
 		f->Write("autoSaveSimuOnly:");f->WriteInt(autoSaveSimuOnly,"\n");
 		f->Write("checkForUpdates:");f->WriteInt(checkForUpdates,"\n");
 		f->Write("compressSavedFiles:");f->WriteInt(compressSavedFiles,"\n");
-		f->Write("gasMass:");f->WriteDouble(gasMass,"\n");
 
 	} catch (Error &err) {
 		printf("Warning, failed to save config file %s\n",err.GetMsg());
@@ -4324,7 +4316,7 @@ void SynRad::NewRegion(){
 	if (!EndsWithParam(fn->fullName))
 		sprintf(fn->fullName,"%s.param",fn->fullName); //append .param extension
 	try {	
-		Region newreg;
+		Region_full newreg;
 		newreg.fileName.assign(fn->fullName);
 		//worker.regions.push_back(newreg);
 		FileWriter *file=new FileWriter(fn->fullName);

@@ -20,7 +20,7 @@
 #define _WORKERH_
 
 #include "Geometry.h"
-#include "Region.h"
+#include "Region_full.h"
 #include "Distributions.h" //for materials
 
 extern float m_fTime;
@@ -74,7 +74,6 @@ public:
   void GetProcStatus(int *states,char **status);// Get process status
   BYTE *GetHits(); // Access to dataport (HIT)
   void  ReleaseHits();
-  void ComputeAC(float appTime); // Send Compute AC matrix order
   void ClearRegions();
   void AddRegion(char *fileName,int position=-1); //load region (position==-1: add as new region)
   void RecalcRegion(int regionId);
@@ -97,10 +96,9 @@ public:
   float  stopTime;          // Stop time
   float  simuTime;          // Total simulation time
   int    mode;              // Simulation mode
-  BOOL   calcAC;            // Calculating AC matrix
-  int    calcACprg;         // AC matrix progress
   int    nbTrajPoints;       // number of all points in trajectory
-  std::vector<Region> regions;
+  int    generation_mode;   //fluxwise or powerwise
+  std::vector<Region_full> regions;
   std::vector<Material> materials;
   char fullFileName[512]; // Current loaded file
 

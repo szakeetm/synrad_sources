@@ -1,5 +1,7 @@
-#ifndef _B_TRAJ_
-#define _B_TRAJ_
+//Generic region that can do the calculations but not additional methods like display, etc.
+
+#ifndef _REGION_MATHONLY_
+#define _REGION_MATHONLY_
 
 #include <math.h>
 #include <stdio.h>
@@ -12,14 +14,15 @@
 //#include "GLApp\GLTypes.h"
 
 #define B_MODE_CONSTANT        1
-#define B_MODE_COORDVALUES     2
-#define B_MODE_SINCOS          3
-#define B_MODE_QUADRUPOLE      4
-#define B_MODE_ANALYTIC        5
-#define B_MODE_HELICOIDAL      6
-#define B_MODE_ROTATING_DIPOLE 7
+#define B_MODE_DIRECTION       2
+#define B_MODE_ALONGBEAM       3
+#define B_MODE_SINCOS          4
+#define B_MODE_QUADRUPOLE      5
+#define B_MODE_ANALYTIC        6
+#define B_MODE_HELICOIDAL      7
+#define B_MODE_ROTATING_DIPOLE 8
 
-class Region { //Beam trajectory
+class Region_mathonly { //Beam trajectory
 public:
 	//Parameters
 	double energy_low;
@@ -35,13 +38,12 @@ public:
 	double coupling;
 	double energy_spread;
 	
-	int generation_mode;     //default value, can change in program
 	int Bx_mode,By_mode,Bz_mode,beta_kind; //switches between constant or file-based magnetic fields
 
 	bool enable_ort_polarization,enable_par_polarization;
 	
 	//References
-	std::string fileName,MAGXfileName,MAGYfileName,MAGZfileName,BXYfileName;
+	//std::string fileName,MAGXfileName,MAGYfileName,MAGZfileName,BXYfileName;
 
 	//Loaded from files
 	Vector nbDistr_MAG; //MAG file points
@@ -54,20 +56,19 @@ public:
 
 	//Calculated data
 	std::vector<Trajectory_Point> Points;
-	int nbPoints;
-	bool isLoaded;
-	Vector startPoint,startDir,B_const,limits,AABBmin,AABBmax;
+	int nbPointsToCopy; //passes info about the number of points that needs to be read from the buffer on loading
+	Vector startPoint,startDir,B_const,limits;//AABBmin,AABBmax
 	Quadrupole quad;
-	int selectedPoint;
+	//int selectedPoint;
 	double gamma;  //    =E/abs(particleMass)
 
 	//Methods
-	Region();
-	~Region();
-	Region(const Region &src);
-	Region& operator=(const Region &src);
+	Region_mathonly();
+	~Region_mathonly();
+	Region_mathonly(const Region_mathonly &src);
+	Region_mathonly& operator=(const Region_mathonly &src);
 
-	Vector B(const Vector &position); //returns the B field at position
+	Vector B(double pointId,const Vector &offset); //returns the B field at a given point, allows interpolation between points and offset due to non-ideal beam
 };
 
 #endif

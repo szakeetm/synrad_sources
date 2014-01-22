@@ -100,6 +100,14 @@ RegionEditor::RegionEditor():GLWindow() {
 	GLLabel* label34 = new GLLabel("");
 	etaText = new GLTextField(0,"");
 	emittanceText = new GLTextField(0,"");
+	GLLabel* emittance_cm = new GLLabel("cm");
+	GLLabel* betax_cm = new GLLabel("cm");
+	GLLabel* betay_cm = new GLLabel("cm");
+	GLLabel* coupling_fraction = new GLLabel("0..1");
+	GLLabel* eta_cm = new GLLabel("cm");
+	GLLabel* etaprime_rad = new GLLabel("rad");
+	GLLabel* E_spread_fraction = new GLLabel("0..1");
+
 	GLLabel* label35 = new GLLabel("");
 	GLLabel* label36 = new GLLabel("");
 	GLLabel* label37 = new GLLabel("");
@@ -453,6 +461,9 @@ RegionEditor::RegionEditor():GLWindow() {
 	Add(emittanceText);
 	emittanceText->SetBounds(240, 309, 80, 18);
 
+	Add(emittance_cm);
+	emittance_cm->SetBounds(325, 309, 17, 18);
+
 	//---- label32 ----
 	label32->SetText("BetaX:");
 	Add(label32);
@@ -463,6 +474,9 @@ RegionEditor::RegionEditor():GLWindow() {
 	Add(betaXtext);
 	betaXtext->SetBounds(425, 309, 80, 18);
 
+	Add(betax_cm);
+	betax_cm->SetBounds(510, 309, 17, 18);
+
 	//---- label36 ----
 	label36->SetText("BetaY:");
 	Add(label36);
@@ -472,6 +486,9 @@ RegionEditor::RegionEditor():GLWindow() {
 	betaYtext->SetEditable(FALSE);
 	Add(betaYtext);
 	betaYtext->SetBounds(605, 309, 80, 18);
+
+	Add(betay_cm);
+	betay_cm->SetBounds(690, 309, 17, 18);
 
 	//Couplinglabel
 	GLLabel *couplingLabel = new GLLabel("Coupling:");
@@ -484,6 +501,9 @@ RegionEditor::RegionEditor():GLWindow() {
 	couplingText->SetBounds(240,334,80,18);
 	Add(couplingText);
 
+	Add(coupling_fraction);
+	coupling_fraction->SetBounds(325,335,17,18);
+
 	//---- label34 ----
 	label34->SetText("Eta:");
 	Add(label34);
@@ -494,6 +514,9 @@ RegionEditor::RegionEditor():GLWindow() {
 	Add(etaText);
 	etaText->SetBounds(425, 334, 80, 18);
 
+	Add(eta_cm);
+	eta_cm->SetBounds(510,335,17,18);
+
 	//---- label37 ----
 	label37->SetText("EtaPrime:");
 	Add(label37);
@@ -503,6 +526,9 @@ RegionEditor::RegionEditor():GLWindow() {
 	etaPrimeText->SetEditable(FALSE);
 	Add(etaPrimeText);
 	etaPrimeText->SetBounds(605, 334, 80, 18);
+
+	Add(etaprime_rad);
+	etaprime_rad->SetBounds(690,335,17,18);
 
 	//---- beamsizeInfoButton ----
 	Add(beamsizeInfoButton);
@@ -518,6 +544,9 @@ RegionEditor::RegionEditor():GLWindow() {
 	energySpreadText->SetEditable(FALSE);
 	energySpreadText->SetBounds(425,359,80,18);
 	Add(energySpreadText);
+
+	Add(E_spread_fraction);
+	E_spread_fraction->SetBounds(510,360,17,18);
 
 	generationPanel->SetBounds(10,390,wD-20,100);
 	Add(generationPanel);
@@ -608,14 +637,15 @@ RegionEditor::RegionEditor():GLWindow() {
 	label47->SetBounds(30, 515, 25, 20);
 	Add(BxtypeCombo);
 	BxtypeCombo->SetBounds(60, 514, 150, 19);
-	BxtypeCombo->SetSize(7);
+	BxtypeCombo->SetSize(8);
 	BxtypeCombo->SetValueAt(0,"Constant field");
-	BxtypeCombo->SetValueAt(1,"By coordinates");
-	BxtypeCombo->SetValueAt(2,"Sine / cosine");
-	BxtypeCombo->SetValueAt(3,"Quadrupole");
-	BxtypeCombo->SetValueAt(4,"Analytical expression");
-	BxtypeCombo->SetValueAt(5,"Helicoidal");
-	BxtypeCombo->SetValueAt(6,"Rotating dipole");
+	BxtypeCombo->SetValueAt(1,"Coords along a direction");
+	BxtypeCombo->SetValueAt(2,"Coords along the beam");
+	BxtypeCombo->SetValueAt(3,"Sine / cosine");
+	BxtypeCombo->SetValueAt(4,"Quadrupole");
+	BxtypeCombo->SetValueAt(5,"Analytical expression");
+	BxtypeCombo->SetValueAt(6,"Helicoidal");
+	BxtypeCombo->SetValueAt(7,"Rotating dipole");
 	BxtypeCombo->SetSelectedIndex(0);
 	Add(constBXtext);
 	constBXtext->SetBounds(240, 514, 80, 18);
@@ -648,14 +678,15 @@ RegionEditor::RegionEditor():GLWindow() {
 	label50->SetBounds(30, 540, 25, 18);
 	Add(BytypeCombo);
 	BytypeCombo->SetBounds(60, 539, 150, 19);
-	BytypeCombo->SetSize(7);
+	BytypeCombo->SetSize(8);
 	BytypeCombo->SetValueAt(0,"Constant field");
-	BytypeCombo->SetValueAt(1,"By coordinates");
-	BytypeCombo->SetValueAt(2,"Sine / cosine");
-	BytypeCombo->SetValueAt(3,"Quadrupole");
-	BytypeCombo->SetValueAt(4,"Analytical expression");
-	BytypeCombo->SetValueAt(5,"Helicoidal");
-	BytypeCombo->SetValueAt(6,"Rotating dipole");
+	BytypeCombo->SetValueAt(1,"By coordinates in a direction");
+	BytypeCombo->SetValueAt(2,"By distance along the beam");
+	BytypeCombo->SetValueAt(3,"Sine / cosine");
+	BytypeCombo->SetValueAt(4,"Quadrupole");
+	BytypeCombo->SetValueAt(5,"Analytical expression");
+	BytypeCombo->SetValueAt(6,"Helicoidal");
+	BytypeCombo->SetValueAt(7,"Rotating dipole");
 	BytypeCombo->SetSelectedIndex(0);
 	Add(constBYtext);
 	constBYtext->SetBounds(240, 539, 80, 18);

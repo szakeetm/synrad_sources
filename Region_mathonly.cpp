@@ -7,9 +7,13 @@
 #include <string>
 
 
-Vector Region::B(const Vector &position) {
-	Vector result;
-	//Creating references to components
+Vector Region_mathonly::B(double pointId,const Vector& offset) {
+	//Calculates the magnetic field at a given point
+	//pointId: Which point (0..nbPoints-1) is the magnetic field calculated at? If not integer, interpolating
+	//offset: A vector that will be added to the interpolated position (non-ideal beam)
+	Vector result; //return value with the magnetic field vector
+
+	//Creating references to X,Y,Z components -> we can avoid repeating code 3 times
 	double* result_ptr[3]={&result.x,&result.y,&result.z};
 	double* Bconst_ptr[3]={&B_const.x,&B_const.y,&B_const.z};
 	Vector* Bdir_ptr[3]={&Bx_dir,&By_dir,&Bz_dir};
@@ -18,19 +22,37 @@ Vector Region::B(const Vector &position) {
 	double* Bphase_ptr[3]={&Bx_phase,&By_phase,&Bz_phase};
 	Distribution2D* distr_ptr[3]={Bx_distr,By_distr,Bz_distr};
 	double Ls_,ratio,K_,K_x,K_y;
-	Vector dL;
-	bool Bset=false; //means that i=0 case sets the remaining two components as well
+	bool Bset=false; //if true, then when we have calculated the X component, we already set Y and Z as well. Used for rotating dipole and analytic expressions
 
-	for (int i=0;i<3&&!Bset;i++) { //3 components
-		dL=Add(position,ScalarMult(startPoint,-1.0));
-		Ls_=DotProduct(*Bdir_ptr[i],dL);//distance towards Bx_dir direction (specified in .MAG file)
+	Vector position_along_beam;
+	if (Points.size()<=1) {
+		position_along_beam=Points[0].position;
+	} else {
+		//Interpolate point
+		SATURATE(pointId,0,(double)Points.size()-1.00000001); //make sure we stay within limits
+		Trajectory_Point previousPoint=Points[(int)pointId];
+		Trajectory_Point nextPoint=Points[(int)pointId+1];
+		double overshoot=pointId-(int)pointId;
+		position_along_beam=Vector(
+			WEIGH(previousPoint.position.x,nextPoint.position.x,overshoot),
+			WEIGH(previousPoint.position.y,nextPoint.position.y,overshoot),
+			WEIGH(previousPoint.position.z,nextPoint.position.z,overshoot)
+			);
+	}
+	Vector position_with_offset(Add(position_along_beam,offset));
+	
+	for (int i=0;i<3&&!Bset;i++) { //X,Y,Z components
+		Ls_=DotProduct(Bdir_ptr[i]->Normalize(),Subtract(position_with_offset,startPoint));//distance towards Bx_dir direction (specified in .MAG file)
 		Ls_-=(int)(Ls_/(*Bperiod_ptr)[i])*(*Bperiod_ptr)[i]; //substract filled periods
 		switch(*Bmode_ptr[i]) {
 		case B_MODE_CONSTANT:
 			*result_ptr[i]=*Bconst_ptr[i];
 			break;
-		case B_MODE_COORDVALUES:
+		case B_MODE_DIRECTION:
 			*result_ptr[i]=distr_ptr[i]->InterpolateY(Ls_);
+			break;
+		case B_MODE_ALONGBEAM:
+			*result_ptr[i]=distr_ptr[i]->InterpolateY(pointId*this->dL); //distance along the beam path
 			break;
 		case B_MODE_SINCOS:
 			*result_ptr[i]=0.0;
@@ -42,15 +64,15 @@ Vector Region::B(const Vector &position) {
 			break;
 		case B_MODE_QUADRUPOLE: //mode 4
 			Bset=true;
-			result=quad.B(position);
+			result=quad.B(position_with_offset);
 			break;
 		case B_MODE_ANALYTIC: //mode 5
 			K_=2*PI/Bx_period;
 			K_x=Bx_distr->valuesX[0];
 			K_y=sqrt(Sqr(K_)-Sqr(K_x));
-			result.x=K_x/K_y*Bx_distr->valuesY[0]*sinh(K_x*position.x)*sinh(K_y*position.y)*cos(K_*position.z);
-			result.y=Bx_distr->valuesY[0]*cosh(K_x*position.x)*cosh(K_y*position.y)*cos(K_*position.z);
-			result.z=-K_/K_y*Bx_distr->valuesY[0]*cosh(K_x*position.x)*sinh(K_y*position.y)*sin(K_*position.z);
+			result.x=K_x/K_y*Bx_distr->valuesY[0]*sinh(K_x*position_with_offset.x)*sinh(K_y*position_with_offset.y)*cos(K_*position_with_offset.z);
+			result.y=Bx_distr->valuesY[0]*cosh(K_x*position_with_offset.x)*cosh(K_y*position_with_offset.y)*cos(K_*position_with_offset.z);
+			result.z=-K_/K_y*Bx_distr->valuesY[0]*cosh(K_x*position_with_offset.x)*sinh(K_y*position_with_offset.y)*sin(K_*position_with_offset.z);
 			Bset=true; //all is set, don't run again for the remaining two components
 			break;
 		case B_MODE_HELICOIDAL:  //mode 6
@@ -74,13 +96,9 @@ Vector Region::B(const Vector &position) {
 	return result;
 }
 
-Region::Region(){
+Region_mathonly::Region_mathonly(){
 	
-	generation_mode=SYNGEN_MODE_POWERWISE;
-	selectedPoint=-1;
-	isLoaded=false;
 	//object placeholders until MAG files are loaded
-	
 	Bx_distr = new Distribution2D(1);
 	By_distr = new Distribution2D(1);
 	Bz_distr = new Distribution2D(1);
@@ -91,7 +109,7 @@ Region::Region(){
 	e_spread_distr = new Distribution2D(1);
 }
 
-Region::~Region(){
+Region_mathonly::~Region_mathonly(){
 	Distribution2D* distr_ptr[9]={Bx_distr,By_distr,Bz_distr,beta_x_distr,beta_y_distr,eta_distr,
 		etaprime_distr,e_spread_distr};
 	for (int i=0;i<9;i++)
@@ -100,7 +118,7 @@ Region::~Region(){
 	Points=std::vector<Trajectory_Point>();
 }
 
-Region::Region(const Region &src) {
+Region_mathonly::Region_mathonly(const Region_mathonly &src) {
 	//alfa0=src.alfa0;
 	betax=src.betax;
 	betay=src.betay;
@@ -151,8 +169,6 @@ Region::Region(const Region &src) {
 	this->eta=src.eta;
 	this->etaprime=src.etaprime;
 	this->gamma=src.gamma;
-	this->generation_mode=src.generation_mode;
-	this->isLoaded=src.isLoaded;
 	//this->i_struct1=src.i_struct1;
 	this->limits=Vector(src.limits.x,src.limits.y,src.limits.z);
 	//this->no_scans=src.no_scans;
@@ -162,22 +178,19 @@ Region::Region(const Region &src) {
 	this->psimaxX=src.psimaxX;
 	this->psimaxY=src.psimaxY;
 	this->quad=src.quad; //write assignment operator...
-	this->selectedPoint=src.selectedPoint;
 	this->startDir=Vector(src.startDir.x,src.startDir.y,src.startDir.z);
 	this->startPoint=Vector(src.startPoint.x,src.startPoint.y,src.startPoint.z);
 	//this->teta0=src.teta0;
 	//this->x0=src.x0;
 	//this->y0=src.y0;
 	//this->z0=src.z0;
-	this->nbPoints=(int)src.nbPoints;
+	this->nbPointsToCopy=(int)src.nbPointsToCopy;
 	this->nbDistr_MAG=Vector(src.nbDistr_MAG.x,src.nbDistr_MAG.y,src.nbDistr_MAG.z);
 	this->beta_kind=src.beta_kind;
-	this->AABBmin=Vector(src.AABBmin.x,src.AABBmin.y,src.AABBmin.z);
-	this->AABBmax=Vector(src.AABBmax.x,src.AABBmax.y,src.AABBmax.z);
 	//this->fileName.assign(src.fileName);
 }
 
-Region& Region::operator=(const Region &src) {
+Region_mathonly& Region_mathonly::operator=(const Region_mathonly &src) {
 	//alfa0=src.alfa0;
 	betax=src.betax;
 	betay=src.betay;
@@ -229,8 +242,6 @@ Region& Region::operator=(const Region &src) {
 	this->eta=src.eta;
 	this->etaprime=src.etaprime;
 	this->gamma=src.gamma;
-	this->generation_mode=src.generation_mode;
-	this->isLoaded=src.isLoaded;
 	//this->i_struct1=src.i_struct1;
 	this->limits=Vector(src.limits.x,src.limits.y,src.limits.z);
 	//this->no_scans=src.no_scans;
@@ -240,18 +251,15 @@ Region& Region::operator=(const Region &src) {
 	this->psimaxX=src.psimaxX;
 	this->psimaxY=src.psimaxY;
 	this->quad=src.quad; //write assignment operator...
-	this->selectedPoint=src.selectedPoint;
 	this->startDir=Vector(src.startDir.x,src.startDir.y,src.startDir.z);
 	this->startPoint=Vector(src.startPoint.x,src.startPoint.y,src.startPoint.z);
 	//this->teta0=src.teta0;
 	//this->x0=src.x0;
 	//this->y0=src.y0;
 	//this->z0=src.z0;
-	this->nbPoints=nbPoints;
+	this->nbPointsToCopy=src.nbPointsToCopy;
 	this->nbDistr_MAG=Vector(src.nbDistr_MAG.x,src.nbDistr_MAG.y,src.nbDistr_MAG.z);
 	this->beta_kind=src.beta_kind;
-	this->AABBmin=Vector(src.AABBmin.x,src.AABBmin.y,src.AABBmin.z);
-	this->AABBmax=Vector(src.AABBmax.x,src.AABBmax.y,src.AABBmax.z);
 	//this->fileName.assign(src.fileName);
 	return *this;
 }

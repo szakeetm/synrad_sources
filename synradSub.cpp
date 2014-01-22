@@ -118,12 +118,9 @@ void SetErrorSub(char *message) {
 
 char *GetSimuStatus() {
 
-  int mode;
   static char ret[128];
   llong count = sHandle->totalDesorbed;
   llong max   = sHandle->maxDesorption;
-
-  mode = sHandle->sMode;
 
       if( max!=0 ) {
         double percent = (double)(count)*100.0 / (double)(max);
@@ -244,7 +241,7 @@ int main(int argc,char* argv[])
       case COMMAND_START:
         printf("COMMAND: START (%d,%I64d)\n",prParam,prParam2);
         if( sHandle->loadOK ) {
-          if( StartSimulation(prParam) )
+          if( StartSimulation() )
             SetState(PROCESS_RUN,GetSimuStatus());
           else {
             if( GetLocalState()!=PROCESS_ERROR )

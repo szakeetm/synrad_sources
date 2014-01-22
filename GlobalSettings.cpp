@@ -31,11 +31,8 @@ static const int   plAligns[] = { ALIGN_LEFT,ALIGN_CENTER,ALIGN_CENTER,ALIGN_CEN
 int antiAliasing=true;
 int whiteBg=false;
 int needsReload=false;
-int nonIsothermal=false;
 int checkForUpdates=true;
 int compressSavedFiles=true;
-double gasMass=28.0;
-double totalOutgassing=0.0;
 double autoSaveFrequency=10.0f; //in minutes
 int autoSaveSimuOnly=false;
 int numCPU=0;
@@ -184,11 +181,6 @@ void GlobalSettings::Display(Worker *w) {
 	chkAntiAliasing->SetCheck(antiAliasing);
 	chkWhiteBg->SetCheck(whiteBg);
 	
-	//chkNonIsothermal->SetCheck(nonIsothermal);
-	/*sprintf(tmp,"%.3E",totalOutgassing);
-	outgassingText->SetText(tmp);
-	sprintf(tmp,"%g",gasMass);
-	gasmassText->SetText(tmp);*/
 	sprintf(tmp,"%g",autoSaveFrequency);
 	autoSaveText->SetText(tmp);
 	chkSimuOnly->SetCheck(autoSaveSimuOnly);

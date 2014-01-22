@@ -108,6 +108,7 @@ typedef struct {
   int        nbSuper;   // Number of superstructures
   int        nbRegion;  //number of magnetic regions
   int        nbTrajPoints; //total number of trajectory points (calculated at CopyGeometryBuffer)
+  int        generation_mode; //fluxwise or powerwise
   char       name[64];  // (Short file name)
 } SHGEOM;
 

@@ -25,9 +25,6 @@ GNU General Public License for more details.
 
 extern GLApplication *theApp;
 
-extern double gasMass;
-extern double totalOutgassing;
-
 static const char*profType[] = {"None","\201","\202","Angle"};
 static const char*profMode[] = {"MC Hits","SR Flux/scan/cm\262","SR Power/scan/cm\262"};
 

@@ -87,7 +87,7 @@ void ClearSimulation() {
 	/*for (i=0;i<(int)sHandle->regions.size();i++)
 	delete &(sHandle->regions[i]);*/
 	//sHandle->regions.clear();
-	sHandle->regions=std::vector<Region>();
+	sHandle->regions=std::vector<Region_mathonly>();
 	SAFE_FREE(sHandle->vertices3);
 	for(j=0;j<sHandle->nbSuper;j++) {
 		for(i=0;i<sHandle->str[j].nbFacet;i++) {
@@ -203,25 +203,26 @@ BOOL LoadSimulation(Dataport *loader) {
 	sHandle->nbSuper = shGeom->nbSuper;
 	sHandle->nbRegion = shGeom->nbRegion;
 	sHandle->totalFacet = shGeom->nbFacet;
+	sHandle->generation_mode = shGeom->generation_mode;
 	buffer+=sizeof(SHGEOM);
 	sHandle->nbTrajPoints=0;
 	//Regions
 	for (int r=0;r<sHandle->nbRegion;r++) {
-		Region *reg = (Region *) buffer;
-		Region newreg=*reg;
-		buffer += sizeof(Region);
+		Region_mathonly *reg = (Region_mathonly *) buffer;
+		Region_mathonly newreg=*reg;
+		buffer += sizeof(Region_mathonly);
 
 		newreg.Points=std::vector<Trajectory_Point>();
 		sHandle->regions.push_back(newreg);
 	}
 	//copy trajectory points	
 	for (int r=0;r<sHandle->nbRegion;r++) {
-		sHandle->regions[r].Points.reserve(sHandle->regions[r].nbPoints);
-		for (int k=0;k<sHandle->regions[r].nbPoints;k++) {
+		sHandle->regions[r].Points.reserve(sHandle->regions[r].nbPointsToCopy);
+		for (int k=0;k<sHandle->regions[r].nbPointsToCopy;k++) {
 			sHandle->regions[r].Points.push_back(*((Trajectory_Point*)(buffer)));
 			buffer+=sizeof(Trajectory_Point);
 		}
-		sHandle->nbTrajPoints+=sHandle->regions[r].nbPoints;
+		sHandle->nbTrajPoints+=sHandle->regions[r].nbPointsToCopy;
 	}
 
 	//copy distribution points
@@ -563,12 +564,11 @@ void ResetSimulation() {
 
 // -------------------------------------------------------
 
-BOOL StartSimulation(int mode) {
+BOOL StartSimulation() {
 	if (sHandle->regions.size()==0) {
 		SetErrorSub("No regions");
 		return FALSE;
 	}
-	sHandle->sMode = mode;
 	
 		if(!sHandle->lastHit) StartFromSource();
 		return true;

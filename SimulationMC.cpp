@@ -537,20 +537,21 @@ BOOL StartFromSource() {
 	}
 
 	//find source point
-	int pointIdGlobal=(int)(rnd()*sHandle->sourceArea);
+	double pointIdGlobal=rnd()*sHandle->sourceArea;
 	BOOL found=false;
-	int regionId,pointIdLocal;
-	int sum=0;
+	int regionId;
+	double pointIdLocal;
+	double sum=0.0;
 	for (regionId=0;regionId<sHandle->nbRegion&&!found;regionId++) {
-		if ((pointIdGlobal>=sum) && (pointIdGlobal<(sum+(int)sHandle->regions[regionId].Points.size()))) {
+		if ((pointIdGlobal>=sum) && (pointIdGlobal<(sum+(double)sHandle->regions[regionId].Points.size()))) {
 			pointIdLocal=pointIdGlobal-sum;
 			found=true;
 		} else sum+=(int)sHandle->regions[regionId].Points.size();
 	}
 	if (!found) SetErrorSub("No start point found");
 	regionId--;
-	Trajectory_Point *source=&(sHandle->regions[regionId].Points[pointIdLocal]);
-	Region *sourceRegion=&(sHandle->regions[regionId]);
+	//Trajectory_Point *source=&(sHandle->regions[regionId].Points[pointIdLocal]);
+	Region_mathonly *sourceRegion=&(sHandle->regions[regionId]);
 	if (!(sourceRegion->psimaxX>0.0 && sourceRegion->psimaxY>0.0)) SetErrorSub("psiMaxX or psiMaxY not positive. No photon can be generated");
 	GenPhoton photon=Radiate(pointIdLocal,sourceRegion);
 
@@ -688,9 +689,19 @@ void RecordHitOnTexture(FACET *f,double dF,double dP) {
 	f->hits_power[add]+=dP*f->inc[add]; //normalized by area
 }
 
-GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon from point number 'sourceId'
+GenPhoton Radiate(double sourceId,Region_mathonly *current_region) { //Generates a photon from point number 'sourceId'
 
-	Trajectory_Point *source=&(current_region->Points[sourceId]);
+	//Interpolate source point
+	SATURATE(sourceId,0,(double)current_region->Points.size()-1.0000001); //make sure we stay within limits
+	Trajectory_Point previousPoint=current_region->Points[(int)sourceId];
+	Trajectory_Point nextPoint=current_region->Points[(int)sourceId+1];
+	double overshoot=sourceId-(int)sourceId;
+	
+	Trajectory_Point source;
+	source.position=Weigh(previousPoint.position,nextPoint.position,overshoot);
+	source.direction=Weigh(previousPoint.direction,nextPoint.direction,overshoot);
+	source.rho=Weigh(previousPoint.rho,nextPoint.rho,overshoot);
+	
 	static double last_critical_energy,last_Bfactor,last_Bfactor_power; //to speed up calculation if critical energy didn't change
 	static double last_average_ans;
 	double average_;
@@ -702,7 +713,7 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 	Vector X_local,Y_local,Z_local;
 
 	//Calculate local base vectors
-	Z_local=source->direction.Normalize(); //Z' base vector
+	Z_local=source.direction.Normalize(); //Z' base vector
 	/*if (source->rho.Norme()<1E29) {
 		X_local=source->rho.Normalize(); //X' base vector
 	} else {
@@ -718,9 +729,9 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 		if (current_region->betax<0.0) { //negative betax value: load BXY file
 			double coordinate; //interpolation X value (first column of BXY file)
 			if (current_region->beta_kind==0) coordinate=sourceId*current_region->dL;
-			else if (current_region->beta_kind==1) coordinate=source->position.x;
-			else if (current_region->beta_kind==2) coordinate=source->position.y;
-			else if (current_region->beta_kind==3) coordinate=source->position.z;
+			else if (current_region->beta_kind==1) coordinate=source.position.x;
+			else if (current_region->beta_kind==2) coordinate=source.position.y;
+			else if (current_region->beta_kind==3) coordinate=source.position.z;
 
 			betax_=current_region->beta_x_distr->InterpolateY(coordinate);
 			betay_=current_region->beta_y_distr->InterpolateY(coordinate);
@@ -755,15 +766,14 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 		divx_offset=Gaussian(sigmaxprime);
 		divy_offset=Gaussian(sigmayprime);
 
-		Vector offset_pos=source->position; //choose ideal beam as origin
-		offset_pos=Add(offset_pos,ScalarMult(X_local,x_offset)); //apply dX offset
-		offset_pos=Add(offset_pos,ScalarMult(Y_local,y_offset)); //apply dY offset
-		result.start_pos=offset_pos;
+		Vector offset=Vector(0,0,0); //choose ideal beam as origin
+		offset=Add(offset,ScalarMult(X_local,x_offset)); //apply dX offset
+		offset=Add(offset,ScalarMult(Y_local,y_offset)); //apply dY offset
+		result.start_pos=Add(source.position,offset);
 
-		Vector B_local=current_region->B(offset_pos); //recalculate B at offset position
-		double B_parallel=DotProduct(source->direction,B_local);
+		Vector B_local=current_region->B(sourceId,offset); //recalculate B at offset position
+		double B_parallel=DotProduct(source.direction,B_local);
 		double B_orthogonal=sqrt(Sqr(B_local.Norme())-Sqr(B_parallel));
-
 		
 		if (B_orthogonal>VERY_SMALL)
 			radius=current_region->E/0.00299792458/B_orthogonal; //Energy in GeV divided by speed of light/1E9 converted to centimeters
@@ -772,13 +782,13 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 		critical_energy=2.959E-5*pow(current_region->gamma,3)/radius; //becomes ~1E-30 if radius is 1E30
 	} else {
 		//0 emittance, ideal beam
-		critical_energy=source->Critical_Energy(current_region->gamma);
-		result.start_pos=source->position;
-		radius=source->rho.Norme();
+		critical_energy=source.Critical_Energy(current_region->gamma);
+		result.start_pos=source.position;
+		radius=source.rho.Norme();
 	}
 
 	double generated_energy=SYNGEN1(current_region->energy_low/critical_energy,current_region->energy_hi/critical_energy,
-		current_region->generation_mode);
+		sHandle->generation_mode);
 
 	if (critical_energy==last_critical_energy)
 		B_factor=last_Bfactor;
@@ -805,7 +815,7 @@ GenPhoton Radiate(int sourceId,Region *current_region) { //Generates a photon fr
 	double average=integral_N_photons.average;
 	//double average1=integral_N_photons.average1; //unused
 
-	if (current_region->generation_mode==SYNGEN_MODE_POWERWISE)
+	if (sHandle->generation_mode==SYNGEN_MODE_POWERWISE)
 		SR_flux=SR_flux/generated_energy*average_;
 
 	//}

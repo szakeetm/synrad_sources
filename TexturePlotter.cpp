@@ -24,9 +24,6 @@ GNU General Public License for more details.
 
 extern SynRad *theApp;
 
-extern double totalOutgassing;
-extern double gasMass;
-
 static const char *fileFilters = "Text files\0*.txt";
 static const int   nbFilter = sizeof(fileFilters) / (2*sizeof(char *));
 
@@ -303,21 +300,6 @@ void TexturePlotter::UpdateTable() {
 
 					for(int i=0;i<w;i++) {
 						for(int j=0;j<h;j++) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 							llong val=hits_MC[i+j*w];

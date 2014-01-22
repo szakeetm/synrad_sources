@@ -27,9 +27,6 @@
 #include "GLApp/GLWindowManager.h"
 #include "GLApp/GLMessageBox.h"
 
-extern double totalOutgassing;
-extern double gasMass;
-
 extern SynRad *theApp;
 
 // OpenGL stuff ----------------------------------------------

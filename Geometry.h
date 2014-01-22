@@ -29,7 +29,7 @@
 #include "smp/SMP.h"
 #include "Utils.h"
 #include "GrahamScan.h"
-#include "Region.h"
+#include "Region_full.h"
 
 extern int changedSinceSave;
 class Worker;
@@ -197,11 +197,11 @@ public:
   double distTraveledTotal;
 
   // Memory usage (in bytes)
-  DWORD GetGeometrySize(std::vector<Region> *regions,std::vector<Material> *materials);
+  DWORD GetGeometrySize(std::vector<Region_full> *regions,std::vector<Material> *materials);
   DWORD GetHitsSize();
 
   // Raw data buffer (geometry)
-  void CopyGeometryBuffer(BYTE *buffer,std::vector<Region> *regions,std::vector<Material> *materials);
+  void CopyGeometryBuffer(BYTE *buffer,std::vector<Region_full> *regions,std::vector<Material> *materials,int generation_mode);
 
   // AC matrix
   DWORD GetMaxElemNumber();

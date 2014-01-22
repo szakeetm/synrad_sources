@@ -800,13 +800,12 @@ void GeometryViewer::DrawLinesAndHits() {
 
 				//Determine MAX dF value
 				int count=0;
-				
-				int generation_mode=(work->regions.size()>0)?work->regions[0].generation_mode:SYNGEN_MODE_FLUXWISE;
 
 				double opacityMax=0.0;
 				if (shadeLines) {
 					while(count<dispNumHits && pHits[count].type!=0) {
-						if (((generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)>opacityMax) opacityMax=(generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF;
+						if (((work->generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)>opacityMax)
+							opacityMax=(work->generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF;
 						count++;
 					}
 				}
@@ -823,7 +822,7 @@ void GeometryViewer::DrawLinesAndHits() {
 						
 					}
 					else {
-						if (shadeLines) lineOpacity=(float)((generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)/(float)opacityMax;
+						if (shadeLines) lineOpacity=(float)((work->generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)/(float)opacityMax;
 						else lineOpacity=1.0;
 						glColor4f(0.5f,1.0f,0.5f,lineOpacity);
 					}
@@ -861,7 +860,7 @@ void GeometryViewer::DrawLinesAndHits() {
 						
 								} else {
 
-									lineOpacity=(float)((generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)/(float)opacityMax;
+									lineOpacity=(float)((work->generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)/(float)opacityMax;
 									glColor4f(0.5f,1.0f,0.5f,lineOpacity);
 								} 
 								glBegin(GL_LINE_STRIP);

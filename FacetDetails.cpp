@@ -22,8 +22,6 @@
 #include "Utils.h"
 #include "SynRad.h"
 
-extern double gasMass;
-extern double totalOutgassing;
 extern SynRad *theApp;
 
 typedef struct {

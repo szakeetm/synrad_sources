@@ -1,4 +1,4 @@
-#include "Region.h"
+#include "Region_full.h"
 #include "Random.h"
 #include "Tools.h"
 #include <ctime>
@@ -12,23 +12,22 @@
 using namespace std;
 //extern int antiAliasing;
 
-vector<Trajectory_Point> Region::CalculateTrajectory(double dL,double E,Vector limits,Vector pos0,Vector dir0,int max_steps){
+void Region_full::CalculateTrajectory(int max_steps){
 	//global variables. All distances in cm!
 	Trajectory_Point current_point;
 	extern Distribution2D polarization_distribution,integral_N_photons,integral_SR_power,g1h2_distribution;
 
 	//initial position and speed
-	current_point.position=pos0;
-	current_point.direction=dir0;
+	current_point.position=this->startPoint;
+	current_point.direction=this->startDir;
 	current_point.rho=Vector(0.0,0.0,1e30); //big enough so no rotation
-	AABBmin=AABBmax=pos0;
+	AABBmin=AABBmax=this->startPoint;
 
 	//Calculate trajectory
-	std::vector <Trajectory_Point>Points;
 	Points.push_back(current_point); //beam starting position
 
 	for (int i=0;i<max_steps&&!isOutsideBoundaries(current_point.position,i==0);i++) {
-		current_point=OneStep(current_point,dL,E); //step forward
+		current_point=OneStep(i); //step forward
 		Points.push_back(current_point); //store point
 		//extend trajectory limits if needed
 		if (current_point.position.x<AABBmin.x) AABBmin.x=current_point.position.x;
@@ -38,86 +37,17 @@ vector<Trajectory_Point> Region::CalculateTrajectory(double dL,double E,Vector l
 		if (current_point.position.y>AABBmax.y) AABBmax.y=current_point.position.y;
 		if (current_point.position.z>AABBmax.z) AABBmax.z=current_point.position.z;
 	}
-	return Points;
 }
 
-//constant B field
-Vector Region::B(Vector position) {
-	Vector result;
-	//Creating references to components
-	double* result_ptr[3]={&result.x,&result.y,&result.z};
-	double* Bconst_ptr[3]={&B_const.x,&B_const.y,&B_const.z};
-	Vector* Bdir_ptr[3]={&Bx_dir,&By_dir,&Bz_dir};
-	int* Bmode_ptr[3]={&Bx_mode,&By_mode,&Bz_mode};
-	double* Bperiod_ptr[3]={&Bx_period,&By_period,&Bz_period};
-	double* Bphase_ptr[3]={&Bx_phase,&By_phase,&Bz_phase};
-	Distribution2D* distr_ptr[3]={Bx_distr,By_distr,Bz_distr};
-	double Ls_,ratio,K_,K_x,K_y;
-	Vector dL;
-	bool Bset=false; //means that i=0 case sets the remaining two components as well
-
-	for (int i=0;i<3&&!Bset;i++) { //3 components
-		dL=Add(position,ScalarMult(startPoint,-1.0));
-		Ls_=DotProduct(*Bdir_ptr[i],dL);//distance towards Bx_dir direction (specified in .MAG file)
-		Ls_-=(int)(Ls_/(*Bperiod_ptr)[i])*(*Bperiod_ptr)[i]; //substract filled periods
-		switch(*Bmode_ptr[i]) {
-		case B_MODE_CONSTANT:
-			*result_ptr[i]=*Bconst_ptr[i];
-			break;
-		case B_MODE_COORDVALUES:
-
-			*result_ptr[i]=distr_ptr[i]->InterpolateY(Ls_);
-			break;
-		case B_MODE_SINCOS:
-			*result_ptr[i]=0.0;
-			ratio=Ls_*2*PI/(*Bperiod_ptr[i]);
-			for (int j=0;j<distr_ptr[i]->size;j++) {
-				*result_ptr[i]+=distr_ptr[i]->valuesX[j]*pow(sin(((double)j+1.0)*ratio),j+1);
-				*result_ptr[i]+=distr_ptr[i]->valuesY[j]*pow(cos(((double)j+1.0)*ratio),j+1);
-			}
-			break;
-		case B_MODE_QUADRUPOLE: //mode 4
-			Bset=true;
-			result=quad.B(position);
-			break;
-		case B_MODE_ANALYTIC: //mode 5
-			K_=2*PI/Bx_period;
-			K_x=Bx_distr->valuesX[0];
-			K_y=sqrt(Sqr(K_)-Sqr(K_x));
-			result.x=K_x/K_y*Bx_distr->valuesY[0]*sinh(K_x*position.x)*sinh(K_y*position.y)*cos(K_*position.z);
-			result.y=Bx_distr->valuesY[0]*cosh(K_x*position.x)*cosh(K_y*position.y)*cos(K_*position.z);
-			result.z=-K_/K_y*Bx_distr->valuesY[0]*cosh(K_x*position.x)*sinh(K_y*position.y)*sin(K_*position.z);
-			Bset=true; //all is set, don't run again for the remaining two components
-			break;
-		case B_MODE_HELICOIDAL:  //mode 6
-			*result_ptr[i]=0.0;
-			ratio=Ls_*2*PI/(*Bperiod_ptr[i]);
-			for (int j=0;j<distr_ptr[i]->size;j++) {
-				*result_ptr[i]+=distr_ptr[i]->valuesX[j]*sin((double)j*ratio)*cos(PI*(*Bphase_ptr[i])/(*Bperiod_ptr[i]));
-				*result_ptr[i]+=distr_ptr[i]->valuesY[j]*cos((double)j*ratio)*sin(PI*(*Bphase_ptr[i])/(*Bperiod_ptr[i]));
-			}
-			break;
-		case B_MODE_ROTATING_DIPOLE:
-			*result_ptr[i]=0.0;
-			ratio=Ls_*2*PI/(*Bperiod_ptr[i]);
-			result.x=Bx_distr->valuesX[0]*sin(ratio);
-			result.y=Bx_distr->valuesX[0]*cos(ratio);
-			result.z=0.0;
-			Bset=true;
-			break;
-		}
-	}
-	return result;
-}
-
-Trajectory_Point Region::OneStep(Trajectory_Point p0,double dL,double E) {
+Trajectory_Point Region_full::OneStep(int pointId) {
+	Trajectory_Point p0=Points[pointId];
 	Vector rotation_axis=Crossproduct(p0.direction,p0.rho);
 	//Calculate new point
 	Trajectory_Point p;
 	p.direction=p0.direction.Rotate(rotation_axis,dL/p0.rho.Norme());
 	p.position=Add(p0.position,ScalarMult(p.direction,dL/p.direction.Norme()));
 
-	Vector B_local=B(p.position);
+	Vector B_local=B((double)pointId,Vector(0,0,0));
 	if (B_local.Norme()<VERY_SMALL) {//straight line
 		p.rho=Vector(0.0,0.0,1.0e30); //no rotation
 		return p;
@@ -134,7 +64,7 @@ Trajectory_Point Region::OneStep(Trajectory_Point p0,double dL,double E) {
 	return p;
 }
 
-bool Region::isOutsideBoundaries(Vector a,BOOL recalcDirs){
+bool Region_full::isOutsideBoundaries(Vector a,BOOL recalcDirs){
 	static double xDir=(limits.x>startPoint.x)?1.0:-1.0;
 	static double yDir=(limits.y>startPoint.y)?1.0:-1.0;
 	static double zDir=(limits.z>startPoint.z)?1.0:-1.0;
@@ -146,7 +76,7 @@ bool Region::isOutsideBoundaries(Vector a,BOOL recalcDirs){
 	return ((a.x-limits.x)*xDir>0.0)||((a.y-limits.y)*yDir>0.0)||((a.z-limits.z)*zDir>0.0);
 }
 
-void Region::LoadPAR(FileReader *file,GLProgress *prg){
+void Region_full::LoadPAR(FileReader *file,GLProgress *prg){
 
 	//Creating references to X,Y,Z components (to avoid writing code 3 times)
 	//double* result_ptr[3]={&result.x,&result.y,&result.z};
@@ -161,7 +91,7 @@ void Region::LoadPAR(FileReader *file,GLProgress *prg){
 	prg->SetMessage("Reading parameter file...");
 	int no_scans=file->ReadInt(); //unused
 	int nregions=file->ReadInt(); //unused
-	generation_mode=file->ReadInt(); //default value
+	int generation_mode=file->ReadInt(); //unused
 	file->JumpComment();
 
 	particleMass=file->ReadDouble();
@@ -273,14 +203,14 @@ void Region::LoadPAR(FileReader *file,GLProgress *prg){
 	}
 
 	prg->SetMessage("Calculating trajectory...");
-	Points=CalculateTrajectory(dL,E,limits,startPoint,startDir,1000000); //max 1 million points
+	CalculateTrajectory(1000000); //max 1 million points
 	isLoaded=true;
 	extern SynRad *theApp;
 	SynRad *mApp = (SynRad *)theApp;
 	if (mApp->regionInfo) mApp->regionInfo->Update();
 }
 
-Distribution2D Region::LoadMAGFile(FileReader *file,Vector *dir,double *period,double *phase,int mode){
+Distribution2D Region_full::LoadMAGFile(FileReader *file,Vector *dir,double *period,double *phase,int mode){
 	Distribution2D result(1);
 	if (mode==B_MODE_QUADRUPOLE) {
 		double quadrX=file->ReadDouble();
@@ -330,23 +260,23 @@ Distribution2D Region::LoadMAGFile(FileReader *file,Vector *dir,double *period,d
 	return result;
 }
 
-Region::Region(){
+Region_full::Region_full():Region_mathonly(){
 
-	generation_mode=SYNGEN_MODE_POWERWISE;
-	emittance=eta=etaprime=energy_spread=betax=betay=0.0;
-	coupling=1.0;
+	//generation_mode=SYNGEN_MODE_POWERWISE;
+	//emittance=eta=etaprime=energy_spread=betax=betay=0.0;
+	//coupling=1.0;
 	selectedPoint=-1;
 	isLoaded=FALSE;
 	//object placeholders until MAG files are loaded
 
-	Bx_distr = new Distribution2D(1);
+	/*Bx_distr = new Distribution2D(1);
 	By_distr = new Distribution2D(1);
 	Bz_distr = new Distribution2D(1);
 	beta_x_distr = new Distribution2D(1);
 	beta_y_distr = new Distribution2D(1);
 	eta_distr = new Distribution2D(1);
 	etaprime_distr = new Distribution2D(1);
-	e_spread_distr = new Distribution2D(1);
+	e_spread_distr = new Distribution2D(1);*/
 
 	MAGXfileName="";
 	MAGYfileName="";
@@ -354,7 +284,7 @@ Region::Region(){
 	BXYfileName="";
 
 	//default values for empty region
-	dL=0.01;
+	/*dL=0.01;
 	limits=Vector(1000,1000,0.1);
 	startPoint=Vector(0,0,0);
 	startDir=Vector(0,0,1);
@@ -368,19 +298,19 @@ Region::Region(){
 	psimaxX=psimaxY=PI;
 	Bx_mode=By_mode=Bz_mode=B_MODE_CONSTANT;
 	B_const=Vector(0,0,0);
-	this->nbPoints=0;
+	this->nbPoints=0;*/
 
 }
 
-Region::~Region(){
-	Distribution2D* distr_ptr[8]={Bx_distr,By_distr,Bz_distr,beta_x_distr,beta_y_distr,eta_distr,
+Region_full::~Region_full(){
+	/*Distribution2D* distr_ptr[8]={Bx_distr,By_distr,Bz_distr,beta_x_distr,beta_y_distr,eta_distr,
 		etaprime_distr,e_spread_distr};
 	for (int i=0;i<8;i++)
 		SAFE_DELETE(distr_ptr[i]);
-	Points=std::vector<Trajectory_Point>();
+	Points=std::vector<Trajectory_Point>();*/
 }
 
-void Region::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLength){
+void Region_full::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLength){
 	if (!whiteBg) glPointSize(1.0f);
 	else glPointSize(2.0f);
 	//if (antiAliasing) glEnable(GL_POINT_SMOOTH);
@@ -430,8 +360,9 @@ void Region::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLength){
 			glEnable(GL_DEPTH_TEST);
 		}
 		glLineWidth(0.5f);
+
 		Vector O=Points[selectedPoint].position;
-		Vector B_local=B(O);
+		Vector B_local=B((double)selectedPoint,Vector(0,0,0));
 		Vector B_local_norm=B_local.Normalize();
 		Vector Rho_local=Points[selectedPoint].rho;
 		Vector Rho_local_norm=Rho_local.Normalize();
@@ -470,7 +401,7 @@ void Region::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLength){
 	}
 }
 
-void Region::SelectTrajPoint(int x,int y) {
+void Region_full::SelectTrajPoint(int x,int y) {
 
 	int i;
 	if(!isLoaded) return;
@@ -518,7 +449,7 @@ void Region::SelectTrajPoint(int x,int y) {
 	if (mApp->regionInfo) mApp->regionInfo->Update();
 }
 
-Region::Region(const Region &src) {
+Region_full::Region_full(const Region_full &src) {
 	//alfa0=src.alfa0;
 	betax=src.betax;
 	betay=src.betay;
@@ -570,7 +501,7 @@ Region::Region(const Region &src) {
 	this->eta=src.eta;
 	this->etaprime=src.etaprime;
 	this->gamma=src.gamma;
-	this->generation_mode=src.generation_mode;
+	//this->generation_mode=src.generation_mode;
 	this->isLoaded=src.isLoaded;
 	//this->i_struct1=src.i_struct1;
 	this->limits=Vector(src.limits.x,src.limits.y,src.limits.z);
@@ -588,7 +519,7 @@ Region::Region(const Region &src) {
 	//this->x0=src.x0;
 	//this->y0=src.y0;
 	//this->z0=src.z0;
-	this->nbPoints=(int)src.nbPoints;
+	this->nbPointsToCopy=(int)src.nbPointsToCopy;
 	this->nbDistr_MAG=Vector(src.nbDistr_MAG.x,src.nbDistr_MAG.y,src.nbDistr_MAG.z);
 	this->beta_kind=src.beta_kind;
 	this->AABBmin=Vector(src.AABBmin.x,src.AABBmin.y,src.AABBmin.z);
@@ -600,7 +531,7 @@ Region::Region(const Region &src) {
 	this->BXYfileName.assign(src.BXYfileName);
 }
 
-Region& Region::operator=(const Region &src) {
+Region_full& Region_full::operator=(const Region_full &src) {
 	//alfa0=src.alfa0;
 	betax=src.betax;
 	betay=src.betay;
@@ -652,7 +583,7 @@ Region& Region::operator=(const Region &src) {
 	this->eta=src.eta;
 	this->etaprime=src.etaprime;
 	this->gamma=src.gamma;
-	this->generation_mode=src.generation_mode;
+	//this->generation_mode=src.generation_mode;
 	this->isLoaded=src.isLoaded;
 	//this->i_struct1=src.i_struct1;
 	this->limits=Vector(src.limits.x,src.limits.y,src.limits.z);
@@ -670,7 +601,7 @@ Region& Region::operator=(const Region &src) {
 	//this->x0=src.x0;
 	//this->y0=src.y0;
 	//this->z0=src.z0;
-	this->nbPoints=(int)src.nbPoints;
+	this->nbPointsToCopy=(int)src.nbPointsToCopy;
 	this->nbDistr_MAG=Vector(src.nbDistr_MAG.x,src.nbDistr_MAG.y,src.nbDistr_MAG.z);
 	this->beta_kind=src.beta_kind;
 	this->AABBmin=Vector(src.AABBmin.x,src.AABBmin.y,src.AABBmin.z);
@@ -683,7 +614,7 @@ Region& Region::operator=(const Region &src) {
 	return *this;
 }
 
-int Region::LoadBXY(FileReader *file,Distribution2D *beta_x_distr,Distribution2D *beta_y_distr,
+int Region_full::LoadBXY(FileReader *file,Distribution2D *beta_x_distr,Distribution2D *beta_y_distr,
 					Distribution2D *eta_distr,Distribution2D *etaprime_distr,
 					Distribution2D *e_spread_distr)
 {
@@ -697,33 +628,6 @@ int Region::LoadBXY(FileReader *file,Distribution2D *beta_x_distr,Distribution2D
 	*etaprime_distr= Distribution2D(nbDistr_BXY);
 	*e_spread_distr= Distribution2D(nbDistr_BXY);
 
-	/*char* tmp=file->ReadWord();
-	if (!file->wasLineEnd) {
-		sscanf(tmp,"%d",&beta_kind);
-		beta_x_distr->valuesX[0]=beta_y_distr->valuesX[0]=eta_distr->valuesX[0]=etaprime_distr->valuesX[0]=file->ReadDouble();
-	}
-	else {
-		sscanf(tmp,"%g",&(etaprime_distr->valuesX[0]));
-		beta_x_distr->valuesX[0]=beta_y_distr->valuesX[0]=eta_distr->valuesX[0]=etaprime_distr->valuesX[0];
-	}
-
-	double value;
-	for (int i=0;i<nbDistr_BXY;i++)
-	{
-		beta_x_distr->valuesY[i]=file->ReadDouble();
-		file->wasLineEnd=false;
-		beta_y_distr->valuesY[i]=file->ReadDouble();
-		if (!file->IsEof()) {
-			value=file->ReadDouble();
-			if (!file->wasLineEnd)
-			{
-				eta_distr->valuesY[i]=value;
-				etaprime_distr->valuesY[i]=file->ReadDouble();
-				if (i<(nbDistr_BXY-1)) beta_x_distr->valuesX[i+1]=beta_y_distr->valuesX[i+1]=eta_distr->valuesX[i+1]=etaprime_distr->valuesX[i+1]=file->ReadDouble();
-			} else
-				if (i<(nbDistr_BXY-1)) beta_x_distr->valuesX[i+1]=beta_y_distr->valuesX[i+1]=eta_distr->valuesX[i+1]=etaprime_distr->valuesX[i+1]=value;
-		}
-	}*/
 	for (int i=0;i<nbDistr_BXY;i++)
 	{
 		beta_x_distr->valuesX[i]=beta_y_distr->valuesX[i]=eta_distr->valuesX[i]=etaprime_distr->valuesX[i]=
@@ -737,8 +641,8 @@ int Region::LoadBXY(FileReader *file,Distribution2D *beta_x_distr,Distribution2D
 	return nbDistr_BXY;
 }
 
-void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL doFullScan){
-
+void Region_full::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL doFullScan){
+	/*
 	char delimiter[3];
 	char *ext;
 	ext = strrchr(file->GetName(),'.');
@@ -837,7 +741,7 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 			//Generate a photon (Radiate routine)
 			//---------------------------------------------------
 			int sourceId=i;
-			Region *current_region=this;
+			Region_full *current_region=this;
 
 			Trajectory_Point *source=&(current_region->Points[sourceId]);
 			static double last_critical_energy,last_Bfactor,last_Bfactor_power; //to speed up calculation if critical energy didn't change
@@ -916,7 +820,7 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 	} else {
 		X_local=RandomPerpendicularVector(Z_local,1.0);
 		}*/
-				Vector Y_local=Vector(0.0,1.0,0.0); //same as absolute Y - assuming that machine's orbit is in the XZ plane
+			/*	Vector Y_local=Vector(0.0,1.0,0.0); //same as absolute Y - assuming that machine's orbit is in the XZ plane
 				Vector X_local=Crossproduct(Z_local,Y_local);
 
 				Vector offset_pos=source->position; //choose ideal beam as origin
@@ -1049,10 +953,11 @@ void Region::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BOOL do
 		}
 	}
 	prg->SetMessage("Writing file to disk...");
+	*/
 }
 
 
-void Region::SaveParam(FileWriter *file) {
+void Region_full::SaveParam(FileWriter *file) {
 	file->Write("param_file_version:");file->WriteInt(PARAMVERSION,"\n");
 	file->Write("startPos_cm:");file->WriteDouble(startPoint.x);file->WriteDouble(startPoint.y);file->WriteDouble(startPoint.z,"\n");
 	file->Write("startDir_cm:");file->WriteDouble(startDir.x);file->WriteDouble(startDir.y);file->WriteDouble(startDir.z,"\n");
@@ -1100,7 +1005,7 @@ void Region::SaveParam(FileWriter *file) {
 	}
 }
 
-void Region::LoadParam(FileReader *file,GLProgress *prg){
+void Region_full::LoadParam(FileReader *file,GLProgress *prg){
 
 	//Creating references to X,Y,Z components (to avoid writing code 3 times)
 	double* Bconst_ptr[3]={&B_const.x,&B_const.y,&B_const.z};
@@ -1217,7 +1122,7 @@ void Region::LoadParam(FileReader *file,GLProgress *prg){
 	gamma=abs(E/particleMass);
 
 	prg->SetMessage("Calculating trajectory...");
-	Points=CalculateTrajectory(dL,E,limits,startPoint,startDir,1000000); //max 1 million points
+	CalculateTrajectory(1000000); //max 1 million points
 	isLoaded=true;
 	extern SynRad *theApp;
 	SynRad *mApp = (SynRad *)theApp;

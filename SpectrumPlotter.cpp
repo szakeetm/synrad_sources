@@ -136,7 +136,7 @@ void SpectrumPlotter::Refresh() {
 void SpectrumPlotter::SetScale() {
 	if (worker) {
 	if ((int)worker->regions.size()>0) {
-		Region *traj=&(worker->regions[0]); //scale axis X
+		Region_full *traj=&(worker->regions[0]); //scale axis X
 		if (traj->isLoaded) {
 			chart->GetXAxis()->SetMinimum(traj->energy_low);
 			chart->GetXAxis()->SetMaximum(traj->energy_hi);
