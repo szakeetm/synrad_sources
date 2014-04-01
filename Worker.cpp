@@ -2,7 +2,7 @@
 File:        Worker.cpp
 Description: Sub processes handling
 Program:     SynRad
-Author:      R. KERSEVAN / M SZAKACS
+Author:      R. KERSEVAN / M ADY
 Copyright:   E.S.R.F / CERN
 
 This program is free software; you can redistribute it and/or modify
@@ -338,9 +338,6 @@ void Worker::ExportTextures(char *fileName,int mode,BOOL askConfirm,BOOL saveSel
 			throw Error("Couldn't open file for writing");
 			return;
 		}
-		double no_scans;
-		if (nbTrajPoints==0 || nbDesorption==0) no_scans=1.0;
-		else no_scans=(double)nbDesorption/(double)nbTrajPoints;
 		geom->ExportTexture(f,mode,no_scans,dpHit,saveSelected);
 		fclose(f);
 	}
@@ -540,6 +537,7 @@ void Worker::LoadGeometry(char *fileName) {
 			maxDesorption = geom->tNbDesorptionMax;
 			totalFlux = geom->tFlux;
 			totalPower = geom->tPower;
+			no_scans = geom->loaded_no_scans;
 
 			//Load regions
 			if (regionsToLoad.nbFiles>0) {
@@ -1092,6 +1090,8 @@ void Worker::Update(float appTime) {
 				nbAbsorption = gHits->total.nbAbsorbed;
 				distTraveledTotal = gHits->distTraveledTotal;
 				nbDesorption = gHits->total.nbDesorbed;
+				if (nbDesorption && nbTrajPoints) no_scans = (double) nbDesorption / (double) nbTrajPoints;
+				else no_scans=1.0;
 				totalFlux = gHits->total.fluxAbs;
 				totalPower = gHits->total.powerAbs;
 				nbLeakTotal = gHits->nbLeakTotal;
@@ -1404,6 +1404,7 @@ void Worker::ResetWorkerStats() {
 	totalFlux = 0.0;
 	totalPower = 0.0;
 	distTraveledTotal = 0.0;
+	no_scans=1.0;
 
 }
 

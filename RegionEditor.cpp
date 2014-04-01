@@ -103,10 +103,10 @@ RegionEditor::RegionEditor():GLWindow() {
 	GLLabel* emittance_cm = new GLLabel("cm");
 	GLLabel* betax_cm = new GLLabel("cm");
 	GLLabel* betay_cm = new GLLabel("cm");
-	GLLabel* coupling_fraction = new GLLabel("0..1");
+	GLLabel* coupling_percent = new GLLabel("%");
 	GLLabel* eta_cm = new GLLabel("cm");
 	GLLabel* etaprime_rad = new GLLabel("rad");
-	GLLabel* E_spread_fraction = new GLLabel("0..1");
+	GLLabel* E_spread_percent = new GLLabel("%");
 
 	GLLabel* label35 = new GLLabel("");
 	GLLabel* label36 = new GLLabel("");
@@ -501,8 +501,8 @@ RegionEditor::RegionEditor():GLWindow() {
 	couplingText->SetBounds(240,334,80,18);
 	Add(couplingText);
 
-	Add(coupling_fraction);
-	coupling_fraction->SetBounds(325,335,17,18);
+	Add(coupling_percent);
+	coupling_percent->SetBounds(325,335,17,18);
 
 	//---- label34 ----
 	label34->SetText("Eta:");
@@ -545,8 +545,8 @@ RegionEditor::RegionEditor():GLWindow() {
 	energySpreadText->SetBounds(425,359,80,18);
 	Add(energySpreadText);
 
-	Add(E_spread_fraction);
-	E_spread_fraction->SetBounds(510,360,17,18);
+	Add(E_spread_percent);
+	E_spread_percent->SetBounds(510,360,17,18);
 
 	generationPanel->SetBounds(10,390,wD-20,100);
 	Add(generationPanel);

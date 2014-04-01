@@ -204,7 +204,9 @@ void AlignFacet::ProcessMessage(GLComponent *src,int message) {
 				geom->AlignFacets(selection,nbMemo,Facet_source,Facet_dest,Anchor_source,Anchor_dest,Dir_source,Dir_dest,
 					invertNormal->IsChecked(),invertDir1->IsChecked(),invertDir2->IsChecked(),src==copyButton,work);
 				//theApp->UpdateModelParams();
-				work->Reload(); 
+				try { work->Reload(); } catch(Error &e) {
+					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
+				} 
 
 				theApp->UpdateFacetlistSelected();	
 				mApp->UpdateViewers();
@@ -221,7 +223,9 @@ void AlignFacet::ProcessMessage(GLComponent *src,int message) {
 			geom->InitializeGeometry();
 			//for(int i=0;i<nbSelected;i++)
 			//	geom->SetFacetTexture(selection[i],geom->GetFacet(selection[i])->tRatio,geom->GetFacet(selection[i])->hasMesh);	
-			work->Reload(); 
+			try { work->Reload(); } catch(Error &e) {
+					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
+			}  
 			theApp->UpdateFacetlistSelected();	
 			mApp->UpdateViewers();
 		}

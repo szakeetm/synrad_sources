@@ -1,8 +1,8 @@
 /*
   File:        SynRad.cpp
   Description: Main application class (GUI management)
-  Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS
+  Program:     SynRad+
+  Author:      R. KERSEVAN / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify
@@ -15,6 +15,9 @@
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
 */
+
+
+
 
 #include "GLApp/GLApp.h"
 #include "GLApp/GLTextField.h"
@@ -30,7 +33,9 @@
 #include "GeometryViewer.h"
 #include "FormulaSettings.h"
 #include "CollapseSettings.h"
+
 #include "MoveVertex.h"
+
 #include "ScaleVertex.h"
 #include "ScaleFacet.h"
 #include "MoveFacet.h"
@@ -43,11 +48,13 @@
 #include "FacetCoordinates.h"
 #include "VertexCoordinates.h"
 #include "FacetDetails.h"
+#include "TrajectoryDetails.h"
 #include "Viewer3DSettings.h"
 #include "TextureSettings.h"
 #include "GlobalSettings.h"
 #include "ProfilePlotter.h"
 #include "SpectrumPlotter.h"
+
 #include "ViewEditor.h"
 #include "TexturePlotter.h"
 //#include "OutgassingMap.h"
@@ -64,7 +71,7 @@
 #define APP_NAME "SynRad+ development version (Compiled "__DATE__" "__TIME__") DEBUG MODE"
 #else
 //#define APP_NAME "SynRad+ development version ("__DATE__")"
-#define APP_NAME "Synrad+ 1.2.0.1 ("__DATE__")"
+#define APP_NAME "Synrad+ 1.3.1 BETA ("__DATE__")"
 #endif
 
 extern int changedSinceSave;
@@ -86,9 +93,9 @@ public:
 
     // Current directory
     void UpdateCurrentDir(char *fileName);
-    char currentDir[512];
+    char currentDir[1024];
     void UpdateCurrentSelDir(char *fileName);
-    char currentSelDir[512];
+    char currentSelDir[1024];
 
     // Simulation state
     float    lastUpdate;   // Last 'hit update' time
@@ -106,6 +113,7 @@ public:
 
     float    lastMeasTime; // Last measurement time (for hps and dps)
 	double tolerance; //Select coplanar tolerance
+
 
     // Util functions
 	//void SendHeartBeat(BOOL forced=FALSE);
@@ -126,6 +134,8 @@ public:
     void ExportSelection();
 	void ExportTexture(int mode);
 	//void ExportDes(bool selectedOnly);
+
+
     void ClearFacetParams();
     void UpdateFacetParams(BOOL updateSelection=FALSE);
     void ApplyFacetParams();
@@ -143,6 +153,7 @@ public:
     void UpdateViewerParams();
     void SelectViewer(int s);
     void Place3DViewer();
+
 	void QuickPipe();
 	void UpdateFacetlistSelected();
 	BOOL AskToSave();
@@ -166,6 +177,10 @@ public:
 	void RenumberFormulas(int startId);
     void AddFormula(GLParser *f,BOOL doUpdate=TRUE);
 	
+
+
+
+
     // Recent files
 	float lastSaveTime;
 	float lastSaveTimeSimu;
@@ -196,8 +211,12 @@ public:
     GLToggle      *showIndex;
     GLToggle      *showVertex;
     GLButton      *showMoreBtn;
+
     GLButton      *startSimu;
     GLButton      *resetSimu;
+
+
+
     GLCombo       *modeCombo;
     GLTextField   *hitNumber;
     GLTextField   *desNumber;
@@ -210,8 +229,17 @@ public:
 	GLTextField   *facetRoughness;
     GLTextField   *facetSuperDest;
     GLTextField   *facetOpacity;
+
+
+
+
+
+
 	GLTextField   *facetArea;
+
 	GLCombo       *facetSideType;
+
+
     GLCombo       *facetReflType;
     GLCombo       *facetRecType;
     GLButton      *facetApplyBtn;
@@ -221,8 +249,12 @@ public:
     GLTitledPanel *facetPanel;
     GLList        *facetList;
     GLTitledPanel *togglePanel;
+
     GLLabel       *modeLabel;
 	GLLabel       *facetAreaLabel;
+
+
+
     GLButton      *singleACBtn;
     GLLabel       *hitLabel;
     GLLabel       *desLabel;
@@ -233,15 +265,21 @@ public:
 	GLLabel       *facetTPLabel;
     GLLabel       *facetStickingLabel;
 	GLLabel       *facetRoughnessLabel;
+
 	GLLabel       *facetSideLabel;
     GLLabel       *facetLinkLabel;
     GLLabel       *facetStrLabel;
     GLTextField   *facetSILabel;
     GLLabel       *facetTLabel;
+
+
     GLLabel       *facetRLabel;
     GLLabel       *facetReLabel;
 	GLLabel       *facetSpectrumLabel;
 	GLCombo      *facetSpectrumCombo;
+
+
+
     GLMenu        *structMenu;
     GLMenu        *viewsMenu;
 	GLMenu        *selectionsMenu;
@@ -251,6 +289,8 @@ public:
 	GLMenu        *clearViewsMenu;
 	GLMenu        *PARloadToMenu;
 	GLMenu        *PARremoveMenu;
+
+
 
     // Formulas
     FORMULA formulas[MAX_FORMULA];
@@ -300,9 +340,12 @@ public:
     FormulaSettings  *formulaSettings;
     CollapseSettings *collapseSettings;
 	RegionInfo       *regionInfo;
+
 	MoveVertex		 *moveVertex;
 	ScaleVertex      *scaleVertex;
+
 	ScaleFacet       *scaleFacet;
+
 	SelectDialog     *selectDialog;
 	MoveFacet		 *moveFacet;
 	ExportDesorption *exportDesorption;
@@ -312,6 +355,7 @@ public:
 	AddVertex		 *addVertex;
     FacetMesh        *facetMesh;
     FacetDetails     *facetDetails;
+	TrajectoryDetails *trajectoryDetails;
     Viewer3DSettings  *viewer3DSettings;
     TextureSettings  *textureSettings;
 	GlobalSettings	 *globalSettings;
@@ -319,10 +363,13 @@ public:
 	VertexCoordinates *vertexCoordinates;
     ProfilePlotter   *profilePlotter;
 	SpectrumPlotter  *spectrumPlotter;
+
+
     ViewEditor       *viewEditor;
     TexturePlotter   *texturePlotter;
 	//OutgassingMap    *outgassingMap;
 	RegionEditor     *regionEditor2;
+
 	char *nbF;
 
     // Testing

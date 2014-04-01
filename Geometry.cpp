@@ -2,7 +2,7 @@
 File:        Geometry.cpp
 Description: Main geometry class (Handles sets of facets)
 Program:     SynRad
-Author:      R. KERSEVAN / M SZAKACS
+Author:      R. KERSEVAN / M ADY
 Copyright:   E.S.R.F / CERN
 
 This program is free software; you can redistribute it and/or modify
@@ -2771,6 +2771,11 @@ PARfileList Geometry::InsertSYNGeom(FileReader *file,int *nbVertex,int *nbFacet,
 	file->ReadLLong();
 	file->ReadKeyword("totalDes");file->ReadKeyword(":");
 	file->ReadLLong();
+	if (version2>=6) {
+		file->ReadKeyword("no_scans");file->ReadKeyword(":");
+		loaded_no_scans = file->ReadDouble();
+	}
+	else loaded_no_scans = 0;
 	file->ReadKeyword("totalLeak");file->ReadKeyword(":");
 	file->ReadInt();
 	if (version2>2) {
@@ -3652,7 +3657,7 @@ void Geometry::ExportTexture(FILE *file,int mode,double no_scans,Dataport *dpHit
 				llong *hits_MC = (llong *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize));
 				double *hits_flux = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize + nbE*sizeof(llong)));
 				double *hits_power = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize+nbE*(sizeof(llong)+sizeof(double))));
-				double norm=1.0/no_scans;
+				double norm=1.0/no_scans; //normalize values by number of scans (and don't normalize by area...)
 
 				for(int i=0;i<w;i++) {
 					for(int j=0;j<h;j++) {
@@ -3718,11 +3723,9 @@ void Geometry::SaveDesorption(FILE *file,Dataport *dpHit,BOOL selectedOnly,int m
 	if( dpHit )
 		if( AccessDataport(dpHit) ) 
 			buffer = (BYTE *)dpHit->buff;
-	double no_scans;
+	
 	SynRad *mApp = (SynRad *)theApp;
 	Worker *worker=&(mApp->worker);
-	if (worker->nbTrajPoints==0 || worker->nbDesorption==0) no_scans=1.0;
-	else no_scans=(double)worker->nbDesorption/(double)worker->nbTrajPoints;
 	
 	// Globals
 	//BYTE *buffer = (BYTE *)dpHit->buff;
@@ -3754,7 +3757,7 @@ void Geometry::SaveDesorption(FILE *file,Dataport *dpHit,BOOL selectedOnly,int m
 
 					for(int i=0;i<w;i++) {
 						for(int j=0;j<h;j++) {
-							double dose=hits_flux[i+j*w]/no_scans;
+							double dose=hits_flux[i+j*w]*f->mesh[i+j*w].area/worker->no_scans;
 							double val;
 							if (mode==1) { //no conversion
 								val=dose;
@@ -4892,7 +4895,8 @@ void Geometry::DelStruct(int numToDel) {
 }
 
 
-void Geometry::SaveSYN(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL saveSelected,LEAK *pleak,int *nbleakSave,HIT *pHits,int *nbHHitSave,BOOL crashSave) {
+void Geometry::SaveSYN(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL saveSelected,LEAK *pleak,
+					   int *nbleakSave,HIT *pHits,int *nbHHitSave,BOOL crashSave) {
 
 	SynRad *mApp = (SynRad *)theApp;
 	prg->SetMessage("Counting hits...");
@@ -4913,9 +4917,6 @@ void Geometry::SaveSYN(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL sav
 	int ix,iy;
 
 	Worker *worker=&(mApp->worker);
-	double no_scans;
-	if (worker->nbTrajPoints==0 || worker->nbDesorption==0) no_scans=1.0;
-	else no_scans=(double)worker->nbDesorption/(double)worker->nbTrajPoints;
 	texCMin_MC = (!crashSave)?gHits->minHit_MC:0;
 	texCMax_MC = (!crashSave)?gHits->maxHit_MC:1;
 	texCMin_flux = (!crashSave)?gHits->minHit_flux:0;
@@ -4927,6 +4928,7 @@ void Geometry::SaveSYN(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL sav
 	file->Write("version:");file->WriteInt(SYNVERSION,"\n");
 	file->Write("totalHit:");file->WriteLLong(gHits->total.nbHit,"\n");
 	file->Write("totalDes:");file->WriteLLong(gHits->total.nbDesorbed,"\n");
+	file->Write("no_scans:");file->WriteDouble(worker->no_scans, "\n");
 	file->Write("totalLeak:");file->WriteLLong(gHits->nbLeakTotal,"\n");
 	file->Write("totalFlux:");file->WriteDouble(gHits->total.fluxAbs,"\n");
 	file->Write("totalPower:");file->WriteDouble(gHits->total.powerAbs,"\n");
@@ -5148,6 +5150,11 @@ PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *
 	tNbHit = file->ReadLLong();
 	file->ReadKeyword("totalDes");file->ReadKeyword(":");
 	tNbDesorption = file->ReadLLong();
+	if (*version>=6) {
+		file->ReadKeyword("no_scans");file->ReadKeyword(":");
+		loaded_no_scans = file->ReadDouble();
+	}
+	else loaded_no_scans = 0;
 	file->ReadKeyword("totalLeak");file->ReadKeyword(":");
 	tNbLeak = file->ReadInt();
 	if (*version>2) {

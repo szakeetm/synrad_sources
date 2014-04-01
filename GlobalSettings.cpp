@@ -31,9 +31,12 @@ static const int   plAligns[] = { ALIGN_LEFT,ALIGN_CENTER,ALIGN_CENTER,ALIGN_CEN
 int antiAliasing=true;
 int whiteBg=false;
 int needsReload=false;
+
 int checkForUpdates=true;
 int compressSavedFiles=true;
-double autoSaveFrequency=10.0f; //in minutes
+
+
+double autoSaveFrequency=10.0; //in minutes
 int autoSaveSimuOnly=false;
 int numCPU=0;
 HANDLE compressProcessHandle;
@@ -180,6 +183,11 @@ void GlobalSettings::Display(Worker *w) {
 	char tmp[256];
 	chkAntiAliasing->SetCheck(antiAliasing);
 	chkWhiteBg->SetCheck(whiteBg);
+
+
+
+
+
 	
 	sprintf(tmp,"%g",autoSaveFrequency);
 	autoSaveText->SetText(tmp);
@@ -268,6 +276,7 @@ void GlobalSettings::RestartProc() {
 		//char tmp[128];
 		//sprintf(tmp,"Kill all running sub-process(es) and start %d new ones ?",nbProc);
 		//int rep = GLMessageBox::Display(tmp,"Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING);
+
 		if( mApp->AskToReset() ) {
 			if(nbProc<=0 || nbProc>16) {
 				GLMessageBox::Display("Invalid process number [1..16]","Error",GLDLG_OK,GLDLG_ICONERROR);
@@ -319,7 +328,40 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 			checkForUpdates=chkCheckForUpdates->IsChecked();
 			compressSavedFiles=chkCompressSavedFiles->IsChecked();
 
+
+
+
+
+
+
 			autoSaveSimuOnly=chkSimuOnly->IsChecked();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 			if( !autoSaveText->GetNumber(&autoSaveFrequency) || !(autoSaveFrequency>0.0) ) {
 				GLMessageBox::Display("Invalid autosave frequency","Error",GLDLG_OK,GLDLG_ICONERROR);

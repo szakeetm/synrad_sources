@@ -2,7 +2,7 @@
 File:        FacetMesh.cpp
 Description: Facet mesh configuration dialog
 Program:     SynRad
-Author:      R. KERSEVAN / M SZAKACS
+Author:      R. KERSEVAN / M ADY
 Copyright:   E.S.R.F / CERN
 
 This program is free software; you can redistribute it and/or modify
@@ -92,7 +92,7 @@ FacetMesh::FacetMesh():GLWindow() {
 	recordDirBtn->SetCheck(FALSE);
 	Add(recordDirBtn);
 
-	GLLabel *l5 = new GLLabel("Resolution (Sample/Unit)");
+	GLLabel *l5 = new GLLabel("Resolution (Sample/cm)");
 	l5->SetBounds(140,80,110,18);
 	Add(l5);
 
@@ -348,7 +348,7 @@ BOOL FacetMesh::Apply() {
 		// Auto resolution
 		double ratio;
 		if( sscanf(resolutionText->GetText(),"%lf",&ratio)==0 ) {
-			GLMessageBox::Display("Invalid number format for sample/unit","Error",GLDLG_OK,GLDLG_ICONERROR);
+			GLMessageBox::Display("Invalid number format for sample/cm","Error",GLDLG_OK,GLDLG_ICONERROR);
 			return FALSE;
 		}
 
@@ -407,7 +407,7 @@ BOOL FacetMesh::Apply() {
 		worker->Reload();
 
 	} catch(Error &e) {
-		GLMessageBox::Display((char *)e.GetMsg(),"Error",GLDLG_OK,GLDLG_ICONERROR);
+		GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
 	}
 	progressDlg->SetVisible(FALSE);
 	SAFE_DELETE(progressDlg);

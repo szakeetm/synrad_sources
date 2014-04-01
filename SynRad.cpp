@@ -1,7 +1,7 @@
 /*
 File:        SynRad.cpp
 Description: Main application class (GUI management)
-Program:     SynRad
+Program:     SynRad+
 Author:      Roberto KERSEVAN / Marton ADY
 Copyright:   E.S.R.F / CERN
 
@@ -257,6 +257,7 @@ SynRad::SynRad()
 	addVertex = NULL;
 	facetMesh = NULL;
 	facetDetails = NULL;
+	trajectoryDetails = NULL;
 	viewer3DSettings = NULL;
 	textureSettings = NULL;
 	globalSettings = NULL;
@@ -725,9 +726,9 @@ int SynRad::OneTimeSceneInit()
 	//AnimateViewerChange(0,TRUE);
 
 	PlaceComponents();
-	SelectViewer(0);
+	//SelectViewer(0);
 
-	viewer[0]->Paint();
+	//viewer[0]->Paint();
 
 	if (checkForUpdates) {
 		//Launch updater tool
@@ -1648,10 +1649,9 @@ int SynRad::FrameMove()
 		leakNumber->SetText("None");
 	}
 
-	if( worker.nbDesorption ) {
-		double no_scans=(double)worker.nbDesorption/
-			((worker.nbTrajPoints>0)?(double)worker.nbTrajPoints:1.0);
-		sprintf(tmp,"Scn:%.1f F=%.3g P=%.3g",(no_scans==1.0)?0.0:no_scans,worker.totalFlux/no_scans,worker.totalPower/no_scans);
+	if( worker.no_scans ) {
+		sprintf(tmp,"Scn:%.1f F=%.3g P=%.3g",(worker.no_scans==1.0)?0.0:worker.no_scans,
+			worker.totalFlux/worker.no_scans,worker.totalPower/worker.no_scans);
 		if (worker.nbTrajPoints>0) doseNumber->SetText(tmp);
 	} else {
 		doseNumber->SetText("");
@@ -1697,10 +1697,7 @@ int SynRad::FrameMove()
 void SynRad::UpdateFacetHits(BOOL all) {
 	char tmp[256];
 	Geometry *geom = worker.GetGeometry();
-	Worker *worker=&(theApp->worker);
-	double no_scans;
-	if (worker->nbTrajPoints==0 || worker->nbDesorption==0) no_scans=1.0;
-	else no_scans=(double)worker->nbDesorption/(double)worker->nbTrajPoints;   
+	Worker *worker=&(theApp->worker);   
 	try{
 		// Facet list
 		if(geom->IsLoaded()) {
@@ -1723,9 +1720,9 @@ void SynRad::UpdateFacetHits(BOOL all) {
 				facetList->SetColumnLabel(1,"Hits");
 				sprintf(tmp,"%I64d",f->sh.counter.nbHit);
 				facetList->SetValueAt(1,i,tmp);
-				sprintf(tmp,"%.3g",f->sh.counter.fluxAbs/no_scans);
+				sprintf(tmp,"%.3g",f->sh.counter.fluxAbs/worker->no_scans);
 				facetList->SetValueAt(2,i,tmp);
-				sprintf(tmp,"%.3g",f->sh.counter.powerAbs/no_scans);
+				sprintf(tmp,"%.3g",f->sh.counter.powerAbs/worker->no_scans);
 				facetList->SetValueAt(3,i,tmp);
 				sprintf(tmp,"%I64d",f->sh.counter.nbAbsorbed);
 				facetList->SetValueAt(4,i,tmp);
@@ -1862,6 +1859,7 @@ int SynRad::RestoreDeviceObjects()
 	RVALIDATE_DLG(addVertex);
 	RVALIDATE_DLG(facetMesh);
 	RVALIDATE_DLG(facetDetails);
+	RVALIDATE_DLG(trajectoryDetails);
 	RVALIDATE_DLG(viewer3DSettings);
 	RVALIDATE_DLG(textureSettings);
 	RVALIDATE_DLG(globalSettings);
@@ -1903,6 +1901,7 @@ int SynRad::InvalidateDeviceObjects()
 	IVALIDATE_DLG(alignFacet);
 	IVALIDATE_DLG(addVertex);
 	IVALIDATE_DLG(facetDetails);
+	IVALIDATE_DLG(trajectoryDetails);
 	IVALIDATE_DLG(viewer3DSettings);
 	IVALIDATE_DLG(textureSettings);
 	IVALIDATE_DLG(globalSettings);
@@ -3186,9 +3185,17 @@ void SynRad::ProcessMessage(GLComponent *src,int message)
 		} else if ( src == facetRecType || src == facetSideType || src == facetSpectrumCombo) {
 			facetApplyBtn->SetEnabled(TRUE);
 		} else if ( src == modeCombo ) {
+			if (!AskToReset()) {
+				modeCombo->SetSelectedIndex(worker.generation_mode);
+				return;
+			}
 			changedSinceSave = TRUE;
 			worker.generation_mode=modeCombo->GetSelectedIndex(); //fluxwise or powerwise
-			worker.Reload();
+				// Send to sub process
+			try { worker.Reload(); } catch(Error &e) {
+				GLMessageBox::Display((char *)e.GetMsg(),"Error",GLDLG_OK,GLDLG_ICONERROR);
+				return;
+			}
 			UpdateFacetHits();
 		}
 		break;
@@ -4279,7 +4286,9 @@ void SynRad::RemoveRegion(int index){
 	if (regionInfo) regionInfo->Update();
 	RebuildPARMenus();
 	worker.GetGeometry()->InitializeGeometry(); //recalculate bounding box
-	worker.Reload();
+	try { worker.Reload(); } catch(Error &e) {
+					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
+	} 
 }
 
 

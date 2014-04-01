@@ -2,7 +2,7 @@
 File:        GeometryViewer.cpp
 Description: Geometry 3D Viewer component
 Program:     SynRad
-Author:      R. KERSEVAN / M SZAKACS
+Author:      R. KERSEVAN / M ADY
 Copyright:   E.S.R.F / CERN
 
 This program is free software; you can redistribute it and/or modify
@@ -1737,7 +1737,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 				glMatrixMode(GL_MODELVIEW);
 				glLoadMatrixf(matView);
 				for (int i=0;i<(int)work->regions.size();i++)
-					work->regions[i].SelectTrajPoint(mX-posX,mY-posY);
+					work->regions[i].SelectTrajPoint(mX-posX,mY-posY,i);
 				break;
 			}
 			break;

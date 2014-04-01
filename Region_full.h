@@ -33,6 +33,7 @@ public:
 	
 	void CalculateTrajectory(int max_steps);
 	Trajectory_Point OneStep(int pointId); //moves the beam by dL length from the i-th calculated point
+	void CalcPointProperties(int pointId); //calculates magnetic field, sigma values, etc. for a trajectory point
 	bool isOutsideBoundaries(Vector a,BOOL recalcDirs);
 	void LoadPAR(FileReader *file,GLProgress *prg);
 	void LoadParam(FileReader *f,GLProgress *prg);
@@ -41,7 +42,7 @@ public:
 	int LoadBXY(FileReader *file,Distribution2D *beta_x_distr,Distribution2D *beta_y_distr,
 		Distribution2D *eta_distr,Distribution2D *etaprime_distr,Distribution2D *e_spread_distr);
 	void Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLength);
-	void SelectTrajPoint(int x,int y);
+	void SelectTrajPoint(int x,int y,int regionId);
 	void ExportPoints(FileWriter *f,GLProgress *prg,int frequency=1,BOOL doFullScan=FALSE);
 	void SaveParam(FileWriter *f);
 	

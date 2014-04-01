@@ -27,19 +27,21 @@ public:
 
 class Trajectory_Point {
 public:
-	Vector position;
-	Vector direction;
+	Vector position,direction,X_local,Y_local,Z_local,B;
 	Vector rho;
-	Trajectory_Point();
-	~Trajectory_Point();
+	double critical_energy, emittance_X, emittance_Y, beta_X, beta_Y, eta, eta_prime, energy_spread;
+	double sigma_x, sigma_y, sigma_x_prime, sigma_y_prime;
+	
 	double Critical_Energy(const double &gamma);
 	double dAlpha(const double &dL);
 };
 
 class GenPhoton {
 public:
-	Vector start_pos,start_dir;
-	double dF,dP,energy;
+	double natural_divx, natural_divy, offset_x, offset_y, offset_divx, offset_divy;
+	double radius, critical_energy, B_ort, B_par, energy;
+	double g1h2, B_factor, B_factor_power, SR_flux, SR_power;
+	Vector start_pos, start_dir,B;
 };
 
 class Histogram {

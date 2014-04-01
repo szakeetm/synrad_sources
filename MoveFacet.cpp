@@ -113,7 +113,9 @@ void MoveFacet::ProcessMessage(GLComponent *src,int message) {
 
 				geom->MoveSelectedFacets(dX,dY,dZ,src==copyButton,work);
 				//theApp->UpdateModelParams();
-				work->Reload(); 
+				try { work->Reload(); } catch(Error &e) {
+					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
+				}  
 
 				theApp->UpdateFacetlistSelected();	
 				mApp->UpdateViewers();

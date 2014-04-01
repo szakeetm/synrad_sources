@@ -1,8 +1,8 @@
 /*
   File:        VertexCoordinates.cpp
   Description: Vertex coordinates window
-  Program:     SynRad
-  Author:      R. Kerservan / M SZAKACS / M SZAKACS
+  Program:     MolFlow
+  Author:      R. Kerservan / J-L PONS / M ADY / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify
@@ -24,6 +24,7 @@
 #include "GLApp/GLMessageBox.h"
 #include "Utils.h"
 #include "SynRad.h"
+#include "GLApp/GLInputBox.h"
 
 //extern GLApplication *theApp;
 extern SynRad *theApp;
@@ -70,6 +71,16 @@ VertexCoordinates::VertexCoordinates():GLWindow() {
   removeButton->SetEnabled(FALSE);
   insertPosText->SetEnabled(FALSE);
   */
+  setXbutton = new GLButton(0, "X");
+  setXbutton->SetBounds(5, hD - 43, 16, 19);
+  Add(setXbutton);
+  setYbutton = new GLButton(0, "Y");
+  setYbutton->SetBounds(27, hD - 43, 16, 19);
+  Add(setYbutton);
+  setZbutton = new GLButton(0, "Z");
+  setZbutton->SetBounds(49, hD - 43, 16, 19);
+  Add(setZbutton);
+
   updateButton = new GLButton(0,"Apply");
   updateButton->SetBounds(wD-195,hD-43,90,19);
   Add(updateButton);
@@ -165,7 +176,44 @@ void VertexCoordinates::ProcessMessage(GLComponent *src,int message) {
     case MSG_BUTTON:
       if(src==dismissButton) {
         SetVisible(FALSE);
-      } else if(src==updateButton) {
+	  }
+	  else if (src == setXbutton) {
+		  double coordValue;
+		  char *coord = GLInputBox::GetInput("0", "New coordinate:", "Set all X coordinates to:");
+		  if (!coord) return;
+		  if (!sscanf(coord, "%lf", &coordValue)) {
+			  GLMessageBox::Display("Invalid number", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			  return;
+		  }
+		  for (int i = 0; i < vertexListC->GetNbRow(); i++) {
+			  vertexListC->SetValueAt(1, i, coord);
+		  }
+	  }
+	  else if (src == setYbutton) {
+		  double coordValue;
+		  char *coord = GLInputBox::GetInput("0", "New coordinate:", "Set all Y coordinates to:");
+		  if (!coord) return;
+		  if (!sscanf(coord, "%lf", &coordValue)) {
+			  GLMessageBox::Display("Invalid number", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			  return;
+		  }
+		  for (int i = 0; i < vertexListC->GetNbRow(); i++) {
+			  vertexListC->SetValueAt(2, i, coord);
+		  }
+	  }
+	  else if (src == setZbutton) {
+		  double coordValue;
+		  char *coord = GLInputBox::GetInput("0", "New coordinate:", "Set all Z coordinates to:");
+		  if (!coord) return;
+		  if (!sscanf(coord, "%lf", &coordValue)) {
+			  GLMessageBox::Display("Invalid number", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			  return;
+		  }
+		  for (int i = 0; i < vertexListC->GetNbRow(); i++) {
+			  vertexListC->SetValueAt(3, i, coord);
+		  }
+	  }
+	  else if (src == updateButton) {
         int rep = GLMessageBox::Display("Apply geometry changes ?","Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING);
         if( rep == GLDLG_OK ) {
 			if (mApp->AskToReset(worker)) {
@@ -175,9 +223,15 @@ void VertexCoordinates::ProcessMessage(GLComponent *src,int message) {
 				double x,y,z;
 				int id;
 				id=vertexListC->GetValueInt(i,0)-1;
-				sscanf(vertexListC->GetValueAt(1,i),"%lf",&x);
-				sscanf(vertexListC->GetValueAt(2,i),"%lf",&y);
-				sscanf(vertexListC->GetValueAt(3,i),"%lf",&z);
+				BOOL success = (1==sscanf(vertexListC->GetValueAt(1,i),"%lf",&x));
+				success = success && (1==sscanf(vertexListC->GetValueAt(2,i),"%lf",&y));
+				success = success && (1==sscanf(vertexListC->GetValueAt(3,i),"%lf",&z));
+				if (!success) { //wrong coordinates at row
+					char tmp[128];
+					sprintf(tmp,"Invalid coordinates in row %d",i+1);
+					GLMessageBox::Display(tmp,"Incorrect vertex",GLDLG_OK,GLDLG_ICONWARNING);
+				return;	
+				}
 				geom->MoveVertexTo(id,x,y,z);
 			}
 			geom->Rebuild();

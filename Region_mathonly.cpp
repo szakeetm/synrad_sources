@@ -7,10 +7,9 @@
 #include <string>
 
 
-Vector Region_mathonly::B(double pointId,const Vector& offset) {
+Vector Region_mathonly::B(int pointId, const Vector &offset) {
 	//Calculates the magnetic field at a given point
-	//pointId: Which point (0..nbPoints-1) is the magnetic field calculated at? If not integer, interpolating
-	//offset: A vector that will be added to the interpolated position (non-ideal beam)
+	
 	Vector result; //return value with the magnetic field vector
 
 	//Creating references to X,Y,Z components -> we can avoid repeating code 3 times
@@ -25,7 +24,7 @@ Vector Region_mathonly::B(double pointId,const Vector& offset) {
 	bool Bset=false; //if true, then when we have calculated the X component, we already set Y and Z as well. Used for rotating dipole and analytic expressions
 
 	Vector position_along_beam;
-	if (Points.size()<=1) {
+	/*if (Points.size()<=1) {
 		position_along_beam=Points[0].position;
 	} else {
 		//Interpolate point
@@ -38,7 +37,8 @@ Vector Region_mathonly::B(double pointId,const Vector& offset) {
 			WEIGH(previousPoint.position.y,nextPoint.position.y,overshoot),
 			WEIGH(previousPoint.position.z,nextPoint.position.z,overshoot)
 			);
-	}
+	}*/
+	position_along_beam = Points[pointId].position;
 	Vector position_with_offset(Add(position_along_beam,offset));
 	
 	for (int i=0;i<3&&!Bset;i++) { //X,Y,Z components
@@ -107,6 +107,24 @@ Region_mathonly::Region_mathonly(){
 	eta_distr = new Distribution2D(1);
 	etaprime_distr = new Distribution2D(1);
 	e_spread_distr = new Distribution2D(1);
+
+	//default values
+	//generation_mode = SYNGEN_MODE_POWERWISE;
+	nbDistr_BXY = 0;
+	dL=0.01;
+	limits=Vector(1000,1000,0.1);
+	startPoint=Vector(0,0,0);
+	startDir=Vector(0,0,1);
+	particleMass=-0.0005110034; //electron
+	E=1;current=1;
+	betax=betay=eta=etaprime=energy_spread=emittance=0.0;
+	coupling=100.0;
+	energy_low=10;
+	energy_hi=1e6;
+	enable_ort_polarization=enable_par_polarization=true;
+	psimaxX=psimaxY=PI;
+	Bx_mode=By_mode=Bz_mode=B_MODE_CONSTANT;
+	B_const=Vector(0,0,0);
 }
 
 Region_mathonly::~Region_mathonly(){

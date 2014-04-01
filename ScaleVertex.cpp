@@ -197,7 +197,9 @@ void ScaleVertex::ProcessMessage(GLComponent *src,int message) {
 			if (mApp->AskToReset()) {
 				geom->ScaleSelectedVertices(invariant,factor,src==copyButton,work);
 				theApp->UpdateModelParams();
-				work->Reload(); 
+				try { work->Reload(); } catch(Error &e) {
+					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
+				}  
 				theApp->UpdateFacetlistSelected();
 				mApp->UpdateViewers();
 				//GLWindowManager::FullRepaint();

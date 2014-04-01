@@ -32,8 +32,8 @@ BOOL EndsWithParam(const char* s);
 RegionInfo::RegionInfo(Worker *w):GLWindow() {
 
 	regionEditor=NULL;
-  int wD = 500;
-  int hD = 295;
+  int wD = 550;
+  int hD = 240;
   //traj=&(w->regions[0]);
   exportFrequency=1;
   calcIntegrals=1;
@@ -88,7 +88,7 @@ RegionInfo::RegionInfo(Worker *w):GLWindow() {
   t6->SetBounds(180,160,170,18);
   Add(t6);
 
-  exportPanel = new GLTitledPanel("Export region points");
+  /*exportPanel = new GLTitledPanel("Export region points");
   exportPanel->SetBounds(5,180,wD-10,65);
   Add(exportPanel);
 
@@ -107,7 +107,11 @@ RegionInfo::RegionInfo(Worker *w):GLWindow() {
   integrateToggle = new GLToggle(0,"Calculate integrals (go through all trajectory points)");
   integrateToggle->SetBounds(10,220,200,18);
   integrateToggle->SetCheck(TRUE);
-  Add(integrateToggle);
+  Add(integrateToggle);*/
+
+  viewPointsButton = new GLButton(0,"View Points");
+  viewPointsButton->SetBounds(wD-540,hD-44,85,21);
+  Add(viewPointsButton);
 
   saveAsButton = new GLButton(0,"Save as...");
   saveAsButton->SetBounds(wD-450,hD-44,85,21);
@@ -129,10 +133,7 @@ RegionInfo::RegionInfo(Worker *w):GLWindow() {
   cancelButton->SetBounds(wD-90,hD-44,85,21);
   Add(cancelButton);
 
-    exportButton = new GLButton(0,"Export points");
-  exportButton->SetBounds(wD-100,217,85,21);
-  Add(exportButton);
-
+  
 
   pathLabel=new GLLabel("No PAR file loaded");
   pathLabel->SetBounds(100,10,380,18);
@@ -192,12 +193,14 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
 		regionEditor->Display(work,regionSelector->GetSelectedIndex());
 		regionEditor->DoModal();
 		SAFE_DELETE(regionEditor);
-	} else if (src==exportButton) {
-		if( !freqField->GetNumberInt(&exportFrequency) ) {
+	} else if (src==viewPointsButton) {
+		/*if( !freqField->GetNumberInt(&exportFrequency) ) {
 				GLMessageBox::Display("Invalid export frequency","Error",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 		}
-		ExportPoints(regionSelector->GetSelectedIndex(),exportFrequency,integrateToggle->IsChecked());
+		ExportPoints(regionSelector->GetSelectedIndex(),exportFrequency,integrateToggle->IsChecked());*/
+		if ( mApp->trajectoryDetails==NULL) mApp->trajectoryDetails = new TrajectoryDetails();
+		mApp->trajectoryDetails->Display(work,regionSelector->GetSelectedIndex());
 	} else if (src==saveAsButton) {
 		FILENAME *fn = GLFileBox::SaveFile(NULL,NULL,"Save Region","param files\0*.param\0All files\0*.*\0",2);
 		if (!fn || !fn->fullName) return;
@@ -238,9 +241,9 @@ void RegionInfo::Update() {
 	if (!selectedRegion->isLoaded) return;
 
 	char tmp[256];
-	sprintf(tmp,"%d points will be exported with an interval of %g cm.",
+	/*sprintf(tmp,"%d points will be exported with an interval of %g cm.",
 		(int)((double)selectedRegion->Points.size()/(double)exportFrequency),selectedRegion->dL*(double)exportFrequency);
-	freqLabel->SetText(tmp);
+	freqLabel->SetText(tmp);*/
 
 	SynRad *mApp = (SynRad *)theApp;
 	

@@ -2,7 +2,7 @@
   File:        SpectrumPlotter.h
   Description: Spectrum plotter window
   Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS
+  Author:      R. KERSEVAN / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify
@@ -65,11 +65,13 @@ private:
   GLButton    *resetButton;
 
   GLDataView  *views[32];
+  GLCColor    *colors[8];
 
+  int          nbColors;
   int          nbView;
   double       delta;
   float        lastUpdate;
 
 };
 
-#endif /* _FACETPLOTTERH_ */
+#endif /* _SPECTRUMPLOTTERH_ */

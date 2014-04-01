@@ -2,7 +2,7 @@
   File:        Types.h
   Description: Various type/macro definitions and util functions
   Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS / M SZAKACS
+  Author:      R. KERSEVAN / M ADY / M ADY
   Copyright:   E.S.R.F / CERN / CERN
 
   This program is free software; you can redistribute it and/or modify

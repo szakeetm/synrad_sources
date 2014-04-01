@@ -1,7 +1,7 @@
 /*
   File:        FacetCoordinates.h
   Description: Facet coordinates window
-  Program:     SynRad
+  Program:     MolFlow
   Author:      R. KERSEVAN / J-L PONS / M ADY
   Copyright:   E.S.R.F / CERN
 
@@ -64,6 +64,7 @@ private:
   GLButton     *insertBeforeButton;
   GLButton     *removePosButton;
   GLTextField  *insertIdText;
+  GLButton      *setXbutton, *setYbutton, *setZbutton;
 
   std::vector<line> lines;
 

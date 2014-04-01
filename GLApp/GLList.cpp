@@ -448,7 +448,7 @@ void GLList::AutoSizeColumn() {
 			int maxWidth = 10;
 			for(int j=0;j<nbRow;j++) {
 				char *v = GetValueAt(i,j);
-				int w = fnt->GetTextWidth(v);
+				if (v) w = fnt->GetTextWidth(v);
 				if( w>maxWidth ) maxWidth = w;
 			}
 			if (cNames && cNames[i] && (w=fnt->GetTextWidth(cNames[i]))>maxWidth)
@@ -1851,8 +1851,8 @@ void GLList::ManageEvent(SDL_Event *evt) {
 						// Select column
 						selectedCol = sCol;
 						lastColSel = sCol;
-						lastRowSel = nbRow - 1;
 						SetSelectedRow( 0 );
+						lastRowSel = nbRow - 1;
 					}
 					parent->ProcessMessage(this,MSG_LIST);
 				}

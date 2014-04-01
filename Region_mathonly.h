@@ -68,7 +68,7 @@ public:
 	Region_mathonly(const Region_mathonly &src);
 	Region_mathonly& operator=(const Region_mathonly &src);
 
-	Vector B(double pointId,const Vector &offset); //returns the B field at a given point, allows interpolation between points and offset due to non-ideal beam
+	Vector B(int pointId,const Vector &offset); //returns the B field at a given point, allows interpolation between points and offset due to non-ideal beam
 };
 
 #endif

@@ -2,7 +2,7 @@
   File:        GeometryRender.cpp
   Description: Geometry class (OpenGL rendering/selection stuff)
   Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS
+  Author:      R. KERSEVAN / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify
@@ -722,16 +722,13 @@ void Geometry::BuildTexture(BYTE *hits) {
       //if( shGHit->total.nbDesorbed>0 ) {
       //  dCoef = (float)totalOutgassing / (float)shGHit->total.nbDesorbed;
   	SynRad *mApp = (SynRad *)theApp;
-	Worker *worker=&(mApp->worker);
-	double no_scans;
-	if (worker->nbTrajPoints==0 || worker->nbDesorption==0) no_scans=1.0;
-	else no_scans=(double)worker->nbDesorption/(double)worker->nbTrajPoints;      
+	Worker *worker=&(mApp->worker);     
 	texCMin_MC = shGHit->minHit_MC;// * dCoef;
 	texCMax_MC = shGHit->maxHit_MC;// * dCoef;
-	texCMin_flux = shGHit->minHit_flux/no_scans;// * dCoef;
-	texCMax_flux = shGHit->maxHit_flux/no_scans;// * dCoef;
-	texCMin_power = shGHit->minHit_power/no_scans;// * dCoef;
-	texCMax_power = shGHit->maxHit_power/no_scans;// * dCoef;
+	texCMin_flux = shGHit->minHit_flux/worker->no_scans;// * dCoef;
+	texCMax_flux = shGHit->maxHit_flux/worker->no_scans;// * dCoef;
+	texCMin_power = shGHit->minHit_power/worker->no_scans;// * dCoef;
+	texCMax_power = shGHit->maxHit_power/worker->no_scans;// * dCoef;
 
       //} else {
       //  texCMin = shGHit->minHit;
@@ -778,12 +775,12 @@ void Geometry::BuildTexture(BYTE *hits) {
 
        if( texAutoScale ) {
 		   if (textureMode==TEXTURE_MODE_MCHITS) f->BuildTexture(hits_MC,texCMin_MC,texCMax_MC,texColormap,texLogScale);
-		   else if (textureMode==TEXTURE_MODE_FLUX) f->BuildTexture(hits_flux,texCMin_flux,texCMax_flux,no_scans,texColormap,texLogScale);
-		   else if (textureMode==TEXTURE_MODE_POWER) f->BuildTexture(hits_power,texCMin_power,texCMax_power,no_scans,texColormap,texLogScale);
+		   else if (textureMode==TEXTURE_MODE_FLUX) f->BuildTexture(hits_flux,texCMin_flux,texCMax_flux,worker->no_scans,texColormap,texLogScale);
+		   else if (textureMode==TEXTURE_MODE_POWER) f->BuildTexture(hits_power,texCMin_power,texCMax_power,worker->no_scans,texColormap,texLogScale);
 	   } else {
 		   if (textureMode==TEXTURE_MODE_MCHITS) f->BuildTexture(hits_MC,texMin_MC,texMax_MC,texColormap,texLogScale);
-		   else if (textureMode==TEXTURE_MODE_FLUX) f->BuildTexture(hits_flux,texMin_flux,texMax_flux,no_scans,texColormap,texLogScale);
-		   else if (textureMode==TEXTURE_MODE_POWER) f->BuildTexture(hits_power,texMin_power,texMax_power,no_scans,texColormap,texLogScale);
+		   else if (textureMode==TEXTURE_MODE_FLUX) f->BuildTexture(hits_flux,texMin_flux,texMax_flux,worker->no_scans,texColormap,texLogScale);
+		   else if (textureMode==TEXTURE_MODE_POWER) f->BuildTexture(hits_power,texMin_power,texMax_power,worker->no_scans,texColormap,texLogScale);
 	   }
     }
     if( f->sh.countDirection && f->dirCache ) {

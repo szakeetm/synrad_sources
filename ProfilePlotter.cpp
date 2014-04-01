@@ -2,7 +2,7 @@
 File:        ProfilePlotter.cpp
 Description: Profile plotter window
 Program:     SynRad
-Author:      R. KERSEVAN / M SZAKACS
+Author:      R. KERSEVAN / M ADY
 Copyright:   E.S.R.F / CERN
 
 This program is free software; you can redistribute it and/or modify
@@ -26,7 +26,7 @@ GNU General Public License for more details.
 extern GLApplication *theApp;
 
 static const char*profType[] = {"None","\201","\202","Angle"};
-static const char*profMode[] = {"MC Hits","SR Flux/scan/cm\262","SR Power/scan/cm\262"};
+static const char*profMode[] = {"MC Hits","SR Flux/cm\262","SR Power/cm\262"};
 
 ProfilePlotter::ProfilePlotter():GLWindow() {
 
@@ -38,6 +38,16 @@ ProfilePlotter::ProfilePlotter():GLWindow() {
 	nbView = 0;
 	worker = NULL;
 	lastUpdate = 0.0f;
+
+	nbColors = 8;
+	colors[0] = new GLCColor(); colors[0]->r = 255; colors[0]->g = 000; colors[0]->b = 055; //red
+	colors[1] = new GLCColor(); colors[1]->r = 000; colors[1]->g = 000; colors[1]->b = 255; //blue
+	colors[2] = new GLCColor(); colors[2]->r = 000; colors[2]->g = 204; colors[2]->b = 051; //green
+	colors[3] = new GLCColor(); colors[3]->r = 000; colors[3]->g = 000; colors[3]->b = 000; //black
+	colors[4] = new GLCColor(); colors[4]->r = 255; colors[4]->g = 153; colors[4]->b = 051; //orange
+	colors[5] = new GLCColor(); colors[5]->r = 153; colors[5]->g = 204; colors[5]->b = 255; //light blue
+	colors[6] = new GLCColor(); colors[6]->r = 153; colors[6]->g = 000; colors[6]->b = 102; //violet
+	colors[7] = new GLCColor(); colors[7]->r = 255; colors[7]->g = 230; colors[7]->b = 005; //yellow
 
 	chart = new GLChart(0);
 	chart->SetBorder(BORDER_BEVEL_IN);
@@ -249,9 +259,6 @@ void ProfilePlotter::refreshViews() {
 	double nbAbs = (double)gHits->total.nbAbsorbed;
 	double nbDes = (double)gHits->total.nbDesorbed;
 	double nbHit = (double)gHits->total.nbHit;
-	double no_scans;
-	if (worker->nbTrajPoints==0 || worker->nbDesorption==0) no_scans=1.0;
-	else no_scans=(double)worker->nbDesorption/(double)worker->nbTrajPoints;
 	
 	for(int i=0;i<nbView;i++) {
 
@@ -274,10 +281,10 @@ void ProfilePlotter::refreshViews() {
 						v->Add((double)j,(double)profilePtr_MC[j],FALSE);
 				} else if (mode==1) { //flux
 					for(int j=0;j<PROFILE_SIZE;j++)
-						v->Add((double)j,profilePtr_flux[j]/no_scans/elemArea,FALSE);
+						v->Add((double)j,profilePtr_flux[j]/worker->no_scans/elemArea,FALSE);
 				} else if (mode==2) { //power
 					for(int j=0;j<PROFILE_SIZE;j++)
-						v->Add((double)j,profilePtr_power[j]/no_scans/elemArea,FALSE);
+						v->Add((double)j,profilePtr_power[j]/worker->no_scans/elemArea,FALSE);
 				}
 				break;
 
@@ -358,6 +365,9 @@ void ProfilePlotter::refreshViews() {
 			GLDataView *v = new GLDataView();
 			sprintf(tmp,"F#%d %s %s",facet+1,profType[f->sh.profileType],profMode[mode]);
 			v->SetName(tmp);
+			v->SetColor(*colors[nbView%nbColors]);
+			v->SetMarkerColor(*colors[nbView%nbColors]);
+			v->SetLineWidth(2);
 			v->userData1 = facet;
 			v->userData2 = mode;
 			chart->GetY1Axis()->AddDataView(v);

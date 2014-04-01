@@ -121,14 +121,6 @@ double Trajectory_Point::dAlpha(const double &dL) {
 	return dL/rho.Norme();
 }
 
-Trajectory_Point::Trajectory_Point(){
-	//printf("Constructor hit!");
-}
-
-Trajectory_Point::~Trajectory_Point(){
-	//printf("Destructor hit!");
-}
-
 Vector Vector::Normalize() {
 	if (Norme()==0.0) return *this;
 	return ScalarMult(*this,1/Norme());

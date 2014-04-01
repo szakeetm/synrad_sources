@@ -1,6 +1,6 @@
 /*
-  File:        FacetDetails.h
-  Description: Facet details window
+  File:        TrajectoryDetails.h
+  Description: Trajectory details window
   Program:     SynRad
   Author:      R. KERSEVAN / M ADY
   Copyright:   E.S.R.F / CERN
@@ -21,41 +21,50 @@
 #include "GLApp/GLButton.h"
 #include "GLApp/GLToggle.h"
 #include "GLApp/GLTitledPanel.h"
+#include "GLApp/GLCombo.h"
 #include "Worker.h"
 
-#ifndef _FACETDETAILSH_
-#define _FACETDETAILSH_
+#ifndef _TRAJECTORYDETAILSH_
+#define _TRAJECTORYDETAILSH_
 
-#define NB_FDCOLUMN 22
+#define NB_TPCOLUMN 45
 
-class FacetDetails : public GLWindow {
+class TrajectoryDetails : public GLWindow {
 
 public:
 
   // Construction
-  FacetDetails();
+  TrajectoryDetails();
 
   // Component method
-  void Display(Worker *w);
+  void Display(Worker *w,int regionId);
   void Update();
 
   // Implementation
   void ProcessMessage(GLComponent *src,int message);
   void SetBounds(int x,int y,int w,int h);
+  void SelectPoint(int idx);
+  int GetRegionId();
 
 private:
 
   char *GetCountStr(Facet *f);
   void UpdateTable();
-  char *FormatCell(int idx,Facet *f,int mode);
+  char *FormatCell(int idx,int mode,GenPhoton* photon);
   void PlaceComponents();
 
+  size_t displayedRegion;
+  int freq;
   Worker      *worker;
-  GLList      *facetListD;
+  GLList      *pointList;
+  GLCombo     *regionCombo;
+  GLTextField *freqText;
+  GLLabel     *everyLabel;
+  GLLabel     *nbPointLabel;
 
   GLTitledPanel *sPanel;          // Toggle panel
-  GLToggle      *show[NB_FDCOLUMN];
-  int            shown[NB_FDCOLUMN];
+  GLToggle      *show[NB_TPCOLUMN-1];
+  int            shown[NB_TPCOLUMN];
 
   GLButton    *checkAllButton;
   GLButton    *uncheckAllButton;
@@ -64,4 +73,4 @@ private:
 
 };
 
-#endif /* _FACETDETAILSH_ */
+#endif /* _TRAJECTORYDETAILSH_ */

@@ -1,8 +1,8 @@
 /*
   File:        VertexCoordinates.h
   Description: Vertex coordinates window
-  Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS / M SZAKACS
+  Program:     MolFlow
+  Author:      R. KERSEVAN / J-L PONS / M ADY / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify
@@ -54,7 +54,7 @@ private:
   //GLButton     *insert2Button;
   //GLButton     *removeButton;
   //GLTextField  *insertPosText;
-
+  GLButton      *setXbutton, *setYbutton, *setZbutton;
 };
 
 #endif /* _VertexCoordinatesH_ */

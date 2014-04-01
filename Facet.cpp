@@ -2,7 +2,7 @@
 File:        Facet.cpp
 Description: Facet class (memory management)
 Program:     SynRad
-Author:      R. KERSEVAN / M SZAKACS
+Author:      R. KERSEVAN / M ADY
 Copyright:   E.S.R.F / CERN
 
 This program is free software; you can redistribute it and/or modify
@@ -240,6 +240,13 @@ void Facet::LoadGEO(FileReader *file,int version,int nbVertex) {
 		file->ReadKeyword("teleportDest");file->ReadKeyword(":");
 		sh.teleportDest = file->ReadInt();
 	}
+
+	if (version >= 13) {
+		// Added in GEO version 13
+		file->ReadKeyword("accomodationFactor"); file->ReadKeyword(":");
+		/*sh.accomodationFactor =*/ file->ReadDouble();
+	}
+
 	UpdateFlags();
 }
 

@@ -2,7 +2,7 @@
   File:        synradSub.c
   Description: Main function on the working sub process
   Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS
+  Author:      R. KERSEVAN / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify

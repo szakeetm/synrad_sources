@@ -2,7 +2,7 @@
 File:        SpectrumPlotter.cpp
 Description: Spectrum plotter window
 Program:     SynRad
-Author:      R. KERSEVAN / M SZAKACS
+Author:      R. KERSEVAN / M ADY
 Copyright:   E.S.R.F / CERN
 
 This program is free software; you can redistribute it and/or modify
@@ -25,7 +25,7 @@ GNU General Public License for more details.
 
 extern GLApplication *theApp;
 
-static const char*specMode[] = {"Flux (ph/sec/.1%)","Power (W/.1%)"};
+static const char*specMode[] = {"Flux (ph/sec/bin)","Power (W/bin)"};
 
 SpectrumPlotter::SpectrumPlotter():GLWindow() {
 
@@ -37,6 +37,16 @@ SpectrumPlotter::SpectrumPlotter():GLWindow() {
 	nbView = 0;
 	worker = NULL;
 	lastUpdate = 0.0f;
+
+	nbColors = 8;
+	colors[0] = new GLCColor(); colors[0]->r = 255; colors[0]->g = 000; colors[0]->b = 055; //red
+	colors[1] = new GLCColor(); colors[1]->r = 000; colors[1]->g = 000; colors[1]->b = 255; //blue
+	colors[2] = new GLCColor(); colors[2]->r = 000; colors[2]->g = 204; colors[2]->b = 051; //green
+	colors[3] = new GLCColor(); colors[3]->r = 000; colors[3]->g = 000; colors[3]->b = 000; //black
+	colors[4] = new GLCColor(); colors[4]->r = 255; colors[4]->g = 153; colors[4]->b = 051; //orange
+	colors[5] = new GLCColor(); colors[5]->r = 153; colors[5]->g = 204; colors[5]->b = 255; //light blue
+	colors[6] = new GLCColor(); colors[6]->r = 153; colors[6]->g = 000; colors[6]->b = 102; //violet
+	colors[7] = new GLCColor(); colors[7]->r = 255; colors[7]->g = 230; colors[7]->b = 005; //yellow
 
 	chart = new GLChart(0);
 	chart->SetBorder(BORDER_BEVEL_IN);
@@ -179,10 +189,7 @@ void SpectrumPlotter::refreshViews() {
 
 	if(!buffer) return;
 
-	Geometry *geom = worker->GetGeometry();	
-	double no_scans;
-	if (worker->nbTrajPoints==0 || worker->nbDesorption==0) no_scans=1.0;
-	else no_scans=(double)worker->nbDesorption/(double)worker->nbTrajPoints;
+	Geometry *geom = worker->GetGeometry();
 
 	for(int i=0;i<nbView;i++) {
 
@@ -207,10 +214,10 @@ void SpectrumPlotter::refreshViews() {
 			case 0: //no normalization
 				if (mode==0) { //flux
 					for(int j=0;j<PROFILE_SIZE;j++)
-						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+j*delta),shSpectrum_fluxwise[j]/no_scans,FALSE);
+						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+j*delta),shSpectrum_fluxwise[j]/worker->no_scans,FALSE);
 				} else if (mode==1) { //power
 					for(int j=0;j<PROFILE_SIZE;j++)
-						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+j*delta),shSpectrum_powerwise[j]/no_scans,FALSE);
+						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+j*delta),shSpectrum_powerwise[j]/worker->no_scans,FALSE);
 				}
 				break;
 			case 1: //normalize max. value to 1
@@ -262,6 +269,9 @@ void SpectrumPlotter::addView(int facet,int mode) {
 		GLDataView *v = new GLDataView();
 		sprintf(tmp,"F#%d %s",facet+1,specMode[mode]);
 		v->SetName(tmp);
+		v->SetColor(*colors[nbView%nbColors]);
+		v->SetMarkerColor(*colors[nbView%nbColors]);
+		v->SetLineWidth(2);
 		v->userData1 = facet;
 		v->userData2 = mode;
 		chart->GetY1Axis()->AddDataView(v);

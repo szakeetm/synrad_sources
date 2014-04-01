@@ -2,7 +2,7 @@
   File:        DrawingArea.h
   Description: Simple drawing area
   Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS
+  Author:      R. KERSEVAN / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify

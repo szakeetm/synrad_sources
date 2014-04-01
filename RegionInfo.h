@@ -33,7 +33,7 @@ private:
 
 	RegionEditor     *regionEditor;
 	Region_full   *selectedRegion;
-	GLButton    *notepadButton,*cancelButton,*reloadButton,*exportButton,*editButton,*saveAsButton;
+	GLButton    *notepadButton,*cancelButton,*reloadButton,*editButton,*saveAsButton,*viewPointsButton;
 	GLLabel     *pathLabel,*t1,*t2,*t3,*t4,*t5,*t6,*freqLabel;
 	GLCombo     *regionSelector;
 	GLToggle    *integrateToggle;

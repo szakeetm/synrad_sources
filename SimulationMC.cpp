@@ -2,7 +2,7 @@
 File:        SimulationMC.c
 Description: Monte-Carlo Simulation for UHV (Physics related routines) 
 Program:     SynRad
-Author:      R. KERSEVAN / M SZAKACS
+Author:      R. KERSEVAN / M ADY
 Copyright:   E.S.R.F / CERN
 
 This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,7 @@ GNU General Public License for more details.
 #include "Utils.h" //debug only
 #include <vector>
 #include "Region_mathonly.h"
+#include "GeneratePhoton.h"
 
 extern SIMULATION *sHandle;
 extern void SetErrorSub(char *message);
@@ -537,13 +538,13 @@ BOOL StartFromSource() {
 	}
 
 	//find source point
-	double pointIdGlobal=rnd()*sHandle->sourceArea;
+	int pointIdGlobal=(int)(rnd()*sHandle->sourceArea);
 	BOOL found=false;
 	int regionId;
-	double pointIdLocal;
-	double sum=0.0;
+	int pointIdLocal;
+	int sum=0;
 	for (regionId=0;regionId<sHandle->nbRegion&&!found;regionId++) {
-		if ((pointIdGlobal>=sum) && (pointIdGlobal<(sum+(double)sHandle->regions[regionId].Points.size()))) {
+		if ((pointIdGlobal>=sum) && (pointIdGlobal<(sum+(int)sHandle->regions[regionId].Points.size()))) {
 			pointIdLocal=pointIdGlobal-sum;
 			found=true;
 		} else sum+=(int)sHandle->regions[regionId].Points.size();
@@ -553,11 +554,11 @@ BOOL StartFromSource() {
 	//Trajectory_Point *source=&(sHandle->regions[regionId].Points[pointIdLocal]);
 	Region_mathonly *sourceRegion=&(sHandle->regions[regionId]);
 	if (!(sourceRegion->psimaxX>0.0 && sourceRegion->psimaxY>0.0)) SetErrorSub("psiMaxX or psiMaxY not positive. No photon can be generated");
-	GenPhoton photon=Radiate(pointIdLocal,sourceRegion);
+	GenPhoton photon=GeneratePhoton(pointIdLocal,sourceRegion,sHandle->generation_mode);
 
 	sHandle->distTraveledCurrentParticle=0.0;
-	sHandle->dF=photon.dF;
-	sHandle->dP=photon.dP;
+	sHandle->dF=photon.SR_flux;
+	sHandle->dP=photon.SR_power;
 	sHandle->energy=photon.energy;
 
 	/*Vector Z_local=source->direction.Normalize(); //Z' base vector
@@ -687,182 +688,6 @@ void RecordHitOnTexture(FACET *f,double dF,double dP) {
 	f->hits_MC[add]++;
 	f->hits_flux[add]+=dF*f->inc[add]; //normalized by area
 	f->hits_power[add]+=dP*f->inc[add]; //normalized by area
-}
-
-GenPhoton Radiate(double sourceId,Region_mathonly *current_region) { //Generates a photon from point number 'sourceId'
-
-	//Interpolate source point
-	SATURATE(sourceId,0,(double)current_region->Points.size()-1.0000001); //make sure we stay within limits
-	Trajectory_Point previousPoint=current_region->Points[(int)sourceId];
-	Trajectory_Point nextPoint=current_region->Points[(int)sourceId+1];
-	double overshoot=sourceId-(int)sourceId;
-	
-	Trajectory_Point source;
-	source.position=Weigh(previousPoint.position,nextPoint.position,overshoot);
-	source.direction=Weigh(previousPoint.direction,nextPoint.direction,overshoot);
-	source.rho=Weigh(previousPoint.rho,nextPoint.rho,overshoot);
-	
-	static double last_critical_energy,last_Bfactor,last_Bfactor_power; //to speed up calculation if critical energy didn't change
-	static double last_average_ans;
-	double average_;
-	double emittance_x_,emittance_y_;
-	double B_factor,B_factor_power;
-	double x_offset,y_offset,divx_offset,divy_offset;
-	double radius=1E30;
-	GenPhoton result;
-	Vector X_local,Y_local,Z_local;
-
-	//Calculate local base vectors
-	Z_local=source.direction.Normalize(); //Z' base vector
-	/*if (source->rho.Norme()<1E29) {
-		X_local=source->rho.Normalize(); //X' base vector
-	} else {
-		X_local=RandomPerpendicularVector(Z_local,1.0);
-		}*/
-	Y_local=Vector(0.0,1.0,0.0); //same as absolute Y - assuming that machine's orbit is in the XZ plane
-	X_local=Crossproduct(Z_local,Y_local);
-
-	double critical_energy;
-	if (current_region->emittance>0.0) { //if beam is not ideal
-		//calculate non-ideal beam's offset (the four sigmas)
-		double betax_,betay_,eta_,etaprime_,e_spread_;
-		if (current_region->betax<0.0) { //negative betax value: load BXY file
-			double coordinate; //interpolation X value (first column of BXY file)
-			if (current_region->beta_kind==0) coordinate=sourceId*current_region->dL;
-			else if (current_region->beta_kind==1) coordinate=source.position.x;
-			else if (current_region->beta_kind==2) coordinate=source.position.y;
-			else if (current_region->beta_kind==3) coordinate=source.position.z;
-
-			betax_=current_region->beta_x_distr->InterpolateY(coordinate);
-			betay_=current_region->beta_y_distr->InterpolateY(coordinate);
-			eta_=current_region->eta_distr->InterpolateY(coordinate);
-			etaprime_=current_region->etaprime_distr->InterpolateY(coordinate);
-			e_spread_=current_region->e_spread_distr->InterpolateY(coordinate);
-			//the six above distributions are the ones that are read from the BXY file
-			//interpolateY finds the Y value corresponding to X input
-
-		} else { //if no BXY file, use average values
-			betax_=current_region->betax;
-			betay_=current_region->betay;
-			eta_=current_region->eta;
-			etaprime_=current_region->etaprime;
-			e_spread_=current_region->energy_spread;
-		}
-
-		emittance_x_=current_region->emittance/(1.0+current_region->coupling);
-		emittance_y_=emittance_x_*current_region->coupling;
-
-		double sigmaxprime=sqrt(emittance_x_/betax_+Sqr(etaprime_*e_spread_));
-		//{ hor lattice-dependent divergence, radians }
-		double sigmayprime=sqrt(emittance_y_/betay_);
-		//{ same for vertical divergence, radians }
-		double sigmax=sqrt(emittance_x_*betax_+Sqr(eta_*e_spread_));
-		//{ hor lattice-dependent beam dimension, cm }
-		double sigmay=sqrt(emittance_y_*betay_);
-		//{ same for vertical, cm }
-
-		x_offset=Gaussian(sigmax);
-		y_offset=Gaussian(sigmay);
-		divx_offset=Gaussian(sigmaxprime);
-		divy_offset=Gaussian(sigmayprime);
-
-		Vector offset=Vector(0,0,0); //choose ideal beam as origin
-		offset=Add(offset,ScalarMult(X_local,x_offset)); //apply dX offset
-		offset=Add(offset,ScalarMult(Y_local,y_offset)); //apply dY offset
-		result.start_pos=Add(source.position,offset);
-
-		Vector B_local=current_region->B(sourceId,offset); //recalculate B at offset position
-		double B_parallel=DotProduct(source.direction,B_local);
-		double B_orthogonal=sqrt(Sqr(B_local.Norme())-Sqr(B_parallel));
-		
-		if (B_orthogonal>VERY_SMALL)
-			radius=current_region->E/0.00299792458/B_orthogonal; //Energy in GeV divided by speed of light/1E9 converted to centimeters
-		else radius=1.0E30;
-
-		critical_energy=2.959E-5*pow(current_region->gamma,3)/radius; //becomes ~1E-30 if radius is 1E30
-	} else {
-		//0 emittance, ideal beam
-		critical_energy=source.Critical_Energy(current_region->gamma);
-		result.start_pos=source.position;
-		radius=source.rho.Norme();
-	}
-
-	double generated_energy=SYNGEN1(current_region->energy_low/critical_energy,current_region->energy_hi/critical_energy,
-		sHandle->generation_mode);
-
-	if (critical_energy==last_critical_energy)
-		B_factor=last_Bfactor;
-	else B_factor=(exp(integral_N_photons.InterpolateY(log(current_region->energy_hi/critical_energy)))
-		-exp(integral_N_photons.InterpolateY(log(current_region->energy_low/critical_energy))))
-		/exp(integral_N_photons.valuesY[integral_N_photons.size-1]);
-
-	double SR_flux,SR_power;
-	SR_flux=current_region->dL/(radius*2*PI)*current_region->gamma*4.1289E14*B_factor*current_region->current;
-	//Total flux per revolution for electrons: 8.08E17*E[GeV]*I[mA] photons/sec
-	//8.08E17 * 0.000511GeV = 4.1289E14
-
-	//if (generation_mode==SYNGEN_MODE_POWERWISE) {
-	if (critical_energy==last_critical_energy)
-		B_factor_power=last_Bfactor_power;
-	else B_factor_power=(exp(integral_SR_power.InterpolateY(log(current_region->energy_hi/critical_energy)))
-		-exp(integral_SR_power.InterpolateY(log(current_region->energy_low/critical_energy))))
-		/exp(integral_SR_power.valuesY[integral_SR_power.size-1]);
-
-	if (critical_energy==last_critical_energy)
-		average_=last_average_ans;
-	else average_=integral_N_photons.Interval_Mean(current_region->energy_low/critical_energy,current_region->energy_hi/critical_energy);
-
-	double average=integral_N_photons.average;
-	//double average1=integral_N_photons.average1; //unused
-
-	if (sHandle->generation_mode==SYNGEN_MODE_POWERWISE)
-		SR_flux=SR_flux/generated_energy*average_;
-
-	//}
-	double f=polarization_distribution.InterpolateY(generated_energy);
-	double g1h2=exp(g1h2_distribution.InterpolateY(generated_energy));
-	double f_times_g1h2=f*g1h2;
-	double natural_divx,natural_divy;
-	
-	do {
-		natural_divy=find_psi(generated_energy,Sqr(current_region->gamma),f_times_g1h2,
-			current_region->enable_par_polarization,current_region->enable_ort_polarization)/current_region->gamma;
-	} while (natural_divy>current_region->psimaxY);
-	do {
-		natural_divx=find_chi(natural_divy,current_region->gamma,f_times_g1h2,
-			current_region->enable_par_polarization,current_region->enable_ort_polarization); //divided by sHandle->gamma inside the function
-	} while (natural_divx>current_region->psimaxX);
-
-	if (rnd()<0.5) natural_divx=-natural_divx;
-	if (rnd()<0.5) natural_divy=-natural_divy;
-
-	if (B_factor>0.0 && average_>VERY_SMALL) {
-		SR_power=SR_flux*generated_energy*critical_energy*1.602189E-19*average/average_*B_factor_power/B_factor; //flux already multiplied by current
-	} else SR_power=0.0;
-
-	last_critical_energy=critical_energy;
-	last_Bfactor=B_factor;
-	last_Bfactor_power=B_factor_power;
-	last_average_ans=average_;
-
-	//return values
-	
-	if (current_region->emittance>0.0) {
-		//do the transf
-		result.start_dir=Z_local;
-		result.start_dir=result.start_dir.Rotate(Y_local,natural_divx+divx_offset);
-		result.start_dir=result.start_dir.Rotate(X_local,natural_divy+divy_offset);
-	} else {
-		result.start_dir=Z_local;
-		result.start_dir=result.start_dir.Rotate(Y_local,natural_divx);
-		result.start_dir=result.start_dir.Rotate(X_local,natural_divy);
-	}
-	result.dF=SR_flux;
-	//if (!(SR_flux==SR_flux)) __debugbreak();
-	result.dP=SR_power;
-	result.energy=generated_energy*critical_energy;
-
-	return result;
 }
 
 double Gaussian(const double &sigma) {

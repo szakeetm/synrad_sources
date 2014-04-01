@@ -2,7 +2,7 @@
   File:        TextureSettings.cpp
   Description: Texture settings dialog (min,max,autoscale,gradient)
   Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS
+  Author:      R. KERSEVAN / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify
@@ -275,7 +275,11 @@ void TextureSettings::ProcessMessage(GLComponent *src,int message) {
 		texMaxText->SetText(texCMaxText->GetText());
 		texAutoScale->SetCheck(FALSE);
 		geom->texAutoScale=false;
-		worker->Update(0.0f);
+		try {
+				worker->Update(0.0f);
+			} catch(Error &e) {
+				GLMessageBox::Display((char *)e.GetMsg(),"Error (Worker::Update)",GLDLG_OK,GLDLG_ICONERROR);
+			}
 		Update();
 	}
     break;

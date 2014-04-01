@@ -2,7 +2,7 @@
   File:        Geometry.h
   Description: Main geometry class (Handles sets of facets)
   Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS
+  Author:      R. KERSEVAN / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify
@@ -37,7 +37,7 @@ class Worker;
 #define SEL_HISTORY  100
 #define MAX_SUPERSTR 256
 #define SYNVERSION   6
-#define GEOVERSION   12
+#define GEOVERSION   13
 #define PARAMVERSION 2
 
 #define TEXTURE_MODE_MCHITS 0
@@ -195,6 +195,7 @@ public:
   llong   tNbLeak;
   llong tNbAbsorption;
   double distTraveledTotal;
+  double loaded_no_scans;
 
   // Memory usage (in bytes)
   DWORD GetGeometrySize(std::vector<Region_full> *regions,std::vector<Material> *materials);

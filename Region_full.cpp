@@ -15,53 +15,113 @@ using namespace std;
 void Region_full::CalculateTrajectory(int max_steps){
 	//global variables. All distances in cm!
 	Trajectory_Point current_point;
-	extern Distribution2D polarization_distribution,integral_N_photons,integral_SR_power,g1h2_distribution;
+	//extern Distribution2D polarization_distribution,integral_N_photons,integral_SR_power,g1h2_distribution;
 
 	//initial position and speed
 	current_point.position=this->startPoint;
 	current_point.direction=this->startDir;
-	current_point.rho=Vector(0.0,0.0,1e30); //big enough so no rotation
+	//current_point.rho=Vector(0.0,0.0,1e30); //big enough so no rotation
 	AABBmin=AABBmax=this->startPoint;
 
 	//Calculate trajectory
 	Points.push_back(current_point); //beam starting position
+	CalcPointProperties(0); //calculate magnetic field, etc. of first point
 
 	for (int i=0;i<max_steps&&!isOutsideBoundaries(current_point.position,i==0);i++) {
 		current_point=OneStep(i); //step forward
-		Points.push_back(current_point); //store point
+		Points.push_back(current_point); //store point on i+1st place
+		CalcPointProperties(i + 1);
 		//extend trajectory limits if needed
-		if (current_point.position.x<AABBmin.x) AABBmin.x=current_point.position.x;
-		if (current_point.position.y<AABBmin.y) AABBmin.y=current_point.position.y;
-		if (current_point.position.z<AABBmin.z) AABBmin.z=current_point.position.z;
-		if (current_point.position.x>AABBmax.x) AABBmax.x=current_point.position.x;
-		if (current_point.position.y>AABBmax.y) AABBmax.y=current_point.position.y;
-		if (current_point.position.z>AABBmax.z) AABBmax.z=current_point.position.z;
+		if (current_point.position.x<AABBmin.x) AABBmin.x = current_point.position.x;
+		if (current_point.position.y<AABBmin.y) AABBmin.y = current_point.position.y;
+		if (current_point.position.z<AABBmin.z) AABBmin.z = current_point.position.z;
+		if (current_point.position.x>AABBmax.x) AABBmax.x = current_point.position.x;
+		if (current_point.position.y>AABBmax.y) AABBmax.y = current_point.position.y;
+		if (current_point.position.z>AABBmax.z) AABBmax.z = current_point.position.z;
 	}
 }
 
 Trajectory_Point Region_full::OneStep(int pointId) {
-	Trajectory_Point p0=Points[pointId];
-	Vector rotation_axis=Crossproduct(p0.direction,p0.rho);
+	Trajectory_Point* p0 = &(Points[pointId]);
+
+	Vector rotation_axis = Crossproduct(p0->direction, p0->rho);
 	//Calculate new point
 	Trajectory_Point p;
-	p.direction=p0.direction.Rotate(rotation_axis,dL/p0.rho.Norme());
-	p.position=Add(p0.position,ScalarMult(p.direction,dL/p.direction.Norme()));
+	p.direction = p0->direction.Rotate(rotation_axis, dL / p0->rho.Norme());
+	p.position = Add(p0->position, ScalarMult(p.direction, dL / p.direction.Norme()));
 
-	Vector B_local=B((double)pointId,Vector(0,0,0));
-	if (B_local.Norme()<VERY_SMALL) {//straight line
-		p.rho=Vector(0.0,0.0,1.0e30); //no rotation
-		return p;
-	}
-	double B_parallel=DotProduct(p.direction,B_local);
-	double B_orthogonal=sqrt(Sqr(B_local.Norme())-Sqr(B_parallel));
-	Vector lorentz_force_direction=Crossproduct(p.direction,B_local).Normalize();
-	if (particleMass<0.0) lorentz_force_direction=ScalarMult(lorentz_force_direction,-1.0);
-	double radius;
-	if (B_orthogonal>VERY_SMALL)
-		radius=E/0.00299792458/B_orthogonal;
-	else radius=1.0E30;
-	p.rho=ScalarMult(lorentz_force_direction,radius);
 	return p;
+}
+
+void Region_full::CalcPointProperties(int pointId) {
+	Trajectory_Point* p = &(Points[pointId]);
+
+	p->B = B(pointId, Vector(0, 0, 0)); //local magnetic field
+	if (p->B.Norme() < VERY_SMALL) {//no magnetic field, beam goes in straight line
+		p->rho = Vector(0.0, 0.0, 1.0e30); //no rotation
+	}
+	else {
+		double B_parallel = DotProduct(p->direction, p->B);
+		double B_orthogonal = sqrt(Sqr(p->B.Norme()) - Sqr(B_parallel));
+		Vector lorentz_force_direction = Crossproduct(p->direction, p->B).Normalize();
+		if (particleMass<0.0) lorentz_force_direction = ScalarMult(lorentz_force_direction, -1.0);
+		double radius;
+		if (B_orthogonal>VERY_SMALL)
+			radius = E / 0.00299792458 / B_orthogonal;
+		else radius = 1.0E30;
+		p->rho = ScalarMult(lorentz_force_direction, radius);
+	}
+
+	p->critical_energy = p->Critical_Energy(gamma);
+
+	//Calculate local base vectors
+	p->Z_local = p->direction.Normalize(); //Z' base vector
+	p->Y_local = Vector(0.0, 1.0, 0.0); //same as absolute Y - assuming that machine's orbit is in the XZ plane
+	p->X_local = Crossproduct(p->Z_local, p->Y_local);
+
+	if (emittance > 0.0) { //if beam is not ideal
+		//calculate non-ideal beam's offset (the four sigmas)
+		if (betax < 0.0) { //negative betax value: load BXY file
+			double coordinate; //interpolation X value (first column of BXY file)
+			if (beta_kind == 0) coordinate = pointId*dL;
+			else if (beta_kind == 1) coordinate = p->position.x;
+			else if (beta_kind == 2) coordinate = p->position.y;
+			else if (beta_kind == 3) coordinate = p->position.z;
+
+			p->beta_X = beta_x_distr->InterpolateY(coordinate);
+			p->beta_Y = beta_y_distr->InterpolateY(coordinate);
+			p->eta = eta_distr->InterpolateY(coordinate);
+			p->eta_prime = etaprime_distr->InterpolateY(coordinate);
+			p->energy_spread = e_spread_distr->InterpolateY(coordinate);
+			//the five above distributions are the ones that are read from the BXY file
+			//interpolateY finds the Y value corresponding to X input
+
+		}
+		else { //if no BXY file, use average values
+			p->beta_X = betax;
+			p->beta_Y = betay;
+			p->eta = eta;
+			p->eta_prime = etaprime;
+			p->energy_spread = energy_spread;
+		}
+
+		p->emittance_X = emittance / (1.0 + coupling*0.01);
+		p->emittance_Y = p->emittance_X*coupling*0.01;
+
+		p->sigma_x_prime = sqrt(p->emittance_X / p->beta_X + Sqr(p->eta_prime*p->energy_spread*0.01));
+		//{ hor lattice-dependent divergence, radians }
+		p->sigma_y_prime = sqrt(p->emittance_Y / p->beta_Y);
+		//{ same for vertical divergence, radians }
+		p->sigma_x = sqrt(p->emittance_X*p->beta_X + Sqr(p->eta*p->energy_spread*0.01));
+		//{ hor lattice-dependent beam dimension, cm }
+		p->sigma_y = sqrt(p->emittance_Y*p->beta_Y);
+		//{ same for vertical, cm }
+	}
+	else {
+		//0 emittance, ideal beam
+		p->emittance_X = p->emittance_Y = p->beta_X = p->beta_Y = p->eta = p->eta_prime = p->energy_spread =
+			p->sigma_x = p->sigma_y = p->sigma_x_prime = p->sigma_y_prime = 0.0;
+	}
 }
 
 bool Region_full::isOutsideBoundaries(Vector a,BOOL recalcDirs){
@@ -89,9 +149,9 @@ void Region_full::LoadPAR(FileReader *file,GLProgress *prg){
 	std::string* MagFileNamePtr[3]={&MAGXfileName,&MAGYfileName,&MAGZfileName};
 
 	prg->SetMessage("Reading parameter file...");
-	int no_scans=file->ReadInt(); //unused
-	int nregions=file->ReadInt(); //unused
-	int generation_mode=file->ReadInt(); //unused
+	file->ReadInt(); //unused (no_scans)
+	file->ReadInt(); //unused (nregions)
+	file->ReadInt(); //unused (generation mode)
 	file->JumpComment();
 
 	particleMass=file->ReadDouble();
@@ -155,7 +215,7 @@ void Region_full::LoadPAR(FileReader *file,GLProgress *prg){
 	}
 
 	emittance=eta=etaprime=energy_spread=betax=betay=0.0; //default values
-	coupling=1.0;
+	coupling=100.0;
 	nbDistr_BXY=0;
 
 	emittance=file->ReadDouble();
@@ -264,7 +324,7 @@ Region_full::Region_full():Region_mathonly(){
 
 	//generation_mode=SYNGEN_MODE_POWERWISE;
 	//emittance=eta=etaprime=energy_spread=betax=betay=0.0;
-	//coupling=1.0;
+	//coupling=100.0;
 	selectedPoint=-1;
 	isLoaded=FALSE;
 	//object placeholders until MAG files are loaded
@@ -291,7 +351,7 @@ Region_full::Region_full():Region_mathonly(){
 	particleMass=-0.0005110034; //electron
 	E=1;current=1;
 	betax=betay=eta=etaprime=energy_spread=emittance=0.0;
-	coupling=1.0;
+	coupling=100.0;
 	energy_low=10;
 	energy_hi=1e6;
 	enable_ort_polarization=enable_par_polarization=TRUE;
@@ -299,7 +359,6 @@ Region_full::Region_full():Region_mathonly(){
 	Bx_mode=By_mode=Bz_mode=B_MODE_CONSTANT;
 	B_const=Vector(0,0,0);
 	this->nbPoints=0;*/
-
 }
 
 Region_full::~Region_full(){
@@ -362,7 +421,7 @@ void Region_full::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLen
 		glLineWidth(0.5f);
 
 		Vector O=Points[selectedPoint].position;
-		Vector B_local=B((double)selectedPoint,Vector(0,0,0));
+		Vector B_local=Points[selectedPoint].B;
 		Vector B_local_norm=B_local.Normalize();
 		Vector Rho_local=Points[selectedPoint].rho;
 		Vector Rho_local_norm=Rho_local.Normalize();
@@ -401,7 +460,9 @@ void Region_full::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLen
 	}
 }
 
-void Region_full::SelectTrajPoint(int x,int y) {
+void Region_full::SelectTrajPoint(int x,int y,int regionId) {
+	extern SynRad *theApp;
+	SynRad *mApp = (SynRad *)theApp;
 
 	int i;
 	if(!isLoaded) return;
@@ -438,14 +499,14 @@ void Region_full::SelectTrajPoint(int x,int y) {
 
 	if (minDist<250.0) {
 		selectedPoint=minId;
+		if (mApp->trajectoryDetails && mApp->trajectoryDetails->GetRegionId()==regionId) mApp->trajectoryDetails->SelectPoint(selectedPoint);
 	}
 
 	free(allXe);
 	free(allYe);
 	free(ok);
 	//UpdateSelection();
-	extern SynRad *theApp;
-	SynRad *mApp = (SynRad *)theApp;
+	
 	if (mApp->regionInfo) mApp->regionInfo->Update();
 }
 
@@ -1042,7 +1103,7 @@ void Region_full::LoadParam(FileReader *file,GLProgress *prg){
 	else current=1;
 
 	emittance=eta=etaprime=energy_spread=betax=betay=0.0; //default values
-	coupling=1.0;
+	coupling=100.0;
 	nbDistr_BXY=0;
 
 	file->ReadKeyword("emittance");file->ReadKeyword(":");emittance=file->ReadDouble();
@@ -1072,7 +1133,13 @@ void Region_full::LoadParam(FileReader *file,GLProgress *prg){
 					}
 				}
 				FileReader BXYfile((char*)BXYfileName.c_str());
-				nbDistr_BXY=LoadBXY(&BXYfile,beta_x_distr,beta_y_distr,eta_distr,etaprime_distr,e_spread_distr);
+				try {
+					nbDistr_BXY = LoadBXY(&BXYfile, beta_x_distr, beta_y_distr, eta_distr, etaprime_distr, e_spread_distr);
+				} catch(Error &e) {
+					//geom->Clear();
+					sprintf(tmp, "Error loading BXY file (%s): %s", BXYfileName.c_str(), e.GetMsg());
+					throw Error(tmp);
+				}
 			 
 		} else { //constants
 			file->ReadKeyword("beta_y");file->ReadKeyword(":");betay=file->ReadDouble();

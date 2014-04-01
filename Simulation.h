@@ -2,7 +2,7 @@
   File:        Simulation.h
   Description: Monte-Carlo Simulation for UHV
   Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS
+  Author:      R. KERSEVAN / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify
@@ -204,6 +204,5 @@ void ProfileFacet(FACET *f,const double &dF,const double &dP,const double &E);
 BOOL IsInFacet(FACET *f,const double &u,const double &v);
 double GetTick();
 long   GetHitsSize();
-GenPhoton Radiate(double sourceId,Region_mathonly *reg);
 
 #endif /* _SIMULATIONH_ */

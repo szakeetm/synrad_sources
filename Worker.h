@@ -2,7 +2,7 @@
   File:        Worker.h
   Description: Sub processes handling
   Program:     SynRad
-  Author:      R. KERSEVAN / M SZAKACS
+  Author:      R. KERSEVAN / M ADY
   Copyright:   E.S.R.F / CERN
 
   This program is free software; you can redistribute it and/or modify
@@ -97,6 +97,7 @@ public:
   float  simuTime;          // Total simulation time
   int    mode;              // Simulation mode
   int    nbTrajPoints;       // number of all points in trajectory
+  double no_scans;           // = nbDesorption/nbTrajPoints. Stored separately for saving/loading
   int    generation_mode;   //fluxwise or powerwise
   std::vector<Region_full> regions;
   std::vector<Material> materials;
