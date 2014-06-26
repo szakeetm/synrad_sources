@@ -30,6 +30,13 @@ GNU General Public License for more details.
 #include "direct.h"
 //#include <winsparkle.h>
 
+#ifdef _DEBUG
+#define APP_NAME "SynRad+ development version (Compiled "__DATE__" "__TIME__") DEBUG MODE"
+#else
+//#define APP_NAME "SynRad+ development version ("__DATE__")"
+#define APP_NAME "Synrad+ 1.3.3 BETA ("__DATE__")"
+#endif
+
 float m_fTime;
 
 static const char *fileLFilters = "All SynRad supported files\0*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0SYN files\0*.syn;*.syn7z;\0GEO files\0*.geo;*.geo7z;\0TXT files\0*.txt\0STR files\0*.str\0STL files\0*.stl\0ASE files\0*.ase\0";
@@ -73,6 +80,7 @@ extern int numCPU;
 #define MENU_FILE_EXPORTTEXTURE_POWER 154
 #define MENU_FILE_EXPORTTEXTURE_FLUXPERAREA 155
 #define MENU_FILE_EXPORTTEXTURE_POWERPERAREA 156
+#define MENU_FILE_EXPORTTEXTURE_ANSYS_POWER 157
 
 /*#define MENU_FILE_EXPORTTEXTURE_DENSITY 152
 #define MENU_FILE_EXPORTTEXTURE_AVG_VELOCITY 153
@@ -94,7 +102,8 @@ extern int numCPU;
 #define MENU_EDIT_3DSETTINGS   21
 #define MENU_EDIT_TSCALING     22
 #define MENU_EDIT_ADDFORMULA   23
-#define MENU_EDIT_GLOBALSETTINGS 24
+#define MENU_EDIT_UPDATEFORMULAS 24
+#define MENU_EDIT_GLOBALSETTINGS 25
 
 #define MENU_FACET_COLLAPSE    300
 #define MENU_FACET_SWAPNORMAL  301
@@ -237,7 +246,13 @@ SynRad::SynRad()
 	nbSelection = 0;
 	idView = 0;
 	idSelection = 0;
+
+	#ifdef _DEBUG
+	nbProc = 1;
+#else
 	nbProc = numCPU;
+#endif
+
 	curViewer = 0;
 	strcpy(currentDir,".");
 	strcpy(currentSelDir,".");
@@ -320,6 +335,7 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Power(W)/Beam Current(mA)",MENU_FILE_EXPORTTEXTURE_POWER);
 	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Flux/Area/Beam current (ph/sec/cm2/mA)",MENU_FILE_EXPORTTEXTURE_FLUXPERAREA);
 	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Power/Area/Beam current (W/sec/cm2/mA)",MENU_FILE_EXPORTTEXTURE_POWERPERAREA);
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Power(W) with global coordinates(cm) for ANSYS",MENU_FILE_EXPORTTEXTURE_ANSYS_POWER);
 	/*
 	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Average Velocity",MENU_FILE_EXPORTTEXTURE_AVG_VELOCITY);
 	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Velocity",MENU_FILE_EXPORTTEXTURE_VELOCITY);
@@ -398,19 +414,22 @@ int SynRad::OneTimeSceneInit()
 
 
 	menu->Add("Tools");
-	menu->GetSubMenu("Tools")->Add("3D Settings ..."   ,MENU_EDIT_3DSETTINGS,SDLK_b,CTRL_MODIFIER);
-	menu->GetSubMenu("Tools")->Add("Texture scaling...",MENU_EDIT_TSCALING,SDLK_d,CTRL_MODIFIER);
 	menu->GetSubMenu("Tools")->Add("Add formula ..."   ,MENU_EDIT_ADDFORMULA);
-	menu->GetSubMenu("Tools")->Add("Global Settings ..."   ,MENU_EDIT_GLOBALSETTINGS);
+	menu->GetSubMenu("Tools")->Add("Update formulas now!",MENU_EDIT_UPDATEFORMULAS,SDLK_f,ALT_MODIFIER);
 	menu->GetSubMenu("Tools")->Add(NULL); // Separator
 	menu->GetSubMenu("Tools")->Add("Texture Plotter ...",MENU_FACET_TEXPLOTTER,SDLK_t,ALT_MODIFIER);
 	menu->GetSubMenu("Tools")->Add("Profile Plotter ...",MENU_FACET_PROFPLOTTER,SDLK_p,ALT_MODIFIER);
 	menu->GetSubMenu("Tools")->Add("Spectrum Plotter ...",MENU_FACET_SPECTRUMPLOTTER);
-
+	menu->GetSubMenu("Tools")->Add(NULL); // Separator
+	menu->GetSubMenu("Tools")->Add("3D Settings ..."   ,MENU_EDIT_3DSETTINGS,SDLK_b,CTRL_MODIFIER);
+	menu->GetSubMenu("Tools")->Add("Texture scaling...",MENU_EDIT_TSCALING,SDLK_d,CTRL_MODIFIER);
+	menu->GetSubMenu("Tools")->Add("Global Settings ..."   ,MENU_EDIT_GLOBALSETTINGS);
+	
 
 	menu->GetSubMenu("Tools")->SetIcon(MENU_EDIT_3DSETTINGS,119,24);
 	menu->GetSubMenu("Tools")->SetIcon(MENU_EDIT_TSCALING,137,24);
 	menu->GetSubMenu("Tools")->SetIcon(MENU_EDIT_ADDFORMULA,155,24);
+	menu->GetSubMenu("Tools")->SetIcon(MENU_EDIT_GLOBALSETTINGS,0,77);
 
 	menu->Add("Facet");
 	menu->GetSubMenu("Facet")->Add("Collapse ...",MENU_FACET_COLLAPSE);
@@ -1678,7 +1697,7 @@ int SynRad::FrameMove()
 	UpdateFacetHits();
 
 	// Formulas
-	UpdateFormula();
+	//UpdateFormula(); //Not automatic anymore
 
 	// Sleep a bit to avoid unwanted CPU load
 	if( viewer[0]->IsDragging() || 
@@ -2044,7 +2063,7 @@ void SynRad::ExportSelection() {
 
 //-----------------------------------------------------------------------------
 
-void SynRad::ExportTexture(int mode) {
+void SynRad::ExportTextures(int mode) {
 
 	Geometry *geom = worker.GetGeometry();
 	if(geom->GetNbSelected()==0) {
@@ -2426,7 +2445,7 @@ void SynRad::ClearFormula() {
 
 }
 
-void SynRad::AddFormula(char *fName,char *formula) {
+void SynRad::AddFormula(const char *fName,const char *formula) {
 
 	GLParser *f = new GLParser();
 	f->SetExpression(formula);
@@ -2585,22 +2604,25 @@ void SynRad::ProcessMessage(GLComponent *src,int message)
 			ExportSelection();
 			break;
 		case MENU_FILE_EXPORTTEXTURE_AREA:
-			ExportTexture(0);
+			ExportTextures(0);
 			break;
 		case MENU_FILE_EXPORTTEXTURE_MCHITS:
-			ExportTexture(1);
+			ExportTextures(1);
 			break;
 		case MENU_FILE_EXPORTTEXTURE_FLUX:
-			ExportTexture(2);
+			ExportTextures(2);
 			break;
 		case MENU_FILE_EXPORTTEXTURE_POWER:
-			ExportTexture(3);
+			ExportTextures(3);
 			break;
 		case MENU_FILE_EXPORTTEXTURE_FLUXPERAREA:
-			ExportTexture(4);
+			ExportTextures(4);
 			break;
 		case MENU_FILE_EXPORTTEXTURE_POWERPERAREA:
-			ExportTexture(5);
+			ExportTextures(5);
+			break;
+		case MENU_FILE_EXPORTTEXTURE_ANSYS_POWER:
+			ExportTextures(10);
 			break;
 		case MENU_FILE_EXPORT_DESORP:
 			if (!geom->IsLoaded()) {
@@ -2629,6 +2651,9 @@ void SynRad::ProcessMessage(GLComponent *src,int message)
 		case MENU_EDIT_ADDFORMULA:
 			if( !formulaSettings ) formulaSettings = new FormulaSettings();
 			AddFormula(formulaSettings->NewFormula());
+			break;
+		case MENU_EDIT_UPDATEFORMULAS:
+			UpdateFormula();
 			break;
 		case MENU_EDIT_GLOBALSETTINGS:
 			if( !globalSettings ) globalSettings = new GlobalSettings();
@@ -3993,6 +4018,9 @@ void SynRad::LoadConfig() {
 		geom->texMax_power = f->ReadDouble();
 		f->ReadKeyword("processNum");f->ReadKeyword(":");
 		nbProc = f->ReadInt();
+#ifdef _DEBUG
+		nbProc=1;
+#endif
 		if(nbProc<=0) nbProc=1;
 		f->ReadKeyword("recents");f->ReadKeyword(":");f->ReadKeyword("{");
 		w = f->ReadString();
@@ -4119,7 +4147,11 @@ void SynRad::SaveConfig() {
 		f->Write("texMax_flux:");f->WriteDouble(geom->texMax_flux,"\n");
 		f->Write("texMin_power:");f->WriteDouble(geom->texMin_power,"\n");
 		f->Write("texMax_power:");f->WriteDouble(geom->texMax_power,"\n");
+#ifdef _DEBUG
+		f->Write("processNum:");f->WriteInt(numCPU,"\n");
+#else
 		f->Write("processNum:");f->WriteInt(worker.GetProcNumber(),"\n");
+#endif
 		f->Write("recents:{\n");
 		for(int i=0;i<nbRecent;i++) {
 			f->Write("\"");

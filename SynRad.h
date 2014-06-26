@@ -67,13 +67,6 @@
 #define MAX_SELECTION 19
 #define MAX_RECENT  10
 
-#ifdef _DEBUG
-#define APP_NAME "SynRad+ development version (Compiled "__DATE__" "__TIME__") DEBUG MODE"
-#else
-//#define APP_NAME "SynRad+ development version ("__DATE__")"
-#define APP_NAME "Synrad+ 1.3.1 BETA ("__DATE__")"
-#endif
-
 extern int changedSinceSave;
 
 typedef struct {
@@ -132,7 +125,7 @@ public:
 	void SaveFile();
     void SaveFileAs();
     void ExportSelection();
-	void ExportTexture(int mode);
+	void ExportTextures(int mode);
 	//void ExportDes(bool selectedOnly);
 
 
@@ -296,7 +289,7 @@ public:
     FORMULA formulas[MAX_FORMULA];
     int nbFormula;
     void ClearFormula();
-    void AddFormula(char *fName,char *formula);
+    void AddFormula(const char *fName,const char *formula);
 
 	//Materials (photon reflection)
 	vector<string> materialPaths;

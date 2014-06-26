@@ -26,6 +26,7 @@
 #define FALSE 0
 
 extern GLApplication *theApp;
+
 // -------------------------------------------------------
 // Utils functions
 // -------------------------------------------------------
@@ -89,8 +90,8 @@ GLParser::~GLParser() {
 
 // -------------------------------------------------------
 
-void GLParser::SetName(char *name) {
-  strcpy(this->name,name);
+void GLParser::SetName(const char *name) {
+  strncpy(this->name,name,256);
 }
 
 // -------------------------------------------------------
@@ -101,8 +102,8 @@ char *GLParser::GetName() {
 
 // -------------------------------------------------------
 
-void GLParser::SetExpression(char *expr) {
-  strcpy(this->expr,expr);
+void GLParser::SetExpression(const char *expr) {
+  strncpy(this->expr,expr,4096);
 }
 
 // -------------------------------------------------------
@@ -394,23 +395,29 @@ void GLParser::ReadTerm(ETREE **node,VLIST **var_list)
 							  AddNode( OPER_PLUS , elem , &l_t , l_t , r_t );
 						  }
 						  
-				  } else {
+				  }
+				  else {
 					  i1--; //selection indexes start from 0
 					  //SUM of a selection Group
 					  SynRad *mApp = (SynRad *)theApp;
-					  if (i1<0 || i1>=mApp->nbSelection) {
-						  SetError("invalid selection group",current);
+					  if (i1 < 0 || i1 >= mApp->nbSelection) {
+						  SetError("invalid selection group", current);
 						  break;
 					  }
-					  for (int j=0;j<mApp->selections[i1].nbSel;j++) {
-						  sprintf(tmpVName,"%s%d",v_name,mApp->selections[i1].selection[j]+1);
-						  elem.variable = AddVar(tmpVName,var_list);
-						  if (j==0) AddNode( TVARIABLE , elem , &l_t , NULL , NULL);
-						  else {
-							  AddNode( TVARIABLE , elem , &r_t , NULL , NULL);
-							  AddNode( OPER_PLUS , elem , &l_t , l_t , r_t );
+					  for (int j = 0; j < mApp->selections[i1].nbSel; j++) {
+						  if (mApp->selections[i1].selection[j] >= mApp->worker.GetGeometry()->GetNbFacet()) { //if invalid facet
+							  SetError("invalid facet", current);
+							  break;
 						  }
-					  }
+							  sprintf(tmpVName, "%s%d", v_name, mApp->selections[i1].selection[j] + 1);
+							  elem.variable = AddVar(tmpVName, var_list);
+							  if (j == 0) AddNode(TVARIABLE, elem, &l_t, NULL, NULL);
+							  else {
+								  AddNode(TVARIABLE, elem, &r_t, NULL, NULL);
+								  AddNode(OPER_PLUS, elem, &l_t, l_t, r_t);
+							  }
+						  }
+					  
 				  }
 				  if (!error) *node = l_t;
                 } else {
@@ -436,7 +443,7 @@ void GLParser::ReadTerm(ETREE **node,VLIST **var_list)
                 AddNode( OPER_COSH , elem , node , l_t , NULL);
                 if (EC!=')') SetError(") expected",current);
                 AV();
-              } else if ( _stricmp(Extract(5),"ci95(")==0 ) {
+              } /*else if ( _stricmp(Extract(5),"ci95(")==0 ) {
                 AV();AV();AV();AV();AV();
                 ReadExpression(&l_t,var_list);
                 if (EC!=',') SetError(", expected",current);
@@ -445,7 +452,7 @@ void GLParser::ReadTerm(ETREE **node,VLIST **var_list)
                 AddNode( OPER_CI95 , elem , node , l_t , r_t);
                 if (EC!=')') SetError(") expected",current);
                 AV();
-              } else {
+              }*/ else {
                 ReadVariable(v_name);
                 elem.variable=AddVar(v_name,var_list);
                 AddNode( TVARIABLE , elem , node , NULL , NULL);

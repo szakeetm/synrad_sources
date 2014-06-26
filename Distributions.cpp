@@ -536,8 +536,8 @@ double Material::Interpolate(const double &energy,const double &angle) {
 	if (angleLowerIndex==((int)angleVals.size()-1)) angleLowerIndex--; //if not in table
 	if (energyLowerIndex==((int)energyVals.size()-1)) energyLowerIndex--; //if not in table
 
-	double angleOvershoot=angle-angleVals[angleLowerIndex];
-	double angleDelta=angleVals[angleLowerIndex+1]-angleVals[angleLowerIndex];
+	double angleOvershoot=log(angle)-log(angleVals[angleLowerIndex]);
+	double angleDelta=log(angleVals[angleLowerIndex+1])-log(angleVals[angleLowerIndex]);
 
 	double energyOvershoot=log(energy)-log(energyVals[energyLowerIndex]);
 	double energyDelta=log(energyVals[energyLowerIndex+1])-log(energyVals[energyLowerIndex]);
@@ -548,7 +548,7 @@ double Material::Interpolate(const double &energy,const double &angle) {
 	double interpolatedReflForHigherAngle=reflVals[energyLowerIndex][angleLowerIndex+1]+
 		energyOvershoot/energyDelta*(reflVals[energyLowerIndex+1][angleLowerIndex+1]-reflVals[energyLowerIndex][angleLowerIndex+1]);
 
-	double interpRefl=interpolatedReflForHigherAngle+angleOvershoot/angleDelta*(interpolatedReflForLowerAngle-interpolatedReflForHigherAngle);
+	double interpRefl=interpolatedReflForLowerAngle+angleOvershoot/angleDelta*(interpolatedReflForHigherAngle-interpolatedReflForLowerAngle);
 
 	return interpRefl;
 }

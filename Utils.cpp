@@ -643,11 +643,14 @@ void CreateGraph(POLYGRAPH *g,POLYGON *inP1,POLYGON *inP2,int *visible2) {
         // Check tangent point
         VERTEX2D vi1,vi2,vo1,vo2;
         
-        Sub2(&vi1,&(g->nodes[ g->nodes[i].VI[0] ].p),&(g->nodes[i].p));
-        Sub2(&vo1,&(g->nodes[ g->nodes[i].VO[0] ].p),&(g->nodes[i].p));
+		// TO DEBUG!!! Causes frequent crashes
+		if (g->nodes[i].VI[0] >= 0 && g->nodes[i].VO[0] >= 0 && g->nodes[i].VI[1] >= 0 && g->nodes[i].VO[1] >= 0) {
+			Sub2(&vi1, &(g->nodes[g->nodes[i].VI[0]].p), &(g->nodes[i].p));
+			Sub2(&vo1, &(g->nodes[g->nodes[i].VO[0]].p), &(g->nodes[i].p));
 
-        Sub2(&vi2,&(g->nodes[ g->nodes[i].VI[1] ].p),&(g->nodes[i].p));
-        Sub2(&vo2,&(g->nodes[ g->nodes[i].VO[1] ].p),&(g->nodes[i].p));
+			Sub2(&vi2, &(g->nodes[g->nodes[i].VI[1]].p), &(g->nodes[i].p));
+			Sub2(&vo2, &(g->nodes[g->nodes[i].VO[1]].p), &(g->nodes[i].p));
+		}
 
         double angI  = GetOrientedAngle(&vi1,&vo1);
         double angII = GetOrientedAngle(&vi1,&vi2);

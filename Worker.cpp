@@ -112,7 +112,7 @@ std::string execCMD(char* cmd);
 void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL saveSelected,BOOL autoSave,BOOL crashSave) {
 
 	try {
-		if (needsReload&&(!crashSave)) RealReload();
+		if (needsReload&&(!crashSave && !saveSelected)) RealReload();
 	} catch (Error &e) {
 		char errMsg[512];
 		sprintf(errMsg,"Error reloading worker. Trying crash save:\n%s",e.GetMsg());
@@ -120,8 +120,8 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 		crashSave=TRUE;
 	} 
 	char tmp[10000]; //compress.exe command line
-	char fileNameWithGeo[2048]; //file name with .geo extension (instead of .geo7z)
-	char fileNameWithGeo7z[2048];
+	/*char fileNameWithGeo[2048]; //file name with .geo extension (instead of .geo7z)
+	char fileNameWithGeo7z[2048];*/
 	char fileNameWithSyn[2048]; //file name with .syn extension (instead of .syn7z)
 	char fileNameWithSyn7z[2048];
 	char fileNameWithoutExtension[2048]; //file name without extension
@@ -133,7 +133,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 	ext = strrchr(fileName,'.');
 
 	if(!(ext) || !(*ext=='.') || ((dir)&&(dir>ext)) ) { 
-		sprintf(fileName,"%s.syn7z",fileName); //set to default SYN7Z format
+		sprintf(fileName, compressSavedFiles ? "%s.syn7z" : "%s.syn", fileName); //set to default SYN/SYN7Z format
 		ext = strrchr(fileName,'.');
 	}
 
@@ -144,8 +144,8 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 	FileWriter *f = NULL;
 	BOOL isTXT = _stricmp(ext,"txt")==0;
 	BOOL isSTR = _stricmp(ext,"str")==0;
-	BOOL isGEO = _stricmp(ext,"geo")==0;
-	BOOL isGEO7Z = _stricmp(ext,"geo7z")==0;
+	/*BOOL isGEO = _stricmp(ext,"geo")==0;
+	BOOL isGEO7Z = _stricmp(ext,"geo7z")==0;*/
 	BOOL isSYN = _stricmp(ext,"syn")==0;
 	BOOL isSYN7Z = _stricmp(ext,"syn7z")==0;
 
@@ -157,42 +157,14 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 				"you have to lower the autosave frequency.","Can't save right now.",GLDLG_OK,GLDLG_ICONERROR);
 			return;
 		}
-		if (isGEO || isSYN) {
+		if (isSYN) {
 			memcpy(fileNameWithoutExtension,fileName,sizeof(char)*(strlen(fileName)-4));
 			fileNameWithoutExtension[strlen(fileName)-4]='\0';
-		} else if (isGEO7Z || isSYN7Z) { //geo7z
-			memcpy(fileNameWithoutExtension,fileName,sizeof(char)*(strlen(fileName)-6));
-			fileNameWithoutExtension[strlen(fileName)-6]='\0';
-		}
-
-		if (isGEO) {
-			sprintf(fileNameWithGeo7z,"%s7z",fileName);
-			memcpy(fileNameWithGeo,fileName,(strlen(fileName)+1)*sizeof(char));
-
-			if(!autoSave && FileUtils::Exist(fileNameWithGeo7z) && compressSavedFiles) {
-				sprintf(tmp,"A .geo7z file of the same name exists. Overwrite that file ?\n%s",fileNameWithGeo7z);
-				ok = ( GLMessageBox::Display(tmp,"Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING)==GLDLG_OK );
-			}
-		} 
-		if (isGEO7Z) {
-			memcpy(fileNameWithGeo,fileName,sizeof(char)*(strlen(fileName)-2));
-			fileNameWithGeo[strlen(fileName)-2]='\0';
-			memcpy(fileNameWithGeo7z,fileName,(1+strlen(fileName))*sizeof(char));
-			sprintf(tmp,"A .geo file of the same name exists. Overwrite that file ?\n%s",fileNameWithGeo);
-			if(!autoSave && FileUtils::Exist(fileNameWithGeo) ) {
-				ok = ( GLMessageBox::Display(tmp,"Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING)==GLDLG_OK );
-			}
-		} 		
-		if (isSYN) {
 			sprintf(fileNameWithSyn7z,"%s7z",fileName);
 			memcpy(fileNameWithSyn,fileName,(strlen(fileName)+1)*sizeof(char));
-
-			if(!autoSave && FileUtils::Exist(fileNameWithSyn7z) && compressSavedFiles) {
-				sprintf(tmp,"A .syn7z file of the same name exists. Overwrite that file ?\n%s",fileNameWithSyn7z);
-				ok = ( GLMessageBox::Display(tmp,"Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING)==GLDLG_OK );
-			}
-		} 
-		if (isSYN7Z) {
+		} else if (isSYN7Z) {
+			memcpy(fileNameWithoutExtension,fileName,sizeof(char)*(strlen(fileName)-6));
+			fileNameWithoutExtension[strlen(fileName)-6]='\0';
 			memcpy(fileNameWithSyn,fileName,sizeof(char)*(strlen(fileName)-2));
 			fileNameWithSyn[strlen(fileName)-2]='\0';
 			memcpy(fileNameWithSyn7z,fileName,(1+strlen(fileName))*sizeof(char));
@@ -200,8 +172,8 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 			if(!autoSave && FileUtils::Exist(fileNameWithSyn) ) {
 				ok = ( GLMessageBox::Display(tmp,"Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING)==GLDLG_OK );
 			}
-		} 
-		if(!autoSave && FileUtils::Exist(fileName) ) {
+		}
+		if(!autoSave && ok && FileUtils::Exist(fileName) ) {
 			sprintf(tmp,"Overwrite existing file ?\n%s",fileName);
 			if (askConfirm) ok = ( GLMessageBox::Display(tmp,"Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING)==GLDLG_OK );
 		}
@@ -211,13 +183,9 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 				geom->SaveSTR(dpHit,saveSelected);
 			} else {
 				try {
-					if (isGEO7Z) {
-						memcpy(fileNameWithGeo,fileName,sizeof(char)*(strlen(fileName)-2));
-						fileNameWithGeo[strlen(fileName)-2]='\0';
-						f = new FileWriter(fileNameWithGeo);
-					} else if (isSYN7Z) {
-						memcpy(fileNameWithSyn,fileName,sizeof(char)*(strlen(fileName)-2));
-						fileNameWithSyn[strlen(fileName)-2]='\0';
+					if (isSYN7Z) {
+						/*memcpy(fileNameWithSyn,fileName,sizeof(char)*(strlen(fileName)-2));
+						fileNameWithSyn[strlen(fileName)-2]='\0';*/
 						f = new FileWriter(fileNameWithSyn);
 					} else
 						f = new FileWriter(fileName);
@@ -228,24 +196,15 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 				}
 				geom->tNbDesorptionMax = maxDesorption;
 				if( isTXT ) geom->SaveTXT(f,dpHit,saveSelected);
-				/*else if( isGEO || isGEO7Z ) {
+				else if( isSYN || isSYN7Z ) {
 					// Retrieve leak cache
 					int nbLeakSave,nbHHitSave;
 					LEAK pLeak[NBHLEAK];
-					if (!crashSave) GetLeak(pLeak,&nbLeakSave);
-					// Retrieve hit cache (lines and dots)
-					HIT pHits[NBHHIT];
-					if (!crashSave) GetHHit(pHits,&nbHHitSave);
-					geom->SaveGEO(f,prg,dpHit,saveSelected,pLeak,&nbLeakSave,pHits,&nbHHitSave,crashSave);
-				}*/ else if( isSYN || isSYN7Z ) {
-					// Retrieve leak cache
-					int nbLeakSave,nbHHitSave;
-					LEAK pLeak[NBHLEAK];
-					if (!crashSave) GetLeak(pLeak,&nbLeakSave);
+					if (!crashSave && !saveSelected) GetLeak(pLeak,&nbLeakSave);
 					else nbLeakSave=0;
 					// Retrieve hit cache (lines and dots)
 					HIT pHits[NBHHIT];
-					if (!crashSave) GetHHit(pHits,&nbHHitSave);
+					if (!crashSave && !saveSelected) GetHHit(pHits,&nbHHitSave);
 					else nbHHitSave=0;
 
 					//Save regions
@@ -259,8 +218,8 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 					geom->SaveSYN(f,prg,dpHit,saveSelected,pLeak,&nbLeakSave,pHits,&nbHHitSave,crashSave);
 				}
 			}
-			if (!autoSave) strcpy(fullFileName,fileName);
-			if (!autoSave) {
+			if (!autoSave && !saveSelected) {
+				strcpy(fullFileName,fileName);
 				remove("Synrad_AutoSave.syn");
 				remove("Synrad_AutoSave.syn7z");
 			}
@@ -288,9 +247,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 			SetFileName(fileName);
 			mApp->UpdateTitle();
 		}
-	} else*/ if (ok && isSYN || isSYN7Z) {
-
-		if (compressSavedFiles) {
+	} else*/ if (ok && isSYN7Z) {
 			if (FileUtils::Exist("compress.exe")) { //compress SYN file to SYN7Z using 7-zip launcher "compress.exe"
 				sprintf(tmp,"compress.exe \"%s\" Geometry.syn",fileNameWithSyn);
 				for (int i=0;i<(int)regions.size();i++) {
@@ -308,15 +265,15 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 				compressProcessHandle=OpenProcess(PROCESS_ALL_ACCESS, TRUE, procId);
 				fileName=fileNameWithSyn7z;
 			} else {
-				GLMessageBox::Display("compress.exe (part of Molfow) not found.\n Will save as uncompressed SYN file.","Compressor not found",GLDLG_OK,GLDLG_ICONERROR);
+				GLMessageBox::Display("compress.exe (part of Synrad) not found.\n Will save as uncompressed SYN file.","Compressor not found",GLDLG_OK,GLDLG_ICONERROR);
 				fileName=fileNameWithSyn;
 			}
-		} else fileName=fileNameWithSyn;
-		if (!autoSave) {
+		} else if (ok && isSYN) fileName=fileNameWithSyn;
+		if (!autoSave && !saveSelected) {
 			SetFileName(fileName);
 			mApp->UpdateTitle();
 		}
-	}
+	
 }
 
 void Worker::ExportTextures(char *fileName,int mode,BOOL askConfirm,BOOL saveSelected) {
@@ -338,7 +295,7 @@ void Worker::ExportTextures(char *fileName,int mode,BOOL askConfirm,BOOL saveSel
 			throw Error("Couldn't open file for writing");
 			return;
 		}
-		geom->ExportTexture(f,mode,no_scans,dpHit,saveSelected);
+		geom->ExportTextures(f,mode,no_scans,dpHit,saveSelected);
 		fclose(f);
 	}
 }

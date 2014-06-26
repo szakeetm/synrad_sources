@@ -354,13 +354,11 @@ void Facet::SaveTXT(FileWriter *file) {
 
 	file->WriteDouble(sh.area,"\n");
 
-	file->WriteDouble(0.0,"\n");
+	file->WriteDouble(0.0, "\n"); //no desorption
+	file->WriteDouble(0.0,"\n"); //nbHit
+	file->WriteDouble(0.0,"\n"); //nbAbsorbed
 
-	file->WriteDouble(0.0,"\n");
-	file->WriteDouble(0.0,"\n");
-
-	// Convert desorbType
-	file->WriteDouble(0.0,"\n");
+	file->WriteDouble(0.0,"\n"); //no desorption
 
 	switch(sh.reflectType) {
 	case REF_DIFFUSE:
@@ -1475,7 +1473,8 @@ void Facet::Copy(Facet *f,BOOL copyMesh) {
 	sh.opacity      = f->sh.opacity;
 	sh.area         = f->sh.area;
 	sh.reflectType  = f->sh.reflectType;
-	sh.profileType  = f->sh.profileType;
+	if (copyMesh) sh.profileType  = f->sh.profileType;
+	else sh.profileType = REC_NONE;
 	sh.is2sided     = f->sh.is2sided;
 	sh.superIdx = f->sh.superIdx;
 	sh.superDest = f->sh.superDest;
@@ -1498,6 +1497,7 @@ void Facet::Copy(Facet *f,BOOL copyMesh) {
 	err = f->err;
 	sh.N = f->sh.N;
 	selected = f->selected;
+	this->UpdateFlags();
 }
 
 // -----------------------------------------------------------
