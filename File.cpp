@@ -47,21 +47,15 @@ const char *Error::GetMsg() {
 // FileUtils class
 // -------------------------------------------------
 
-int FileUtils::Exist(char *fileName) {
+int FileUtils::Exist(const char *fileName) {
 
-#ifdef WIN32
-  struct _finddata_t seqfile;
-  intptr_t h;
-
-  if( (h=_findfirst( fileName , &seqfile )) != -1L ) {
-	  _findclose(h);
+	if (FILE *file = fopen(fileName, "r")) {
+		fclose(file);
+		return TRUE;
 	}
-
-  return (h != -1L);
-#else
- // TODO
- return FALSE;
-#endif
+	else {
+		return FALSE;
+	}
 }
 
 // -------------------------------------------------
@@ -180,7 +174,9 @@ llong FileReader::ReadLLong() {
 
   llong ret;
   char *w = ReadWord();
-  if( sscanf(w,"%I64d",&ret)<=0 ) throw Error(MakeError("Wrong integer64 format"));
+  if (sscanf(w, "%I64d", &ret) <= 0) {
+	  throw Error(MakeError("Wrong integer64 format"));
+  }
   return ret;
 
 }

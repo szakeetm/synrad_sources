@@ -300,8 +300,8 @@ void ProfileFacet(FACET *f,const double &dF,const double &dP,const double &E) {
   }
 
   if (f->sh.hasSpectrum) {
-	  f->spectrum_fluxwise->Add(E,dF);
-	  f->spectrum_powerwise->Add(E,dP);
+	  f->spectrum_fluxwise->Add(E,dF,0.001);
+	  f->spectrum_powerwise->Add(E,dP,0.001);
   }
 }
 

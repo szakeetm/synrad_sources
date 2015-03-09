@@ -68,12 +68,13 @@ typedef struct {
   int      projMode;   // Projection type
   double   camAngleOx; // Spheric coordinates
   double   camAngleOy; // Spheric coordinates
+  double   camAngleOz;
   double   camDist;    // Camera distance (or zoom in orthographic)
 
   double   lightAngleOx; //Light direction
   double   lightAngleOy; //Light direction
-  VERTEX3D camOffset;  // Camera target offset
-  int      performXY;  // Draw x,y,z coordinates when aligned with axis and orthographic
+  VERTEX3D camOffset;    //Camera target offset
+  int      performXY;    //Draw x,y,z coordinates when aligned with axis and orthographic
 
   double   vLeft;      // Viewport in 2D proj space (used for orthographic autoscaling)
   double   vRight;     // Viewport in 2D proj space (used for orthographic autoscaling)

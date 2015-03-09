@@ -125,7 +125,7 @@ public:
 	void SaveFile();
     void SaveFileAs();
     void ExportSelection();
-	void ExportTextures(int mode);
+	void ExportTextures(int grouping,int mode);
 	//void ExportDes(bool selectedOnly);
 
 
@@ -368,7 +368,7 @@ public:
     // Testing
     //int     nbSt;
     //void LogProfile();
-    void BuildPipe(double ratio);
+    void BuildPipe(double ratio,int steps=0);
     //void BuildPipeStick(double s);
 	
 	void CrashHandler(Error *e);

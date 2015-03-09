@@ -57,14 +57,6 @@ static COLUMN allColumn[] = {
 	{"Power"        , 80 , ALIGN_CENTER} ,
 };
 
-static const char *refStr[] = {
-	"Diffuse",
-	"Mirror",
-	"Copper",
-	"Aluminium",
-	"Al2O3"
-};
-
 static const char *profStr[] = {
 	"None",
 	"Pressure (u)",
@@ -259,7 +251,9 @@ char *FacetDetails::FormatCell(int idx,Facet *f,int mode) {
 		sprintf(ret,"%d",f->sh.superDest);
 		break;
 	case 5:
-		sprintf(ret,"%s",refStr[f->sh.reflectType]);
+		if (f->sh.reflectType == 0) sprintf(ret, "Diffuse");
+		else if (f->sh.reflectType == 1) sprintf(ret, "Mirror");
+		else sprintf(ret,"%s",worker->materials[f->sh.reflectType-2].name.c_str());
 		break;
 	case 6:
 		sprintf(ret,"%g",f->sh.roughness);

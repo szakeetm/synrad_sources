@@ -28,13 +28,14 @@ GNU General Public License for more details.
 #include "GLApp/GLWindowManager.h"
 #include "Utils.h" //for Remainder
 #include "direct.h"
+#include <io.h>
 //#include <winsparkle.h>
 
 #ifdef _DEBUG
 #define APP_NAME "SynRad+ development version (Compiled "__DATE__" "__TIME__") DEBUG MODE"
 #else
 //#define APP_NAME "SynRad+ development version ("__DATE__")"
-#define APP_NAME "Synrad+ 1.3.3 BETA ("__DATE__")"
+#define APP_NAME "Synrad+ 1.3.4 ("__DATE__")"
 #endif
 
 float m_fTime;
@@ -71,7 +72,7 @@ extern int numCPU;
 #define MENU_FILE_SAVEAS     13
 #define MENU_FILE_INSERTGEO  140
 #define MENU_FILE_INSERTGEO_NEWSTR  141
-#define MENU_FILE_EXPORTMESH      15
+#define MENU_FILE_EXPORT_SELECTION  15
 #define MENU_FILE_EXPORT_DESORP 18
 
 #define MENU_FILE_EXPORTTEXTURE_AREA 151
@@ -82,11 +83,14 @@ extern int numCPU;
 #define MENU_FILE_EXPORTTEXTURE_POWERPERAREA 156
 #define MENU_FILE_EXPORTTEXTURE_ANSYS_POWER 157
 
-/*#define MENU_FILE_EXPORTTEXTURE_DENSITY 152
-#define MENU_FILE_EXPORTTEXTURE_AVG_VELOCITY 153
-#define MENU_FILE_EXPORTTEXTURE_VELOCITY 154
-#define MENU_FILE_EXPORTTEXTURE_COUNT 155
-#define MENU_FILE_EXPORTTEXTURE_HITS 156*/
+#define MENU_FILE_EXPORTTEXTURE_AREA_COORD 1510
+#define MENU_FILE_EXPORTTEXTURE_MCHITS_COORD 1520
+#define MENU_FILE_EXPORTTEXTURE_FLUX_COORD 1530
+#define MENU_FILE_EXPORTTEXTURE_POWER_COORD 1540
+#define MENU_FILE_EXPORTTEXTURE_FLUXPERAREA_COORD 1550
+#define MENU_FILE_EXPORTTEXTURE_POWERPERAREA_COORD 1560
+#define MENU_FILE_EXPORTTEXTURE_ANSYS_POWER_COORD 1570
+
 
 #define MENU_FILE_LOADRECENT 110
 #define MENU_FILE_EXIT       20
@@ -289,6 +293,7 @@ SynRad::SynRad()
 	m_minScreenWidth  = 800;
 	m_minScreenHeight = 600;
 	tolerance=1e-8;
+	materialPaths = std::vector<std::string>();
 }
 
 //-----------------------------------------------------------------------------
@@ -310,11 +315,6 @@ int SynRad::OneTimeSceneInit()
 
 	LoadConfig();
 
-	//Materials
-	materialPaths.push_back("param\\copper.csv");
-	materialPaths.push_back("param\\aluminium.csv");
-	materialPaths.push_back("param\\al2o3.csv");
-
 	menu = new GLMenuBar(0);
 	wnd->SetMenuBar(menu);
 	menu->Add("File");
@@ -326,25 +326,24 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("File")->Add("&Insert geometry");
 	menu->GetSubMenu("File")->GetSubMenu("Insert geometry")->Add("&To current structure",MENU_FILE_INSERTGEO);
 	menu->GetSubMenu("File")->GetSubMenu("Insert geometry")->Add("&To new structure",MENU_FILE_INSERTGEO_NEWSTR);
-	menu->GetSubMenu("File")->Add("&Export selected facets",MENU_FILE_EXPORTMESH);
+	menu->GetSubMenu("File")->Add("&Export selected facets",MENU_FILE_EXPORT_SELECTION);
 
 	menu->GetSubMenu("File")->Add("Export selected textures");
-	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Element Area",MENU_FILE_EXPORTTEXTURE_AREA);
-	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("MC hits",MENU_FILE_EXPORTTEXTURE_MCHITS);
-	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Flux(ph/sec)/Beam current(mA)",MENU_FILE_EXPORTTEXTURE_FLUX);
-	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Power(W)/Beam Current(mA)",MENU_FILE_EXPORTTEXTURE_POWER);
-	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Flux/Area/Beam current (ph/sec/cm2/mA)",MENU_FILE_EXPORTTEXTURE_FLUXPERAREA);
-	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Power/Area/Beam current (W/sec/cm2/mA)",MENU_FILE_EXPORTTEXTURE_POWERPERAREA);
-	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Power(W) with global coordinates(cm) for ANSYS",MENU_FILE_EXPORTTEXTURE_ANSYS_POWER);
-	/*
-	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Average Velocity",MENU_FILE_EXPORTTEXTURE_AVG_VELOCITY);
-	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Velocity",MENU_FILE_EXPORTTEXTURE_VELOCITY);
-	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Count",MENU_FILE_EXPORTTEXTURE_COUNT);
-	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Hits",MENU_FILE_EXPORTTEXTURE_HITS);
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Facet by facet");
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("Facet by facet")->Add("Element Area",MENU_FILE_EXPORTTEXTURE_AREA);
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("Facet by facet")->Add("MC hits",MENU_FILE_EXPORTTEXTURE_MCHITS);
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("Facet by facet")->Add("Flux(ph/sec)",MENU_FILE_EXPORTTEXTURE_FLUX);
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("Facet by facet")->Add("Power(W)",MENU_FILE_EXPORTTEXTURE_POWER);
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("Facet by facet")->Add("Flux density (ph/sec/cm\262)",MENU_FILE_EXPORTTEXTURE_FLUXPERAREA);
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("Facet by facet")->Add("Power density (W/mm\262)",MENU_FILE_EXPORTTEXTURE_POWERPERAREA);
 	
-	
-	TO DO FOR SYNRAD!
-	*/
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("By X,Y,Z coordinates");
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("By X,Y,Z coordinates")->Add("Element Area",MENU_FILE_EXPORTTEXTURE_AREA_COORD);
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("By X,Y,Z coordinates")->Add("MC hits",MENU_FILE_EXPORTTEXTURE_MCHITS_COORD);
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("By X,Y,Z coordinates")->Add("Flux(ph/sec)",MENU_FILE_EXPORTTEXTURE_FLUX_COORD);
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("By X,Y,Z coordinates")->Add("Power(W)",MENU_FILE_EXPORTTEXTURE_POWER_COORD);
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("By X,Y,Z coordinates")->Add("Flux density (ph/sec/cm\262)",MENU_FILE_EXPORTTEXTURE_FLUXPERAREA_COORD);
+	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->GetSubMenu("By X,Y,Z coordinates")->Add("Power density (W/mm\262)",MENU_FILE_EXPORTTEXTURE_POWERPERAREA_COORD);
 
 	menu->GetSubMenu("File")->Add(NULL); // Separator
 	menu->GetSubMenu("File")->Add("Load recent");
@@ -642,17 +641,6 @@ int SynRad::OneTimeSceneInit()
 	facetOpacity = new GLTextField(0,NULL);
 	facetPanel->Add(facetOpacity);
 
-	facetRLabel = new GLLabel("Reflection:");
-	facetPanel->Add(facetRLabel);
-	facetReflType = new GLCombo(0);
-	facetReflType->SetSize(5); //TODO
-	facetReflType->SetValueAt(0,"Diffuse",REF_DIFFUSE);
-	facetReflType->SetValueAt(1,"Mirror",REF_MIRROR);
-	facetReflType->SetValueAt(2,"Copper",REF_MATERIAL+0);
-	facetReflType->SetValueAt(3,"Aluminium",REF_MATERIAL+1);
-	facetReflType->SetValueAt(4,"Al2O3",REF_MATERIAL+2);
-	facetPanel->Add(facetReflType);
-
 	facetAreaLabel = new GLLabel("Area (cm\262):");
 	facetPanel->Add(facetAreaLabel);
 	facetArea = new GLTextField(0,NULL);
@@ -719,19 +707,37 @@ int SynRad::OneTimeSceneInit()
 	facetList->Sortable = TRUE;
 	Add(facetList);
 
+	//Reflection materials
+	//Find material files in param directory
+	intptr_t file;
+	_finddata_t filedata;
+	file = _findfirst("param\\*.csv", &filedata);
+	if (file != -1)
+	{
+		do
+		{
+			materialPaths.push_back(filedata.name);
+		} while (_findnext(file, &filedata) == 0);
+	}
+	_findclose(file);
+	int index;
+
+
+	facetRLabel = new GLLabel("Reflection:");
+	facetPanel->Add(facetRLabel);
+	facetReflType = new GLCombo(0);
+	facetReflType->SetSize((int)materialPaths.size()+2);
+	facetReflType->SetValueAt(0, "Diffuse", REF_DIFFUSE);
+	facetReflType->SetValueAt(1, "Mirror", REF_MIRROR);
+	for (int i = 0; i < (int)materialPaths.size(); i++) {
+		int lastindex = materialPaths[i].find_last_of("."); //cut extension
+		facetReflType->SetValueAt(i + 2, materialPaths[i].substr(0, lastindex).c_str(), REF_MATERIAL + i);
+	}
+	facetPanel->Add(facetReflType);
+
 	ClearFacetParams();
 	UpdateViewerParams();
 	PlaceComponents();
-
-	//LoadFile();
-	try {
-		for (int i=0;i<(int)materialPaths.size();i++) //load materials
-			worker.AddMaterial(&(materialPaths[i]));
-	} catch (Error &e) {
-		char errMsg[512];
-		sprintf(errMsg,"Failed to load material library\n%s",e.GetMsg());
-		GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
-	}
 
 	try {
 		worker.SetProcNumber(nbProc);
@@ -742,9 +748,18 @@ int SynRad::OneTimeSceneInit()
 		GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
 	}
 
+	try {
+		for (index = 0; index<(int)materialPaths.size(); index++) //load materials
+			worker.AddMaterial(&(materialPaths[index]));
+	}
+	catch (Error &e) {
+		char errMsg[512];
+		sprintf(errMsg, "Failed to load material reflection file:\n%s\n%s", materialPaths[index].c_str(), e.GetMsg());
+		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+	}
+
 	//AnimateViewerChange(0,TRUE);
 
-	PlaceComponents();
 	//SelectViewer(0);
 
 	//viewer[0]->Paint();
@@ -1460,6 +1475,10 @@ void SynRad::OffsetFormula(char *expression,int offset,int filter) {
 	prefixes.push_back("D");
 	prefixes.push_back("H");
 	prefixes.push_back("AR");
+	prefixes.push_back("a");
+	prefixes.push_back("d");
+	prefixes.push_back("h");
+	prefixes.push_back("ar");
 	prefixes.push_back(","); //for sum formulas
 
 	string expr=expression; //convert char array to string
@@ -1485,10 +1504,13 @@ void SynRad::OffsetFormula(char *expression,int offset,int filter) {
 			if (digitsLength>0) { //there was a digit after the prefix
 				int facetNumber;
 				if (sscanf(expr.substr(minPos+maxLength,digitsLength).c_str(),"%d",&facetNumber)){
-					if (facetNumber>filter) {
+					if ((facetNumber-1)>filter) {
 						char tmp[10];
 						sprintf(tmp,"%d",facetNumber+=offset);
 						expr.replace(minPos+maxLength,digitsLength,tmp);
+					}
+					else if ((facetNumber-1)== filter) {
+						expr.replace(minPos + maxLength, digitsLength, "0");
 					}
 				}
 			}
@@ -1544,12 +1566,13 @@ void SynRad::AutoSave(BOOL crashSave) {
 	char filename[2048];
 	sprintf(filename,"%s\\Synrad_AutoSave.syn7z",CWD);
 	try {
-		ResetAutoSaveTimer();
 		worker.SaveGeometry(filename,progressDlg2,FALSE,FALSE,TRUE,crashSave);
+		ResetAutoSaveTimer();
 	} catch (Error &e) {
 		char errMsg[512];
 		sprintf(errMsg,"%s\nFile:%s",e.GetMsg(),worker.GetFileName());
 		GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
+		ResetAutoSaveTimer();
 	}
 	//lastSaveTime=(worker.simuTime+(m_fTime-worker.startTime));
 	progressDlg2->SetVisible(FALSE);
@@ -2063,11 +2086,16 @@ void SynRad::ExportSelection() {
 
 //-----------------------------------------------------------------------------
 
-void SynRad::ExportTextures(int mode) {
+void SynRad::ExportTextures(int grouping,int mode) {
 
 	Geometry *geom = worker.GetGeometry();
 	if(geom->GetNbSelected()==0) {
 		GLMessageBox::Display("Empty selection","Error",GLDLG_OK,GLDLG_ICONERROR);
+		return;
+	}
+
+	if (!worker.IsDpInitialized()) {
+		GLMessageBox::Display("Worker Dataport not initialized yet", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		return;
 	}
 
@@ -2076,7 +2104,7 @@ void SynRad::ExportTextures(int mode) {
 	if( fn ) {
 
 		try {
-			worker.ExportTextures(fn->fullName,mode,TRUE,TRUE);
+			worker.ExportTextures(fn->fullName,grouping,mode,TRUE,TRUE);
 			//UpdateCurrentDir(fn->fullName);
 			//UpdateTitle();
 		} catch (Error &e) {
@@ -2241,7 +2269,10 @@ void SynRad::LoadFile(char *fName) {
 	else strcpy(shortName,fullName);
 
 	try {
-		worker.ClearRegions();
+		ClearFormula();
+		ClearAllSelections();
+		ClearAllViews();
+		ClearTraj();
 		worker.LoadGeometry(fullName);
 
 		Geometry *geom = worker.GetGeometry();
@@ -2286,7 +2317,7 @@ void SynRad::LoadFile(char *fName) {
 		if(profilePlotter) profilePlotter->Refresh();
 		if(spectrumPlotter) spectrumPlotter->Refresh();
 		if(texturePlotter) texturePlotter->Update(m_fTime,TRUE);
-		//if(outgassingMap) outgassingMap->Update(m_fTime,TRUE);
+		if (textureSettings) textureSettings->Update();
 		if(facetDetails) facetDetails->Update();
 		if(facetCoordinates) facetCoordinates->UpdateFromSelection();
 		if(vertexCoordinates) vertexCoordinates->Update();
@@ -2600,30 +2631,48 @@ void SynRad::ProcessMessage(GLComponent *src,int message)
 				SaveFileAs();
 			} else GLMessageBox::Display("No geometry loaded.","No geometry",GLDLG_OK,GLDLG_ICONERROR);
 			break;
-		case MENU_FILE_EXPORTMESH:
+		case MENU_FILE_EXPORT_SELECTION:
 			ExportSelection();
 			break;
+
 		case MENU_FILE_EXPORTTEXTURE_AREA:
-			ExportTextures(0);
+			ExportTextures(0,0);
 			break;
 		case MENU_FILE_EXPORTTEXTURE_MCHITS:
-			ExportTextures(1);
+			ExportTextures(0,1);
 			break;
 		case MENU_FILE_EXPORTTEXTURE_FLUX:
-			ExportTextures(2);
+			ExportTextures(0,2);
 			break;
 		case MENU_FILE_EXPORTTEXTURE_POWER:
-			ExportTextures(3);
+			ExportTextures(0,3);
 			break;
 		case MENU_FILE_EXPORTTEXTURE_FLUXPERAREA:
-			ExportTextures(4);
+			ExportTextures(0,4);
 			break;
 		case MENU_FILE_EXPORTTEXTURE_POWERPERAREA:
-			ExportTextures(5);
+			ExportTextures(0,5);
 			break;
-		case MENU_FILE_EXPORTTEXTURE_ANSYS_POWER:
-			ExportTextures(10);
+
+		case MENU_FILE_EXPORTTEXTURE_AREA_COORD:
+			ExportTextures(1,0);
 			break;
+		case MENU_FILE_EXPORTTEXTURE_MCHITS_COORD:
+			ExportTextures(1,1);
+			break;
+		case MENU_FILE_EXPORTTEXTURE_FLUX_COORD:
+			ExportTextures(1,2);
+			break;
+		case MENU_FILE_EXPORTTEXTURE_POWER_COORD:
+			ExportTextures(1,3);
+			break;
+		case MENU_FILE_EXPORTTEXTURE_FLUXPERAREA_COORD:
+			ExportTextures(1,4);
+			break;
+		case MENU_FILE_EXPORTTEXTURE_POWERPERAREA_COORD:
+			ExportTextures(1,5);
+			break;
+
 		case MENU_FILE_EXPORT_DESORP:
 			if (!geom->IsLoaded()) {
 				GLMessageBox::Display("No geometry loaded.","Error",GLDLG_OK,GLDLG_ICONERROR);
@@ -2640,13 +2689,19 @@ void SynRad::ProcessMessage(GLComponent *src,int message)
 			if (AskToSave()) Exit();
 			break;
 		case MENU_EDIT_3DSETTINGS:
-			if( !viewer3DSettings ) viewer3DSettings = new Viewer3DSettings();
-			viewer3DSettings->Display(geom,viewer[curViewer]);
-			UpdateViewerParams();
+			if (!viewer3DSettings || !viewer3DSettings->IsVisible()){
+				SAFE_DELETE(viewer3DSettings);
+				viewer3DSettings = new Viewer3DSettings();
+				viewer3DSettings->Display(geom, viewer[curViewer]);
+				UpdateViewerParams();
+			}
 			break;
 		case MENU_EDIT_TSCALING:
-			if( !textureSettings ) textureSettings = new TextureSettings();
-			textureSettings->Display(&worker,viewer);
+			if (!textureSettings || !textureSettings->IsVisible()) {
+				SAFE_DELETE(textureSettings);
+				textureSettings = new TextureSettings();
+				textureSettings->Display(&worker, viewer);
+			}
 			break;
 		case MENU_EDIT_ADDFORMULA:
 			if( !formulaSettings ) formulaSettings = new FormulaSettings();
@@ -3471,42 +3526,10 @@ BOOL SynRad::AskToReset(Worker *work) {
 
 void SynRad::QuickPipe() {
 
-	Geometry *geom = worker.GetGeometry();
-	char tmp[256];
-	double R = 1.0;
-	double L = 5.0;
-	int    step=5;
-	ResetSimulation(FALSE);
-	worker.ClearRegions();
-	geom->BuildPipe(L,R,0,step);
-	worker.nbDesorption = 0;
-	sprintf(tmp,"L|R %g",L/R);
-	nbDesStart = 0;
-	nbHitStart = 0;
-	for(int i=0;i<MAX_VIEWER;i++)
-		viewer[i]->SetWorker(&worker);
-	startSimu->SetEnabled(TRUE);
-	ClearFacetParams();
-	if( nbFormula==0 ) {
-		GLParser *f = new GLParser();
-		f->SetExpression("A2/SUMDES");
-		f->SetName("Trans. Prob.");
-		f->Parse();
-		AddFormula(f);
-	}
-	UpdateStructMenu();
-	// Send to sub process
-	try { worker.Reload(); } catch(Error &e) {
-		GLMessageBox::Display((char *)e.GetMsg(),"Error",GLDLG_OK,GLDLG_ICONERROR);
-		return;
-	}
-
-	UpdateTitle();
-	changedSinceSave=FALSE;
-	ResetAutoSaveTimer();
+	BuildPipe(5.0, 5);
 }
 
-void SynRad::BuildPipe(double ratio) {
+void SynRad::BuildPipe(double ratio,int steps) {
 
 	char tmp[128];
 	Geometry *geom = worker.GetGeometry();
@@ -3515,16 +3538,22 @@ void SynRad::BuildPipe(double ratio) {
 	double L = ratio * R;
 	int    step;
 
-	sprintf(tmp,"100");
-	char *nbF = GLInputBox::GetInput(tmp,"Number of facet","Build Pipe");
-	if( !nbF ) return;
-	if(( sscanf(nbF,"%d",&step)<=0 )||(step<3)) {
-		GLMessageBox::Display("Invalid number","Error",GLDLG_OK,GLDLG_ICONERROR);
-		return;
+	if (steps) step = steps; //Quick Pipe
+	else {
+		sprintf(tmp, "100");
+		char *nbF = GLInputBox::GetInput(tmp, "Number of facet", "Build Pipe");
+		if (!nbF) return;
+		if ((sscanf(nbF, "%d", &step) <= 0) || (step < 3)) {
+			GLMessageBox::Display("Invalid number", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			return;
+		}
 	}
 
 	ResetSimulation(FALSE);
-	worker.ClearRegions();
+	ClearFormula();
+	ClearAllSelections();
+	ClearAllViews();
+	ClearTraj();
 	geom->BuildPipe(L,R,0,step);
 	worker.nbDesorption = 0;
 	sprintf(tmp,"L|R %g",L/R);
@@ -3534,13 +3563,13 @@ void SynRad::BuildPipe(double ratio) {
 		viewer[i]->SetWorker(&worker);
 	startSimu->SetEnabled(TRUE);
 	ClearFacetParams();
-	if(profilePlotter) profilePlotter->Refresh();
-	if(spectrumPlotter) spectrumPlotter->Refresh();
-	if(texturePlotter) texturePlotter->Update(m_fTime,TRUE);
-		//if(outgassingMap) outgassingMap->Update(m_fTime,TRUE);
-	if(facetDetails) facetDetails->Update();
-	if(facetCoordinates) facetCoordinates->UpdateFromSelection();
-	if(vertexCoordinates) vertexCoordinates->Update();
+	if (profilePlotter) profilePlotter->Refresh();
+	if (spectrumPlotter) spectrumPlotter->Refresh();
+	if (texturePlotter) texturePlotter->Update(m_fTime, TRUE);
+	if (textureSettings) textureSettings->Update();
+	if (facetDetails) facetDetails->Update();
+	if (facetCoordinates) facetCoordinates->UpdateFromSelection();
+	if (vertexCoordinates) vertexCoordinates->Update();
 	if( nbFormula==0 ) {
 		GLParser *f = new GLParser();
 		f->SetExpression("A2/SUMDES");

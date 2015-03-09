@@ -100,7 +100,7 @@ void GLCombo::SetSize(int nbRow) {
 
 // -----------------------------------------------------------------
 
-void GLCombo::SetValueAt(int row,char *value,int userValue) {
+void GLCombo::SetValueAt(int row,const char *value,int userValue) {
   list->SetValueAt(0,row,value,userValue);
 }
 

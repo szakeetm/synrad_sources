@@ -45,6 +45,7 @@ public:
 	std::vector<double> energyVals,angleVals; //energy and angle values (table headers)
 	std::vector<std::vector<double>> reflVals; //actual table values
 	void LoadCSV(FileReader *file);
+	std::string name; //For display in the program
 };
 
 class Indexes {

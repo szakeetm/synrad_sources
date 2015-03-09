@@ -43,7 +43,8 @@ public:
   void SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm=TRUE,BOOL saveSelected=FALSE,BOOL autoSave=FALSE,BOOL crashSave=FALSE);
 
   // Export textures (throws Error)
-  void ExportTextures(char *fileName,int mode,BOOL askConfirm=TRUE,BOOL saveSelected=FALSE);
+  BOOL IsDpInitialized();
+  void ExportTextures(char *fileName,int grouping,int mode,BOOL askConfirm=TRUE,BOOL saveSelected=FALSE);
   void ExportRegionPoints(char *fileName,GLProgress *prg,int regionId,int exportFrequency,BOOL doFullScan);
   void ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr);
 

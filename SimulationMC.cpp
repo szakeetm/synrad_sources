@@ -388,7 +388,7 @@ void PerformTeleport(FACET *iFacet) {
 	sHandle->lastHit = destination;
 
 	//Count hits on teleport facets (only TP source)
-	iFacet->sh.counter.nbAbsorbed++;
+	//iFacet->sh.counter.nbAbsorbed++;
 	//destination->sh.counter.nbDesorbed++;
 
 	iFacet->sh.counter.nbHit++;//destination->sh.counter.nbHit++;
@@ -554,7 +554,7 @@ BOOL StartFromSource() {
 	//Trajectory_Point *source=&(sHandle->regions[regionId].Points[pointIdLocal]);
 	Region_mathonly *sourceRegion=&(sHandle->regions[regionId]);
 	if (!(sourceRegion->psimaxX>0.0 && sourceRegion->psimaxY>0.0)) SetErrorSub("psiMaxX or psiMaxY not positive. No photon can be generated");
-	GenPhoton photon=GeneratePhoton(pointIdLocal,sourceRegion,sHandle->generation_mode);
+	GenPhoton photon=GeneratePhoton(pointIdLocal,sourceRegion,sHandle->generation_mode,sHandle->tmpCount.nbDesorbed==0);
 
 	sHandle->distTraveledCurrentParticle=0.0;
 	sHandle->dF=photon.SR_flux;
@@ -593,7 +593,8 @@ BOOL StartFromSource() {
 
 	// Count
 	sHandle->totalDesorbed++;
-	//sHandle->counter.nbDesorbed++;
+	sHandle->tmpCount.fluxAbs += sHandle->dF;
+	sHandle->tmpCount.powerAbs += sHandle->dP;
 	sHandle->tmpCount.nbDesorbed++;
 	sHandle->nbPHit = 0;
 
@@ -707,8 +708,6 @@ int Stick(FACET* collidedFacet) {
 	collidedFacet->sh.counter.fluxAbs+=sHandle->dF;
 	collidedFacet->sh.counter.powerAbs+=sHandle->dP;
 	sHandle->tmpCount.nbAbsorbed++;
-	sHandle->tmpCount.fluxAbs+=sHandle->dF;
-	sHandle->tmpCount.powerAbs+=sHandle->dP;
 	sHandle->distTraveledSinceUpdate+=sHandle->distTraveledCurrentParticle;
 	//sHandle->counter.nbAbsorbed++;
 	//sHandle->counter.fluxAbs+=sHandle->dF;

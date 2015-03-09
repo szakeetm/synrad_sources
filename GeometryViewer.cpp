@@ -59,9 +59,12 @@ GeometryViewer::GeometryViewer(int id):GLComponent(id) {
 	/// Default values
 	draggMode = DRAGG_NONE;
 	selected = FALSE;
-	view.projMode = PERSPECTIVE_PROJ;
+	view.projMode = ORTHOGRAPHIC_PROJ;
 	view.camAngleOx = 0.0;
 	view.camAngleOy = 0.0;
+
+    view.camAngleOz = 0.0;
+
 	view.lightAngleOx = 0.0;
 	view.lightAngleOy = 0.0;
 	view.camDist = 100.0;
@@ -95,6 +98,7 @@ GeometryViewer::GeometryViewer(int id):GLComponent(id) {
 	showColormap = TRUE;
 	shadeLines = TRUE;
 	showTP = TRUE;
+
 	camDistInc = 1.0;
 	transStep = 1.0;
 	angleStep = 0.005;
@@ -108,6 +112,7 @@ GeometryViewer::GeometryViewer(int id):GLComponent(id) {
 	dispNumHits = 2048;
 	dispNumLeaks = 2048;
 	dispNumTraj = 500;
+
 
 	// GL Component default
 	SetBorder(BORDER_NONE);
@@ -143,12 +148,16 @@ GeometryViewer::GeometryViewer(int id):GLComponent(id) {
 	projCombo->SetSize(2);
 	projCombo->SetValueAt(0,"Persp.");
 	projCombo->SetValueAt(1,"Ortho.");
-	projCombo->SetSelectedIndex(0);
+	projCombo->SetSelectedIndex(1);
 	Add(projCombo);
 
 	capsLockLabel = new GLLabel("CAPS LOCK On: select facets only with selected vertex");
 	capsLockLabel->SetTextColor(255,0,0);
 	Add(capsLockLabel);
+
+
+
+
 
 	zoomBtn = new GLButton(0,"");
 	zoomBtn->SetIcon("images/icon_zoom.png");
@@ -170,6 +179,9 @@ GeometryViewer::GeometryViewer(int id):GLComponent(id) {
 	selTrajBtn = new GLButton(0,"");
 	selTrajBtn->SetIcon("images/icon_traj_select.png");
 	Add(selTrajBtn);
+
+
+
 	autoBtn = new GLButton(0,"");
 	autoBtn->SetIcon("images/icon_autoscale.png");
 	autoBtn->SetToggle(TRUE);
@@ -201,11 +213,14 @@ GeometryViewer::GeometryViewer(int id):GLComponent(id) {
 
 }
 
-//----------------------------------------------------------------------
+
 void GeometryViewer::ToOrigo() {
 	//view.projMode = PERSPECTIVE_PROJ;
 	view.camAngleOx = 0.0;
 	view.camAngleOy = (view.projMode == PERSPECTIVE_PROJ)?0.0:PI;
+
+
+
 	view.camDist = 100.0;
 	view.camOffset.x = 0.0;
 	view.camOffset.y = 0.0;
@@ -217,7 +232,7 @@ void GeometryViewer::ToOrigo() {
 	view.vBottom = 0.0;
 }
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::SetBounds(int x,int y,int width,int height) {
 	if( this->posX != x || this->posY != y || this->width != width || this->height != height ) {
@@ -231,9 +246,11 @@ void GeometryViewer::SetBounds(int x,int y,int width,int height) {
 		coordLab->SetBounds(posX+162,posY+height-20,100,18);
 		facetSearchState->SetBounds(posX+10,posY+10,90,19);
 
+
 		autoBtn->SetBounds(posX+width-142,posY+height-22,19,19);
 		selBtn->SetBounds(posX+width-122,posY+height-22,19,19);
 		selVxBtn->SetBounds(posX+width-102,posY+height-22,19,19);
+
 		selTrajBtn->SetBounds(posX+width-82,posY+height-22,19,19);
 		zoomBtn->SetBounds(posX+width-62,posY+height-22,19,19);
 		handBtn->SetBounds(posX+width-42,posY+height-22,19,19);
@@ -244,7 +261,6 @@ void GeometryViewer::SetBounds(int x,int y,int width,int height) {
 	}
 }
 
-// ---------------------------------------------------------------------
 
 BOOL GeometryViewer::IsSelected() {
 	return selected;
@@ -254,14 +270,12 @@ void GeometryViewer::SetSelected(BOOL s) {
 	selected = s;
 }
 
-// ---------------------------------------------------------------------
 
 void GeometryViewer::SetFocus(BOOL focus) {
 	if(focus && parent)  parent->ProcessMessage(this,MSG_GEOMVIEWER_SELECT);
 	GLComponent::SetFocus(focus);
 }
 
-// ---------------------------------------------------------------------
 
 void GeometryViewer::UpdateMouseCursor(int mode) { //Sets mouse cursor to action
 
@@ -271,8 +285,6 @@ void GeometryViewer::UpdateMouseCursor(int mode) { //Sets mouse cursor to action
 
 		if(!((draggMode==DRAGG_ROTATE)||(draggMode==DRAGG_MOVE))) {
 			switch(mode) {
-
-
 
 			case MODE_SELECT:
 				if (GetWindow()->IsCtrlDown()) {
@@ -332,19 +344,22 @@ void GeometryViewer::UpdateMouseCursor(int mode) { //Sets mouse cursor to action
 	}
 }
 
-// ---------------------------------------------------------------------
+
 
 BOOL GeometryViewer::IsDragging() {
 	return draggMode != DRAGG_NONE;
 }
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::ToTopView() {
 
 	if(!work) return;
 	view.camAngleOx = PI/2.0;
 	view.camAngleOy = 0.0;
+
+    view.camAngleOz = 0.0;
+
 	view.performXY=(view.projMode==PERSPECTIVE_PROJ)?XYZ_NONE:XYZ_TOP;
 	AutoScale();
 
@@ -356,6 +371,9 @@ void GeometryViewer::ToSideView() {
 
 	view.camAngleOx = 0.0;
 	view.camAngleOy = PI/2.0;
+
+   view.camAngleOz = 0.0;
+
 	view.performXY=(view.projMode==PERSPECTIVE_PROJ)?XYZ_NONE:XYZ_SIDE;
 	AutoScale();
 
@@ -370,8 +388,6 @@ void GeometryViewer::ToFrontView() {
 	AutoScale();
 
 }
-
-//-----------------------------------------------------------------------------
 
 void GeometryViewer::UpdateLight() {
 
@@ -425,7 +441,7 @@ void GeometryViewer::UpdateLight() {
 
 }
 
-//-----------------------------------------------------------------------------
+
 
 void GeometryViewer::UpdateMatrix() {
 
@@ -439,16 +455,31 @@ void GeometryViewer::UpdateMatrix() {
 	view.camAngleOx = RoundAngle(view.camAngleOx);
 	view.camAngleOy = RoundAngle(view.camAngleOy);
 
+    view.camAngleOz = RoundAngle(view.camAngleOz);
+
 	// Convert polar coordinates
 	VERTEX3D org = geom->GetCenter();
 
+	/*
 	camDir.x  = -cos(view.camAngleOx) * sin(view.camAngleOy);
 	camDir.y  =  sin(view.camAngleOx);
 	camDir.z  = -cos(view.camAngleOx) * cos(view.camAngleOy);
+	*/
+
+	double x  = -cos(view.camAngleOx) * sin(view.camAngleOy);
+	double y  =  sin(view.camAngleOx);
+	double z  = -cos(view.camAngleOx) * cos(view.camAngleOy);
+
+	//Rotation around Z
+	camDir.x= x*cos(view.camAngleOz)-y*sin(view.camAngleOz);
+	camDir.y= x*sin(view.camAngleOz)+y*cos(view.camAngleOz);
+	camDir.z= z;
 
 	camLeft.x = -cos(view.camAngleOy);
 	camLeft.y = 0.0;
 	camLeft.z = sin(view.camAngleOy);
+	
+	//Rotate(&camLeft,org,camDir,ToDeg(view.camAngleOz));
 
 	Cross(&camUp,&camDir,&camLeft);
 
@@ -467,6 +498,8 @@ void GeometryViewer::UpdateMatrix() {
 		glScaled(-view.camDist,-view.camDist,view.camDist);
 		glRotated(ToDeg(-view.camAngleOx),1.0,0.0,0.0);
 		glRotated(ToDeg(view.camAngleOy),0.0,1.0,0.0);
+        glRotated(ToDeg(view.camAngleOz),0.0,0.0,1.0);
+
 		glTranslated(-(org.x-view.camOffset.x),-(org.y+view.camOffset.y),-(org.z+view.camOffset.z));
 		break;
 	}
@@ -500,13 +533,9 @@ void GeometryViewer::UpdateMatrix() {
 
 }
 
-// ---------------------------------------------------------------------
-
 double GeometryViewer::ToDeg(double radians) {
 	return (radians/PI)*180.0f;
 }
-
-// ---------------------------------------------------------------------
 
 BOOL GeometryViewer::SelectionChanged() {
 	BOOL ret = selectionChange;
@@ -514,13 +543,11 @@ BOOL GeometryViewer::SelectionChanged() {
 	return ret;
 }
 
-// ---------------------------------------------------------------------
-
 AVIEW GeometryViewer::GetCurrentView() {
 	return view;
 }
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::SetCurrentView(AVIEW v) {
 
@@ -549,7 +576,7 @@ void GeometryViewer::SetCurrentView(AVIEW v) {
 
 }
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::SetProjection(int mode) {
 	view.projMode = mode;
@@ -557,7 +584,7 @@ void GeometryViewer::SetProjection(int mode) {
 	ToFrontView();
 }
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::SetWorker(Worker *w) {
 	work = w;
@@ -569,7 +596,7 @@ void GeometryViewer::SetWorker(Worker *w) {
 	arrowLength = 10.0 / vectorLength;//MAX((bb.max.z-bb.min.z),vectorLength);
 }
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::DrawIndex() {
 
@@ -614,7 +641,7 @@ void GeometryViewer::DrawIndex() {
 		}
 		glEnd();
 
-		// Save contexct
+		// Save context
 		GLToolkit::DrawStringInit();
 		GLToolkit::GetDialogFont()->SetTextColor(0.5f,0.9f,0.9f);
 
@@ -642,7 +669,6 @@ void GeometryViewer::DrawIndex() {
 
 }
 
-// ---------------------------------------------------------------------
 
 void GeometryViewer::DrawRule() {
 
@@ -669,7 +695,7 @@ void GeometryViewer::DrawRule() {
 
 }
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::DrawNormal() {
 
@@ -694,7 +720,7 @@ void GeometryViewer::DrawNormal() {
 
 }
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::DrawUV() {
 
@@ -736,14 +762,14 @@ void GeometryViewer::DrawUV() {
 
 }
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::DrawLeak() {
 
 	// Draw leak
 	if(showLeak) {
 
-		// Retreive leak data
+		// Retrieve leak data
 		LEAK pLeak[NBHLEAK];
 		int nbLeak;
 		work->GetLeak(pLeak,&nbLeak);
@@ -776,7 +802,7 @@ void GeometryViewer::DrawLeak() {
 
 }
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::DrawLinesAndHits() {
 
@@ -807,10 +833,26 @@ void GeometryViewer::DrawLinesAndHits() {
 						if (((work->generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)>opacityMax)
 							opacityMax=(work->generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF;
 						count++;
+
+
 					}
+
+
+
+
+
+
+
+
+
+
+
 				}
 				count=0;
 				
+
+
+
 
 				while(count<dispNumHits && pHits[count].type!=0) {
 					//if (count>0&&pHits[count].type==HIT_DES&&pHits[count-1].type!=HIT_ABS) __debugbreak(); //desorbed without being absorbed first
@@ -831,8 +873,22 @@ void GeometryViewer::DrawLinesAndHits() {
 						//glLineWidth(	2.0f);
 					}
 					
+
+
+
+
+
+
+
+
+
 					glBegin(GL_LINE_STRIP);
 					while(count<dispNumHits && pHits[count].type!=HIT_ABS) {
+
+
+
+
+
 						//teleport routine
 						if (pHits[count].type==HIT_TELEPORT) {
 							glVertex3d(pHits[count].pos.x , pHits[count].pos.y , pHits[count].pos.z);
@@ -860,6 +916,7 @@ void GeometryViewer::DrawLinesAndHits() {
 						
 								} else {
 
+
 									lineOpacity=(float)((work->generation_mode==SYNGEN_MODE_FLUXWISE)?pHits[count].dP:pHits[count].dF)/(float)opacityMax;
 									glColor4f(0.5f,1.0f,0.5f,lineOpacity);
 								} 
@@ -870,11 +927,17 @@ void GeometryViewer::DrawLinesAndHits() {
 								count++;   
 								glBegin(GL_LINE_STRIP);
 								glVertex3d(pHits[count].pos.x , pHits[count].pos.y , pHits[count].pos.z);  //teleport dest.
+
+
 							}
+
 						}
 						/*if (pHits[count].type==HIT_DES) {
 							glEnd();glBegin(GL_LINE_STRIP); //pen up pen down for leaks
 						}*/
+
+
+
 						glVertex3d(pHits[count].pos.x , pHits[count].pos.y , pHits[count].pos.z);
 						count++;
 						if (pHits[count].type==LASTHIT) { //pen up at cache refresh border
@@ -893,6 +956,7 @@ void GeometryViewer::DrawLinesAndHits() {
 				}
 
 			}
+
 			// Hit
 			if(showHit) {
 
@@ -902,6 +966,7 @@ void GeometryViewer::DrawLinesAndHits() {
 				glDisable(GL_CULL_FACE);
 
 				// Refl
+
 				float pointSize=(bigDots)?2.0f:1.0f;
 				glPointSize(pointSize);
 				if (whiteBg) { //whitebg
@@ -967,7 +1032,7 @@ void GeometryViewer::DrawLinesAndHits() {
 
 }
 
-// ---------------------------------------------------------------------
+
 
 /*
 
@@ -1037,7 +1102,7 @@ DrawBB(node->right);
 }
 */
 
-// ---------------------------------------------------------------------
+
 
 #define TRANSFORMBB( X,Y,Z )                                                \
 	mv.TransfomVec((float)bbO.X,(float)bbO.Y,(float)bbO.Z,1.0f,&rx,&ry,&rz,&rw);\
@@ -1063,7 +1128,7 @@ DrawBB(node->right);
 	if( dy > yMax ) yMax = dy;                                        \
 	if( dz > zFar ) zFar = dz;
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::ComputeBB(BOOL getAll) {
 
@@ -1112,6 +1177,16 @@ void GeometryViewer::ComputeBB(BOOL getAll) {
 		TRANSFORMVERTEX(bb.max.x,bb.max.y,bb.min.z);
 		TRANSFORMVERTEX(bb.max.x,bb.max.y,bb.max.z);
 
+
+
+
+
+
+
+
+
+
+
 	} else {
 
 		int *refIdx = (int *)malloc( nbV * sizeof(int) );
@@ -1142,7 +1217,7 @@ void GeometryViewer::ComputeBB(BOOL getAll) {
 }
 
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::AutoScale(BOOL reUpdateMouseCursor) {
 
@@ -1203,7 +1278,7 @@ void GeometryViewer::AutoScale(BOOL reUpdateMouseCursor) {
 
 }
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::Zoom() {
 
@@ -1245,7 +1320,7 @@ void GeometryViewer::Zoom() {
 			dy = ( 0.5 - y0/(double)(height-DOWN_MARGIN)) * (view.vBottom-view.vTop);
 			break;
 		case XYZ_FRONT: // Front View
-			dx = (-0.5 + x0/(double)width)  * (view.vRight-view.vLeft) ;
+			dx = -(-0.5 + x0/(double)width)  * (view.vRight-view.vLeft) ;
 			dy = ( 0.5 - y0/(double)(height-DOWN_MARGIN)) * (view.vBottom-view.vTop) ;
 			break;
 		}
@@ -1261,7 +1336,7 @@ void GeometryViewer::Zoom() {
 
 }
 
-// ---------------------------------------------------------------------
+
 
 void GeometryViewer::Paint() {
 
@@ -1338,18 +1413,39 @@ void GeometryViewer::Paint() {
 	glDepthFunc(GL_LEQUAL);
 
 	/*// Draw geometry
+
+
 	glEnable(GL_DEPTH_TEST);
+
+
 	glClearDepth(1.0);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glDepthFunc(GL_LEQUAL);*/
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	int bgCol=(whiteBg)?255:0;
 	SetBackgroundColor(bgCol,bgCol,bgCol);
 
 	DrawLinesAndHits();
+
+
 	geom->Render((GLfloat *)matView,showVolume,showTexture,showBack,showFilter,showHidden,showMesh,showDir);
 	for (int i=0;i<(int)work->regions.size();i++)
 		work->regions[i].Render(dispNumTraj,&blueMaterial,vectorLength);
+
+
 
 	DrawIndex();
 	DrawNormal();
@@ -1377,6 +1473,7 @@ void GeometryViewer::Paint() {
 		glColor3f(1.0f,0.8f,0.9f);
 		glEnable(GL_LINE_STIPPLE);
 		glLineStipple(1,dashPattern);
+
 		if (!circleMode) { //normal rectangle
 		glBegin(GL_LINE_LOOP);
 		_glVertex2i(selX1,selY1);
@@ -1410,11 +1507,14 @@ void GeometryViewer::Paint() {
 	PaintCompAndBorder();
 
 	capsLockLabel->SetVisible(GetWindow()->IsCapsLockOn());
+
+
+
+
+
+
 }
 
-
-
-//-----------------------------------------------------------------------------
 
 void GeometryViewer::PaintCompAndBorder() {
 
@@ -1465,7 +1565,7 @@ void GeometryViewer::PaintCompAndBorder() {
 
 }
 
-//-----------------------------------------------------------------------------
+
 
 void GeometryViewer::TranslateScale(double diff) {
 
@@ -1481,7 +1581,7 @@ void GeometryViewer::TranslateScale(double diff) {
 
 }
 
-//-----------------------------------------------------------------------------
+
 
 void GeometryViewer::ManageEvent(SDL_Event *evt)
 {
@@ -1638,11 +1738,11 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 			// Selection dragging
 			selX1 = selX2 = mX;
 			selY1 = selY2 = mY;
-			if (mode==MODE_SELECT) draggMode=DRAGG_SELECT;
+			if (mode==MODE_SELECT || mode==MODE_ZOOM) draggMode=DRAGG_SELECT;
 			else if (mode==MODE_SELECTVERTEX) draggMode=DRAGG_SELECTVERTEX;
 			else if (mode==MODE_SELECTTRAJ) draggMode=DRAGG_SELECTTRAJ;
 			else if (mode==MODE_MOVE) draggMode=DRAGG_MOVE;
-			//else if (mode==MODE_ZOOM) draggMode=DRAGG_ZOOM;
+
 		}
 		if( evt->button.button == SDL_BUTTON_MIDDLE ) {
 			// Camera translational dragging
@@ -1686,8 +1786,9 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 
 		case DRAGG_SELECT:
 		case DRAGG_SELECTVERTEX:
-		//case DRAGG_ZOOM:
 		case DRAGG_SELECTTRAJ:
+
+
 			switch(mode) {
 			case MODE_ZOOM:
 				Zoom();
@@ -1741,6 +1842,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 				break;
 			}
 			break;
+
 		}
 
 		draggMode=DRAGG_NONE;
@@ -1767,6 +1869,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 		case DRAGG_SELECTVERTEX:
 		case DRAGG_SELECT:
 		//case DRAGG_ZOOM:
+
 			// Selection rectangle
 			/*if( GetWindow()->IsAltDown() ) {
 				draggMode=DRAGG_MOVE;
@@ -1803,32 +1906,38 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 		case DRAGG_ROTATE:
 
 			if( fabs(diffX)>1.9 || fabs(diffY)>1.9 ) {
+				double factor=GetWindow()->IsShiftDown()?0.05:1.0;
 				if( GetWindow()->IsCtrlDown() ) {
-					TranslateScale(diffY);
+					//Z axis rotation
+					//TranslateScale(diffY);
+					view.camAngleOz += diffX*angleStep*factor;
 				}
 				else {
 					// Rotate view
-					double factor=GetWindow()->IsShiftDown()?0.05:1.0;
+
+					
 					if(GetWindow()->IsAltDown()) {            //Lights direction rotation
 							view.lightAngleOx += diffY * angleStep*factor;
 							view.lightAngleOy += diffX * angleStep*factor;
 					} else {                                  //Camera angle rotation
-					if (view.projMode == PERSPECTIVE_PROJ) {
-						view.camAngleOx += diffY * angleStep*factor;
-						view.camAngleOy += diffX * angleStep*factor;
-					} else {
-						view.camAngleOx -= diffY * angleStep*factor;
-						view.camAngleOy -= diffX * angleStep*factor;
+						if (view.projMode == PERSPECTIVE_PROJ) {
+							view.camAngleOx += diffY * angleStep*factor;
+							view.camAngleOy += diffX * angleStep*factor;
+						} else {
+							view.camAngleOx -= diffY * angleStep*factor;
+							view.camAngleOy -= diffX * angleStep*factor;
+						}
 					}
-					}
-					view.performXY=XYZ_NONE;
+				}
+				view.performXY=XYZ_NONE;
 					zoomBtn->SetEnabled(FALSE);
+					if (mode==MODE_ZOOM) UpdateMouseCursor(MODE_SELECT);
 					UpdateMatrix();
 					if (autoScaleOn) (AutoScale(FALSE));
-					//UpdateMouseCursor(MODE_SELECT); //was already MODE_SELECT
-					//draggMode=DRAGG_NONE;
-				}
+
+
 			}
+
 			//UpdateMatrix();
 			break;
 		}
@@ -1836,7 +1945,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 
 }
 
-// -------------------------------------------------------------
+
 void GeometryViewer::SelectCoplanar(double tolerance) {
 	if(!work) return;
 	Geometry *geom = work->GetGeometry();
@@ -1849,7 +1958,7 @@ void GeometryViewer::SelectCoplanar(double tolerance) {
 	geom->SelectCoplanar(this->width,this->height,tolerance);
 }
 
-// -------------------------------------------------------------
+
 
 void GeometryViewer::ProcessMessage(GLComponent *src,int message) {
 
@@ -1871,6 +1980,8 @@ void GeometryViewer::ProcessMessage(GLComponent *src,int message) {
 			UpdateMouseCursor(MODE_SELECTVERTEX);
 		} else if (src==selTrajBtn) {
 			UpdateMouseCursor(MODE_SELECTTRAJ);
+
+
 		} else if (src==autoBtn) {
 			autoScaleOn=!autoScaleOn;
 			//autoBtn->SetCheck(autoScaleOn);

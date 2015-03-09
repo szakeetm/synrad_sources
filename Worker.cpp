@@ -76,6 +76,10 @@ Geometry *Worker::GetGeometry() {
 	return geom;
 }
 
+BOOL Worker::IsDpInitialized(){
+
+	return (dpHit != NULL);
+}
 // -------------------------------------------------------------
 
 char *Worker::GetFileName() {
@@ -276,7 +280,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 	
 }
 
-void Worker::ExportTextures(char *fileName,int mode,BOOL askConfirm,BOOL saveSelected) {
+void Worker::ExportTextures(char *fileName,int grouping,int mode,BOOL askConfirm,BOOL saveSelected) {
 
 	char tmp[512];
 
@@ -293,9 +297,8 @@ void Worker::ExportTextures(char *fileName,int mode,BOOL askConfirm,BOOL saveSel
 		f=fopen(fileName,"w");
 		if (!f) {
 			throw Error("Couldn't open file for writing");
-			return;
 		}
-		geom->ExportTextures(f,mode,no_scans,dpHit,saveSelected);
+		geom->ExportTextures(f,grouping,mode,no_scans,dpHit,saveSelected);
 		fclose(f);
 	}
 }
@@ -1587,9 +1590,11 @@ void Worker::ClearRegions() {
 void Worker::AddMaterial(string *fileName){
 	Material result;
 	char tmp[512];
-	strcpy(tmp,fileName->c_str());
+	sprintf(tmp,"param\\%s",fileName->c_str());
 	FileReader *f=new FileReader(tmp);
 	result.LoadCSV(f);
+	int lastindex = fileName->find_last_of(".");
+	result.name = fileName->substr(0, lastindex);
 	materials.push_back(result);
 }
 

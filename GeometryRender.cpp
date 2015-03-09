@@ -762,7 +762,7 @@ void Geometry::BuildTexture(BYTE *hits) {
 	  }
 
 	  int profSize = (f->sh.isProfile)?(PROFILE_SIZE*(sizeof(llong)+2*sizeof(double))):0;
-	  int spectrumSize = (f->sh.hasSpectrum)?(SPECTRUM_SIZE*2*sizeof(double)):0;
+	  //int spectrumSize = (f->sh.hasSpectrum)?(SPECTRUM_SIZE*2*sizeof(double)):0;
     int nbElem = f->sh.texWidth*f->sh.texHeight;
     int tSize = nbElem*sizeof(double);
     int dSize = nbElem*sizeof(VHIT);

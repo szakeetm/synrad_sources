@@ -1948,8 +1948,8 @@ void  Geometry::BuildPipe(double L,double R,double s,int step) {
 	Clear();
 
 	SynRad *mApp = (SynRad *)theApp;
-	mApp->ClearAllSelections();
-	mApp->ClearAllViews();
+	//mApp->ClearAllSelections();
+	//mApp->ClearAllViews();
 	sprintf(sh.name,"PIPE%g",L/R);
 
 	int nbDecade = 0;
@@ -2122,8 +2122,8 @@ void Geometry::LoadASE(FileReader *file,GLProgress *prg) {
 	Clear();
 
 	SynRad *mApp = (SynRad *)theApp;
-	mApp->ClearAllSelections();
-	mApp->ClearAllViews();
+	//mApp->ClearAllSelections();
+	//mApp->ClearAllViews();
 	ASELoader ase(file);
 	ase.Load();
 
@@ -2182,8 +2182,8 @@ void Geometry::LoadSTR(FileReader *file,GLProgress *prg) {
 	Clear();
 
 	SynRad *mApp = (SynRad *)theApp;
-	mApp->ClearAllSelections();
-	mApp->ClearAllViews();
+	//mApp->ClearAllSelections();
+	//mApp->ClearAllViews();
 	// Load multiple structure file
 	sh.nbSuper = file->ReadInt();
 
@@ -2237,8 +2237,8 @@ void Geometry::LoadSTR(FileReader *file,GLProgress *prg) {
 void Geometry::LoadSTL(FileReader *file,GLProgress *prg,double scaleFactor) {
 
 	SynRad *mApp = (SynRad *)theApp;
-	mApp->ClearAllSelections();
-	mApp->ClearAllViews();
+	//mApp->ClearAllSelections();
+	//mApp->ClearAllViews();
 	char *w;
 
 	prg->SetMessage("Clearing current geometry...");
@@ -2246,7 +2246,7 @@ void Geometry::LoadSTL(FileReader *file,GLProgress *prg,double scaleFactor) {
 
 	// First pass
 	prg->SetMessage("Counting facets in STL file...");
-	file->ReadKeyword("solid");
+	//file->ReadKeyword("solid");
 	file->ReadLine(); // solid name
 	w = file->ReadWord();
 	while(strcmp(w,"facet")==0) {
@@ -2268,7 +2268,7 @@ void Geometry::LoadSTL(FileReader *file,GLProgress *prg,double scaleFactor) {
 	// Second pass
 	prg->SetMessage("Reading facets...");
 	file->SeekStart();
-	file->ReadKeyword("solid");
+	//file->ReadKeyword("solid");
 	file->ReadLine();
 	for(int i=0;i<sh.nbFacet;i++) {
 
@@ -2325,8 +2325,8 @@ void Geometry::LoadSTL(FileReader *file,GLProgress *prg,double scaleFactor) {
 void Geometry::LoadTXT(FileReader *file,GLProgress *prg) {
 
 	SynRad *mApp = (SynRad *)theApp;
-	mApp->ClearAllSelections();
-	mApp->ClearAllViews();
+	//mApp->ClearAllSelections();
+	//mApp->ClearAllViews();
 	Clear();
 	LoadTXTGeom(file,&(sh.nbVertex),&(sh.nbFacet),&vertices3,&facets);
 	UpdateName(file);
@@ -2338,7 +2338,6 @@ void Geometry::LoadTXT(FileReader *file,GLProgress *prg) {
 	InitializeGeometry();
 	AdjustProfile();
 	//isLoaded = TRUE;
-
 }
 
 // -----------------------------------------------------------
@@ -3077,11 +3076,11 @@ extern GLApplication *theApp;
 void Geometry::LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleak,HIT *pHits,int *nbHHit,int *version) {
 
 	SynRad *mApp = (SynRad *)theApp;
-	mApp->ClearAllSelections();
-	mApp->ClearAllViews();
+	//mApp->ClearAllSelections();
+	//mApp->ClearAllViews();
 	prg->SetMessage("Clearing current geometry...");
 	Clear();
-	mApp->ClearFormula();
+	//mApp->ClearFormula();
 
 
 	// Globals
@@ -3633,7 +3632,7 @@ void Geometry::SaveTXT(FileWriter *file,Dataport *dpHit,BOOL saveSelected) {
 }
 
 // -----------------------------------------------------------------------
-void Geometry::ExportTextures(FILE *file,int mode,double no_scans,Dataport *dpHit,BOOL saveSelected) {
+void Geometry::ExportTextures(FILE *file,int grouping,int mode,double no_scans,Dataport *dpHit,BOOL saveSelected) {
 
 	//if(!IsLoaded()) throw Error("Nothing to save !");
 
@@ -3647,32 +3646,35 @@ void Geometry::ExportTextures(FILE *file,int mode,double no_scans,Dataport *dpHi
 	//BYTE *buffer = (BYTE *)dpHit->buff;
 	//SHGHITS *gHits = (SHGHITS *)buffer;
 
-	if (mode==10) fprintf(file,"X_coord_cm\tY_coord_cm\tZ_coord_cm\tPower_Watt\t\n"); //mode 10: special ANSYS export
+	if (grouping==1) fprintf(file,"X_coord_cm\tY_coord_cm\tZ_coord_cm\tValue\t\n"); //mode 10: special ANSYS export
 
 	// Facets
 	for(int i=0;i<sh.nbFacet;i++) {
 		Facet *f = facets[i];
 
 		if( f->selected ) {
-			if (mode!=10) fprintf(file,"FACET%d\n",i+1); //mode 10: special ANSYS export
+			if (grouping==0) fprintf(file,"FACET%d\n",i+1); //mode 10: special ANSYS export
 			SHELEM *mesh = f->mesh;
 			if( mesh ) {
 				char tmp[256];
+				char out[256];
 				float dCoef = 1.0f;
 				if(!buffer) return;
 				SHGHITS *shGHit = (SHGHITS *)buffer;
 				int w = f->sh.texWidth;
 				int h = f->sh.texHeight;
 				int nbE = w*h;
-				int profSize = (f->sh.isProfile)?(PROFILE_SIZE*sizeof(llong)):0;
+				int profSize = (f->sh.isProfile) ? (PROFILE_SIZE*(sizeof(llong)+2 * sizeof(double))) : 0;
+
 				llong *hits_MC = (llong *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize));
 				double *hits_flux = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize + nbE*sizeof(llong)));
 				double *hits_power = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize+nbE*(sizeof(llong)+sizeof(double))));
-				double norm=1.0/no_scans; //normalize values by number of scans (and don't normalize by area...)
+				double norm = 1.0 / no_scans; //normalize values by number of scans (and don't normalize by area...)
 
 				for(int i=0;i<w;i++) {
 					for(int j=0;j<h;j++) {
 						int index=i+j*w;
+						tmp[0]=out[0]=0;
 						switch(mode) {
 
 						case 0: // Element area
@@ -3680,52 +3682,45 @@ void Geometry::ExportTextures(FILE *file,int mode,double no_scans,Dataport *dpHi
 							break;
 
 						case 1: // MC_hits
-							sprintf(tmp,"%I64d",hits_MC[index]);
+							if (!grouping || hits_MC[index]) sprintf(tmp, "%I64d", hits_MC[index]);
 							break;
 
 						case 2: // Flux
-							sprintf(tmp,"%g",hits_flux[index]*f->mesh[i+j*w].area*norm);
+							if (!grouping || hits_flux[index]) sprintf(tmp, "%g", hits_flux[index] * f->mesh[i + j*w].area*norm);
 							break;
 
 						case 3: // Power
-							sprintf(tmp,"%g",hits_power[index]*f->mesh[i+j*w].area*norm);
+							if (!grouping || hits_power[index]) sprintf(tmp, "%g", hits_power[index] * f->mesh[i + j*w].area*norm);
 							break;
 
 						case 4: // Flux/area
-							sprintf(tmp,"%g",hits_flux[index]*norm);
+							if (!grouping || hits_flux[index]) sprintf(tmp, "%g", hits_flux[index] * norm);
 							break;
 
 						case 5: // Power/area
-							sprintf(tmp,"%g",hits_power[index]*norm);
-							break;
-
-						case 10: //ANSYS export: coordinates then power
-							if (hits_power[index]>1E-30) //if there is power
-							sprintf(tmp,"%g\t%g\t%g\t%g\t\n",
-								f->sh.O.x+f->mesh[i+j*w].uCenter*f->sh.U.x+f->mesh[i+j*w].vCenter*f->sh.V.x,
-								f->sh.O.y+f->mesh[i+j*w].uCenter*f->sh.U.y+f->mesh[i+j*w].vCenter*f->sh.V.y,
-								f->sh.O.z+f->mesh[i+j*w].uCenter*f->sh.U.z+f->mesh[i+j*w].vCenter*f->sh.V.z,
-								hits_power[index]*f->mesh[i+j*w].area*norm);
+							if (!grouping || hits_power[index]) sprintf(tmp, "%g", hits_power[index] * 0.01*norm); //Don't write 0 powers
 							break;
 						}
 
-						if( tmp ) fprintf(file,"%s",tmp);
-						if( j<w-1 && mode!=10) 
+						if (grouping==1 && tmp && tmp[0])
+							sprintf(out,"%g\t%g\t%g\t%s\t\n",
+								f->sh.O.x+f->mesh[index].uCenter*f->sh.U.x+f->mesh[index].vCenter*f->sh.V.x,
+								f->sh.O.y+f->mesh[index].uCenter*f->sh.U.y+f->mesh[index].vCenter*f->sh.V.y,
+								f->sh.O.z+f->mesh[index].uCenter*f->sh.U.z+f->mesh[index].vCenter*f->sh.V.z,
+								tmp);
+						else sprintf(out,"%s",tmp);
+
+						if( out ) fprintf(file,"%s",out);
+						if( j<w-1 && grouping==0) 
 							fprintf(file,"\t");
 					}
-					if (mode!=10) fprintf(file,"\n");
+					if (grouping==0) fprintf(file,"\n");
 				}
-				break;
-
-
-
-
-
 			}
 			else {
 				fprintf(file,"No mesh.\n");
 			}
-			fprintf(file,"\n"); //Current facet exported. 
+			if (grouping==0) fprintf(file,"\n"); //Current facet exported. 
 		}
 
 	}
@@ -5143,12 +5138,8 @@ PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *
 
 
 	SynRad *mApp = (SynRad *)theApp;
-	mApp->ClearAllSelections();
-	mApp->ClearAllViews();
 	prg->SetMessage("Clearing current geometry...");
 	Clear();
-	mApp->ClearFormula();
-	mApp->ClearTraj();
 
 	PARfileList result(0);
 

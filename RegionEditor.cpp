@@ -1235,7 +1235,6 @@ void RegionEditor::ApplyChanges() {
 		}
 	}
 
-	
 	worker->RecalcRegion(regionId);
 	if (mApp->regionInfo) mApp->regionInfo->Update();
 	if (mApp->spectrumPlotter) mApp->spectrumPlotter->SetScale();
