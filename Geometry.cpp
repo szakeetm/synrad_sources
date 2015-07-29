@@ -993,13 +993,15 @@ DWORD Geometry::GetGeometrySize(std::vector<Region_full> *regions,std::vector<Ma
 
 // -----------------------------------------------------------
 
-void Geometry::CopyGeometryBuffer(BYTE *buffer,std::vector<Region_full> *regions,std::vector<Material> *materials,int generation_mode) {
+void Geometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *regions, std::vector<Material> *materials, int generation_mode, BOOL lowFluxMode, double lowFluxCutoff) {
 
 	// Build shared buffer for geometry (see Shared.h)
 	int fOffset = sizeof(SHGHITS);
 	SHGEOM *shGeom = (SHGEOM *)buffer;
 	sh.nbRegion=(*regions).size();
 	sh.generation_mode=generation_mode;
+	sh.lowFluxMode = lowFluxMode;
+	sh.lowFluxCutoff = lowFluxCutoff;
 	memcpy(shGeom,&(this->sh),sizeof(SHGEOM));
 	buffer += sizeof(SHGEOM);
 
@@ -2539,11 +2541,21 @@ void Geometry::InsertGEOGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3
 	file->ReadLLong();
 	file->ReadKeyword("totalLeak");file->ReadKeyword(":");
 	file->ReadLLong();
-	if (version2>=12) {
-		file->ReadKeyword("totalAbs");file->ReadKeyword(":");
+	if (version2 >= 12) {
+		file->ReadKeyword("totalAbs"); file->ReadKeyword(":");
 		file->ReadLLong();
-		file->ReadKeyword("totalDist");file->ReadKeyword(":");
+		if (version2 >= 15) {
+			file->ReadKeyword("totalDist_total");
+		}
+		else { //between versions 12 and 15
+			file->ReadKeyword("totalDist");
+		}
+		file->ReadKeyword(":");
 		file->ReadDouble();
+		if (version2 >= 15) {
+			file->ReadKeyword("totalDist_fullHitsOnly"); file->ReadKeyword(":");
+			file->ReadDouble();
+		}
 	}
 	file->ReadKeyword("maxDes");file->ReadKeyword(":");
 	file->ReadLLong(); 
@@ -3103,8 +3115,18 @@ void Geometry::LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleak,
 	if (*version>=12) {
 		file->ReadKeyword("totalAbs");file->ReadKeyword(":");
 		tNbAbsorption =0; file->ReadLLong();
-		file->ReadKeyword("totalDist");file->ReadKeyword(":");
+		if (*version >= 15) {
+			file->ReadKeyword("totalDist_total");
+		}
+		else { //between versions 12 and 15
+			file->ReadKeyword("totalDist");
+		}
+		file->ReadKeyword(":");
 		distTraveledTotal =0.0; file->ReadDouble();
+		if (*version >= 15) {
+			file->ReadKeyword("totalDist_fullHitsOnly"); file->ReadKeyword(":");
+			file->ReadDouble();
+		}
 	} else {
 		tNbAbsorption=0;
 		distTraveledTotal=0.0;
@@ -3391,8 +3413,19 @@ bool Geometry::loadTextures(FileReader *file,GLProgress *prg,Dataport *dpHit,int
 				double *hits_flux = (double *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(SHHITS) + profSize + nbE*sizeof(llong)));
 				double *hits_power = (double *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(SHHITS) + profSize+nbE*(sizeof(llong)+sizeof(double))));
 
-				for (iy=0;iy<(f->sh.texHeight);iy++) {
-					for (ix=0;ix<(f->sh.texWidth);ix++) {
+				int texWidth_file, texHeight_file;
+				//In case of rounding errors, the file might contain different texture dimensions than expected.
+				if (version >= 8) {
+					file->ReadKeyword("width"); file->ReadKeyword(":"); texWidth_file = file->ReadInt();
+					file->ReadKeyword("height"); file->ReadKeyword(":"); texHeight_file = file->ReadInt();
+				}
+				else {
+					texWidth_file = f->sh.texWidth;
+					texHeight_file = f->sh.texHeight;
+				}
+
+				for (iy = 0; iy<(MIN(f->sh.texHeight, texHeight_file)); iy++) { //MIN: If stored texture is larger, don't read extra cells
+					for (ix=0;ix<(MIN(f->sh.texWidth,texWidth_file));ix++) { //MIN: If stored texture is larger, don't read extra cells
 						int index=iy*(f->sh.texWidth)+ix;
 						*(hits_MC+index)=file->ReadLLong();
 						if (version >= 7) file->ReadDouble(); //cell area
@@ -3404,6 +3437,22 @@ bool Geometry::loadTextures(FileReader *file,GLProgress *prg,Dataport *dpHit,int
 							*(hits_flux+index)/=f->mesh[index].area;
 							*(hits_power+index)/=f->mesh[index].area;
 						}
+					}
+					for (int ie = 0; ie < texWidth_file - f->sh.texWidth; ie++) {//Executed if file texture is bigger than expected texture
+						//Read extra cells from file without doing anything
+						file->ReadLLong();
+						if (version >= 7) file->ReadDouble(); //cell area
+						file->ReadDouble();
+						file->ReadDouble();
+					}
+				}
+				for (int ie = 0; ie < texHeight_file - f->sh.texHeight; ie++) {//Executed if file texture is bigger than expected texture
+					//Read extra cells ffrom file without doing anything
+					for (int iw = 0; iw < texWidth_file; iw++) {
+						file->ReadLLong();
+						if (version >= 7) file->ReadDouble(); //cell area
+						file->ReadDouble();
+						file->ReadDouble();
 					}
 				}
 				file->ReadKeyword("}");
@@ -5114,7 +5163,7 @@ void Geometry::SaveSYN(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL sav
 			//char tmp[256];
 			sprintf(tmp,"texture_facet %d {\n",i+1);
 			file->Write(tmp);
-
+			file->Write("width:"); file->WriteInt(f->sh.texWidth); file->Write(" height:"); file->WriteInt(f->sh.texHeight); file->Write("\n");
 			for (iy=0;iy<(f->sh.texHeight);iy++) {
 				for (ix=0;ix<(f->sh.texWidth);ix++) {
 					int index=iy*(f->sh.texWidth)+ix;
@@ -5337,7 +5386,7 @@ PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *
 	}
 
 	prg->SetMessage("Initalizing geometry and building mesh...");
-	InitializeGeometry();
+	InitializeGeometry(); //Contains SetFacetTexture
 	//AdjustProfile();
 	isLoaded = TRUE;
 	UpdateName(file);

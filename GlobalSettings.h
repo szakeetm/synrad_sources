@@ -46,6 +46,7 @@ private:
   GLButton    *maxButton;
   GLTextField *nbProcText;
   GLTextField *autoSaveText;
+  GLTextField *cutoffText;
  
   float lastUpdate;
   float lastCPUTime[MAX_PROCESS];
@@ -57,8 +58,10 @@ private:
   GLToggle      *chkSimuOnly;
   GLToggle      *chkCheckForUpdates;
   GLToggle      *chkCompressSavedFiles;
+  GLToggle      *lowFluxToggle;
   GLButton    *applyButton;
   GLButton    *cancelButton;
+  GLButton    *lowFluxInfo;
 
   /*GLTextField *outgassingText;
   GLTextField *gasmassText;*/

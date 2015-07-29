@@ -136,7 +136,7 @@ bool Region_full::isOutsideBoundaries(Vector a,BOOL recalcDirs){
 	return ((a.x-limits.x)*xDir>0.0)||((a.y-limits.y)*yDir>0.0)||((a.z-limits.z)*zDir>0.0);
 }
 
-void Region_full::LoadPAR(FileReader *file,GLProgress *prg){
+void Region_full::LoadPAR(FileReader *file){
 
 	//Creating references to X,Y,Z components (to avoid writing code 3 times)
 	//double* result_ptr[3]={&result.x,&result.y,&result.z};
@@ -148,7 +148,7 @@ void Region_full::LoadPAR(FileReader *file,GLProgress *prg){
 	Distribution2D* distr_ptr[3]={Bx_distr,By_distr,Bz_distr};
 	std::string* MagFileNamePtr[3]={&MAGXfileName,&MAGYfileName,&MAGZfileName};
 
-	prg->SetMessage("Reading parameter file...");
+	//prg->SetMessage("Reading parameter file...");
 	file->ReadInt(); //unused (no_scans)
 	file->ReadInt(); //unused (nregions)
 	file->ReadInt(); //unused (generation mode)
@@ -262,7 +262,7 @@ void Region_full::LoadPAR(FileReader *file,GLProgress *prg){
 		
 	}
 
-	prg->SetMessage("Calculating trajectory...");
+	//prg->SetMessage("Calculating trajectory...");
 	CalculateTrajectory(1000000); //max 1 million points
 	isLoaded=true;
 	extern SynRad *theApp;
@@ -1066,7 +1066,7 @@ void Region_full::SaveParam(FileWriter *file) {
 	}
 }
 
-void Region_full::LoadParam(FileReader *file,GLProgress *prg){
+void Region_full::LoadParam(FileReader *file){
 
 	//Creating references to X,Y,Z components (to avoid writing code 3 times)
 	double* Bconst_ptr[3]={&B_const.x,&B_const.y,&B_const.z};
@@ -1081,7 +1081,7 @@ void Region_full::LoadParam(FileReader *file,GLProgress *prg){
 	std::string MagFileNameStr[3]={"Bx_fileName","By_fileName","Bz_fileName"};
 	int paramVersion;
 
-	prg->SetMessage("Reading parameter file...");
+	//prg->SetMessage("Reading parameter file...");
 
 	file->ReadKeyword("param_file_version");file->ReadKeyword(":");paramVersion=file->ReadInt();
 	if (paramVersion>PARAMVERSION) {
@@ -1188,7 +1188,7 @@ void Region_full::LoadParam(FileReader *file,GLProgress *prg){
 	}
 	gamma=abs(E/particleMass);
 
-	prg->SetMessage("Calculating trajectory...");
+	//prg->SetMessage("Calculating trajectory...");
 	CalculateTrajectory(1000000); //max 1 million points
 	isLoaded=true;
 	extern SynRad *theApp;

@@ -332,6 +332,7 @@ FILENAME *GLFileBox::OpenFile(char *path,char *fileName,char *title,const char *
 	ofn.nFilterIndex = 1;
 	ofn.lpstrFileTitle = NULL;
 	ofn.nMaxFileTitle = 0;
+	ofn.lpstrTitle = title;
 	ofn.lpstrInitialDir = NULL;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
@@ -371,6 +372,90 @@ FILENAME *GLFileBox::OpenFile(char *path,char *fileName,char *title,const char *
   delete f;
   return ret;
   */
+
+}
+
+std::vector<FILENAME> GLFileBox::OpenMultipleFiles(const char *filters, const char *title) {
+
+
+	std::vector<FILENAME> ret;
+
+	//Windows File Open dialog
+	OPENFILENAME ofn;       // common dialog box structure
+	char fileNm[1025];       // buffer for file name
+
+	// Initialize OPENFILENAME
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.lpstrFile = fileNm;
+	ofn.lpstrFile[0] = '\0';
+	ofn.nMaxFile = sizeof(fileNm);
+	ofn.lpstrFilter = filters;
+	ofn.lpstrTitle = title;
+	ofn.nFilterIndex = 1;
+	ofn.lpstrFileTitle = NULL;
+	ofn.nMaxFileTitle = 0;
+	ofn.lpstrInitialDir = NULL;
+	ofn.Flags = OFN_ALLOWMULTISELECT | OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+	// Display the Open dialog box. 
+
+	char CWD[MAX_PATH];
+	_getcwd(CWD, MAX_PATH);
+	_chdir(CWD);
+	if (GetOpenFileName(&ofn) == TRUE) {
+		_chdir(CWD); //OpenFileName dialog changes the working driectory, so we must set it back
+		
+		//Parsing from http://stackoverflow.com/questions/26317556/how-to-get-list-of-selected-files-when-using-getopenfilename-with-multiselect
+
+		char* str = ofn.lpstrFile;
+		std::string directory = str;
+		str += (directory.length() + 1);
+		BOOL moreThanOne = FALSE;
+		while (*str) {
+			moreThanOne = TRUE;
+			std::string filename = str;
+			str += (filename.length() + 1);
+			// use the filename, e.g. add it to a vector
+			FILENAME retFile;
+			strcpy(retFile.path, directory.c_str());
+			strcpy(retFile.file, filename.c_str());
+			sprintf(retFile.fullName, "%s\\%s", directory.c_str(), filename.c_str());
+			ret.push_back(retFile);
+		}
+		if (!moreThanOne) {
+			FILENAME retFile;
+			strcpy(retFile.file, directory.c_str());
+			strcpy(retFile.fullName, directory.c_str());
+			ret.push_back(retFile);
+		}
+	}
+
+	return ret;
+	/* Original cross-platform OpenGl OpenFile dialog. Replaced with Windows file dialog
+	if(!title) title = "Open File";
+
+	#ifdef WIN32
+	if(!path || strcmp(path,".")==0) path=_getcwd(NULL,0);
+	GLFileBox::InitDrivePaths();
+	#endif
+
+	FILENAME *ret = NULL;
+
+	GLFileBox *f = new GLFileBox(path,fileName,title,filters,nbFilter,TRUE);
+	f->DoModal();
+
+	if( f->rCode == OK_BTN ) {
+	strcpy(retFile.path , f->curPath);
+	strcpy(retFile.file , f->curFile);
+	sprintf(retFile.fullName,"%s\\%s",f->curPath,f->curFile);
+	ret = &retFile;
+	f->AddToFileHist(f->curFile);
+	}
+
+	delete f;
+	return ret;
+	*/
 
 }
 

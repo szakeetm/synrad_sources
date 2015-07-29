@@ -1423,18 +1423,6 @@ void GeometryViewer::Paint() {
 	glDepthFunc(GL_LEQUAL);*/
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 	int bgCol=(whiteBg)?255:0;
 	SetBackgroundColor(bgCol,bgCol,bgCol);
 
@@ -1442,7 +1430,7 @@ void GeometryViewer::Paint() {
 
 
 	geom->Render((GLfloat *)matView,showVolume,showTexture,showBack,showFilter,showHidden,showMesh,showDir);
-	for (int i=0;i<(int)work->regions.size();i++)
+	for (size_t i = 0; i < work->regions.size(); i++)
 		work->regions[i].Render(dispNumTraj,&blueMaterial,vectorLength);
 
 
@@ -1507,11 +1495,6 @@ void GeometryViewer::Paint() {
 	PaintCompAndBorder();
 
 	capsLockLabel->SetVisible(GetWindow()->IsCapsLockOn());
-
-
-
-
-
 
 }
 

@@ -44,6 +44,8 @@ Worker::Worker() {
 	nbProcess = 0;
 	maxDesorption = 0;
 	distTraveledTotal=0.0;
+	lowFluxCutoff = 1E-7;
+	lowFluxMode = FALSE;
 	ResetWorkerStats();
 	geom = new Geometry();
 	regions = std::vector<Region_full>();
@@ -506,6 +508,8 @@ void Worker::LoadGeometry(char *fileName) {
 				BOOL loadThem = ( GLMessageBox::Display(tmp,"File load",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONINFO)==GLDLG_OK );
 				//BOOL loadThem = TRUE;
 				if (loadThem) {
+					GLProgress* prg = new GLProgress("", "Loading regions");
+					prg->SetVisible(TRUE);
 					for (int i=0;i<regionsToLoad.nbFiles;i++) {
 						std::string toLoad;
 						if (isSYN7Z) { //PAR file to load in tmp dir (just extracted)
@@ -522,8 +526,14 @@ void Worker::LoadGeometry(char *fileName) {
 						}
 						toLoad.append(regionsToLoad.fileNames[i]);
 						char *toLoadChar=_strdup(toLoad.c_str());
-						AddRegion(toLoadChar,-1);
+						char tmp[256];
+						sprintf(tmp, "Adding %s...", regionsToLoad.fileNames[i]);
+						prg->SetMessage(tmp);
+						prg->SetProgress((double)i / (double)regionsToLoad.nbFiles);
+						AddRegion(toLoadChar, -1);
 					}
+					prg->SetVisible(FALSE);
+					SAFE_DELETE(prg);
 				}
 			}
 
@@ -536,7 +546,7 @@ void Worker::LoadGeometry(char *fileName) {
 			SetHHit(pHits,&nbHHit,gHits);
 			SAFE_DELETE(f);
 			progressDlg->SetMessage("Loading textures...");
-			loadTextures((isSYN7Z)?tmp2:fileName,version);
+			loadTextures((isSYN7Z) ? tmp2 : fileName, version);
 			strcpy(fullFileName,fileName);
 		} catch(Error &e) {
 			geom->Clear();
@@ -745,7 +755,7 @@ void Worker::InsertGeometry(BOOL newStr,char *fileName) {
 			SAFE_DELETE(f);
 			//progressDlg->SetMessage("Loading textures...");
 			//loadTextures((isSYN7Z)?tmp2:fileName,version);
-			strcpy(fullFileName,fileName);
+			//strcpy(fullFileName,fileName);
 			//Load regions
 			if (regionsToLoad.nbFiles>0) {
 				char tmp[256];
@@ -890,20 +900,18 @@ void Worker::loadTextures(char *fileName,int version) {
 			f = new FileReader(fileName);
 			progressDlg->SetVisible(TRUE);
 			geom->loadTextures(f,progressDlg,dpHit,version);
-			if( AccessDataport(dpHit) ) {
-				BYTE *buffer = (BYTE *)dpHit->buff;
-				geom->BuildTexture(buffer);
-				ReleaseDataport(dpHit);
-			}
+			RebuildTextures();
 			progressDlg->SetVisible(FALSE);
 			SAFE_DELETE(progressDlg);
 
 		} catch(Error &e) {
-			geom->Clear();
-			SAFE_DELETE(f);
+			//geom->Clear();
+			//SAFE_DELETE(f);
+			char tmp[256];
+			sprintf(tmp, "Couldn't load some textures. It is recommended to reset the simulation.\n%s", e.GetMsg());
+			GLMessageBox::Display(tmp, "Error while loading textures.", GLDLG_OK, GLDLG_ICONWARNING);
 			progressDlg->SetVisible(FALSE);
 			SAFE_DELETE(progressDlg);
-			throw e;
 		}
 	}
 
@@ -1169,7 +1177,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 	progressDlg->SetMessage("Accessing dataport...");
 	AccessDataportTimed(loader,3000+nbProcess*(int)((double)loadSize/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");
-	geom->CopyGeometryBuffer((BYTE *)loader->buff,&regions,&materials,generation_mode);
+	geom->CopyGeometryBuffer((BYTE *)loader->buff,&regions,&materials,generation_mode,lowFluxMode,lowFluxCutoff);
 	progressDlg->SetMessage("Releasing dataport...");
 	ReleaseDataport(loader);
 
@@ -1518,9 +1526,9 @@ void Worker::AddRegion(char *fileName,int position) {
 	// Read a file
 	FileReader *f = NULL;
 
-	GLProgress *progressDlg = new GLProgress("Reading file...","Please wait");
+	/*GLProgress *progressDlg = new GLProgress("Reading file...","Please wait");
 	progressDlg->SetVisible(TRUE);
-	progressDlg->SetProgress(0.0);
+	progressDlg->SetProgress(0.0);*/
 
 	BOOL isPAR=(_stricmp(ext,"par")==0);
 	BOOL isParam=(_stricmp(ext,"param")==0);
@@ -1530,8 +1538,8 @@ void Worker::AddRegion(char *fileName,int position) {
 		try {
 			f = new FileReader(fileName);
 			Region_full newtraj;
-			if (isPAR) newtraj.LoadPAR(f,progressDlg);
-			else newtraj.LoadParam(f,progressDlg);
+			if (isPAR) newtraj.LoadPAR(f);
+			else newtraj.LoadParam(f);
 			newtraj.fileName=fileName;
 			if (position==-1) regions.push_back(newtraj);
 			else {
@@ -1543,20 +1551,20 @@ void Worker::AddRegion(char *fileName,int position) {
 			nbTrajPoints+=(int)newtraj.Points.size();
 		} catch(Error &e) {
 			//geom->Clear();
-			SAFE_DELETE(f);
+			/*SAFE_DELETE(f);
 			progressDlg->SetVisible(FALSE);
-			SAFE_DELETE(progressDlg);
+			SAFE_DELETE(progressDlg);*/
 			throw e;
 		}
 	}  else {
-		SAFE_DELETE(f);
+		/*SAFE_DELETE(f);
 		progressDlg->SetVisible(FALSE);
-		SAFE_DELETE(progressDlg);
+		SAFE_DELETE(progressDlg);*/
 		throw Error("LoadParam(): Invalid file extension [Only par or param]");
 	}
-	progressDlg->SetVisible(FALSE);
+	/*progressDlg->SetVisible(FALSE);
 	SAFE_DELETE(progressDlg);
-	SAFE_DELETE(f);
+	SAFE_DELETE(f);*/
 }
 
 void Worker::RecalcRegion(int regionId) {
@@ -1637,4 +1645,16 @@ BOOL EndsWithPar(const char* s)
   }
 
   return ret;
+}
+
+void Worker::RebuildTextures() {
+	if (AccessDataport(dpHit)) {
+		BYTE *buffer = (BYTE *)dpHit->buff;
+		try{ geom->BuildTexture(buffer); }
+		catch (Error &e) {
+			ReleaseDataport(dpHit);
+			throw e;
+		}
+		ReleaseDataport(dpHit);
+	}
 }

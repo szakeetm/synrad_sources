@@ -199,6 +199,9 @@ BOOL LoadSimulation(Dataport *loader) {
 		SetErrorSub("No structures");
 		return FALSE;
 	}
+	sHandle->lowFluxMode = shGeom->lowFluxMode;
+	sHandle->lowFluxCutoff = shGeom->lowFluxCutoff;
+	
 	sHandle->nbVertex = shGeom->nbVertex;
 	sHandle->nbSuper = shGeom->nbSuper;
 	sHandle->nbRegion = shGeom->nbRegion;

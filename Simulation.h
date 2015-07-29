@@ -158,6 +158,10 @@ typedef struct {
   double   distTraveledCurrentParticle; //Distance traveled by particle before absorption
   double   distTraveledSinceUpdate;
 
+  BOOL lowFluxMode;
+  double lowFluxCutoff;
+  double oriRatio;
+
 } SIMULATION;
 
 // Handle to simulation object

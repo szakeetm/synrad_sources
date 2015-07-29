@@ -14,6 +14,7 @@
   GNU General Public License for more details.
 */
 #include "GLComponent.h"
+#include <string>
 
 #ifndef _GLTEXTFIELDH_
 #define _GLTEXTFIELDH_
@@ -28,13 +29,17 @@ public:
   GLTextField(int compId,char *text);
 
   // Component methods
-  void SetText(char *text);
+  void SetText(const char *text);
+  void SetText(std::string string);
+  void SetText(const double &val);
+  void SetText(const int &val);
   char *GetText();
   void ScrollToVisible();
   void SetCursorPos(int pos);
   int  GetCursorPos();
   int  GetTextLength();
   void SetEditable(BOOL editable);
+  BOOL IsEditable();
   void SetEditable_NoBG(BOOL editable);
   void Clear();
   // ------------------------------------------------------
@@ -61,7 +66,7 @@ private:
   void   RemoveSel();
   void   MoveSel(int newPos);
   void   DeleteSel();
-  void   UpdateText(char *text);
+  void   UpdateText(const char *text);
   void	 ProcessEnter();
   int    GetCursorLocation(int px);
 

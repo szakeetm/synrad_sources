@@ -850,8 +850,8 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 			if (!(magFile->fullName)) return;
 			MAGfileZtext->SetText(magFile->fullName);
 		} else if (src==this->startDirInfoButton) {
-			char tmp[]="Theta: angle with YZ plane (positive if X<0)\n"
-				"Alpha: angle with XZ plane (positive if Y<0)\n\n"
+			char tmp[]="Theta [-PI..PI]: angle with Z axis in XZ plane (positive if X<0)\n"
+				"Alpha [-PI/2..PI/2]: angle with XZ plane (positive if Y<0)\n\n"
 				"Conversion:\n"
 				"X=-cos(alpha)*sin(theta)\n"
 				"Y=-sin(alpha)\n"
@@ -956,12 +956,18 @@ void RegionEditor::FillValues() {
 	sprintf(tmp,"%g",cr->startPoint.z);startPointZtext->SetText(tmp);
 
 	double t0;
-	if (cr->startDir.z==0) {
-		if (cr->startDir.x>=0) t0=-PI/2;
-		else t0=PI/2;
-	} else t0=-atan(cr->startDir.x/cr->startDir.z);
-	sprintf(tmp,"%g",t0);theta0text->SetText(tmp);
-	sprintf(tmp,"%g",-asin(cr->startDir.y));alpha0text->SetText(tmp);
+	if (cr->startDir.z == 0) {
+		if (cr->startDir.x >= 0) t0 = -PI / 2;
+		else t0 = PI / 2;
+	}
+	else {
+		t0 = -atan(cr->startDir.x / cr->startDir.z); //Good for -PI/2...PI/2
+		if (cr->startDir.z <= 0) //atan out of period
+			if (cr->startDir.x < 0) t0 += PI;
+			else t0 -= PI;
+	}
+	theta0text->SetText(t0);
+	alpha0text->SetText(-asin(cr->startDir.Normalize().y));
 	sprintf(tmp,"%g",cr->startDir.x);startDirXtext->SetText(tmp);
 	sprintf(tmp,"%g",cr->startDir.y);startDirYtext->SetText(tmp);
 	sprintf(tmp,"%g",cr->startDir.z);startDirZtext->SetText(tmp);
@@ -1135,7 +1141,7 @@ void RegionEditor::ApplyChanges() {
 		double a0,t0;
 		alpha0text->GetNumber(&a0);
 		theta0text->GetNumber(&t0);
-		cr->startDir=Vector(-cos(a0)*sin(t0),-sin(a0),cos(a0)*cos(t0));
+		cr->startDir=Vector(sin(-t0)*cos(a0),sin(-a0),cos(a0)*cos(t0));  //left-handed coordinate system
 	} else { // define by vector
 		startDirXtext->GetNumber(&cr->startDir.x);
 		startDirYtext->GetNumber(&cr->startDir.y);

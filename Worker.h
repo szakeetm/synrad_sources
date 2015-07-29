@@ -39,6 +39,8 @@ public:
   void LoadGeometry(char *fileName);// Load a geometry (throws Error)
   void InsertGeometry(BOOL newStr,char *fileName); // Inserts a new geometry (throws Error)
   void loadTextures(char *fileName,int version);  // Load a textures(throws Error)
+    void RebuildTextures();
+  
   // Save a geometry (throws Error)
   void SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm=TRUE,BOOL saveSelected=FALSE,BOOL autoSave=FALSE,BOOL crashSave=FALSE);
 
@@ -100,6 +102,8 @@ public:
   int    nbTrajPoints;       // number of all points in trajectory
   double no_scans;           // = nbDesorption/nbTrajPoints. Stored separately for saving/loading
   int    generation_mode;   //fluxwise or powerwise
+  BOOL   lowFluxMode;
+  double lowFluxCutoff;
   std::vector<Region_full> regions;
   std::vector<Material> materials;
   char fullFileName[512]; // Current loaded file

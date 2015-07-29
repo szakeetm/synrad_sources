@@ -1,7 +1,7 @@
 /*
   File:        GLTextField.cpp
-  Description: Text fiedl class (SDL/OpenGL OpenGL application framework)
-  Author:      J-L PONS (2007)
+  Description: Text area class (SDL/OpenGL OpenGL application framework)
+  Author:      Marton ADY (2013)
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -82,6 +82,10 @@ void GLTextField::SetEditable(BOOL editable) {
   }
 }
 
+BOOL GLTextField::IsEditable() {
+	return m_Editable;
+}
+
 // ------------------------------------------------------
 
 void GLTextField::SetEditable_NoBG(BOOL editable) { //for combo boxes
@@ -102,7 +106,7 @@ BOOL GLTextField::IsCaptured() {
 
 // ------------------------------------------------------
 
-void GLTextField::SetText(char *text) {
+void GLTextField::SetText(const char *text) {
   if(text && strcmp(text,m_Text)==0) return;
   UpdateText(text);
   m_Start=0;
@@ -112,9 +116,25 @@ void GLTextField::SetText(char *text) {
   m_Zero=0;
 }
 
+void GLTextField::SetText(std::string string) {
+	SetText(string.c_str());
+}
+
+void GLTextField::SetText(const double &val) {
+	char tmp[256];
+	sprintf(tmp, "%g", val);
+	SetText(tmp);
+}
+
+void GLTextField::SetText(const int &val) {
+	char tmp[256];
+	sprintf(tmp, "%d", val);
+	SetText(tmp);
+}
+
 // ------------------------------------------------------
 
-void GLTextField::UpdateText(char *text) {
+void GLTextField::UpdateText(const char *text) {
   if(text) {
     strncpy(m_Text,text,MAX_TEXT_SIZE);
     m_Text[MAX_TEXT_SIZE-1]=0;
@@ -214,7 +234,7 @@ void GLTextField::DeleteString(int count)
   char tmp[MAX_TEXT_SIZE];
   strcpy(tmp,m_Text);
   tmp[m_CursorPos]=0;
-  strcat(tmp,m_Text+m_CursorPos+count);
+  strncat(tmp,m_Text+m_CursorPos+count,MAX_TEXT_SIZE);
   m_CursorState=1;
   UpdateText(tmp);
   ScrollToVisible();

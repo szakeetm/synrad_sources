@@ -549,6 +549,6 @@ double Material::Interpolate(const double &energy,const double &angle) {
 		energyOvershoot/energyDelta*(reflVals[energyLowerIndex+1][angleLowerIndex+1]-reflVals[energyLowerIndex][angleLowerIndex+1]);
 
 	double interpRefl=interpolatedReflForLowerAngle+angleOvershoot/angleDelta*(interpolatedReflForHigherAngle-interpolatedReflForLowerAngle);
-
+	SATURATE(interpRefl, 0.0, 100.0);
 	return interpRefl;
 }

@@ -35,6 +35,7 @@ class GLFileBox : public GLWindow {
 public:
 
   static FILENAME *OpenFile(char *path=NULL,char *fileName=NULL,char *title=NULL,const char *filters=NULL,int nbFilter=0);
+  static std::vector<FILENAME> OpenMultipleFiles(const char *filters = NULL, const char *title=NULL);
   static FILENAME *SaveFile(char *path=NULL,char *fileName=NULL,char *title=NULL,const char *filters=NULL,int nbFilter=0);
 
 private:

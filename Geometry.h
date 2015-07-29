@@ -36,8 +36,8 @@ class Worker;
 
 #define SEL_HISTORY  100
 #define MAX_SUPERSTR 256
-#define SYNVERSION   7
-#define GEOVERSION   13
+#define SYNVERSION   8
+#define GEOVERSION   15
 #define PARAMVERSION 2
 
 #define TEXTURE_MODE_MCHITS 0
@@ -202,7 +202,7 @@ public:
   DWORD GetHitsSize();
 
   // Raw data buffer (geometry)
-  void CopyGeometryBuffer(BYTE *buffer,std::vector<Region_full> *regions,std::vector<Material> *materials,int generation_mode);
+  void CopyGeometryBuffer(BYTE *buffer,std::vector<Region_full> *regions,std::vector<Material> *materials,int generation_mode,BOOL lowFluxMode,double lowFluxCutoff);
 
   // AC matrix
   DWORD GetMaxElemNumber();

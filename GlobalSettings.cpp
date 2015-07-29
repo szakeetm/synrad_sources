@@ -64,26 +64,26 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	chkWhiteBg->SetBounds(10,50,80,19);
 	panel->Add(chkWhiteBg);
 
-	/*GLTitledPanel *panel2 = new GLTitledPanel("Gas settings");
-	panel2->SetBounds(310,2,295,78);
+	GLTitledPanel *panel2 = new GLTitledPanel("Low flux mode");
+	panel2->SetBounds(310,2,300,78);
 	Add(panel2);
 
-	GLLabel *massLabel = new GLLabel("Gas molecular mass (g/mol):");
-	massLabel->SetBounds(315,20,150,19);
-	panel2->Add(massLabel);
+	lowFluxInfo = new GLButton(0, "Info");
+	lowFluxInfo->SetBounds(480, 20, 40, 19);
+	panel2->Add(lowFluxInfo);
 
-	gasmassText = new GLTextField(0,"");
-	gasmassText->SetBounds(460,20,70,19);
-	panel2->Add(gasmassText);
+	lowFluxToggle = new GLToggle(0,"Enable low flux mode");
+	lowFluxToggle->SetBounds(315, 20, 150, 19);
+	panel2->Add(lowFluxToggle);
 
-	GLLabel *outgassingLabel = new GLLabel("Total outgassing (unit * l/sec):");
-	outgassingLabel->SetBounds(315,50,150,19);
-	panel2->Add(outgassingLabel);
+	GLLabel *cutoffLabel = new GLLabel("Cutoff ratio:");
+	cutoffLabel->SetBounds(330, 50, 80, 19);
+	panel2->Add(cutoffLabel);
 
-	outgassingText = new GLTextField(0,"");
-	outgassingText->SetBounds(460,50,70,19);
-	outgassingText->SetEditable(FALSE);
-	panel2->Add(outgassingText);*/
+	cutoffText = new GLTextField(0, "");
+	cutoffText->SetBounds(410, 50, 70, 19);
+	cutoffText->SetEditable(FALSE);
+	panel2->Add(cutoffText);
 
 	GLTitledPanel *panel4 = new GLTitledPanel("Program settings");
 	panel4->SetBounds(5,85,600,90);
@@ -180,25 +180,26 @@ GlobalSettings::GlobalSettings():GLWindow() {
 // --------------------------------------------------------------------
 
 void GlobalSettings::Display(Worker *w) {
+	worker = w;
 	char tmp[256];
 	chkAntiAliasing->SetCheck(antiAliasing);
 	chkWhiteBg->SetCheck(whiteBg);
 
+	cutoffText->SetText(worker->lowFluxCutoff);
+	cutoffText->SetEditable(worker->lowFluxMode);
+	lowFluxToggle->SetCheck(worker->lowFluxMode);
 
-
-
-
-	
 	sprintf(tmp,"%g",autoSaveFrequency);
 	autoSaveText->SetText(tmp);
 	chkSimuOnly->SetCheck(autoSaveSimuOnly);
 	chkCheckForUpdates->SetCheck(checkForUpdates);
 	chkCompressSavedFiles->SetCheck(compressSavedFiles);
-	worker = w;
+	
 	int nb = worker->GetProcNumber();
 	sprintf(tmp,"%d",nb);
 	nbProcText->SetText(tmp);
-
+	
+	
 	SetVisible(TRUE);
 
 }
@@ -328,55 +329,64 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 			checkForUpdates=chkCheckForUpdates->IsChecked();
 			compressSavedFiles=chkCompressSavedFiles->IsChecked();
 
-
-
-
-
-
-
 			autoSaveSimuOnly=chkSimuOnly->IsChecked();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-			if( !autoSaveText->GetNumber(&autoSaveFrequency) || !(autoSaveFrequency>0.0) ) {
+			double autosavefreq;
+			if (!autoSaveText->GetNumber(&autosavefreq) || !(autosavefreq>0.0)) {
 				GLMessageBox::Display("Invalid autosave frequency","Error",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 			}
+			autoSaveFrequency = autosavefreq;
+			
+			double cutoffnumber;
+			if (!cutoffText->GetNumber(&cutoffnumber) || !(cutoffnumber>0.0 && cutoffnumber<1.0)) {
+				GLMessageBox::Display("Invalid cutoff ratio, must be between 0 and 1","Error",GLDLG_OK,GLDLG_ICONWARNING);
+				return;
+			}
+
+			if (abs(worker->lowFluxCutoff - cutoffnumber)>1e-10 || worker->lowFluxMode!=lowFluxToggle->IsChecked()) {
+				if (mApp->AskToReset()) {
+					worker->lowFluxCutoff = cutoffnumber;
+					worker->lowFluxMode = lowFluxToggle->IsChecked();
+					changedSinceSave = TRUE;
+					// Send to sub process
+					try { worker->Reload(); }
+					catch (Error &e) {
+						GLMessageBox::Display((char *)e.GetMsg(), "Error", GLDLG_OK, GLDLG_ICONERROR);
+						return;
+					}
+					mApp->UpdateFacetHits();
+				}
+				
+			}
+
+			
+
 			GLWindow::ProcessMessage(NULL,MSG_CLOSE); 
 			return;
 
+		}
+		else if (src == lowFluxInfo) {
+			GLMessageBox::Display("Low flux mode helps to gain more statistics on low flux/power parts of the system, at the expense\n"
+				"of higher flux/power parts. If a traced photon reflects from a low reflection probability surface, regardless of that probability,\n"
+				"a reflected test photon representing a reduced flux will still be traced. Therefore test photons can reach low flux areas more easily, but\n"
+				"at the same time tracng a test photon takes longer. The cutoff ratio defines what ratio of the originally generated flux/power\n"
+				"can be neglected. If, for example, it is 0.001, then, when after subsequent reflections the test photon carries less than 0.1%\n"
+				"of the original flux, it will be eliminated. A good advice is that if you'd like to see flux across N orders of magnitude, set it to 1E-N"
+				, "Low flux mode", GLDLG_OK, GLDLG_ICONINFO);
+			return;
 		}
 		break;
 
 	case MSG_TEXT:
 		ProcessMessage(applyButton,MSG_BUTTON);
 		break;
-	}
+	
 
+	case MSG_TOGGLE:
+		if (src == lowFluxToggle) {
+			cutoffText->SetEditable(lowFluxToggle->IsChecked());
+		}
+		break;
+	}
 	GLWindow::ProcessMessage(src,message);
 }
