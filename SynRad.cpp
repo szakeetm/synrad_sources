@@ -131,23 +131,24 @@ extern int numCPU;
 #define MENU_FACET_SELECTPROF  319
 #define MENU_FACET_SELECTSPECTRUM 320
 #define MENU_FACET_SELECTDEST  321
-#define MENU_FACET_SELECTVOL   322
-#define MENU_FACET_SELECTERR   323
-#define MENU_FACET_SELECTHITS  324
-#define MENU_FACET_SELECTTP    325
-#define MENU_FACET_SAVESEL     330
-#define MENU_FACET_LOADSEL     331
-#define MENU_FACET_INVERTSEL   332
-#define MENU_FACET_MOVE		   333
-#define MENU_FACET_SCALE       334
-#define MENU_FACET_MIRROR	   335
-#define MENU_FACET_ROTATE	   336
-#define MENU_FACET_ALIGN       337
+#define MENU_FACET_SELECTTELEPORT 322
+#define MENU_FACET_SELECTVOL   323
+#define MENU_FACET_SELECTERR   324
+#define MENU_FACET_SELECTHITS  325
+#define MENU_FACET_SELECTTP    326
+#define MENU_FACET_SAVESEL     327
+#define MENU_FACET_LOADSEL     328
+#define MENU_FACET_INVERTSEL   329
+#define MENU_FACET_MOVE		   330
+#define MENU_FACET_SCALE       331
+#define MENU_FACET_MIRROR	   332
+#define MENU_FACET_ROTATE	   333
+#define MENU_FACET_ALIGN       334
 //#define MENU_FACET_OUTGASSINGMAP 338
-#define MENU_FACET_CREATE_DIFFERENCE 3381
+#define MENU_FACET_CREATE_DIFFERENCE 335
 
-#define MENU_SELECTION_ADDNEW             339
-#define MENU_SELECTION_CLEARALL           340
+#define MENU_SELECTION_ADDNEW             336
+#define MENU_SELECTION_CLEARALL           337
 
 #define MENU_SELECTION_MEMORIZESELECTIONS   3300
 #define MENU_SELECTION_SELECTIONS           3400
@@ -387,6 +388,7 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("Selection")->Add(NULL); // Separator
 	menu->GetSubMenu("Selection")->Add("Select teleport", MENU_FACET_SELECTTP);
 	menu->GetSubMenu("Selection")->Add("Select link facet", MENU_FACET_SELECTDEST);
+	menu->GetSubMenu("Selection")->Add("Select teleport facets", MENU_FACET_SELECTTELEPORT);
 	menu->GetSubMenu("Selection")->Add("Select volatile facet", MENU_FACET_SELECTVOL);
 	menu->GetSubMenu("Selection")->Add("Select non simple", MENU_FACET_SELECTERR);
 	menu->GetSubMenu("Selection")->Add("Invert selection", MENU_FACET_INVERTSEL, SDLK_i, CTRL_MODIFIER);
@@ -3043,6 +3045,14 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			geom->Unselect();
 			for (int i = 0; i < geom->GetNbFacet(); i++)
 				if (geom->GetFacet(i)->sh.superDest != 0)
+					geom->Select(i);
+			geom->UpdateSelection();
+			UpdateFacetParams(TRUE);
+			break;
+		case MENU_FACET_SELECTTELEPORT:
+			geom->Unselect();
+			for (int i = 0; i < geom->GetNbFacet(); i++)
+				if (geom->GetFacet(i)->sh.teleportDest != 0)
 					geom->Select(i);
 			geom->UpdateSelection();
 			UpdateFacetParams(TRUE);

@@ -4135,8 +4135,8 @@ void Geometry::RemoveCollinear() {
 	for(int i=0;i<sh.nbFacet;i++) {
 		if(facets[i]->collinear) {
 			delete facets[i];
-			mApp->RenumberSelections(i);
-			mApp->RenumberFormulas(i);
+			mApp->RenumberSelections(nb);
+			mApp->RenumberFormulas(nb);
 		} else {
 			f[nb++] = facets[i];
 		}
@@ -4178,8 +4178,8 @@ void Geometry::RemoveFromStruct(int numToDel) {
 	for(int i=0;i<sh.nbFacet;i++) {
 		if(facets[i]->sh.superIdx==numToDel) {
 			delete facets[i];
-			mApp->RenumberSelections(i);
-			mApp->RenumberFormulas(i);
+			mApp->RenumberSelections(nb);
+			mApp->RenumberFormulas(nb);
 		} else {
 			f[nb++] = facets[i];
 		}
@@ -4241,8 +4241,8 @@ void Geometry::RemoveSelectedVertex() {
 		for (size_t f=0;(int)f<sh.nbFacet;f++) {
 			if (nextToRemove<facetsToRemove.size() && f==facetsToRemove[nextToRemove]) {
 				delete facets[f];
-				mApp->RenumberSelections(f);
-				mApp->RenumberFormulas(f);
+				mApp->RenumberSelections(nextToAdd);
+				mApp->RenumberFormulas(nextToAdd);
 				nextToRemove++;
 			} else {
 				newFacets[nextToAdd++]=facets[f];
@@ -4374,8 +4374,8 @@ int Geometry::ExplodeSelected(BOOL toMap,int desType,double exponent,double *val
 	for(int i=0;i<sh.nbFacet;i++) {
 		if(facets[i]->selected) {
 			delete facets[i];
-			mApp->RenumberSelections(i);
-			mApp->RenumberFormulas(i);
+			mApp->RenumberSelections(nb);
+			mApp->RenumberFormulas(nb);
 		} else {
 			f[nb++] = facets[i];
 		}
@@ -4427,8 +4427,8 @@ void Geometry::RemoveNullFacet() {
 		if(facets[i]->sh.area<areaMin) {
 			delete facets[i];
 			SynRad *mApp = (SynRad *)theApp;
-			mApp->RenumberSelections(i);
-			mApp->RenumberFormulas(i);
+			mApp->RenumberSelections(nb);
+			mApp->RenumberFormulas(nb);
 		} else {
 			f[nb++] = facets[i];
 		}
