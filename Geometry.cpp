@@ -4287,8 +4287,8 @@ void Geometry::RemoveSelected() {
 	for(int i=0;i<sh.nbFacet;i++) {
 		if(facets[i]->selected) {
 			delete facets[i];
-			mApp->RenumberSelections(i);
-			mApp->RenumberFormulas(i);
+			mApp->RenumberSelections(nb);
+			mApp->RenumberFormulas(nb);
 		} else {
 			f[nb++] = facets[i];
 		}

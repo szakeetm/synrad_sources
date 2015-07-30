@@ -166,7 +166,7 @@ public:
     // Formula management
     void ProcessFormulaButtons(GLComponent *src);
     void UpdateFormula();
-	void OffsetFormula(char* expression,int offset,int filter=0);
+	BOOL OffsetFormula(char* expression,int offset,int filter=0);
 	void RenumberFormulas(int startId);
     void AddFormula(GLParser *f,BOOL doUpdate=TRUE);
 	

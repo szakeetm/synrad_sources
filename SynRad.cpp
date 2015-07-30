@@ -1518,9 +1518,10 @@ void SynRad::UpdateFormula() {
 	}
 }
 
-void SynRad::OffsetFormula(char *expression, int offset, int filter) {
+BOOL SynRad::OffsetFormula(char *expression, int offset, int filter) {
 	//will increase or decrease facet numbers in a formula
 	//only applies to facet numbers larger than "filter" parameter
+	BOOL changed = FALSE;
 
 	vector<string> prefixes;
 	prefixes.push_back("A");
@@ -1560,9 +1561,11 @@ void SynRad::OffsetFormula(char *expression, int offset, int filter) {
 						char tmp[10];
 						sprintf(tmp, "%d", facetNumber += offset);
 						expr.replace(minPos + maxLength, digitsLength, tmp);
+						changed = TRUE;
 					}
 					else if ((facetNumber - 1) == filter) {
 						expr.replace(minPos + maxLength, digitsLength, "0");
+						changed = TRUE;
 					}
 				}
 			}
@@ -1571,15 +1574,20 @@ void SynRad::OffsetFormula(char *expression, int offset, int filter) {
 		else pos = minPos;
 	}
 	strcpy(expression, expr.c_str());
+	return changed;
 }
 
 void SynRad::RenumberFormulas(int startId) {
 	for (int i = 0; i < nbFormula; i++) {
 		char expression[1024];
 		strcpy(expression, this->formulas[i].parser->GetExpression());
-		OffsetFormula(expression, -1, startId);
-		this->formulas[i].parser->SetExpression(expression);
-		this->formulas[i].parser->Parse();
+		if (OffsetFormula(expression, -1, startId))	{
+			this->formulas[i].parser->SetExpression(expression);
+			this->formulas[i].parser->Parse();
+			std:string formulaName = formulas[i].parser->GetName();
+			if (formulaName.empty()) formulaName = expression;
+			formulas[i].name->SetText(formulaName.c_str());
+		}
 	}
 }
 
