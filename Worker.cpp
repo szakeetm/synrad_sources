@@ -26,11 +26,7 @@ GNU General Public License for more details.
 #include "Synrad.h"
 #include <direct.h>
 
-extern GLApplication *theApp;
-extern HANDLE compressProcessHandle;
-extern int autoSaveSimuOnly;
-extern int needsReload;
-extern int compressSavedFiles;
+extern SynRad *mApp;
 BOOL EndsWithPar(const char* s);
 
 // -------------------------------------------------------------
@@ -133,13 +129,12 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 	char fileNameWithoutExtension[2048]; //file name without extension
 	//char *ext = fileName+strlen(fileName)-4;
 	char *ext,*dir;
-	SynRad *mApp = (SynRad *)theApp;
 
 	dir = strrchr(fileName,'\\');
 	ext = strrchr(fileName,'.');
 
 	if(!(ext) || !(*ext=='.') || ((dir)&&(dir>ext)) ) { 
-		sprintf(fileName, compressSavedFiles ? "%s.syn7z" : "%s.syn", fileName); //set to default SYN/SYN7Z format
+		sprintf(fileName, mApp->compressSavedFiles ? "%s.syn7z" : "%s.syn", fileName); //set to default SYN/SYN7Z format
 		ext = strrchr(fileName,'.');
 	}
 
@@ -157,7 +152,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 
 	if(isTXT || isSYN || isSYN7Z || isSTR) {
 
-		if (WAIT_TIMEOUT==WaitForSingleObject(compressProcessHandle,0)) {
+		if (WAIT_TIMEOUT==WaitForSingleObject(mApp->compressProcessHandle,0)) {
 			GLMessageBox::Display("Compressing a previous save file is in progress. Wait until that finishes"
 				"or close process \"compress.exe\"\nIf this was an autosave attempt,"
 				"you have to lower the autosave frequency.","Can't save right now.",GLDLG_OK,GLDLG_ICONERROR);
@@ -268,7 +263,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 						sprintf(tmp,"%s \"%s\"",tmp,regions[i].BXYfileName.c_str());
 				}
 				int procId = StartProc_background(tmp);
-				compressProcessHandle=OpenProcess(PROCESS_ALL_ACCESS, TRUE, procId);
+				mApp->compressProcessHandle=OpenProcess(PROCESS_ALL_ACCESS, TRUE, procId);
 				fileName=fileNameWithSyn7z;
 			} else {
 				GLMessageBox::Display("compress.exe (part of Synrad) not found.\n Will save as uncompressed SYN file.","Compressor not found",GLDLG_OK,GLDLG_ICONERROR);
@@ -368,7 +363,6 @@ void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double e
 
 void Worker::LoadGeometry(char *fileName) {
 	needsReload=TRUE;
-	SynRad *mApp = (SynRad *)theApp;
 	char *ext,*filebegin;
 	BOOL isGEO7Z,isSYN7Z;
 	char CWD [MAX_PATH];
@@ -639,7 +633,6 @@ void Worker::LoadGeometry(char *fileName) {
 // -------------------------------------------------------------
 
 void Worker::InsertGeometry(BOOL newStr,char *fileName) {
-	SynRad *mApp = (SynRad *)theApp;
 	if (needsReload) RealReload();
 	char *ext,*filebegin;
 	BOOL isGEO7Z,isSYN7Z;
@@ -1514,7 +1507,6 @@ DWORD Worker::GetPID(int prIdx) {
 void Worker::AddRegion(char *fileName,int position) {
 	//if (!geom->IsLoaded()) throw Error("Load geometry first!");
 	needsReload=TRUE;
-	SynRad *mApp = (SynRad *)theApp;
 	char *ext;
 
 	ext = strrchr(fileName,'.');
@@ -1570,7 +1562,6 @@ void Worker::AddRegion(char *fileName,int position) {
 void Worker::RecalcRegion(int regionId) {
 	
 	needsReload=TRUE;
-	SynRad *mApp = (SynRad *)theApp;
 	try {
 			
 			Region_full newtraj;

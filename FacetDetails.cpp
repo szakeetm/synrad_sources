@@ -22,7 +22,7 @@ GNU General Public License for more details.
 #include "Utils.h"
 #include "SynRad.h"
 
-extern SynRad *theApp;
+extern SynRad *mApp;
 
 typedef struct {
 
@@ -228,7 +228,6 @@ char *FacetDetails::GetCountStr(Facet *f) {
 
 char *FacetDetails::FormatCell(int idx,Facet *f,int mode) {
 
-	SynRad *mApp = (SynRad *)theApp;
 	Worker *worker=&(mApp->worker);     
 
 	static char ret[256];

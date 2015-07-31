@@ -17,8 +17,6 @@
 */
 
 
-
-
 #include "GLApp/GLApp.h"
 #include "GLApp/GLTextField.h"
 #include "GLApp/GLToggle.h"
@@ -67,8 +65,6 @@
 #define MAX_SELECTION 19
 #define MAX_RECENT  10
 
-extern int changedSinceSave;
-
 typedef struct {
   GLLabel     *name;
   GLTextField *value;
@@ -101,12 +97,26 @@ public:
     llong    nbDesStart;   // measurement
     llong    nbHitStart;   // measurement
     int      nbProc;       // Temporary var (use Worker::GetProcNumber)
-	//float lastHeartBeat;   //last time a heartbeat was sent to the subprocesses
-	float lastAppTime;
 
-    float    lastMeasTime; // Last measurement time (for hps and dps)
-	double tolerance; //Select coplanar tolerance
+	float    lastAppTime;
+	BOOL     antiAliasing;
+	BOOL     whiteBg;
+	float    lastMeasTime; // Last measurement time (for hps and dps)
+	double   tolerance; //Select coplanar tolerance
+	double   largeArea; //Selection filter
+	double   planarityThreshold; //Planarity threshold
+	int      checkForUpdates;
+	int      autoUpdateFormulas;
+	int      compressSavedFiles;
+	int      autoSaveSimuOnly;
+	int      numCPU;
+	BOOL     changedSinceSave; //For saving and autosaving
+	double   autoSaveFrequency; //autosave period, in minutes
+	float    lastSaveTime;
+	float    lastSaveTimeSimu;
+	std::string autosaveFilename; //only delete files that this instance saved
 
+	HANDLE compressProcessHandle;
 
     // Util functions
 	//void SendHeartBeat(BOOL forced=FALSE);
@@ -127,8 +137,6 @@ public:
     void ExportSelection();
 	void ExportTextures(int grouping,int mode);
 	//void ExportDes(bool selectedOnly);
-
-
     void ClearFacetParams();
     void UpdateFacetParams(BOOL updateSelection=FALSE);
     void ApplyFacetParams();
@@ -153,7 +161,7 @@ public:
 	BOOL AskToReset(Worker *work=NULL);
 	float GetAppTime();
 	void ResetAutoSaveTimer();
-	void AutoSave(BOOL crashSave=FALSE);
+	BOOL AutoSave(BOOL crashSave=FALSE);
 	void CheckForRecovery();
 	void UpdateViewers();
 	void SetFacetSearchPrg(BOOL visible,char *text);
@@ -164,20 +172,17 @@ public:
 	void NewRegion();
 
     // Formula management
-    void ProcessFormulaButtons(GLComponent *src);
+	int nbFormula;
+	FORMULA formulas[MAX_FORMULA];
+	void ProcessFormulaButtons(GLComponent *src);
     void UpdateFormula();
 	BOOL OffsetFormula(char* expression,int offset,int filter=0);
 	void RenumberFormulas(int startId);
     void AddFormula(GLParser *f,BOOL doUpdate=TRUE);
-	
+	void AddFormula(const char *fName, const char *formula);
+	void ClearFormula();	
 
-
-
-
-    // Recent files
-	float lastSaveTime;
-	float lastSaveTimeSimu;
-   
+    // Recent files   
 	char *recents[MAX_RECENT];
     int  nbRecent;
     void AddRecent(char *fileName);
@@ -282,14 +287,6 @@ public:
 	GLMenu        *clearViewsMenu;
 	GLMenu        *PARloadToMenu;
 	GLMenu        *PARremoveMenu;
-
-
-
-    // Formulas
-    FORMULA formulas[MAX_FORMULA];
-    int nbFormula;
-    void ClearFormula();
-    void AddFormula(const char *fName,const char *formula);
 
 	//Materials (photon reflection)
 	vector<string> materialPaths;

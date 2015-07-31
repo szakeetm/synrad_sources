@@ -22,24 +22,13 @@ GNU General Public License for more details.
 #include "Utils.h"
 #include "Synrad.h"
 
-extern GLApplication *theApp;
+extern SynRad *mApp;
 
 static const int   plWidth[] = {15,40,70,70,50,330};
 static const char *plName[] = {"#","PID","Mem Usage","Mem Peak","CPU","Status"};
 static const int   plAligns[] = { ALIGN_LEFT,ALIGN_CENTER,ALIGN_CENTER,ALIGN_CENTER,ALIGN_CENTER,ALIGN_LEFT };
 
-int antiAliasing=true;
-int whiteBg=false;
-int needsReload=false;
 
-int checkForUpdates=true;
-int compressSavedFiles=true;
-
-
-double autoSaveFrequency=10.0; //in minutes
-int autoSaveSimuOnly=false;
-int numCPU=0;
-HANDLE compressProcessHandle;
 //HANDLE synradHandle;
 
 // --------------------------------------------------------------------
@@ -106,6 +95,10 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	//chkCheckForUpdates->SetEnabled(FALSE);
 	Add(chkCheckForUpdates);
 
+	chkAutoUpdateFormulas = new GLToggle(0, "Auto update formulas");
+	chkAutoUpdateFormulas->SetBounds(315, 125, 160, 19);
+	Add(chkAutoUpdateFormulas);
+
 	chkCompressSavedFiles = new GLToggle(0,"Compress saved files (use .SYN7Z format)");
 	chkCompressSavedFiles->SetBounds(10,150,100,19);
 	Add(chkCompressSavedFiles);
@@ -130,7 +123,7 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	panel3->Add(processList);
 
 	char tmp[128];
-	sprintf(tmp,"Number of CPU cores:     %d",numCPU);
+	sprintf(tmp,"Number of CPU cores:     %d",mApp->numCPU);
 	GLLabel *coreLabel = new GLLabel(tmp);
 	coreLabel->SetBounds(10,hD-99,120,19);
 	panel3->Add(coreLabel);
@@ -182,18 +175,18 @@ GlobalSettings::GlobalSettings():GLWindow() {
 void GlobalSettings::Display(Worker *w) {
 	worker = w;
 	char tmp[256];
-	chkAntiAliasing->SetCheck(antiAliasing);
-	chkWhiteBg->SetCheck(whiteBg);
+	chkAntiAliasing->SetCheck(mApp->antiAliasing);
+	chkWhiteBg->SetCheck(mApp->whiteBg);
 
 	cutoffText->SetText(worker->lowFluxCutoff);
 	cutoffText->SetEditable(worker->lowFluxMode);
 	lowFluxToggle->SetCheck(worker->lowFluxMode);
 
-	sprintf(tmp,"%g",autoSaveFrequency);
+	sprintf(tmp,"%g",mApp->autoSaveFrequency);
 	autoSaveText->SetText(tmp);
-	chkSimuOnly->SetCheck(autoSaveSimuOnly);
-	chkCheckForUpdates->SetCheck(checkForUpdates);
-	chkCompressSavedFiles->SetCheck(compressSavedFiles);
+	chkSimuOnly->SetCheck(mApp->autoSaveSimuOnly);
+	chkCheckForUpdates->SetCheck(mApp->checkForUpdates);
+	chkCompressSavedFiles->SetCheck(mApp->compressSavedFiles);
 	
 	int nb = worker->GetProcNumber();
 	sprintf(tmp,"%d",nb);
@@ -269,7 +262,6 @@ void GlobalSettings::SMPUpdate(float appTime) {
 
 void GlobalSettings::RestartProc() {
 
-	SynRad *mApp = (SynRad *)theApp;
 	int nbProc;
 	if( sscanf(nbProcText->GetText(),"%d",&nbProc)==0 ) {
 		GLMessageBox::Display("Invalid process number","Error",GLDLG_OK,GLDLG_ICONERROR);
@@ -297,7 +289,7 @@ void GlobalSettings::RestartProc() {
 // --------------------------------------------------------------------
 
 void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
-	SynRad *mApp = (SynRad *)theApp;
+
 	switch(message) {
 	case MSG_BUTTON:
 
@@ -324,18 +316,18 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 				GLMessageBox::Display("No geometry loaded.","No geometry",GLDLG_OK,GLDLG_ICONERROR);
 			}
 		} else if (src==applyButton) {
-			antiAliasing=chkAntiAliasing->IsChecked();
-			whiteBg=chkWhiteBg->IsChecked();
-			checkForUpdates=chkCheckForUpdates->IsChecked();
-			compressSavedFiles=chkCompressSavedFiles->IsChecked();
-
-			autoSaveSimuOnly=chkSimuOnly->IsChecked();
+			mApp->antiAliasing = chkAntiAliasing->IsChecked();
+			mApp->whiteBg = chkWhiteBg->IsChecked();
+			mApp->checkForUpdates = chkCheckForUpdates->IsChecked();
+			mApp->compressSavedFiles = chkCompressSavedFiles->IsChecked();
+			mApp->autoUpdateFormulas = chkAutoUpdateFormulas->IsChecked();
+			mApp->autoSaveSimuOnly=chkSimuOnly->IsChecked();
 			double autosavefreq;
 			if (!autoSaveText->GetNumber(&autosavefreq) || !(autosavefreq>0.0)) {
 				GLMessageBox::Display("Invalid autosave frequency","Error",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 			}
-			autoSaveFrequency = autosavefreq;
+			mApp->autoSaveFrequency = autosavefreq;
 			
 			double cutoffnumber;
 			if (!cutoffText->GetNumber(&cutoffnumber) || !(cutoffnumber>0.0 && cutoffnumber<1.0)) {

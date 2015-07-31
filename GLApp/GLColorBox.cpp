@@ -190,7 +190,7 @@ void GLColorBox::RestoreDeviceObjects() {
 
   // Slider texture  
   CImage img;
-  if( img.LoadImage("images/icon_slider.png") ) {
+  if( img.LoadCImage("images/icon_slider.png") ) {
 
     BYTE *buff32 = (BYTE *)malloc(16*16*4);
     BYTE *data   = img.GetData();

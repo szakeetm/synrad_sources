@@ -23,7 +23,7 @@ GNU General Public License for more details.
 #include "SynRad.h"
 #include "GLApp/GLFileBox.h"
 
-extern SynRad *theApp;
+extern SynRad *mApp;
 
 ExportDesorption::ExportDesorption(Geometry *g,Worker *w):GLWindow() {
 
@@ -97,7 +97,6 @@ ExportDesorption::ExportDesorption(Geometry *g,Worker *w):GLWindow() {
 }
 
 void ExportDesorption::ProcessMessage(GLComponent *src,int message) {
-	SynRad *mApp = (SynRad *)theApp;
 
 	switch(message) {
 	case MSG_BUTTON:

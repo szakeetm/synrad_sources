@@ -26,8 +26,10 @@ GNU General Public License for more details.
 #include "GLApp/GLFileBox.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLWindowManager.h"
+#include "RecoveryDialog.h"
 #include "Utils.h" //for Remainder
 #include "direct.h"
+#include <string>
 #include <io.h>
 //#include <winsparkle.h>
 
@@ -35,10 +37,8 @@ GNU General Public License for more details.
 #define APP_NAME "SynRad+ development version (Compiled "__DATE__" "__TIME__") DEBUG MODE"
 #else
 //#define APP_NAME "SynRad+ development version ("__DATE__")"
-#define APP_NAME "Synrad+ 1.3.10 ("__DATE__")"
+#define APP_NAME "Synrad+ 1.3.11 ("__DATE__")"
 #endif
-
-float m_fTime;
 
 static const char *fileLFilters = "All SynRad supported files\0*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0SYN files\0*.syn;*.syn7z;\0GEO files\0*.geo;*.geo7z;\0TXT files\0*.txt\0STR files\0*.str\0STL files\0*.stl\0ASE files\0*.ase\0";
 static const int   nbLFilter = 8;
@@ -60,12 +60,9 @@ static const char *cName[] = { "#", "Hits", "Flux", "Power", "Abs" };
 
 BOOL EndsWithParam(const char* s);
 BOOL changedSinceSave;
-SynRad *theApp;
-extern double autoSaveFrequency;
-extern int checkForUpdates;
-extern int compressSavedFiles;
-extern int autoSaveSimuOnly;
-extern int numCPU;
+
+float m_fTime;
+SynRad *mApp;
 
 #define MENU_FILE_LOAD       11
 #define MENU_FILE_SAVE       12
@@ -201,8 +198,9 @@ extern int numCPU;
 
 INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
 {
-	theApp = new SynRad();
-	if (!theApp->Create(1024, 768, FALSE)) {
+	SynRad *mApp = new SynRad();
+
+	if (!mApp->Create(1024, 768, FALSE)) {
 		char *logs = GLToolkit::GetLogs();
 #ifdef WIN32
 		if (logs) MessageBox(NULL, logs, "Synrad [Fatal error]", MB_OK);
@@ -213,16 +211,16 @@ INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
 		}
 #endif
 		SAFE_FREE(logs);
-		delete theApp;
+		delete mApp;
 		return -1;
 	}
 	try {
-		theApp->Run();
+		mApp->Run();
 	}
 	catch (Error &e) {
-		theApp->CrashHandler(&e);
+		mApp->CrashHandler(&e);
 	}
-	delete theApp;
+	delete mApp;
 	return 0;
 }
 
@@ -237,17 +235,33 @@ SynRad::SynRad()
 	//Get number of cores
 	SYSTEM_INFO sysinfo;
 	GetSystemInfo(&sysinfo);
+
 	numCPU = (int)sysinfo.dwNumberOfProcessors;
+
+	mApp = this; //to refer to the app as extern variable
+	antiAliasing = TRUE;
+	whiteBg = FALSE;
+	checkForUpdates = FALSE;
+	autoUpdateFormulas = FALSE;
+	compressSavedFiles = TRUE;
+
+	autoSaveFrequency = 10.0; //in minutes
+	autoSaveSimuOnly = FALSE;
+	autosaveFilename = "";
+	compressProcessHandle = NULL;
 
 	lastSaveTime = 0.0f;
 	lastSaveTimeSimu = 0.0f;
 	changedSinceSave = FALSE;
+
 	nbDesStart = 0;
 	nbHitStart = 0;
+
 	lastUpdate = 0.0;
 	nbFormula = 0;
 	nbRecent = 0;
 	nbRecentPAR = 0;
+	
 	nbView = 0;
 	nbSelection = 0;
 	idView = 0;
@@ -315,8 +329,6 @@ int SynRad::OneTimeSceneInit()
 	modeSolo = TRUE;
 	//nbSt = 0;
 
-	LoadConfig();
-
 	menu = new GLMenuBar(0);
 	wnd->SetMenuBar(menu);
 	menu->Add("File");
@@ -349,8 +361,6 @@ int SynRad::OneTimeSceneInit()
 
 	menu->GetSubMenu("File")->Add(NULL); // Separator
 	menu->GetSubMenu("File")->Add("Load recent");
-	for (int i = nbRecent - 1; i >= 0; i--)
-		menu->GetSubMenu("File")->GetSubMenu("Load recent")->Add(recents[i], MENU_FILE_LOADRECENT + i);
 	menu->GetSubMenu("File")->Add(NULL); // Separator
 	menu->GetSubMenu("File")->Add("E&xit", MENU_FILE_EXIT);
 
@@ -741,6 +751,7 @@ int SynRad::OneTimeSceneInit()
 	ClearFacetParams();
 	UpdateViewerParams();
 	PlaceComponents();
+	LoadConfig();
 
 	try {
 		worker.SetProcNumber(nbProc);
@@ -1586,7 +1597,7 @@ void SynRad::RenumberFormulas(int startId) {
 		if (OffsetFormula(expression, -1, startId))	{
 			this->formulas[i].parser->SetExpression(expression);
 			this->formulas[i].parser->Parse();
-			std:string formulaName = formulas[i].parser->GetName();
+			std::string formulaName = formulas[i].parser->GetName();
 			if (formulaName.empty()) formulaName = expression;
 			formulas[i].name->SetText(formulaName.c_str());
 		}
@@ -1617,52 +1628,67 @@ void SynRad::ResetAutoSaveTimer() {
 }
 
 //-----------------------------------------------------------------------------
-void SynRad::AutoSave(BOOL crashSave) {
-	if (!changedSinceSave) return;
+BOOL SynRad::AutoSave(BOOL crashSave) {
+	if (!changedSinceSave) return TRUE;
 	GLProgress *progressDlg2 = new GLProgress("Peforming autosave...", "Please wait");
 	progressDlg2->SetProgress(0.0);
 	progressDlg2->SetVisible(TRUE);
 	//GLWindowManager::Repaint();
 	char CWD[MAX_PATH];
 	_getcwd(CWD, MAX_PATH);
-	char filename[2048];
-	sprintf(filename, "%s\\Synrad_AutoSave.syn7z", CWD);
+
+	std::string shortFn(worker.GetShortFileName());
+	std::string newAutosaveFilename = "Synrad_Autosave";
+	if (shortFn != "") newAutosaveFilename += "(" + shortFn + ")";
+	newAutosaveFilename += ".syn7z";
+	char fn[1024];
+	strcpy(fn, newAutosaveFilename.c_str());
 	try {
-		worker.SaveGeometry(filename, progressDlg2, FALSE, FALSE, TRUE, crashSave);
-		ResetAutoSaveTimer();
+		worker.SaveGeometry(fn, progressDlg2, FALSE, FALSE, TRUE, crashSave);
+		//Success:
+		if (autosaveFilename != "" && autosaveFilename != newAutosaveFilename) remove(autosaveFilename.c_str());
+		autosaveFilename = newAutosaveFilename;
+		ResetAutoSaveTimer(); //deduct saving time from interval
 	}
 	catch (Error &e) {
+		//delete fn;
 		char errMsg[512];
 		sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), worker.GetFileName());
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+		progressDlg2->SetVisible(FALSE);
+		SAFE_DELETE(progressDlg2);
 		ResetAutoSaveTimer();
+		return FALSE;
 	}
 	//lastSaveTime=(worker.simuTime+(m_fTime-worker.startTime));
 	progressDlg2->SetVisible(FALSE);
 	SAFE_DELETE(progressDlg2);
+	return TRUE;
 }
 
 //-------------------------------------------------------------------------------
 void SynRad::CheckForRecovery() {
-	char CWD[MAX_PATH];
-	_getcwd(CWD, MAX_PATH);
-	char filename[2048];
-	sprintf(filename, "%s\\Synrad_AutoSave.syn7z", CWD);
-	if (FileUtils::Exist(filename)) {
-		int rep = GLMessageBox::Display("Autosave file found. Load it now?\nIf you click CANCEL the file will be discarded.", "Autosave recovery", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONWARNING);
-		if (rep == GLDLG_OK) {
-			LoadFile(filename);
-			RemoveRecent(filename);
-		}
-		return;
+	// Check for autosave files in current dir.
+	intptr_t file;
+	_finddata_t filedata;
+	file = _findfirst("Molflow_Autosave*.zip", &filedata);
+	if (file != -1)
+	{
+		do
+		{
+			std::ostringstream msg;
+			msg << "Autosave file found:\n" << filedata.name << "\n";
+			int rep = RecoveryDialog::Display(msg.str().c_str(), "Autosave recovery", GLDLG_LOAD | GLDLG_SKIP, GLDLG_DELETE);
+			if (rep == GLDLG_LOAD) {
+				LoadFile(filedata.name);
+				RemoveRecent(filedata.name);
+			}
+			else if (rep == GLDLG_CANCEL) return;
+			else if (rep == GLDLG_SKIP) continue;
+			else if (rep == GLDLG_DELETE) remove(filedata.name);
+		} while (_findnext(file, &filedata) == 0);
 	}
-	sprintf(filename, "%s\\Synrad_AutoSave.syn", CWD);
-	if (FileUtils::Exist(filename)) {
-		int rep = GLMessageBox::Display("Autosave file found. Load it now?\nIf you click CANCEL the file will be discarded.", "Autosave recovery", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONWARNING);
-		if (rep == GLDLG_OK) {
-			LoadFile(filename);
-		}
-	}
+	_findclose(file);
 }
 
 
@@ -1810,7 +1836,7 @@ int SynRad::FrameMove()
 void SynRad::UpdateFacetHits(BOOL all) {
 	char tmp[256];
 	Geometry *geom = worker.GetGeometry();
-	Worker *worker = &(theApp->worker);
+
 	try{
 		// Facet list
 		if (geom->IsLoaded()) {
@@ -1833,9 +1859,9 @@ void SynRad::UpdateFacetHits(BOOL all) {
 				facetList->SetColumnLabel(1, "Hits");
 				sprintf(tmp, "%I64d", f->sh.counter.nbHit);
 				facetList->SetValueAt(1, i, tmp);
-				sprintf(tmp, "%.3g", f->sh.counter.fluxAbs / worker->no_scans);
+				sprintf(tmp, "%.3g", f->sh.counter.fluxAbs / worker.no_scans);
 				facetList->SetValueAt(2, i, tmp);
-				sprintf(tmp, "%.3g", f->sh.counter.powerAbs / worker->no_scans);
+				sprintf(tmp, "%.3g", f->sh.counter.powerAbs / worker.no_scans);
 				facetList->SetValueAt(3, i, tmp);
 				sprintf(tmp, "%I64d", f->sh.counter.nbAbsorbed);
 				facetList->SetValueAt(4, i, tmp);
@@ -2047,15 +2073,13 @@ int SynRad::InvalidateDeviceObjects()
 int SynRad::OnExit() {
 	SaveConfig();
 	worker.Exit();
-	remove("Synrad_AutoSave.syn");
-	remove("Synrad_AutoSave.syn7z");
+	remove(autosaveFilename.c_str());
 	//empty TMP directory
 	char tmp[2048];
 	char CWD[MAX_PATH];
 	_getcwd(CWD, MAX_PATH);
 	sprintf(tmp, "del /Q \"%s\\tmp\\*.*\"", CWD);
 	system(tmp);
-	//win_sparkle_cleanup();
 	return GL_OK;
 }
 
@@ -2539,7 +2563,7 @@ void SynRad::AddFormula(GLParser *f, BOOL doUpdate) {
 	if (f) {
 		if (nbFormula < MAX_FORMULA) {
 			formulas[nbFormula].parser = f;
-			std:string formulaName = f->GetName();
+			std::string formulaName = f->GetName();
 			if (formulaName.empty()) formulaName = f->GetExpression();
 			formulas[nbFormula].name = new GLLabel(formulaName.c_str());
 			Add(formulas[nbFormula].name);
@@ -2602,7 +2626,7 @@ void SynRad::ProcessFormulaButtons(GLComponent *src) {
 		if (!formulaSettings) formulaSettings = new FormulaSettings();
 		if (formulaSettings->EditFormula(formulas[i].parser)) {
 			// Apply change
-		std:string formulaName = formulas[i].parser->GetName();
+		std::string formulaName = formulas[i].parser->GetName();
 		if (formulaName.empty()) formulaName = formulas[i].parser->GetExpression();
 		formulas[i].name->SetText(formulaName.c_str());
 		UpdateFormula();
@@ -3667,7 +3691,6 @@ BOOL SynRad::AskToSave() {
 }
 
 BOOL SynRad::AskToReset(Worker *work) {
-	SynRad *mApp = (SynRad *)theApp;
 	if (work == NULL) work = &worker;
 	if (work->nbHit > 0) {
 		int rep = GLMessageBox::Display("This will reset simulation data.", "Geometry change", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONWARNING);
@@ -4230,6 +4253,9 @@ void SynRad::LoadConfig() {
 			nbRecent++;
 			w = f->ReadString();
 		}
+		for (int i = nbRecent - 1; i >= 0; i--)
+			menu->GetSubMenu("File")->GetSubMenu("Load recent")->Add(recents[i], MENU_FILE_LOADRECENT + i);
+
 		f->ReadKeyword("recentPARs"); f->ReadKeyword(":"); f->ReadKeyword("{");
 		w = f->ReadString();
 		while (strcmp(w, "}") != 0 && nbRecentPAR < MAX_RECENT)  {
@@ -4402,7 +4428,7 @@ void SynRad::CrashHandler(Error *e) {
 	sprintf(tmp, "Well, that's emberassing. Synrad crashed and will exit now.\nBefore that, an autosave will be attempted.\nHere is the error info:\n\n%s", (char *)e->GetMsg());
 	GLMessageBox::Display(tmp, "Main crash handler", GLDLG_OK, GLDGL_ICONDEAD);
 	try {
-		theApp->AutoSave(TRUE); //crashSave
+		AutoSave(TRUE); //crashSave
 		GLMessageBox::Display("Good news, autosave worked!", "Main crash handler", GLDLG_OK, GLDGL_ICONDEAD);
 	}
 	catch (Error &e) {

@@ -12,6 +12,8 @@
 using namespace std;
 //extern int antiAliasing;
 
+extern SynRad *mApp;
+
 void Region_full::CalculateTrajectory(int max_steps){
 	//global variables. All distances in cm!
 	Trajectory_Point current_point;
@@ -265,8 +267,6 @@ void Region_full::LoadPAR(FileReader *file){
 	//prg->SetMessage("Calculating trajectory...");
 	CalculateTrajectory(1000000); //max 1 million points
 	isLoaded=true;
-	extern SynRad *theApp;
-	SynRad *mApp = (SynRad *)theApp;
 	if (mApp->regionInfo) mApp->regionInfo->Update();
 }
 
@@ -370,14 +370,14 @@ Region_full::~Region_full(){
 }
 
 void Region_full::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLength){
-	if (!whiteBg) glPointSize(1.0f);
+	if (!mApp->whiteBg) glPointSize(1.0f);
 	else glPointSize(2.0f);
 	//if (antiAliasing) glEnable(GL_POINT_SMOOTH);
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_LIGHTING);
 	glDisable(GL_BLEND);
 	glDisable(GL_CULL_FACE);
-	if (!whiteBg) glColor3f(1.0f,0.9f,0.2f);
+	if (!mApp->whiteBg) glColor3f(1.0f, 0.9f, 0.2f);
 	else glColor3f(1.0f,0.5f,0.2f);
 	glBegin(GL_POINTS);
 	//Region
@@ -396,7 +396,7 @@ void Region_full::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLen
 	//Selected trajectory point
 	if (selectedPoint!=-1) {
 		// Draw dot
-		if (!whiteBg) glPointSize(6.0f);
+		if (!mApp->whiteBg) glPointSize(6.0f);
 		else glPointSize(7.0f);
 		glEnable(GL_POINT_SMOOTH);
 		glDisable(GL_TEXTURE_2D);
@@ -411,7 +411,7 @@ void Region_full::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLen
 		glEnd();
 
 		GLToolkit::SetMaterial(B_material);
-		if (antiAliasing) {
+		if (mApp->antiAliasing) {
 			glEnable(GL_LINE_SMOOTH);
 			//glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
@@ -434,7 +434,7 @@ void Region_full::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLen
 			GLToolkit::DrawVector(O.x,O.y,O.z,O.x+factor*Rho_local_norm.x,O.y+factor*Rho_local_norm.y,O.z+factor*Rho_local_norm.z);
 		if (dir.Norme()>0.0) 
 			GLToolkit::DrawVector(O.x,O.y,O.z,O.x+factor*dir.x,O.y+factor*dir.y,O.z+factor*dir.z);
-		if (antiAliasing) glDisable(GL_LINE_SMOOTH);
+		if (mApp->antiAliasing) glDisable(GL_LINE_SMOOTH);
 		glPointSize(3.0f);
 		glColor3f(0.5f,1.0f,1.0f);
 		glBegin(GL_POINTS);
@@ -461,8 +461,6 @@ void Region_full::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLen
 }
 
 void Region_full::SelectTrajPoint(int x,int y,int regionId) {
-	extern SynRad *theApp;
-	SynRad *mApp = (SynRad *)theApp;
 
 	int i;
 	if(!isLoaded) return;
@@ -1191,7 +1189,6 @@ void Region_full::LoadParam(FileReader *file){
 	//prg->SetMessage("Calculating trajectory...");
 	CalculateTrajectory(1000000); //max 1 million points
 	isLoaded=true;
-	extern SynRad *theApp;
-	SynRad *mApp = (SynRad *)theApp;
+	
 	if (mApp->regionInfo) mApp->regionInfo->Update();
 }

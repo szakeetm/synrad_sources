@@ -23,14 +23,14 @@ GNU General Public License for more details.
 #include "Utils.h"
 #include <math.h>
 #include <malloc.h>
-
+#include "SynRad.h"
 
 #define DOWN_MARGIN 25
 
 static const GLfloat position[]  = { -0.3f, 0.3f, -1.0f, 0.0f }; //light1
 static const GLfloat positionI[] = {  1.0f,-0.5f,  -0.2f, 0.0f }; //light2
 
-extern GLApplication *theApp;
+extern SynRad *mApp;
 
 // ---------------------------------------------------------------------
 
@@ -733,7 +733,7 @@ void GeometryViewer::DrawUV() {
 				VERTEX3D U = f->sh.U;
 				VERTEX3D V = f->sh.V;
 				GLToolkit::SetMaterial(&blueMaterial);
-				if (antiAliasing) {
+				if (mApp->antiAliasing) {
 					glEnable(GL_LINE_SMOOTH);
 					//glEnable(GL_BLEND);
 					glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
@@ -743,7 +743,7 @@ void GeometryViewer::DrawUV() {
 				glLineWidth(1.0f);
 				GLToolkit::DrawVector(O.x,O.y,O.z,O.x+U.x,O.y+U.y,O.z+U.z,arrowLength);
 				GLToolkit::DrawVector(O.x,O.y,O.z,O.x+V.x,O.y+V.y,O.z+V.z,arrowLength);
-				if (antiAliasing) glDisable(GL_LINE_SMOOTH);
+				if (mApp->antiAliasing) glDisable(GL_LINE_SMOOTH);
 				glPointSize(3.0f);
 				glColor3f(0.5f,1.0f,1.0f);
 				glBegin(GL_POINTS);
@@ -858,7 +858,7 @@ void GeometryViewer::DrawLinesAndHits() {
 					//if (count>0&&pHits[count].type==HIT_DES&&pHits[count-1].type!=HIT_ABS) __debugbreak(); //desorbed without being absorbed first
 					float lineOpacity;
 					
-					if (whiteBg) { //whitebg
+					if (mApp->whiteBg) { //whitebg
 						lineOpacity=1.0f;
 						glColor4f(0.2f,0.7f,0.2f,lineOpacity);
 						
@@ -868,33 +868,20 @@ void GeometryViewer::DrawLinesAndHits() {
 						else lineOpacity=1.0;
 						glColor4f(0.5f,1.0f,0.5f,lineOpacity);
 					}
-					if (antiAliasing) {
+					if (mApp->antiAliasing) {
 						glEnable(GL_BLEND);//,glEnable(GL_LINE_SMOOTH);
 						//glLineWidth(	2.0f);
 					}
-					
-
-
-
-
-
-
-
-
 
 					glBegin(GL_LINE_STRIP);
 					while(count<dispNumHits && pHits[count].type!=HIT_ABS) {
-
-
-
-
 
 						//teleport routine
 						if (pHits[count].type==HIT_TELEPORT) {
 							glVertex3d(pHits[count].pos.x , pHits[count].pos.y , pHits[count].pos.z);
 							glEnd();
 							if (showTP) {
-								if (!whiteBg) {
+								if (!mApp->whiteBg) {
 									glColor3f(1.0f,0.7f,0.2f);
 								} else {
 									glColor3f(1.0f,0.0f,1.0f);
@@ -910,7 +897,7 @@ void GeometryViewer::DrawLinesAndHits() {
 								glEnd();
 								glPopAttrib();
 
-								if (whiteBg) { //whitebg
+								if (mApp->whiteBg) { //whitebg
 									lineOpacity=1.0f;
 									glColor4f(0.2f,0.7f,0.2f,lineOpacity);
 						
@@ -951,7 +938,8 @@ void GeometryViewer::DrawLinesAndHits() {
 						count++;
 					}
 					glEnd();
-					if (antiAliasing){glDisable(GL_LINE_SMOOTH);
+					if (mApp->antiAliasing){
+						glDisable(GL_LINE_SMOOTH);
 					glDisable(GL_BLEND);}
 				}
 
@@ -969,7 +957,7 @@ void GeometryViewer::DrawLinesAndHits() {
 
 				float pointSize=(bigDots)?2.0f:1.0f;
 				glPointSize(pointSize);
-				if (whiteBg) { //whitebg
+				if (mApp->whiteBg) { //whitebg
 					glColor3f(0.2f,0.2f,0.2f);
 				}
 				else {
@@ -995,7 +983,7 @@ void GeometryViewer::DrawLinesAndHits() {
 				if (showTP) {
 					//pointSize=(bigDots)?3.0f:2.0f;
 					glPointSize(pointSize);
-					if (!whiteBg) {
+					if (!mApp->whiteBg) {
 						glColor3f(1.0f,0.7f,0.2f);
 					} else {
 						glColor3f(1.0f,0.0f,1.0f);
@@ -1347,7 +1335,8 @@ void GeometryViewer::Paint() {
 	//Background gradient
 	int x,y,width,height;
 	((GLComponent*)this)->GetBounds(&x,&y,&width,&height);
-	if (!whiteBg) { glBegin(GL_QUADS);
+	if (!mApp->whiteBg) {
+		glBegin(GL_QUADS);
 
 	glColor3f(0.7f,0.4f,0.3f); //red top
 	glVertex2i(x,y);
@@ -1423,7 +1412,7 @@ void GeometryViewer::Paint() {
 	glDepthFunc(GL_LEQUAL);*/
 
 
-	int bgCol=(whiteBg)?255:0;
+	int bgCol = (mApp->whiteBg) ? 255 : 0;
 	SetBackgroundColor(bgCol,bgCol,bgCol);
 
 	DrawLinesAndHits();

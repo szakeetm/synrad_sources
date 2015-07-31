@@ -92,7 +92,7 @@ int Sprite2D::RestoreDeviceObjects(char *diffName,char *alphaName,int scrWidth,i
 
   
   
-  if( !img.LoadImage(diffName) ) {
+  if( !img.LoadCImage(diffName) ) {
     sprintf(tmp,"Failed to load \"%s\"",diffName);
     GLToolkit::Log(tmp); //Commented out for File open dialog
     return 0;
@@ -101,7 +101,7 @@ int Sprite2D::RestoreDeviceObjects(char *diffName,char *alphaName,int scrWidth,i
 
   hasAlpha = strcmp(alphaName,"none")!=0;
   if( hasAlpha ) {
-    if( !imga.LoadImage(alphaName) ) {
+    if( !imga.LoadCImage(alphaName) ) {
       sprintf(tmp,"Failed to load \"%s\"",alphaName);
       GLToolkit::Log(tmp);
       return 0;

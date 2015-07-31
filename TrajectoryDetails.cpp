@@ -24,7 +24,7 @@ GNU General Public License for more details.
 #include "SynRad.h"
 #include "Random.h"
 
-extern SynRad *theApp;
+extern SynRad *mApp;
 
 typedef struct {
 
@@ -195,7 +195,6 @@ void TrajectoryDetails::SetBounds(int x, int y, int w, int h) {
 
 char *TrajectoryDetails::FormatCell(int idx, int mode, GenPhoton* photon) {
 
-	SynRad *mApp = (SynRad *)theApp;
 	Worker *worker = &(mApp->worker);
 
 	static char ret[256];
@@ -381,8 +380,7 @@ void TrajectoryDetails::UpdateTable() {
 	double integ_power = 0.0;*/
 
 	//initialize random number generator
-	extern SynRad *theApp;
-	DWORD seed = (DWORD)((int)(theApp->GetTick()*1000.0)*_getpid());
+	DWORD seed = (DWORD)((int)(mApp->GetTick()*1000.0)*_getpid());
 	rseed(seed);
 
 

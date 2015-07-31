@@ -27,7 +27,7 @@
 #include "GLApp/GLInputBox.h"
 
 //extern GLApplication *theApp;
-extern SynRad *theApp;
+extern SynRad *mApp;
 
 static const int   flWidth[] = {35,40,100,100,100};
 static const char *flName[] = {"#","Vertex","X","Y","Z"};
@@ -307,7 +307,6 @@ void FacetCoordinates::InsertVertex(int rowId,int vertexId){
 void FacetCoordinates::ApplyChanges(){
 	
 	Geometry *geom = worker->GetGeometry();
-	SynRad *mApp = (SynRad *)theApp;
 	
 	if (facetListC->GetNbRow()<3) {
 		GLMessageBox::Display("A facet must have at least 3 vertices","Not enough vertices",GLDLG_OK,GLDLG_ICONWARNING);

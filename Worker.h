@@ -108,7 +108,7 @@ public:
   std::vector<Material> materials;
   char fullFileName[512]; // Current loaded file
 
-  
+  BOOL needsReload;
 
 private:
 

@@ -22,7 +22,7 @@ GNU General Public License for more details.
 #include "GLApp/GLMessageBox.h"
 #include "SynRad.h"
 
-extern SynRad *theApp;
+extern SynRad *mApp;
 
 AlignFacet::~AlignFacet() {
 	SAFE_FREE(selection);
@@ -109,7 +109,6 @@ AlignFacet::AlignFacet(Geometry *g,Worker *w):GLWindow() {
 }
 
 void AlignFacet::ProcessMessage(GLComponent *src,int message) {
-	SynRad *mApp = (SynRad *)theApp;
 
 	switch(message) {
 	case MSG_BUTTON:
@@ -208,7 +207,7 @@ void AlignFacet::ProcessMessage(GLComponent *src,int message) {
 					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
 				} 
 
-				theApp->UpdateFacetlistSelected();	
+				mApp->UpdateFacetlistSelected();	
 				mApp->UpdateViewers();
 				//GLWindowManager::FullRepaint();
 			}
@@ -226,7 +225,7 @@ void AlignFacet::ProcessMessage(GLComponent *src,int message) {
 			try { work->Reload(); } catch(Error &e) {
 					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
 			}  
-			theApp->UpdateFacetlistSelected();	
+			mApp->UpdateFacetlistSelected();	
 			mApp->UpdateViewers();
 		}
 		break;

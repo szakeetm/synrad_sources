@@ -31,7 +31,7 @@ GNU General Public License for more details.
 #include "GLApp/GLMessageBox.h"
 #include "SynRad.h"
 
-extern SynRad *theApp;
+extern SynRad *mApp;
 int    axisMode;
 
 RotateFacet::RotateFacet(Geometry *g,Worker *w):GLWindow() {
@@ -181,7 +181,6 @@ RotateFacet::RotateFacet(Geometry *g,Worker *w):GLWindow() {
 }
 
 void RotateFacet::ProcessMessage(GLComponent *src,int message) {
-	SynRad *mApp = (SynRad *)theApp;
 	double a,b,c,u,v,w,deg;
 	int facetNum;
 
@@ -319,7 +318,7 @@ void RotateFacet::ProcessMessage(GLComponent *src,int message) {
 				try { work->Reload(); } catch(Error &e) {
 					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
 				} 
-				theApp->UpdateFacetlistSelected();
+				mApp->UpdateFacetlistSelected();
 				mApp->UpdateViewers();
 				//GLWindowManager::FullRepaint();
 			}

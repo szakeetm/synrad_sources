@@ -22,7 +22,7 @@ GNU General Public License for more details.
 #include "GLApp/GLFileBox.h"
 #include "SynRad.h"
 
-extern SynRad *theApp;
+extern SynRad *mApp;
 
 static const char *fileFilters = "Text files\0*.txt";
 static const int   nbFilter = sizeof(fileFilters) / (2*sizeof(char *));

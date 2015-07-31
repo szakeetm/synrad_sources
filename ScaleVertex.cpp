@@ -26,7 +26,7 @@ GNU General Public License for more details.
 #include "GLApp/GLMessageBox.h"
 #include "SynRad.h"
 
-extern SynRad *theApp;
+extern SynRad *mApp;
 
 ScaleVertex::ScaleVertex(Geometry *g,Worker *w):GLWindow() {
 
@@ -128,7 +128,6 @@ ScaleVertex::ScaleVertex(Geometry *g,Worker *w):GLWindow() {
 }
 
 void ScaleVertex::ProcessMessage(GLComponent *src,int message) {
-	SynRad *mApp = (SynRad *)theApp;
 	double x,y,z,factor;
 	int facetNum,vertexNum;
 
@@ -196,11 +195,11 @@ void ScaleVertex::ProcessMessage(GLComponent *src,int message) {
 
 			if (mApp->AskToReset()) {
 				geom->ScaleSelectedVertices(invariant,factor,src==copyButton,work);
-				theApp->UpdateModelParams();
+				mApp->UpdateModelParams();
 				try { work->Reload(); } catch(Error &e) {
 					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
 				}  
-				theApp->UpdateFacetlistSelected();
+				mApp->UpdateFacetlistSelected();
 				mApp->UpdateViewers();
 				//GLWindowManager::FullRepaint();
 			}

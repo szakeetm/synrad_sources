@@ -45,7 +45,7 @@ int GLFont2D::RestoreDeviceObjects(int scrWidth,int scrHeight) {
 
   // Load the image
   CImage img;
-  if( !img.LoadImage(fileName) ) {
+  if( !img.LoadCImage(fileName) ) {
     char tmp[512];
     sprintf(tmp,"Failed to load \"%s\"",fileName);
     GLToolkit::Log(tmp);

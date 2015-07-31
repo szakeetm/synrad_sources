@@ -18,7 +18,7 @@
 #include "GLApp/GLWindowManager.h"
 #include "GLApp/GLMessageBox.h"
 #include "SynRad.h"
-extern SynRad *theApp;
+extern SynRad *mApp;
 
 // Construct a message dialog box
 SelectDialog::SelectDialog(Worker *w):GLWindow() {
@@ -81,7 +81,6 @@ SelectDialog::SelectDialog(Worker *w):GLWindow() {
 
 void SelectDialog::ProcessMessage(GLComponent *src,int message) {
   if(message==MSG_BUTTON) {
-		SynRad *mApp = (SynRad *)theApp;
 		rCode = src->GetId();
 		  int facetnumber;
 		  numText->GetNumberInt(&facetnumber);

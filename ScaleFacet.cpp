@@ -29,7 +29,7 @@ GNU General Public License for more details.
 #include "GLApp/GLMessageBox.h"
 #include "SynRad.h"
 
-extern SynRad *theApp;
+extern SynRad *mApp;
 
 ScaleFacet::ScaleFacet(Geometry *g,Worker *w):GLWindow() {
 
@@ -161,7 +161,6 @@ ScaleFacet::ScaleFacet(Geometry *g,Worker *w):GLWindow() {
 }
 
 void ScaleFacet::ProcessMessage(GLComponent *src,int message) {
-	SynRad *mApp = (SynRad *)theApp;
 	double x,y,z,factor,factorX,factorY,factorZ;
 	int facetNum;
 
@@ -251,11 +250,11 @@ void ScaleFacet::ProcessMessage(GLComponent *src,int message) {
 			if (mApp->AskToReset()) {
 				if (scaleMode==UNIFORMMODE) factorX=factorY=factorZ=factor;
 				geom->ScaleSelectedFacets(invariant,factorX,factorY,factorZ,src==copyButton,work);
-				theApp->UpdateModelParams();
+				mApp->UpdateModelParams();
 				try { work->Reload(); } catch(Error &e) {
 					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
 				}  
-				theApp->UpdateFacetlistSelected();
+				mApp->UpdateFacetlistSelected();
 				mApp->UpdateViewers();
 				//GLWindowManager::FullRepaint();
 			}

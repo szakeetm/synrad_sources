@@ -57,6 +57,7 @@ private:
   //GLToggle      *chkNonIsothermal;
   GLToggle      *chkSimuOnly;
   GLToggle      *chkCheckForUpdates;
+  GLToggle      *chkAutoUpdateFormulas;
   GLToggle      *chkCompressSavedFiles;
   GLToggle      *lowFluxToggle;
   GLButton    *applyButton;

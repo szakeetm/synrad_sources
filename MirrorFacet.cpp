@@ -29,7 +29,7 @@
 #include "GLApp/GLMessageBox.h"
 #include "SynRad.h"
 
-extern SynRad *theApp;
+extern SynRad *mApp;
 int    planeMode;
 
 MirrorFacet::MirrorFacet(Geometry *g,Worker *w):GLWindow() {
@@ -135,7 +135,6 @@ MirrorFacet::MirrorFacet(Geometry *g,Worker *w):GLWindow() {
 }
 
 void MirrorFacet::ProcessMessage(GLComponent *src,int message) {
-	SynRad *mApp = (SynRad *)theApp;
   double a,b,c,d;
   int facetNum;
 
@@ -259,7 +258,7 @@ void MirrorFacet::ProcessMessage(GLComponent *src,int message) {
 				try { work->Reload(); } catch(Error &e) {
 					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
 				}  
-				theApp->UpdateFacetlistSelected();
+				mApp->UpdateFacetlistSelected();
 				mApp->UpdateViewers();
 	       		//GLWindowManager::FullRepaint();
 			}

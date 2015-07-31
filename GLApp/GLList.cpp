@@ -33,7 +33,7 @@ GNU General Public License for more details.
 template<class T> int cmp_column(const void *lhs_, const void *rhs_);
 int clickedCol;
 BOOL sortDescending;
-extern SynRad *theApp;
+extern SynRad *mApp;
 
 // ---------------------------------------------------------------
 
@@ -1498,7 +1498,6 @@ void GLList::HandleWheel(SDL_Event *evt) {
 // ---------------------------------------------------------------
 
 void GLList::CopyToClipboard(int row,int col,int rowLght,int colLgth) {
-	SynRad *mApp = (SynRad *)theApp;
 	mApp->UpdateFacetHits(TRUE);
 	// Compute data length
 	size_t totalLength = 0;
@@ -1561,7 +1560,6 @@ void GLList::CopyToClipboard(int row,int col,int rowLght,int colLgth) {
 // ---------------------------------------------------------------
 
 void GLList::CopyAllToClipboard() {
-	SynRad *mApp = (SynRad *)theApp;
 	mApp->UpdateFacetHits(TRUE);
 	// Compute data length
 	size_t totalLength = 0;
@@ -1623,7 +1621,6 @@ void GLList::CopyAllToClipboard() {
 // ---------------------------------------------------------------
 
 void GLList::CopySelectionToClipboard() {
-	SynRad *mApp = (SynRad *)theApp;
 	mApp->UpdateFacetHits(TRUE);
 	// Compute data length
 	size_t totalLength = 0;
@@ -1787,7 +1784,6 @@ void GLList::ManageEvent(SDL_Event *evt) {
 						if (clickedColTmp == clickedCol)
 							sortDescending = !sortDescending;
 						clickedCol = clickedColTmp;
-						SynRad *mApp = (SynRad *)theApp;
 						mApp->UpdateFacetHits(TRUE);
 						// Step 1) Allocate the rows
 						double **table = new double*[nbRow];

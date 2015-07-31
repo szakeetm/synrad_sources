@@ -28,9 +28,7 @@ GNU General Public License for more details.
 #include "GLApp\GLWindowManager.h"
 #include "Region_full.h"
 
-extern GLApplication *theApp;
-//extern HANDLE synradHandle;
-extern int needsReload;
+extern SynRad *mApp;
 
 // -----------------------------------------------------------
 
@@ -312,7 +310,6 @@ void Geometry::CorrectNonSimple(int *nonSimpleList,int nbNonSimple) {
 void Geometry::CreatePolyFromVertices_Convex() {
 	//creates facet from selected vertices
 
-	SynRad *mApp = (SynRad *)theApp;
 	changedSinceSave=TRUE;
 	nbSelectedVertex = 0;
 
@@ -408,7 +405,6 @@ void Geometry::CreatePolyFromVertices_Convex() {
 void Geometry::CreatePolyFromVertices_Order() {
 	//creates facet from selected vertices
 
-	SynRad *mApp = (SynRad *)theApp;
 	changedSinceSave=TRUE;
 	/*nbSelectedVertex = 0;
 
@@ -505,7 +501,6 @@ void Geometry::CreatePolyFromVertices_Order() {
 void Geometry::CreateDifference() {
 	//creates facet from selected vertices
 
-	SynRad *mApp = (SynRad *)theApp;
 	changedSinceSave=TRUE;
 	nbSelectedVertex = 0;
 
@@ -636,7 +631,6 @@ VERTEX3D *Geometry::GetVertex(int idx) {
 
 Facet *Geometry::GetFacet(int facet) {
 	if (facet>=sh.nbFacet || facet<0) {	
-		SynRad *mApp = (SynRad *)theApp;
 		char errMsg[512];
 		sprintf(errMsg,"Geometry::GetFacet()\nA process tried to access facet #%d that doesn't exist.\nAutoSaving and probably crashing...",facet+1);
 		GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
@@ -720,7 +714,6 @@ VERTEX3D Geometry::GetCenter() {
 
 void Geometry::InitializeGeometry(int facet_number,BOOL BBOnly) {
 
-	SynRad *mApp = (SynRad *)theApp;
 	// Perform various precalculation here for a faster simulation.
 
 	//GLProgress *initGeoPrg = new GLProgress("Initializing geometry...","Please wait");
@@ -746,7 +739,6 @@ void Geometry::InitializeGeometry(int facet_number,BOOL BBOnly) {
 			if( p.z > bb.max.z ) bb.max.z = p.z;
 		}
 
-		SynRad *mApp = (SynRad *)theApp;
 		Worker *worker=&(mApp->worker);
 		for (int i=0;i<(int)worker->regions.size();i++) {
 			if (worker->regions[i].AABBmin.x<bb.min.x) bb.min.x=worker->regions[i].AABBmin.x;
@@ -1419,7 +1411,7 @@ void Geometry::BuildSelectList() {
 	glDisable(GL_LIGHTING);
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_BLEND);
-	if (antiAliasing){
+	if (mApp->antiAliasing){
 		glEnable(GL_LINE_SMOOTH);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);	//glHint(GL_LINE_SMOOTH_HINT,GL_NICEST);
@@ -1435,7 +1427,7 @@ void Geometry::BuildSelectList() {
 		}
 	}  
 	glLineWidth(1.0f);
-	if (antiAliasing) {
+	if (mApp->antiAliasing) {
 		glDisable(GL_BLEND);
 		glDisable(GL_LINE_SMOOTH);
 	}
@@ -1675,7 +1667,6 @@ void Geometry::Collapse(double vT,double fT,double lT,BOOL doSelectedOnly,GLProg
 	changedSinceSave = TRUE;
 	Facet *fi,*fj;
 	Facet *merged;
-	SynRad *mApp = (SynRad *)theApp;
 
 	vThreshold = vT;
 	double totalWork=(1.0 + (double)(fT>0.0) + (double)(lT>0.0)); //for progress indicator
@@ -1946,10 +1937,9 @@ void Geometry::SetFacetTexture(int facet,double ratio,BOOL mesh) {
 // Testing purpose function, construct a PIPE
 // -----------------------------------------------------------
 void  Geometry::BuildPipe(double L,double R,double s,int step) {
-	needsReload=TRUE;
+	
 	Clear();
 
-	SynRad *mApp = (SynRad *)theApp;
 	//mApp->ClearAllSelections();
 	//mApp->ClearAllViews();
 	sprintf(sh.name,"PIPE%g",L/R);
@@ -2123,7 +2113,6 @@ void Geometry::LoadASE(FileReader *file,GLProgress *prg) {
 
 	Clear();
 
-	SynRad *mApp = (SynRad *)theApp;
 	//mApp->ClearAllSelections();
 	//mApp->ClearAllViews();
 	ASELoader ase(file);
@@ -2183,7 +2172,6 @@ void Geometry::LoadSTR(FileReader *file,GLProgress *prg) {
 
 	Clear();
 
-	SynRad *mApp = (SynRad *)theApp;
 	//mApp->ClearAllSelections();
 	//mApp->ClearAllViews();
 	// Load multiple structure file
@@ -2238,7 +2226,6 @@ void Geometry::LoadSTR(FileReader *file,GLProgress *prg) {
 
 void Geometry::LoadSTL(FileReader *file,GLProgress *prg,double scaleFactor) {
 
-	SynRad *mApp = (SynRad *)theApp;
 	//mApp->ClearAllSelections();
 	//mApp->ClearAllViews();
 	char *w;
@@ -2326,7 +2313,6 @@ void Geometry::LoadSTL(FileReader *file,GLProgress *prg,double scaleFactor) {
 
 void Geometry::LoadTXT(FileReader *file,GLProgress *prg) {
 
-	SynRad *mApp = (SynRad *)theApp;
 	//mApp->ClearAllSelections();
 	//mApp->ClearAllViews();
 	Clear();
@@ -2527,7 +2513,6 @@ void Geometry::InsertTXTGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3
 
 void Geometry::InsertGEOGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3D **vertices3,Facet ***facets,int strIdx,BOOL newStruct) {
 
-	SynRad *mApp = (SynRad *)theApp;
 	UnSelectAll();
 	char tmp[512];
 
@@ -2764,7 +2749,6 @@ void Geometry::InsertGEOGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3
 
 PARfileList Geometry::InsertSYNGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3D **vertices3,Facet ***facets,int strIdx,BOOL newStruct) {
 
-	SynRad *mApp = (SynRad *)theApp;
 	PARfileList result(0);
 	UnSelectAll();
 	char tmp[512];
@@ -5230,12 +5214,12 @@ PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *
 	sh.nbFacet = file->ReadInt();
 	file->ReadKeyword("nbSuper");file->ReadKeyword(":");
 	sh.nbSuper = file->ReadInt();
-	int nbF=0;
-	int nbV=0;
+	int nbF = 0; std::vector<std::vector<string>> loadFormulas;
+	int nbV = 0;
 
-	file->ReadKeyword("nbFormula");file->ReadKeyword(":");
-	nbF = file->ReadInt();
-	file->ReadKeyword("nbView");file->ReadKeyword(":");
+	file->ReadKeyword("nbFormula"); file->ReadKeyword(":");
+	nbF = file->ReadInt(); loadFormulas.reserve(nbF);
+	file->ReadKeyword("nbView"); file->ReadKeyword(":");
 	nbV = file->ReadInt();
 	int nbS=0;
 	file->ReadKeyword("nbSelection");file->ReadKeyword(":");
@@ -5261,7 +5245,11 @@ PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *
 		char tmpExpr[512];
 		strcpy(tmpName,file->ReadString());
 		strcpy(tmpExpr,file->ReadString());
-		mApp->AddFormula(tmpName,tmpExpr);
+		//mApp->AddFormula(tmpName, tmpExpr); //parse after selection groups are loaded
+		std::vector<string> newFormula;
+		newFormula.push_back(tmpName);
+		newFormula.push_back(tmpExpr);
+		loadFormulas.push_back(newFormula);
 	}
 	file->ReadKeyword("}");
 	
@@ -5301,6 +5289,10 @@ PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *
 		mApp->AddSelection(s.name,s);
 	}
 	file->ReadKeyword("}");
+
+	for (int i = 0; i < nbF; i++) { //parse formulas now that selection groups are loaded
+		mApp->AddFormula(loadFormulas[i][0].c_str(), loadFormulas[i][1].c_str());
+	}
 
 	file->ReadKeyword("structures");file->ReadKeyword("{");
 	for(int i=0;i<sh.nbSuper;i++) {

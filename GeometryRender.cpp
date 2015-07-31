@@ -27,7 +27,7 @@
 #include "GLApp/GLWindowManager.h"
 #include "GLApp/GLMessageBox.h"
 
-extern SynRad *theApp;
+extern SynRad *mApp;
 
 // OpenGL stuff ----------------------------------------------
 
@@ -53,7 +53,6 @@ void Geometry::SelectArea(int x1,int y1,int x2,int y2,BOOL clear,BOOL unselect,B
 
   // Select a set of facet according to a 2D bounding rectangle
   // (x1,y1) and (x2,y2) are in viewport coordinates
-	SynRad *mApp = (SynRad *)theApp;
   float rx,ry,rz,rw,r2;
   int _x1,_y1,_x2,_y2;
 
@@ -137,7 +136,6 @@ void Geometry::SelectArea(int x1,int y1,int x2,int y2,BOOL clear,BOOL unselect,B
 // -----------------------------------------------------------
 
 void Geometry::Select(int x,int y,BOOL clear,BOOL unselect,BOOL vertexBound,int width,int height) {
-  SynRad *mApp = (SynRad *)theApp;
   int i;
   if(!isLoaded) return;
 
@@ -277,9 +275,7 @@ void Geometry::SelectVertex(int x1,int y1,int x2,int y2,BOOL shiftDown,BOOL ctrl
 
   float rx,ry,rz,rw,r2;
   int _x1,_y1,_x2,_y2;
-
-  SynRad *mApp = (SynRad *)theApp;
-
+  
   _x1 = MIN(x1,x2);
   _x2 = MAX(x1,x2);
   _y1 = MIN(y1,y2);
@@ -353,7 +349,6 @@ void Geometry::SelectVertex(int x1,int y1,int x2,int y2,BOOL shiftDown,BOOL ctrl
 // -----------------------------------------------------------
 
 void Geometry::SelectVertex(int x,int y,BOOL shiftDown,BOOL ctrlDown) {
-	SynRad *mApp = (SynRad *)theApp;
   int i;
   if(!isLoaded) return;
 
@@ -603,7 +598,7 @@ void Geometry::PaintSelectedVertices(BOOL hiddenVertex) {
    }
 
     // Draw dot
-    if (!whiteBg) glPointSize(6.0f);
+    if (!mApp->whiteBg) glPointSize(6.0f);
 	else glPointSize(7.0f);
 	glEnable(GL_POINT_SMOOTH);
     glDisable(GL_TEXTURE_2D);
@@ -612,7 +607,7 @@ void Geometry::PaintSelectedVertices(BOOL hiddenVertex) {
     glDisable(GL_CULL_FACE);
 	if (hiddenVertex) glDisable(GL_DEPTH_TEST);
 	else glEnable(GL_DEPTH_TEST);
-    if (!whiteBg) glColor3f(1.0f,0.9f,0.2f);
+	if (!mApp->whiteBg) glColor3f(1.0f, 0.9f, 0.2f);
 	else glColor3f(1.0f,0.5f,0.2f);
 
     glBegin(GL_POINTS);
@@ -624,7 +619,7 @@ void Geometry::PaintSelectedVertices(BOOL hiddenVertex) {
 
     // Save contexct
     GLToolkit::DrawStringInit();
-        if (!whiteBg) GLToolkit::GetDialogFont()->SetTextColor(1.0f,0.9f,0.2f);
+	if (!mApp->whiteBg) GLToolkit::GetDialogFont()->SetTextColor(1.0f, 0.9f, 0.2f);
 	else GLToolkit::GetDialogFont()->SetTextColor(1.0f,0.2f,0.0f);
 
     // Draw Labels
@@ -721,7 +716,6 @@ void Geometry::BuildTexture(BYTE *hits) {
 
       //if( shGHit->total.nbDesorbed>0 ) {
       //  dCoef = (float)totalOutgassing / (float)shGHit->total.nbDesorbed;
-  	SynRad *mApp = (SynRad *)theApp;
 	Worker *worker=&(mApp->worker);     
 	texCMin_MC = shGHit->minHit_MC;// * dCoef;
 	texCMax_MC = shGHit->maxHit_MC;// * dCoef;
@@ -832,10 +826,10 @@ void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int 
     glDisable(GL_CULL_FACE);
     glDisable(GL_LIGHTING);
 	
-	float color=(whiteBg)?0.0f:1.0f; //whitebg here
+	float color=(mApp->whiteBg)?0.0f:1.0f; //whitebg here
     if(viewStruct==-1) {      
 		glColor4f(color,color,color,0.5f);
-		if (antiAliasing) {
+		if (mApp->antiAliasing) {
 		glEnable(GL_LINE_SMOOTH);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);	//glHint(GL_LINE_SMOOTH_HINT,GL_NICEST);
@@ -852,7 +846,7 @@ void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int 
 
       // Draw non selectable facet in dark grey
       glColor3f(0.2f,0.2f,0.2f);
-	  		if (antiAliasing) {
+	  		if (mApp->antiAliasing) {
 		glEnable(GL_LINE_SMOOTH);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);	//glHint(GL_LINE_SMOOTH_HINT,GL_NICEST);
@@ -866,7 +860,7 @@ void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int 
 		glEnable(GL_POLYGON_OFFSET_LINE);
       glCallList(lineList[viewStruct]);
 		glDisable(GL_POLYGON_OFFSET_LINE);
-	  	 if (antiAliasing) {
+		if (mApp->antiAliasing) {
 			 glDisable(GL_BLEND);
 			 glDisable(GL_LINE_SMOOTH);
 		 }
@@ -907,7 +901,7 @@ void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int 
   // Paint mesh
   if( showMesh ) {
 	  glColor4f(0.7f,0.7f,0.7f,0.3f);
-	  if (antiAliasing) {
+	  if (mApp->antiAliasing) {
 		  glEnable(GL_BLEND);
 		  glEnable(GL_LINE_SMOOTH);
 	  }
@@ -924,7 +918,7 @@ void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int 
 			glDisable(GL_POLYGON_OFFSET_LINE);
 	  }
     }
-	if (antiAliasing) {
+	if (mApp->antiAliasing) {
 		glDisable(GL_LINE_SMOOTH);
 		glDisable(GL_BLEND);
 	}
@@ -966,7 +960,7 @@ void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int 
 
   // Paint selection
   if(nbSelected) {
-	  if (antiAliasing) {
+	  if (mApp->antiAliasing) {
 	  glEnable(GL_BLEND);
 	  glEnable(GL_LINE_SMOOTH);
 	  }
@@ -983,7 +977,7 @@ void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int 
 	  //   glCallList(selectList3);
 	  //}
     }
-	if (antiAliasing) {
+	if (mApp->antiAliasing) {
 	glDisable(GL_LINE_SMOOTH);
 	glDisable(GL_BLEND);
 	}

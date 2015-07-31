@@ -30,6 +30,7 @@
 #include "Utils.h"
 #include "GrahamScan.h"
 #include "Region_full.h"
+#include <sstream>
 
 extern int changedSinceSave;
 class Worker;

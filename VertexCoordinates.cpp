@@ -27,7 +27,7 @@
 #include "GLApp/GLInputBox.h"
 
 //extern GLApplication *theApp;
-extern SynRad *theApp;
+extern SynRad *mApp;
 
 static const int   flWidth[] = {40,100,100,100};
 static const char *flName[] = {"Vertex#","X","Y","Z"};
@@ -171,7 +171,6 @@ void VertexCoordinates::Display(Worker *w) {
 void VertexCoordinates::ProcessMessage(GLComponent *src,int message) {
 
   Geometry *geom = worker->GetGeometry();
-  SynRad *mApp = (SynRad *)theApp;
   switch(message) {
     case MSG_BUTTON:
       if(src==dismissButton) {
