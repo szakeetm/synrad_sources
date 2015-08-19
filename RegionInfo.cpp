@@ -106,7 +106,7 @@ RegionInfo::RegionInfo(Worker *w):GLWindow() {
 
   integrateToggle = new GLToggle(0,"Calculate integrals (go through all trajectory points)");
   integrateToggle->SetBounds(10,220,200,18);
-  integrateToggle->SetCheck(TRUE);
+  integrateToggle->SetState(TRUE);
   Add(integrateToggle);*/
 
   viewPointsButton = new GLButton(0,"View Points");
@@ -166,7 +166,7 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
 			sprintf(tmp,"%d points will be exported with an interval of %g cm.",
 				(int)((double)selectedRegion->Points.size()/(double)exportFrequency),selectedRegion->dL*(double)exportFrequency);
 			freqLabel->SetText(tmp);
-			integrateToggle->SetCheck(exportFrequency==1);
+			integrateToggle->SetState(exportFrequency==1);
 		}
 	case MSG_BUTTON:
 
@@ -198,7 +198,7 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
 				GLMessageBox::Display("Invalid export frequency","Error",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 		}
-		ExportPoints(regionSelector->GetSelectedIndex(),exportFrequency,integrateToggle->IsChecked());*/
+		ExportPoints(regionSelector->GetSelectedIndex(),exportFrequency,integrateToggle->GetState());*/
 		if ( mApp->trajectoryDetails==NULL) mApp->trajectoryDetails = new TrajectoryDetails();
 		mApp->trajectoryDetails->Display(work,regionSelector->GetSelectedIndex());
 	} else if (src==saveAsButton) {
@@ -218,7 +218,7 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
     break;
 	case MSG_TOGGLE:
 	/*if (src==integrateToggle) {
-		calcIntegrals=integrateToggle->IsChecked();
+		calcIntegrals=integrateToggle->GetState();
 	}*/
 	break;
   }

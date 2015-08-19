@@ -56,11 +56,14 @@ TextureSettings::TextureSettings():GLWindow() {
   setCurrentButton->SetBounds(105,70,90,19);
   Add(setCurrentButton);
 
+  updateButton = new GLButton(0,"Apply");
+  updateButton->SetBounds(10,70,90,19);
+  Add(updateButton);
   texAutoScale = new GLToggle(0,"Autoscale");
   texAutoScale->SetBounds(150,20,80,19);
   Add(texAutoScale);
 
-  colormapBtn = new GLToggle(0,"Use colormap");
+  colormapBtn = new GLToggle(0,"Use colors");
   colormapBtn->SetBounds(230,20,85,19);
   Add(colormapBtn);
 
@@ -122,18 +125,16 @@ TextureSettings::TextureSettings():GLWindow() {
   modeCombo->SetSelectedIndex(1);
   Add(modeCombo);
 
-  // ---------------------------------------------------
 
-  updateButton = new GLButton(0,"Apply");
-  updateButton->SetBounds(10,70,90,19);
-  Add(updateButton);
 
-  // Center dialog
+  SetBounds(8,30,wD,hD);
+
+  /*// Center dialog
   int wS,hS;
   GLToolkit::GetScreenSize(&wS,&hS);
   int xD = (wS-wD)/2;
   int yD = (hS-hD)/2;
-  SetBounds(xD,yD,wD,hD);
+  SetBounds(xD,yD,wD,hD);*/
 
   RestoreDeviceObjects();
 
@@ -150,7 +151,7 @@ void TextureSettings::UpdateSize() {
   for(int i=0;i<nbFacet;i++) {
     Facet *f = geom->GetFacet(i);
     if(f->sh.isTextured) {
-      swap += f->GetTexSwapSize(colormapBtn->IsChecked());
+      swap += f->GetTexSwapSize(colormapBtn->GetState());
     }
   }
   swapText->SetText(FormatMemory(swap));
@@ -172,8 +173,8 @@ void TextureSettings::Update() {
   else if (geom->textureMode==TEXTURE_MODE_FLUX) sprintf(tmp,"%.3E",geom->texCMax_flux);
   else if (geom->textureMode==TEXTURE_MODE_POWER) sprintf(tmp,"%.3E",geom->texCMax_power);
   texCMaxText->SetText(tmp);
-  texAutoScale->SetCheck(geom->texAutoScale);
-  logBtn->SetCheck(geom->texLogScale);
+  texAutoScale->SetState(geom->texAutoScale);
+  logBtn->SetState(geom->texLogScale);
   gradient->SetScale(geom->texLogScale?LOG_SCALE:LINEAR_SCALE);
   if( !geom->texAutoScale ) {
     if (geom->textureMode==TEXTURE_MODE_MCHITS) gradient->SetMinMax((double)geom->texMin_MC,(double)geom->texMax_MC);
@@ -184,7 +185,7 @@ void TextureSettings::Update() {
 	else if (geom->textureMode==TEXTURE_MODE_FLUX) gradient->SetMinMax(geom->texCMin_flux,geom->texCMax_flux);
 	else if (geom->textureMode==TEXTURE_MODE_POWER) gradient->SetMinMax(geom->texCMin_power,geom->texCMax_power);
   }
-  colormapBtn->SetCheck(viewers[0]->showColormap);
+  colormapBtn->SetState(viewers[0]->showColormap);
   gradient->SetType( viewers[0]->showColormap?GRADIENT_COLOR:GRADIENT_BW );
   UpdateSize();
 
@@ -254,7 +255,7 @@ void TextureSettings::ProcessMessage(GLComponent *src,int message) {
 		  geom->texMin_power = (double)min;
 		  geom->texMax_power = (double)max;
 	  }
-      geom->texAutoScale = texAutoScale->IsChecked();
+      geom->texAutoScale = texAutoScale->GetState();
       worker->Update(0.0f);
       Update();
 
@@ -273,7 +274,7 @@ void TextureSettings::ProcessMessage(GLComponent *src,int message) {
 		}
 		texMinText->SetText(texCMinText->GetText());
 		texMaxText->SetText(texCMaxText->GetText());
-		texAutoScale->SetCheck(FALSE);
+		texAutoScale->SetState(FALSE);
 		geom->texAutoScale=false;
 		try {
 				worker->Update(0.0f);
@@ -286,16 +287,16 @@ void TextureSettings::ProcessMessage(GLComponent *src,int message) {
 
     case MSG_TOGGLE:
     if (src==colormapBtn) {
-      for(int i=0;i<MAX_VIEWER;i++) viewers[i]->showColormap = colormapBtn->IsChecked();
-      geom->texColormap = colormapBtn->IsChecked();
+      for(int i=0;i<MAX_VIEWER;i++) viewers[i]->showColormap = colormapBtn->GetState();
+      geom->texColormap = colormapBtn->GetState();
       worker->Update(0.0f);
       Update();
     } else if (src==texAutoScale) {
-      geom->texAutoScale = texAutoScale->IsChecked();
+      geom->texAutoScale = texAutoScale->GetState();
       worker->Update(0.0f);
       Update();
     } else if (src==logBtn) {
-      geom->texLogScale = logBtn->IsChecked();
+      geom->texLogScale = logBtn->GetState();
       gradient->SetScale(geom->texLogScale?LOG_SCALE:LINEAR_SCALE);
       worker->Update(0.0f);
       Update();

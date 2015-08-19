@@ -32,9 +32,9 @@
 // Error class
 // -------------------------------------------------
 
-Error::Error(char *message) {
-  strncpy(msg,message,1023);
-  msg[1023]=0;
+Error::Error(const char *message) {
+  strncpy(msg,message,255);
+  msg[255]=0;
 }
 
 // -------------------------------------------------
@@ -47,11 +47,12 @@ const char *Error::GetMsg() {
 // FileUtils class
 // -------------------------------------------------
 
-int FileUtils::Exist(const char *fileName) {
+BOOL FileUtils::Exist(const char *fileName) {
 
 	if (FILE *file = fopen(fileName, "r")) {
 		fclose(file);
 		return TRUE;
+
 	}
 	else {
 		return FALSE;
@@ -63,7 +64,7 @@ int FileUtils::Exist(const char *fileName) {
 char *FileUtils::GetPath(char *fileName) {
 
   static char tmp[512];
-  strcpy(tmp,fileName);
+  strncpy(tmp,fileName,512);
 
   char  *p = strrchr(tmp,'\\');
   if(!p) p = strrchr(tmp,'/');
@@ -117,12 +118,14 @@ char FileReader::ReadChar() {
   } else {
     CurrentChar = 0;
   }
+
   return CurrentChar;
 }
 
 // -------------------------------------------------
 
 int FileReader::IsEof() {
+
 
   JumpControlChars();
   return isEof;
@@ -256,6 +259,7 @@ char *FileReader::ReadLine() {
   int len = 0;
   
   /* Jump space and comments */
+
   JumpControlChars();
 
   
@@ -328,6 +332,7 @@ char *FileReader::ReadWord() {
   int len = 0;
 
   /* Jump space and comments */
+
   JumpControlChars();
 
   /* Treat special character */
@@ -425,6 +430,7 @@ void FileWriter::WriteLLong(const llong &v,char *sep) {
 }
 
 void FileWriter::WriteDouble(const double &v,char *sep) {
+
   //if(v>=0.0) fprintf(file," ");
 	fprintf(file," ");
   if( !fprintf(file,"%.14E",v) )

@@ -81,11 +81,11 @@ SpectrumPlotter::SpectrumPlotter():GLWindow() {
 	Add(specCombo);
 
 	logToggle = new GLToggle(0,"Log Y scale");
-	logToggle->SetCheck(TRUE);
+	logToggle->SetState(TRUE);
 	Add(logToggle);
 
 	normToggle = new GLToggle(0,"Normalize");
-	normToggle->SetCheck(TRUE);
+	normToggle->SetState(TRUE);
 	Add(normToggle);
 
 	// Center dialog
@@ -185,7 +185,7 @@ void SpectrumPlotter::refreshViews() {
 
 	// Lock during update
 	BYTE *buffer = worker->GetHits();
-	int normalize = normToggle->IsChecked();
+	int normalize = normToggle->GetState();
 
 	if(!buffer) return;
 
@@ -343,7 +343,7 @@ void SpectrumPlotter::ProcessMessage(GLComponent *src,int message) {
 		if( src==normToggle ) {
 			refreshViews();
 		} else if (src==logToggle) {
-			chart->GetY1Axis()->SetScale(logToggle->IsChecked()?LOG_SCALE:LINEAR_SCALE);
+			chart->GetY1Axis()->SetScale(logToggle->GetState()?LOG_SCALE:LINEAR_SCALE);
 		}
 	}
 

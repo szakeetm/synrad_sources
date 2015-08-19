@@ -37,6 +37,7 @@
 #include "ScaleVertex.h"
 #include "ScaleFacet.h"
 #include "MoveFacet.h"
+#include "ExtrudeFacet.h"
 #include "ExportDesorption.h"
 #include "MirrorFacet.h"
 #include "RotateFacet.h"
@@ -53,7 +54,6 @@
 #include "ProfilePlotter.h"
 #include "SpectrumPlotter.h"
 
-#include "ViewEditor.h"
 #include "TexturePlotter.h"
 //#include "OutgassingMap.h"
 #include "SelectDialog.h"
@@ -337,6 +337,7 @@ public:
 	ScaleFacet       *scaleFacet;
 
 	SelectDialog     *selectDialog;
+	ExtrudeFacet	 *extrudeFacet;
 	MoveFacet		 *moveFacet;
 	ExportDesorption *exportDesorption;
 	MirrorFacet	     *mirrorFacet;
@@ -353,9 +354,6 @@ public:
 	VertexCoordinates *vertexCoordinates;
     ProfilePlotter   *profilePlotter;
 	SpectrumPlotter  *spectrumPlotter;
-
-
-    ViewEditor       *viewEditor;
     TexturePlotter   *texturePlotter;
 	//OutgassingMap    *outgassingMap;
 	RegionEditor     *regionEditor2;

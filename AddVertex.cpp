@@ -20,6 +20,9 @@
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLWindowManager.h"
 #include "GLApp/GLMessageBox.h"
+#include "SynRad.h"
+
+extern SynRad *mApp;
 
 AddVertex::AddVertex(Geometry *g,Worker *w):GLWindow() {
 
@@ -105,7 +108,8 @@ void AddVertex::ProcessMessage(GLComponent *src,int message) {
       geom->AddVertex(X,Y,Z);
 	  try { work->Reload(); } catch(Error &e) {
 				GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
-	  }      
+	  }    
+		mApp->changedSinceSave = TRUE;	  
       GLWindowManager::FullRepaint();
 
     }

@@ -23,7 +23,7 @@
 FormulaSettings::FormulaSettings():GLWindow() {
 
   int wD = 500;
-  int hD = 380;
+  int hD = 425;
 
   SetTitle("Formula Editor");
 

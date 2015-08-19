@@ -420,7 +420,7 @@ RegionEditor::RegionEditor():GLWindow() {
 
 	//---- idealBeamToggle ----
 	//idealBeamToggle->SetText("Ideal beam");
-	idealBeamToggle->SetCheck(TRUE);
+	idealBeamToggle->SetState(TRUE);
 	Add(idealBeamToggle);
 	idealBeamToggle->SetBounds(30, 285, 160, 18);
 
@@ -587,11 +587,11 @@ RegionEditor::RegionEditor():GLWindow() {
 	Add(label42);
 	label42->SetBounds(30, 435, 180, 18);
 
-	enableParPolarizationToggle->SetCheck(TRUE);
+	enableParPolarizationToggle->SetState(TRUE);
 	Add(enableParPolarizationToggle);
 	enableParPolarizationToggle->SetBounds(240, 434, 100, 18);
 
-	enableOrtPolarizationToggle->SetCheck(TRUE);
+	enableOrtPolarizationToggle->SetState(TRUE);
 	Add(enableOrtPolarizationToggle);
 	enableOrtPolarizationToggle->SetBounds(425, 434, 100, 18);
 
@@ -679,14 +679,14 @@ RegionEditor::RegionEditor():GLWindow() {
 	Add(BytypeCombo);
 	BytypeCombo->SetBounds(60, 539, 150, 19);
 	BytypeCombo->SetSize(8);
-	BytypeCombo->SetValueAt(0,"Constant field");
-	BytypeCombo->SetValueAt(1,"By coordinates in a direction");
-	BytypeCombo->SetValueAt(2,"By distance along the beam");
-	BytypeCombo->SetValueAt(3,"Sine / cosine");
-	BytypeCombo->SetValueAt(4,"Quadrupole");
-	BytypeCombo->SetValueAt(5,"Analytical expression");
-	BytypeCombo->SetValueAt(6,"Helicoidal");
-	BytypeCombo->SetValueAt(7,"Rotating dipole");
+	BytypeCombo->SetValueAt(0, "Constant field");
+	BytypeCombo->SetValueAt(1, "Coords along a direction");
+	BytypeCombo->SetValueAt(2, "Coords along the beam");
+	BytypeCombo->SetValueAt(3, "Sine / cosine");
+	BytypeCombo->SetValueAt(4, "Quadrupole");
+	BytypeCombo->SetValueAt(5, "Analytical expression");
+	BytypeCombo->SetValueAt(6, "Helicoidal");
+	BytypeCombo->SetValueAt(7, "Rotating dipole");
 	BytypeCombo->SetSelectedIndex(0);
 	Add(constBYtext);
 	constBYtext->SetBounds(240, 539, 80, 18);
@@ -719,14 +719,15 @@ RegionEditor::RegionEditor():GLWindow() {
 	label53->SetBounds(30, 565, 25, 18);
 	Add(BztypeCombo);
 	BztypeCombo->SetBounds(60, 564, 150, 19);
-	BztypeCombo->SetSize(7);
-	BztypeCombo->SetValueAt(0,"Constant field");
-	BztypeCombo->SetValueAt(1,"By coordinates");
-	BztypeCombo->SetValueAt(2,"Sine / cosine");
-	BztypeCombo->SetValueAt(3,"Quadrupole");
-	BztypeCombo->SetValueAt(4,"Analytical expression");
-	BztypeCombo->SetValueAt(5,"Helicoidal");
-	BztypeCombo->SetValueAt(6,"Rotating dipole");
+	BztypeCombo->SetSize(8);
+	BztypeCombo->SetValueAt(0, "Constant field");
+	BztypeCombo->SetValueAt(1, "Coords along a direction");
+	BztypeCombo->SetValueAt(2, "Coords along the beam");
+	BztypeCombo->SetValueAt(3, "Sine / cosine");
+	BztypeCombo->SetValueAt(4, "Quadrupole");
+	BztypeCombo->SetValueAt(5, "Analytical expression");
+	BztypeCombo->SetValueAt(6, "Helicoidal");
+	BztypeCombo->SetValueAt(7, "Rotating dipole");
 	BztypeCombo->SetSelectedIndex(0);
 	Add(constBZtext);
 	constBZtext->SetBounds(240, 564, 80, 18);
@@ -930,7 +931,7 @@ void RegionEditor::EnableDisableControls() {
 	MAGfileZtext->SetEditable(useMAGfile);
 	magzBrowseButton->SetEnabled(useMAGfile);
 	magzEditButton->SetEnabled(useMAGfile);
-	BOOL useIdealBeam=idealBeamToggle->IsChecked();
+	BOOL useIdealBeam=idealBeamToggle->GetState();
 	BOOL useBXYfile=(betaOrBXYCombo->GetSelectedIndex()==1);
 	betaOrBXYCombo->SetEditable(!useIdealBeam);
 	betaOrBXYCombo->SetEnabled(!useIdealBeam);
@@ -944,7 +945,7 @@ void RegionEditor::EnableDisableControls() {
 	etaText->SetEditable(!useIdealBeam && !useBXYfile);
 	etaPrimeText->SetEditable(!useIdealBeam && !useBXYfile);			
 	energySpreadText->SetEditable(!useIdealBeam && !useBXYfile);			
-	BOOL limitAngle=limitAngleToggle->IsChecked();
+	BOOL limitAngle=limitAngleToggle->GetState();
 	psiMaxXtext->SetEditable(limitAngle);
 	psiMaxYtext->SetEditable(limitAngle);
 }
@@ -983,7 +984,7 @@ void RegionEditor::FillValues() {
 
 	sprintf(tmp,"%g",cr->E);beamEnergyText->SetText(tmp);
 	sprintf(tmp,"%g",cr->current);beamCurrentText->SetText(tmp);
-	idealBeamToggle->SetCheck(cr->emittance==0.0);
+	idealBeamToggle->SetState(cr->emittance==0.0);
 
 	if (cr->emittance==0.0) { //ideal beam
 		betaOrBXYCombo->SetSelectedIndex(0);
@@ -1015,9 +1016,9 @@ void RegionEditor::FillValues() {
 
 	sprintf(tmp,"%g",cr->energy_low);EminText->SetText(tmp);
 	sprintf(tmp,"%g",cr->energy_hi);EmaxText->SetText(tmp);
-	enableOrtPolarizationToggle->SetCheck(cr->enable_ort_polarization);
-	enableParPolarizationToggle->SetCheck(cr->enable_par_polarization);
-	limitAngleToggle->SetCheck(cr->psimaxX<3.14159 || cr->psimaxY<3.14159);
+	enableOrtPolarizationToggle->SetState(cr->enable_ort_polarization);
+	enableParPolarizationToggle->SetState(cr->enable_par_polarization);
+	limitAngleToggle->SetState(cr->psimaxX<3.14159 || cr->psimaxY<3.14159);
 	sprintf(tmp,"%g",cr->psimaxX);psiMaxXtext->SetText(tmp);
 	sprintf(tmp,"%g",cr->psimaxY);psiMaxYtext->SetText(tmp);
 
@@ -1073,7 +1074,7 @@ void RegionEditor::ApplyChanges() {
 	if (!beamCurrentText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid beam current","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	if (tmp<=0.0) {GLMessageBox::Display("Beam current must be positive","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 
-	if(!idealBeamToggle->IsChecked()) { //non-ideal beam
+	if(!idealBeamToggle->GetState()) { //non-ideal beam
 		if (!emittanceText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid emittance","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		if (tmp<=0.0) {GLMessageBox::Display("Emittance must be positive","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		if (!couplingText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid Coupling","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
@@ -1102,7 +1103,7 @@ void RegionEditor::ApplyChanges() {
 	if (tmp2<=0.0) {GLMessageBox::Display("Emax must be positive","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	if (tmp>=tmp2) {GLMessageBox::Display("Emin must be smaller than Emax","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 
-	if (limitAngleToggle->IsChecked()) {
+	if (limitAngleToggle->GetState()) {
 		if (!psiMaxXtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid psiMaxX","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		if (tmp<=0.0) {GLMessageBox::Display("psiMaxX must be positive","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		if (!psiMaxYtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid psiMaxY","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
@@ -1157,7 +1158,7 @@ void RegionEditor::ApplyChanges() {
 	beamEnergyText->GetNumber(&cr->E);
 	beamCurrentText->GetNumber(&cr->current);
 	cr->gamma=abs(cr->E/cr->particleMass);
-	if (idealBeamToggle->IsChecked()) cr->emittance=0.0;
+	if (idealBeamToggle->GetState()) cr->emittance=0.0;
 	else {
 		emittanceText->GetNumber(&cr->emittance);
 		couplingText->GetNumber(&cr->coupling);
@@ -1186,9 +1187,9 @@ void RegionEditor::ApplyChanges() {
 
 	EminText->GetNumber(&cr->energy_low);
 	EmaxText->GetNumber(&cr->energy_hi);
-	cr->enable_ort_polarization=enableOrtPolarizationToggle->IsChecked();
-	cr->enable_par_polarization=enableParPolarizationToggle->IsChecked();
-	if (limitAngleToggle->IsChecked()) { //limit angle
+	cr->enable_ort_polarization=enableOrtPolarizationToggle->GetState();
+	cr->enable_par_polarization=enableParPolarizationToggle->GetState();
+	if (limitAngleToggle->GetState()) { //limit angle
 		psiMaxXtext->GetNumber(&cr->psimaxX);
 		psiMaxYtext->GetNumber(&cr->psimaxY);
 	} else { 

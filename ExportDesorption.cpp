@@ -42,7 +42,7 @@ ExportDesorption::ExportDesorption(Geometry *g,Worker *w):GLWindow() {
 
 	toggle2=new GLToggle(0,"Eta =           * Dose ^");
 	toggle2->SetBounds(10,40,170,18);
-	toggle2->SetCheck(TRUE);
+	toggle2->SetState(TRUE);
 	Add(toggle2);
 
 	eta0Field = new GLTextField(0,"1");
@@ -107,7 +107,7 @@ void ExportDesorption::ProcessMessage(GLComponent *src,int message) {
 
 		} else if (src==exportButton) {
 			//do checks
-			if (selectedToggle->IsChecked() && geom->GetNbSelected()==0) {
+			if (selectedToggle->GetState() && geom->GetNbSelected()==0) {
 				GLMessageBox::Display("No facets selected","Nothing to export",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 			}
@@ -139,7 +139,7 @@ void ExportDesorption::ProcessMessage(GLComponent *src,int message) {
 			if( fn ) {
 				
 				try {
-					work->ExportDesorption(fn->fullName,selectedToggle->IsChecked(),mode,eta0,alpha,conversionDistr);
+					work->ExportDesorption(fn->fullName,selectedToggle->GetState(),mode,eta0,alpha,conversionDistr);
 					GLWindow::ProcessMessage(NULL,MSG_CLOSE);
 				} catch (Error &e) {
 					char errMsg[512];
@@ -149,9 +149,9 @@ void ExportDesorption::ProcessMessage(GLComponent *src,int message) {
 
 			}
 		} else if (src==browseButton) {
-			toggle1->SetCheck(FALSE);
-			toggle2->SetCheck(FALSE);
-			toggle3->SetCheck(TRUE);
+			toggle1->SetState(FALSE);
+			toggle2->SetState(FALSE);
+			toggle3->SetState(TRUE);
 			//load file dialog
 			FILENAME *convFile=GLFileBox::OpenFile(mApp->currentDir,NULL,"Open conversion file","CONV files\0*.conv\0All files\0*.*\0",2);
 			if (!convFile) return;
@@ -172,9 +172,9 @@ void ExportDesorption::ProcessMessage(GLComponent *src,int message) {
 		break;
 	case MSG_TOGGLE:
 		if (src!=selectedToggle) {
-			toggle1->SetCheck(src==toggle1);
-			toggle2->SetCheck(src==toggle2);
-			toggle3->SetCheck(src==toggle3);
+			toggle1->SetState(src==toggle1);
+			toggle2->SetState(src==toggle2);
+			toggle3->SetState(src==toggle3);
 			if (src==toggle1) mode=1;
 			if (src==toggle2) mode=2;
 			if (src==toggle3) mode=3;

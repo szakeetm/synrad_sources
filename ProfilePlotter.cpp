@@ -23,7 +23,7 @@ GNU General Public License for more details.
 #include <math.h>
 #include "Synrad.h"
 
-extern GLApplication *theApp;
+extern SynRad *mApp;
 
 static const char*profType[] = {"None","\201","\202","Angle"};
 static const char*profMode[] = {"MC Hits","SR Flux/cm\262","SR Power/cm\262"};
@@ -79,11 +79,11 @@ ProfilePlotter::ProfilePlotter():GLWindow() {
 	Add(profCombo);
 
 	logToggle = new GLToggle(0,"Log Y scale");
-	logToggle->SetCheck(TRUE);
+	logToggle->SetState(TRUE);
 	Add(logToggle);
 
 	normToggle = new GLToggle(0,"Normalize");
-	normToggle->SetCheck(FALSE);
+	normToggle->SetState(FALSE);
 	Add(normToggle);
 
 	formulaText = new GLTextField(0,"");
@@ -128,27 +128,37 @@ void ProfilePlotter::Refresh() {
 
 	if(!worker) return;
 
+	//Rebuild selection combo box
 	Geometry *geom = worker->GetGeometry();
 	int nb = geom->GetNbFacet();
 	int nbProf = 0;
 	for(int i=0;i<nb;i++)
 		if(geom->GetFacet(i)->sh.isProfile) nbProf+=3;
-	profCombo->Clear();
+	profCombo->Clear(); profCombo->SetSelectedIndex(0);
 	if(nbProf) profCombo->SetSize(nbProf);
 	nbProf=0;
-	for(int i=0;i<nb;i++) {
+	for (int i = 0; i < nb; i++) {
 		Facet *f = geom->GetFacet(i);
-		if(f->sh.isProfile) {
+		if (f->sh.isProfile) {
 			char tmp[128];
-			for (int mode=0;mode<3;mode++) { //MC hits, flux, power
-				sprintf(tmp,"F#%d %s %s",i+1,profType[f->sh.profileType],profMode[mode]);
-				profCombo->SetValueAt(nbProf,tmp,i*3+mode);
+			for (int mode = 0; mode < 3; mode++) { //MC hits, flux, power
+				sprintf(tmp, "F#%d %s %s", i + 1, profType[f->sh.profileType], profMode[mode]);
+				profCombo->SetValueAt(nbProf, tmp, i * 3 + mode);
 				profCombo->SetSelectedIndex(0);
 				nbProf++;
 			}
 		}
 	}
+	//Remove profiles that aren't present anymore
+	for (int v = 0; v < nbView; v++)
+		if (views[v]->userData1 >= geom->GetNbFacet() || !geom->GetFacet(views[v]->userData1)->sh.isProfile) {
+			chart->GetY1Axis()->RemoveDataView(views[v]);
+			SAFE_DELETE(views[v]);
+			for (int j = v; j < nbView - 1; j++) views[j] = views[j + 1];
+			nbView--;
+		}
 
+	//Update values
 	refreshViews();
 
 }
@@ -250,7 +260,7 @@ void ProfilePlotter::refreshViews() {
 
 	// Lock during update
 	BYTE *buffer = worker->GetHits();
-	int normalize = normToggle->IsChecked();
+	int normalize = normToggle->GetState();
 
 	if(!buffer) return;
 
@@ -408,7 +418,7 @@ void ProfilePlotter::refreshViews() {
 
 	void ProfilePlotter::ProcessMessage(GLComponent *src,int message) {
 		Geometry *geom = worker->GetGeometry();
-		SynRad *mApp = (SynRad *)theApp;
+		
 		switch(message) {
 		case MSG_BUTTON:
 			if(src==dismissButton) {
@@ -441,7 +451,7 @@ void ProfilePlotter::refreshViews() {
 			if( src==normToggle ) {
 				refreshViews();
 			} else if (src==logToggle) {
-				chart->GetY1Axis()->SetScale(logToggle->IsChecked()?LOG_SCALE:LINEAR_SCALE);
+				chart->GetY1Axis()->SetScale(logToggle->GetState()?LOG_SCALE:LINEAR_SCALE);
 			}
 		}
 
@@ -449,3 +459,25 @@ void ProfilePlotter::refreshViews() {
 
 	}
 
+void ProfilePlotter::SetViews(std::vector<int> views,int mode) {
+	Reset();
+	for (int view : views)
+		addView(view,mode);
+	Refresh();
+}
+
+std::vector<int> ProfilePlotter::GetViews() {
+	std::vector<int>v;
+	v.reserve(nbView);
+	for (size_t i = 0; i < nbView; i++)
+		v.push_back(views[i]->userData1);
+	return v;
+}
+
+BOOL ProfilePlotter::IsLogScaled() {
+	return chart->GetY1Axis()->GetScale();
+}
+void ProfilePlotter::SetLogScaled(BOOL logScale){
+	chart->GetY1Axis()->SetScale(logScale);
+	logToggle->SetState(logScale);
+}

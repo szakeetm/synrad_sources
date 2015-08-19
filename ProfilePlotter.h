@@ -26,8 +26,8 @@
 #include "Worker.h"
 #include "Geometry.h"
 
-#ifndef _FACETPLOTTERH_
-#define _FACETPLOTTERH_
+#ifndef _PROFILEPLOTTERH_
+#define _PROFILEPLOTTERH_
 
 class ProfilePlotter : public GLWindow {
 
@@ -45,6 +45,12 @@ public:
   // Implementation
   void ProcessMessage(GLComponent *src,int message);
   void SetBounds(int x,int y,int w,int h);
+  void addView(int facet);
+  std::vector<int> GetViews();
+  void SetViews(std::vector<int> views,int mode);
+  BOOL IsLogScaled();
+  void SetLogScaled(BOOL logScale);
+  void SetWorker(Worker *w);
 
 private:
 
@@ -75,4 +81,4 @@ private:
 
 };
 
-#endif /* _FACETPLOTTERH_ */
+#endif /* _PROFILEPLOTTERH_ */

@@ -79,7 +79,7 @@ TexturePlotter::TexturePlotter():GLWindow() {
 	Add(cancelButton);
 
 	autoSizeOnUpdate = new GLToggle(0,"Autosize on every update");
-	autoSizeOnUpdate->SetCheck(TRUE);
+	autoSizeOnUpdate->SetState(TRUE);
 	Add(autoSizeOnUpdate);
 
 	// Center dialog
@@ -165,7 +165,7 @@ void TexturePlotter::UpdateTable() {
 
 	maxValue=0.0f;
 	GetSelected();
-	if( !selFacet ) {
+	if( !selFacet || !selFacet->mesh) {
 		mapList->Clear();
 		return;
 	}
@@ -187,7 +187,7 @@ void TexturePlotter::UpdateTable() {
 
 		switch(mode) {
 
-		case 0: // Element area
+		case 0: {// Cell area
 			for(int i=0;i<w;i++) {
 				for(int j=0;j<h;j++) {
 					float val=selFacet->mesh[i+j*w].area;
@@ -199,7 +199,7 @@ void TexturePlotter::UpdateTable() {
 					mapList->SetValueAt(i,j,tmp);
 				}
 			}
-			break;
+			break; }
 
 		case 1:  {// Flux
 
@@ -312,7 +312,7 @@ void TexturePlotter::UpdateTable() {
 
 	}
 
-	if (autoSizeOnUpdate->IsChecked()) mapList->AutoSizeColumn();
+	if (autoSizeOnUpdate->GetState()) mapList->AutoSizeColumn();
 }
 
 // --------------------------------------------------------------------

@@ -135,7 +135,7 @@ typedef struct {
   // Flags
   BOOL   is2sided;     // 2 sided
   BOOL   isProfile;    // Profile facet
-  BOOL   isOpaque;     // Opacity != 0
+  //BOOL   isOpaque;     // Opacity != 0
   BOOL   isTextured;   // texture
   BOOL   isVolatile;   // Volatile facet (absorbtion facet which does not affect particule trajectory)
 

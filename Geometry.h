@@ -30,13 +30,14 @@
 #include "Utils.h"
 #include "GrahamScan.h"
 #include "Region_full.h"
+#include "PugiXML/pugixml.hpp"
+#include <vector>
 #include <sstream>
 
-extern int changedSinceSave;
 class Worker;
 
 #define SEL_HISTORY  100
-#define MAX_SUPERSTR 256
+#define MAX_SUPERSTR 128
 #define SYNVERSION   8
 #define GEOVERSION   15
 #define PARAMVERSION 2
@@ -63,23 +64,30 @@ public:
   void LoadASE(FileReader *file,GLProgress *prg);
   void LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleakLoad,HIT *pHits,int *nbHHitLoad,int *version);
   PARfileList LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleakLoad,HIT *pHits,int *nbHHitLoad,int *version);
-  bool loadTextures(FileReader *file,GLProgress *prg,Dataport *dpHit,int version);
+  bool LoadTextures(FileReader *file,GLProgress *prg,Dataport *dpHit,int version);
+
   BOOL IsLoaded();
 
   // Insert
   void InsertTXT(FileReader *file,GLProgress *prg,BOOL newStr);
   void InsertGEO(FileReader *file,GLProgress *prg,BOOL newStr);
   PARfileList InsertSYN(FileReader *file,GLProgress *prg,BOOL newStr);
-  void InsertSTL(FileReader *file,GLProgress *prg,BOOL newStr,double scaleFactor);
+  void InsertSTL(FileReader *file,GLProgress *prg,double scaleFactor,BOOL newStr);
 
   // Save
   void SaveTXT(FileWriter *file,Dataport *dhHit,BOOL saveSelected);
   void ExportTextures(FILE *file,int grouping,int mode,double no_scans,Dataport *dhHit,BOOL saveSelected);
   void SaveDesorption(FILE *file,Dataport *dhHit,BOOL selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr);
+
   //void SaveGEO(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL saveSelected,LEAK *pleak,int *nbleakSave,HIT *pHits,int *nbHHitSave,BOOL crashSave=FALSE);
   void SaveSYN(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL saveSelected,LEAK *pleak,int *nbleakSave,HIT *pHits,int *nbHHitSave,BOOL crashSave=FALSE);
   void SaveSTR(Dataport *dhHit,BOOL saveSelected);
-
+  void SaveXML_geometry(pugi::xml_node saveDoc, Worker *work, GLProgress *prg, BOOL saveSelected);
+  BOOL SaveXML_simustate(pugi::xml_node saveDoc, Worker *work, BYTE *buffer, SHGHITS *gHits, int nbLeakSave, int nbHHitSave,
+	  LEAK *pLeak, HIT *pHits, GLProgress *prg, BOOL saveSelected);
+  void LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, BOOL isSynxml = FALSE);
+  void InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, BOOL newStr, BOOL isSynxml = FALSE);
+  BOOL LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit, Worker *work, GLProgress *progressDlg);
 
   // Selection (drawing stuff)
   void SelectAll();
@@ -95,6 +103,7 @@ public:
   int  GetNbSelected();
   void UpdateSelection();
   void SwapNormal();
+  void Extrude(VERTEX3D offset, double distance=1.0);
   void RemoveSelected();
   void RemoveSelectedVertex();
   void RemoveFromStruct(int numToDel);
@@ -104,6 +113,7 @@ public:
   void MoveSelectedVertex(double dX,double dY,double dZ,BOOL copy,Worker *worker);
   void ScaleSelectedVertices(VERTEX3D invariant,double factor,BOOL copy,Worker *worker);
   void ScaleSelectedFacets(VERTEX3D invariant,double factorX,double factorY,double factorZ,BOOL copy,Worker *worker);
+
   void MoveSelectedFacets(double dX,double dY,double dZ,BOOL copy,Worker *worker);
   void MirrorSelectedFacets(VERTEX3D P0,VERTEX3D N,BOOL copy,Worker *worker);
   void RotateSelectedFacets(const VERTEX3D &AXIS_P0,const VERTEX3D &AXIS_DIR,double theta,BOOL copy,Worker *worker);
@@ -137,6 +147,7 @@ public:
   int  InvalidateDeviceObjects();
 
   // Geometry
+
   int      GetNbFacet();
   int      GetNbVertex();
   int      GetNbStructure();
@@ -170,6 +181,8 @@ public:
   void     InitializeGeometry(int facet_number=-1,BOOL BBOnly=FALSE);           // Initialiase all geometry related variable
   void     LoadProfileSYN(FileReader *file,Dataport *dpHit);
   void     LoadSpectrumSYN(FileReader *file,Dataport *dpHit);
+
+
  
   // Texture scaling
   int textureMode;  //MC hits/flux/power
@@ -178,7 +191,9 @@ public:
   double  texCMin_flux,texCMin_power;       // Current minimum
   double  texCMax_flux,texCMax_power;       // Current maximum
   llong texMin_MC,texMax_MC,texCMin_MC,texCMax_MC;
+
   BOOL  texAutoScale;  // Autoscale flag
+
   BOOL  texColormap;   // Colormap flag
   BOOL  texLogScale;   // Texture im log scale
 
@@ -198,12 +213,16 @@ public:
   double distTraveledTotal;
   double loaded_no_scans;
 
+
   // Memory usage (in bytes)
   DWORD GetGeometrySize(std::vector<Region_full> *regions,std::vector<Material> *materials);
   DWORD GetHitsSize();
 
+
+
   // Raw data buffer (geometry)
   void CopyGeometryBuffer(BYTE *buffer,std::vector<Region_full> *regions,std::vector<Material> *materials,int generation_mode,BOOL lowFluxMode,double lowFluxCutoff);
+
 
   // AC matrix
   DWORD GetMaxElemNumber();
@@ -226,7 +245,7 @@ private:
   float normeRatio;     // Norme factor (direction field)
   BOOL  autoNorme;      // Auto normalize (direction field)
   BOOL  centerNorme;    // Center vector (direction field)
-   BOOL isLoaded;  // Is loaded flag
+
   void CalculateFacetParam(int facet); // Facet parameters
   void Merge(int nbV,int nbF,VERTEX3D *nV,Facet **nF); // Merge geometry
   void LoadTXTGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0);
@@ -242,6 +261,8 @@ private:
   void SaveProfileTXT(FileWriter *file,int super=-1,BOOL saveSelected=FALSE);
   void AdjustProfile();
   void SaveSuper(Dataport *dpHit,int s);
+
+  BOOL isLoaded;  // Is loaded flag
 
   // Collapsing stuff
   int  AddRefVertex(VERTEX3D *p,VERTEX3D *refs,int *nbRef);
@@ -267,6 +288,7 @@ private:
   void EmptySelectedVertexList();
   void RemoveFromSelectedVertexList(int vertexId);
   void AddToSelectedVertexList(int vertexId);
+
 
   void DrawFacet(Facet *f,BOOL offset=FALSE,BOOL showHidden=FALSE,BOOL selOffset=FALSE);
   void FillFacet(Facet *f,BOOL addTextureCoord);
@@ -301,4 +323,3 @@ private:
 };
 
 #endif /* _GEOMETRYH_ */
-

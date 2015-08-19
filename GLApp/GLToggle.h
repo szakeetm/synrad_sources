@@ -26,9 +26,11 @@ public:
   GLToggle(int compId,char *text);
 
   // Component method
-  BOOL IsChecked();
-  void SetCheck(BOOL checked);
+  int  GetState();
+  void SetState(int setState);
   void SetTextColor(int r,int g,int b);
+  void SetEnabled(BOOL enable); //override GLComponent for text color change
+  void AllowMixedState(BOOL setAllow);
 
   // Implementation
   void Paint();
@@ -37,10 +39,11 @@ public:
 private:
 
   char text[512];
-  int  state; // 0=>Unchekced 1=>Checked
+  int  state; // 0=>Unchekced 1=>Checked 2=>Multiple
   float rText;
   float gText;
   float bText;
+  BOOL allowMixedState; //Allow "multiple" state
 
 };
 

@@ -62,34 +62,34 @@ FacetMesh::FacetMesh():GLWindow() {
 
 	enableBtn = new GLToggle(0,"Enable");
 	enableBtn->SetBounds(10,80,55,18);
-	enableBtn->SetCheck(FALSE);
+	enableBtn->SetState(FALSE);
 	Add(enableBtn);
 
 	boundaryBtn = new GLToggle(0,"Boundary correction");
 	boundaryBtn->SetBounds(10,100,100,18);
 	boundaryBtn->SetEnabled(FALSE);
 	boundaryBtn->SetTextColor(110,110,110);
-	boundaryBtn->SetCheck(TRUE);
+	boundaryBtn->SetState(TRUE);
 	Add(boundaryBtn);
 
 	recordAbsBtn = new GLToggle(0,"Count absorption");
 	recordAbsBtn->SetBounds(10,150,100,18);
-	recordAbsBtn->SetCheck(FALSE);
+	recordAbsBtn->SetState(FALSE);
 	Add(recordAbsBtn);
 
 	recordReflBtn = new GLToggle(0,"Count reflection");
 	recordReflBtn->SetBounds(120,130,110,18);
-	recordReflBtn->SetCheck(FALSE);
+	recordReflBtn->SetState(FALSE);
 	Add(recordReflBtn);
 
 	recordTransBtn = new GLToggle(0,"Count transparent pass");
 	recordTransBtn->SetBounds(120,150,110,18);
-	recordTransBtn->SetCheck(FALSE);
+	recordTransBtn->SetState(FALSE);
 	Add(recordTransBtn);
 
 	recordDirBtn = new GLToggle(0,"Record direction");
 	recordDirBtn->SetBounds(120,170,110,18);
-	recordDirBtn->SetCheck(FALSE);
+	recordDirBtn->SetState(FALSE);
 	Add(recordDirBtn);
 
 	GLLabel *l5 = new GLLabel("Resolution (Sample/cm)");
@@ -106,12 +106,12 @@ FacetMesh::FacetMesh():GLWindow() {
 
 	showTexture = new GLToggle(0,"Show texture");
 	showTexture->SetBounds(10,215,55,18);
-	showTexture->SetCheck(TRUE);
+	showTexture->SetState(TRUE);
 	Add(showTexture);
 
 	showVolume = new GLToggle(0,"Show volume");
 	showVolume->SetBounds(100,215,55,18);
-	showVolume->SetCheck(TRUE);
+	showVolume->SetState(TRUE);
 	showVolume->SetVisible(TRUE); //not working yet
 	Add(showVolume);
 
@@ -164,7 +164,7 @@ void FacetMesh::UpdateSize() {
 
 	char tmp[64];
 
-	if( enableBtn->IsChecked() ) {
+	if( enableBtn->GetState() ) {
 
 		llong ram = 0;
 		llong cell = 0;
@@ -194,10 +194,10 @@ void FacetMesh::UpdateSizeForRatio() {
 
 	double ratio;
 	char tmp[64];
-	BOOL boundMap = boundaryBtn->IsChecked();
-	BOOL recordDir = recordDirBtn->IsChecked();
+	BOOL boundMap = boundaryBtn->GetState();
+	BOOL recordDir = recordDirBtn->GetState();
 
-	if( !enableBtn->IsChecked() ) {
+	if( !enableBtn->GetState() ) {
 		ramText->SetText(FormatMemory(0));
 		cellText->SetText("0");
 		return;
@@ -302,15 +302,15 @@ void FacetMesh::EditFacet(Worker *w) {
 		vLength->SetText(tmp);
 	}
 
-	enableBtn->SetCheck(allEnabled);
-	//boundaryBtn->SetCheck(allBound);
-	boundaryBtn->SetCheck(TRUE);
-	recordAbsBtn->SetCheck(allCountAbs);
-	recordReflBtn->SetCheck(allCountRefl);
-	recordTransBtn->SetCheck(allCountTrans);
-	recordDirBtn->SetCheck(allCountDir);
-	showTexture->SetCheck(allTexVisible);
-	showVolume->SetCheck(allVolVisible);
+	enableBtn->SetState(allEnabled);
+	//boundaryBtn->SetState(allBound);
+	boundaryBtn->SetState(TRUE);
+	recordAbsBtn->SetState(allCountAbs);
+	recordReflBtn->SetState(allCountRefl);
+	recordTransBtn->SetState(allCountTrans);
+	recordDirBtn->SetState(allCountDir);
+	showTexture->SetState(allTexVisible);
+	showVolume->SetState(allVolVisible);
 
 	if( allEnabled && ratioE ) {
 		sprintf(tmp,"%g",tRatio);
@@ -331,16 +331,16 @@ BOOL FacetMesh::Apply() {
 	extern GLApplication *theApp;
 	SynRad *mApp = (SynRad *)theApp;
 	if (!mApp->AskToReset(worker)) return FALSE;
-	BOOL boundMap = boundaryBtn->IsChecked();
+	BOOL boundMap = boundaryBtn->GetState();
 	double nbSelected = (double)geom->GetNbSelected();
 	double nbPerformed = 0.0;
 
-	if( enableBtn->IsChecked() ) {
+	if( enableBtn->GetState() ) {
 
 		// Check counting mode
-		if( !recordAbsBtn->IsChecked() && 
-			!recordReflBtn->IsChecked() && !recordTransBtn->IsChecked() && 
-			!recordDirBtn->IsChecked() ) {
+		if( !recordAbsBtn->GetState() && 
+			!recordReflBtn->GetState() && !recordTransBtn->GetState() && 
+			!recordDirBtn->GetState() ) {
 				GLMessageBox::Display("Please select counting mode","Error",GLDLG_OK,GLDLG_ICONERROR);
 				return FALSE;
 		}
@@ -359,12 +359,12 @@ BOOL FacetMesh::Apply() {
 		for(int i=0;i<geom->GetNbFacet();i++) {
 			Facet *f = geom->GetFacet(i);
 			if( f->selected ) {
-				f->sh.countAbs = recordAbsBtn->IsChecked();
-				f->sh.countRefl = recordReflBtn->IsChecked();
-				f->sh.countTrans = recordTransBtn->IsChecked();
-				f->sh.countDirection = recordDirBtn->IsChecked();
-				f->textureVisible = showTexture->IsChecked();
-				f->volumeVisible = showVolume->IsChecked();
+				f->sh.countAbs = recordAbsBtn->GetState();
+				f->sh.countRefl = recordReflBtn->GetState();
+				f->sh.countTrans = recordTransBtn->GetState();
+				f->sh.countDirection = recordDirBtn->GetState();
+				f->textureVisible = showTexture->GetState();
+				f->volumeVisible = showVolume->GetState();
 				try {
 					geom->SetFacetTexture(i,ratio,boundMap);
 				} catch (Error &e) {
@@ -393,8 +393,8 @@ BOOL FacetMesh::Apply() {
 			Facet *f = geom->GetFacet(i);
 			if( f->selected ) {
 				geom->SetFacetTexture(i,0.0,FALSE);
-				f->textureVisible = showTexture->IsChecked();
-				f->volumeVisible = showVolume->IsChecked();
+				f->textureVisible = showTexture->GetState();
+				f->volumeVisible = showVolume->GetState();
 				nbPerformed+=1.0;
 				progressDlg->SetProgress(nbPerformed/nbSelected);
 			}
@@ -428,8 +428,8 @@ void FacetMesh::QuickApply() {
 		Facet *f = geom->GetFacet(i);
 		if( f->selected ) {
 
-			f->textureVisible = showTexture->IsChecked();
-			f->volumeVisible = showVolume->IsChecked();
+			f->textureVisible = showTexture->GetState();
+			f->volumeVisible = showVolume->GetState();
 
 			nbPerformed+=1.0;
 			progressDlg->SetProgress(nbPerformed/nbSelected);
@@ -444,19 +444,19 @@ void FacetMesh::QuickApply() {
 void FacetMesh::UpdateToggle(GLComponent *src) {
 
 	if(src==enableBtn) {
-		//boundaryBtn->SetCheck(enableBtn->IsChecked());
+		//boundaryBtn->SetState(enableBtn->GetState());
 	} else if(src==recordAbsBtn ) {
-		enableBtn->SetCheck(TRUE);
-		boundaryBtn->SetCheck(TRUE);
+		enableBtn->SetState(TRUE);
+		boundaryBtn->SetState(TRUE);
 	} else if(src==recordReflBtn ) {
-		enableBtn->SetCheck(TRUE);
-		boundaryBtn->SetCheck(TRUE);
+		enableBtn->SetState(TRUE);
+		boundaryBtn->SetState(TRUE);
 	} else if(src==recordTransBtn ) {
-		enableBtn->SetCheck(TRUE);
-		boundaryBtn->SetCheck(TRUE);
+		enableBtn->SetState(TRUE);
+		boundaryBtn->SetState(TRUE);
 	} else if(src==recordDirBtn ) {
-		enableBtn->SetCheck(TRUE);
-		boundaryBtn->SetCheck(TRUE);
+		enableBtn->SetState(TRUE);
+		boundaryBtn->SetState(TRUE);
 	}
 	UpdateSizeForRatio();
 }
@@ -497,7 +497,7 @@ void FacetMesh::ProcessMessage(GLComponent *src,int message) {
 
 		// -------------------------------------------------------------
 	case MSG_TEXT_UPD:
-		enableBtn->SetCheck(TRUE);
+		enableBtn->SetState(TRUE);
 		UpdateSizeForRatio();
 		break;
 

@@ -75,11 +75,11 @@ typedef struct {
 
 } VERTEX3D;
 
-typedef struct {
+/*typedef struct {
 	VERTEX3D v1;
 	VERTEX3D v2;
 	VERTEX3D v3;
-} MATRIX;
+} MATRIX;*/
 
 typedef struct {
 
@@ -125,7 +125,7 @@ typedef struct {
 // Velocity field
 typedef struct {
   VERTEX3D dir;
-  unsigned int count;
+  llong count;
 } VHIT;
 
 #define IS_ZERO(x) (fabs((x))<1e-10)

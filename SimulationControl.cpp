@@ -152,13 +152,13 @@ DWORD GetSeed() {
 
 }
 
-// -------------------------------------------------------
+
 
 double Norme(VERTEX3D *v) {
 	return sqrt(v->x*v->x + v->y*v->y + v->z*v->z);
 }
 
-// -------------------------------------------------------
+
 
 BOOL LoadSimulation(Dataport *loader) {
 
@@ -345,6 +345,10 @@ BOOL LoadSimulation(Dataport *loader) {
 
 		SHFACET *shFacet = (SHFACET *)buffer;
 		FACET *f = (FACET *)malloc(sizeof(FACET));
+		if (!f) {
+			SetErrorSub("Not enough memory to load facets");
+			return FALSE;
+		}
 		memset(f,0,sizeof(FACET));
 		memcpy(&(f->sh),shFacet,sizeof(SHFACET));
 
@@ -361,7 +365,7 @@ BOOL LoadSimulation(Dataport *loader) {
 			// Link or volatile facet, overides facet settings
 			// Must be full opaque and 0 sticking
 			// (see SimulationMC.c::PerformBounce)
-			f->sh.isOpaque = TRUE;
+			//f->sh.isOpaque = TRUE;
 			f->sh.opacity = 1.0;
 			f->sh.sticking = 0.0;
 			if( (f->sh.superDest-1) >= sHandle->nbSuper || f->sh.superDest<0 ) {
@@ -381,9 +385,14 @@ BOOL LoadSimulation(Dataport *loader) {
 		memcpy(f->indices,buffer,f->sh.nbIndex*sizeof(int));
 		buffer+=f->sh.nbIndex*sizeof(int);
 		f->vertices2 = (VERTEX2D *)malloc(f->sh.nbIndex * sizeof(VERTEX2D));
+		if (!f->vertices2) {
+			SetErrorSub("Not enough memory to load vertices");
+			return FALSE;
+		}
 		memcpy(f->vertices2,buffer,f->sh.nbIndex * sizeof(VERTEX2D));
 		buffer+=f->sh.nbIndex*sizeof(VERTEX2D);
 
+		//Textures
 		if(f->sh.isTextured) {
 			int nbE = f->sh.texWidth*f->sh.texHeight;
 			f->textureSize = nbE*(2*sizeof(double)+sizeof(llong));
@@ -500,7 +509,7 @@ void UpdateHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 
 // -------------------------------------------------------
 
-long GetHitsSize() {
+size_t GetHitsSize() {
 	return sHandle->textTotalSize + sHandle->profTotalSize + sHandle->dirTotalSize +
 		sHandle->spectrumTotalSize + sHandle->totalFacet*sizeof(SHHITS) + sizeof(SHGHITS);
 }

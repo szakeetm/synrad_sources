@@ -22,6 +22,9 @@
 #include "Geometry.h"
 #include "Region_full.h"
 #include "Distributions.h" //for materials
+#include "PugiXML/pugixml.hpp"
+#include <string>
+
 
 extern float m_fTime;
 class Worker
@@ -38,7 +41,7 @@ public:
   void AddMaterial(string *fileName);
   void LoadGeometry(char *fileName);// Load a geometry (throws Error)
   void InsertGeometry(BOOL newStr,char *fileName); // Inserts a new geometry (throws Error)
-  void loadTextures(char *fileName,int version);  // Load a textures(throws Error)
+  void LoadTextures(char *fileName,int version);  // Load a textures(throws Error)
     void RebuildTextures();
   
   // Save a geometry (throws Error)
@@ -56,6 +59,7 @@ public:
   // Return/Set the current filename
   char *GetFileName();
   char *GetShortFileName();
+  char *GetShortFileName(char* longFileName);
   void  SetFileName(char *fileName);
   void SetProcNumber(int n);// Set number of processes [1..16] (throws Error)
   int GetProcNumber();  // Get number of processes

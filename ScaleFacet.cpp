@@ -38,7 +38,7 @@ ScaleFacet::ScaleFacet(Geometry *g,Worker *w):GLWindow() {
 	invariantMode=XYZMODE;
 	scaleMode=UNIFORMMODE;
 
-	SetTitle("Scale selected vertices");
+	SetTitle("Scale selected facets");
 
 	iPanel = new GLTitledPanel("Invariant point definiton mode");
 	iPanel->SetBounds(5,3,wD-10,97);
@@ -46,7 +46,7 @@ ScaleFacet::ScaleFacet(Geometry *g,Worker *w):GLWindow() {
 
 	l1 = new GLToggle(0,"");
 	l1->SetBounds(10,20,20,18);
-	l1->SetCheck(TRUE);
+	l1->SetState(TRUE);
 	iPanel->Add(l1);
 
 	GLLabel *xLabel = new GLLabel("X=");
@@ -95,7 +95,7 @@ ScaleFacet::ScaleFacet(Geometry *g,Worker *w):GLWindow() {
 
 	uniform = new GLToggle(0,"Uniform");
 	uniform->SetBounds(10,115,100,18);
-	uniform->SetCheck(TRUE);
+	uniform->SetState(TRUE);
 	Add(uniform);
 
 	factorNumber = new GLTextField(0,"1");
@@ -222,7 +222,7 @@ void ScaleFacet::ProcessMessage(GLComponent *src,int message) {
 				}
 				break;
 			default:
-				GLMessageBox::Display("Select a plane definition mode.","Error",GLDLG_OK,GLDLG_ICONERROR);
+				GLMessageBox::Display("Select an invariant definition mode.","Error",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 			}
 
@@ -256,6 +256,7 @@ void ScaleFacet::ProcessMessage(GLComponent *src,int message) {
 				}  
 				mApp->UpdateFacetlistSelected();
 				mApp->UpdateViewers();
+				mApp->changedSinceSave = TRUE;
 				//GLWindowManager::FullRepaint();
 			}
 		}
@@ -269,9 +270,9 @@ void ScaleFacet::UpdateToggle(GLComponent *src) {
 	
 	if (src==l1 || src==l2 || src==l3) {
 
-		l1->SetCheck(src==l1);
-		l2->SetCheck(src==l2);
-		l3->SetCheck(src==l3);
+		l1->SetState(src==l1);
+		l2->SetState(src==l2);
+		l3->SetState(src==l3);
 
 		facetNumber->SetEditable(src==l3);
 		xText->SetEditable(src==l1);
@@ -282,8 +283,8 @@ void ScaleFacet::UpdateToggle(GLComponent *src) {
 		if (src==l2) invariantMode=VERTEXMODE;
 		if (src==l3) invariantMode=FACETMODE;
 	} else {
-		uniform->SetCheck(src==uniform);
-		distort->SetCheck(src==distort);
+		uniform->SetState(src==uniform);
+		distort->SetState(src==distort);
 
 		factorNumber->SetEditable(src==uniform);
 		factorNumberX->SetEditable(src==distort);

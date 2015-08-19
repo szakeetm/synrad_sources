@@ -97,7 +97,7 @@ public:
   void  FillVertexArray(VERTEX3D *v);
   void  BuildMeshList();
   void  InitVisibleEdge();
-  void  SetTexture(double width,double height,BOOL useMesh);
+  BOOL  SetTexture(double width,double height,BOOL useMesh);
   DWORD GetGeometrySize();
   DWORD GetHitsSize();
   DWORD GetTexSwapSize(BOOL useColormap);
@@ -109,7 +109,7 @@ public:
   void  UpdateFlags();
   void  BuildTexture(double *texBuffer,double min,double max,double no_scans,BOOL useColorMap,BOOL doLog,BOOL normalize=TRUE);
   void  BuildTexture(llong *texBuffer,llong min,llong max,BOOL useColorMap,BOOL doLog);
-  void  BuildMesh();
+  BOOL  BuildMesh();
   void  BuildSelElemList();
   int   RestoreDeviceObjects();
   int   InvalidateDeviceObjects();

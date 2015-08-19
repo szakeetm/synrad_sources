@@ -143,9 +143,10 @@ SynRad *mApp;
 #define MENU_FACET_ALIGN       334
 //#define MENU_FACET_OUTGASSINGMAP 338
 #define MENU_FACET_CREATE_DIFFERENCE 335
+#define MENU_FACET_EXTRUDE 336
 
-#define MENU_SELECTION_ADDNEW             336
-#define MENU_SELECTION_CLEARALL           337
+#define MENU_SELECTION_ADDNEW             337
+#define MENU_SELECTION_CLEARALL           338
 
 #define MENU_SELECTION_MEMORIZESELECTIONS   3300
 #define MENU_SELECTION_SELECTIONS           3400
@@ -285,6 +286,7 @@ SynRad::SynRad()
 	regionInfo = NULL;
 	selectDialog = NULL;
 	moveFacet = NULL;
+	extrudeFacet = NULL;
 	exportDesorption = NULL;
 	mirrorFacet = NULL;
 	rotateFacet = NULL;
@@ -300,7 +302,6 @@ SynRad::SynRad()
 	vertexCoordinates = NULL;
 	profilePlotter = NULL;
 	spectrumPlotter = NULL;
-	viewEditor = NULL;
 	texturePlotter = NULL;
 	//outgassingMap = NULL;
 	m_strWindowTitle = APP_NAME;
@@ -453,6 +454,7 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("Facet")->Add("Mirror ...", MENU_FACET_MIRROR);
 	menu->GetSubMenu("Facet")->Add("Rotate ...", MENU_FACET_ROTATE);
 	menu->GetSubMenu("Facet")->Add("Align ...", MENU_FACET_ALIGN);
+	menu->GetSubMenu("Facet")->Add("Extrude ...", MENU_FACET_EXTRUDE);
 	menu->GetSubMenu("Facet")->Add("Remove selected", MENU_FACET_REMOVESEL, SDLK_DELETE, CTRL_MODIFIER);
 	menu->GetSubMenu("Facet")->Add("Explode selected", MENU_FACET_EXPLODE);
 	menu->GetSubMenu("Facet")->Add("Create difference of 2", MENU_FACET_CREATE_DIFFERENCE);
@@ -966,17 +968,17 @@ void SynRad::SetFacetSearchPrg(BOOL visible, char *text) {
 
 void SynRad::UpdateViewerParams() {
 
-	showNormal->SetCheck(viewer[curViewer]->showNormal);
-	showRule->SetCheck(viewer[curViewer]->showRule);
-	showUV->SetCheck(viewer[curViewer]->showUV);
-	showLeak->SetCheck(viewer[curViewer]->showLeak);
-	showHit->SetCheck(viewer[curViewer]->showHit);
-	showVolume->SetCheck(viewer[curViewer]->showVolume);
-	showLine->SetCheck(viewer[curViewer]->showLine);
-	showTexture->SetCheck(viewer[curViewer]->showTexture);
-	showFilter->SetCheck(viewer[curViewer]->showFilter);
-	showVertex->SetCheck(viewer[curViewer]->showVertex);
-	showIndex->SetCheck(viewer[curViewer]->showIndex);
+	showNormal->SetState(viewer[curViewer]->showNormal);
+	showRule->SetState(viewer[curViewer]->showRule);
+	showUV->SetState(viewer[curViewer]->showUV);
+	showLeak->SetState(viewer[curViewer]->showLeak);
+	showHit->SetState(viewer[curViewer]->showHit);
+	showVolume->SetState(viewer[curViewer]->showVolume);
+	showLine->SetState(viewer[curViewer]->showLine);
+	showTexture->SetState(viewer[curViewer]->showTexture);
+	showFilter->SetState(viewer[curViewer]->showFilter);
+	showVertex->SetState(viewer[curViewer]->showVertex);
+	showIndex->SetState(viewer[curViewer]->showIndex);
 
 	// Force all views to have the same showColormap
 	viewer[1]->showColormap = viewer[0]->showColormap;
@@ -1817,7 +1819,7 @@ int SynRad::FrameMove()
 	UpdateFacetHits();
 
 	// Formulas
-	//UpdateFormula(); //Not automatic anymore
+	if (autoUpdateFormulas) UpdateFormula();
 
 	// Sleep a bit to avoid unwanted CPU load
 	if (viewer[0]->IsDragging() ||
@@ -2002,6 +2004,7 @@ int SynRad::RestoreDeviceObjects()
 	RVALIDATE_DLG(scaleFacet);
 	RVALIDATE_DLG(selectDialog);
 	RVALIDATE_DLG(moveFacet);
+	RVALIDATE_DLG(extrudeFacet);
 	RVALIDATE_DLG(exportDesorption);
 	RVALIDATE_DLG(mirrorFacet);
 	RVALIDATE_DLG(rotateFacet);
@@ -2017,7 +2020,6 @@ int SynRad::RestoreDeviceObjects()
 	RVALIDATE_DLG(vertexCoordinates);
 	RVALIDATE_DLG(profilePlotter);
 	RVALIDATE_DLG(spectrumPlotter);
-	RVALIDATE_DLG(viewEditor);
 	RVALIDATE_DLG(texturePlotter);
 	//RVALIDATE_DLG(outgassingMap);
 
@@ -2045,6 +2047,7 @@ int SynRad::InvalidateDeviceObjects()
 	IVALIDATE_DLG(scaleFacet);
 	IVALIDATE_DLG(selectDialog);
 	IVALIDATE_DLG(moveFacet);
+	IVALIDATE_DLG(extrudeFacet);
 	IVALIDATE_DLG(exportDesorption);
 	IVALIDATE_DLG(mirrorFacet);
 	IVALIDATE_DLG(rotateFacet);
@@ -2059,9 +2062,7 @@ int SynRad::InvalidateDeviceObjects()
 	IVALIDATE_DLG(vertexCoordinates);
 	IVALIDATE_DLG(profilePlotter);
 	IVALIDATE_DLG(spectrumPlotter);
-	IVALIDATE_DLG(viewEditor);
 	IVALIDATE_DLG(texturePlotter);
-	//IVALIDATE_DLG(outgassingMap);
 
 	return GL_OK;
 }
@@ -2859,6 +2860,14 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 				}
 			}
 			break;
+		case MENU_FACET_EXTRUDE:
+			if (!extrudeFacet || !extrudeFacet->IsVisible()) {
+				SAFE_DELETE(extrudeFacet);
+				extrudeFacet = new ExtrudeFacet(geom, &worker);
+			}
+			extrudeFacet->SetVisible(TRUE);
+			break;
+
 		case MENU_FACET_SHIFTVERTEX:
 			if (AskToReset()) {
 				geom->ShiftVertex();
@@ -3274,7 +3283,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			else {
 				Resize(1024, 768, TRUE);
 			}
-			menu->GetSubMenu("View")->SetCheck(MENU_VIEW_FULLSCREEN, !m_bWindowed);
+			menu->GetSubMenu("View")->SetState(MENU_VIEW_FULLSCREEN, !m_bWindowed);
 			break;
 
 		case MENU_VIEW_ADDNEW:
@@ -3356,11 +3365,17 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			UpdateStructMenu();
 		}
 
-
 		// Select selection
-		if (src->GetId() >= MENU_SELECTION_SELECTIONS && src->GetId() < MENU_SELECTION_SELECTIONS + nbSelection) {
+		if (MENU_SELECTION_SELECTIONS + nbSelection > src->GetId() >= MENU_SELECTION_SELECTIONS) { //Choose selection by number
 			SelectSelection(src->GetId() - MENU_SELECTION_SELECTIONS);
 		}
+		else if (src->GetId() == (MENU_SELECTION_SELECTIONS + nbSelection)){ //Previous selection
+			SelectSelection(Remainder(idSelection - 1, nbSelection));
+		}
+		else if (src->GetId() == (MENU_SELECTION_SELECTIONS + nbSelection + 1)){ //Next selection
+			SelectSelection(Remainder(idSelection + 1, nbSelection));
+		}
+
 		// Clear selection
 		if (src->GetId() >= MENU_SELECTION_CLEARSELECTIONS && src->GetId() < MENU_SELECTION_CLEARSELECTIONS + nbSelection) {
 			char tmpname[256];
@@ -3800,7 +3815,7 @@ void SynRad::UpdateStructMenu() {
 			structMenu->Add(tmp, MENU_VIEW_STRUCTURE + (i + 1));
 	}
 
-	structMenu->SetCheck(MENU_VIEW_STRUCTURE + geom->viewStruct + 1, TRUE);
+	structMenu->SetState(MENU_VIEW_STRUCTURE + geom->viewStruct + 1, TRUE);
 
 	UpdateTitle();
 }
@@ -3817,6 +3832,7 @@ void SynRad::SelectView(int v) {
 void SynRad::SelectSelection(int v) {
 	Geometry *geom = worker.GetGeometry();
 	geom->SetSelection((&selections[v].selection), &(selections[v].nbSel));
+	idSelection = v;
 }
 
 //-----------------------------------------------------------------------------
@@ -3832,7 +3848,8 @@ void SynRad::ClearSelectionMenus() {
 
 void SynRad::RebuildSelectionMenus() {
 	ClearSelectionMenus();
-	for (int i = 0; i < nbSelection; i++){
+	int i;
+	for (i = 0; i < nbSelection; i++){
 		if (i <= 8) {
 			selectionsMenu->Add(selections[i].name, MENU_SELECTION_SELECTIONS + i, SDLK_1 + i, ALT_MODIFIER);
 		}
@@ -3842,6 +3859,9 @@ void SynRad::RebuildSelectionMenus() {
 		clearSelectionsMenu->Add(selections[i].name, MENU_SELECTION_CLEARSELECTIONS + i);
 		memorizeSelectionsMenu->Add(selections[i].name, MENU_SELECTION_MEMORIZESELECTIONS + i);
 	}
+	selectionsMenu->Add(NULL); //Separator
+	selectionsMenu->Add("Select previous", MENU_SELECTION_SELECTIONS + i, SDLK_F11, ALT_MODIFIER);
+	selectionsMenu->Add("Select next", MENU_SELECTION_SELECTIONS + i + 1, SDLK_F12, ALT_MODIFIER);
 }
 
 void SynRad::AddSelection(char *selectionName, ASELECTION s) {
@@ -3861,8 +3881,8 @@ void SynRad::AddSelection(char *selectionName, ASELECTION s) {
 }
 
 void SynRad::ClearSelection(int idClr) {
-	SAFE_FREE(selections[0].name);
-	for (int i = 0; i < nbSelection - 1; i++) selections[i] = selections[i + 1];
+	SAFE_FREE(selections[idClr].name);
+	for (int i = idClr; i < nbSelection - 1; i++) selections[i] = selections[i + 1];
 	nbSelection--;
 	RebuildSelectionMenus();
 }
@@ -3962,8 +3982,8 @@ void SynRad::AddView(char *viewName, AVIEW v) {
 }
 
 void SynRad::ClearView(int idClr) {
-	SAFE_FREE(views[0].name);
-	for (int i = 0; i < nbView - 1; i++) views[i] = views[i + 1];
+	SAFE_FREE(views[idClr].name);
+	for (int i = idClr; i < nbView - 1; i++) views[i] = views[i + 1];
 	nbView--;
 	RebuildViewMenus();
 }
@@ -4288,6 +4308,8 @@ void SynRad::LoadConfig() {
 		autoSaveSimuOnly = f->ReadInt();
 		f->ReadKeyword("checkForUpdates"); f->ReadKeyword(":");
 		checkForUpdates = f->ReadInt();
+		f->ReadKeyword("autoUpdateFormulas"); f->ReadKeyword(":");
+		autoUpdateFormulas = f->ReadInt();
 		f->ReadKeyword("compressSavedFiles"); f->ReadKeyword(":");
 		compressSavedFiles = f->ReadInt();
 		f->ReadKeyword("lowFluxMode"); f->ReadKeyword(":");
@@ -4326,17 +4348,17 @@ void SynRad::LoadConfig() {
 
 //----------------------------------------------------------------------------
 void SynRad::UpdateViewerFlags() {
-	viewer[curViewer]->showNormal = showNormal->IsChecked();
-	viewer[curViewer]->showRule = showRule->IsChecked();
-	viewer[curViewer]->showUV = showUV->IsChecked();
-	viewer[curViewer]->showLeak = showLeak->IsChecked();
-	viewer[curViewer]->showHit = showHit->IsChecked();
-	viewer[curViewer]->showLine = showLine->IsChecked();
-	viewer[curViewer]->showVolume = showVolume->IsChecked();
-	viewer[curViewer]->showTexture = showTexture->IsChecked();
-	viewer[curViewer]->showFilter = showFilter->IsChecked();
-	viewer[curViewer]->showVertex = showVertex->IsChecked();
-	viewer[curViewer]->showIndex = showIndex->IsChecked();
+	viewer[curViewer]->showNormal = showNormal->GetState();
+	viewer[curViewer]->showRule = showRule->GetState();
+	viewer[curViewer]->showUV = showUV->GetState();
+	viewer[curViewer]->showLeak = showLeak->GetState();
+	viewer[curViewer]->showHit = showHit->GetState();
+	viewer[curViewer]->showLine = showLine->GetState();
+	viewer[curViewer]->showVolume = showVolume->GetState();
+	viewer[curViewer]->showTexture = showTexture->GetState();
+	viewer[curViewer]->showFilter = showFilter->GetState();
+	viewer[curViewer]->showVertex = showVertex->GetState();
+	viewer[curViewer]->showIndex = showIndex->GetState();
 	//worker.Update(0.0);
 }
 
@@ -4410,6 +4432,7 @@ void SynRad::SaveConfig() {
 		f->Write("autoSaveFrequency:"); f->WriteDouble(autoSaveFrequency, "\n");
 		f->Write("autoSaveSimuOnly:"); f->WriteInt(autoSaveSimuOnly, "\n");
 		f->Write("checkForUpdates:"); f->WriteInt(checkForUpdates, "\n");
+		f->Write("autoUpdateFormulas:"); f->WriteInt(autoUpdateFormulas, "\n");
 		f->Write("compressSavedFiles:"); f->WriteInt(compressSavedFiles, "\n");
 		f->Write("lowFluxMode:"); f->WriteInt(worker.lowFluxMode, "\n");
 		f->Write("lowFluxCutoff:"); f->WriteDouble(worker.lowFluxCutoff, "\n");

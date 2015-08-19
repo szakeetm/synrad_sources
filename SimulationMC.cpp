@@ -668,7 +668,6 @@ BOOL StartFromSource() {
 	sHandle->tmpCount.fluxAbs += sHandle->dF;
 	sHandle->tmpCount.powerAbs += sHandle->dP;
 	sHandle->tmpCount.nbDesorbed++;
-	sHandle->nbPHit = 0;
 
 	sHandle->lastHit=NULL;
 
@@ -722,7 +721,6 @@ int PerformBounce(FACET *iFacet,double sigmaRatio,double theta,double phi,
 
 	RecordHit(HIT_REF,sHandle->dF,sHandle->dP);
 	sHandle->lastHit = iFacet;
-	sHandle->nbPHit++;
 
 
 	if( iFacet->hits_MC && iFacet->sh.countRefl ) RecordHitOnTexture(iFacet,sHandle->dF,sHandle->dP);

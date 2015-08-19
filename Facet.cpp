@@ -22,7 +22,8 @@ GNU General Public License for more details.
 #include <string.h>
 #include <math.h>
 #include "GLToolkit.h"
-
+#include "PugiXML\pugixml.hpp"
+using namespace pugi;
 #define MAX(x,y) (((x)<(y))?(y):(x))
 #define MIN(x,y) (((x)<(y))?(x):(y))
 
@@ -41,11 +42,8 @@ Facet::Facet(int nbIndex) {
 	memset(vertices2,0,nbIndex * sizeof(VERTEX2D));
 
 	sh.nbIndex = nbIndex;
-	sh.counter.nbDesorbed=0;
-	sh.counter.nbAbsorbed=0;
-	sh.counter.nbHit=0;
-	sh.counter.fluxAbs=0.0;
-	sh.counter.powerAbs=0.0;
+	memset(&sh.counter, 0, sizeof(sh.counter));
+	
 	sh.sticking = 0.0;
 	sh.opacity = 1.0;
 	sh.roughness = 0.004; //=20/5000
@@ -61,7 +59,7 @@ Facet::Facet(int nbIndex) {
 	sh.center.z = 0.0;
 	sh.is2sided = FALSE;
 	sh.isProfile = FALSE;
-	sh.isOpaque = TRUE;
+	//sh.isOpaque = TRUE;
 	sh.isTextured = FALSE;
 	sh.sign = 0.0;
 	sh.countAbs = FALSE;
@@ -474,7 +472,7 @@ void Facet::DetectOrientation() {
 void Facet::UpdateFlags() {
 
 	sh.isProfile  = (sh.profileType!=REC_NONE);
-	sh.isOpaque   = (sh.opacity!=0.0);
+	//sh.isOpaque   = (sh.opacity!=0.0);
 	sh.isTextured = ((texDimW*texDimH)>0);
 
 }
@@ -511,7 +509,7 @@ int Facet::InvalidateDeviceObjects() {
 
 // -----------------------------------------------------------
 
-void Facet::SetTexture(double width,double height,BOOL useMesh) {
+BOOL Facet::SetTexture(double width,double height,BOOL useMesh) {
 
 	BOOL dimOK = (width*height>0.0000001);
 
@@ -520,6 +518,7 @@ void Facet::SetTexture(double width,double height,BOOL useMesh) {
 		sh.texHeightD = height;
 		sh.texWidth = (int)ceil(width *0.9999999); //0.9999999: cut the last few digits (convert rounding error 1.00000001 to 1, not 2)
 		sh.texHeight = (int)ceil(height *0.9999999);
+		dimOK = (sh.texWidth > 0 && sh.texHeight > 0);
 	} else {
 		sh.texWidth   = 0;
 		sh.texHeight  = 0;
@@ -552,17 +551,18 @@ void Facet::SetTexture(double width,double height,BOOL useMesh) {
 		if( texDimH<4 ) texDimH=4;
 		glGenTextures(1,&glTex);
 		glList = glGenLists(1);
-		if( useMesh ) BuildMesh();
+		if (useMesh)
+			if (!BuildMesh()) return FALSE;
 		if( sh.countDirection ) {
-			int dirSize = sh.texWidth*sh.texHeight*sizeof(VHIT);
-			dirCache = (VHIT *)malloc(dirSize);
-			if (!dirCache) throw Error("Direction texture memory alloc failed. Out of memory.");
-			memset(dirCache,0,dirSize);
+			dirCache = (VHIT *)calloc(sh.texWidth*sh.texHeight, sizeof(VHIT));
+			if (!dirCache) return FALSE;
+			//memset(dirCache,0,dirSize); //already done by calloc
 		}
 
 	}
 
 	UpdateFlags(); //set hasMesh to TRUE if everything was OK
+	return TRUE;
 
 }
 
@@ -578,15 +578,19 @@ void Facet::glVertex2u(double u,double v) {
 
 // -----------------------------------------------------------
 
-void Facet::BuildMesh() {
+BOOL Facet::BuildMesh() {
 
 	mesh = (SHELEM *)malloc(sh.texWidth * sh.texHeight * sizeof(SHELEM));
 	if (!mesh) {
-		throw Error("Couldn't allocate memory for texture mesh.");
+		//Couldn't allocate memory
+		return FALSE;
+		//throw Error("malloc failed on Facet::BuildMesh()");
 	}
 	meshPts = (MESH *)malloc(sh.texWidth * sh.texHeight * sizeof(MESH));
 	if (!meshPts) {
-		throw Error("Couldn't allocate memory for texture mesh points.");
+		return FALSE;
+
+
 	}
 	hasMesh = TRUE;
 	memset(mesh,0,sh.texWidth * sh.texHeight * sizeof(SHELEM));
@@ -728,6 +732,7 @@ void Facet::BuildMesh() {
 
 	free(P1.pts);
 	BuildMeshList();
+	return TRUE;
 
 }
 
@@ -850,11 +855,19 @@ void Facet::RenderSelectedElem() {
 void Facet::Explode(FACETGROUP *group) {
 
 	int nb=0;
-	group->facets = (Facet **)malloc(nbElem*sizeof(Facet *));
+	if (!(group->facets = (Facet **)malloc(nbElem*sizeof(Facet *))))
+		throw Error("Not enough memory to create new facets");
 	for(int i=0;i<nbElem;i++) {
-		Facet *f = new Facet(meshPts[i].nbPts);
-		f->Copy(this);
-		group->facets[i] = f;
+		try {
+			Facet *f = new Facet(meshPts[i].nbPts);
+			f->Copy(this);
+			group->facets[i] = f;
+		}
+		catch (...) {
+			for (int d = 0; d < i; d++)
+				SAFE_DELETE(group->facets[d]);
+			throw Error("Cannot reserve memory for new facet(s)");
+		}
 		nb += meshPts[i].nbPts;
 	}
 
@@ -887,7 +900,8 @@ DWORD Facet::GetGeometrySize() {
 		+ (sh.nbIndex * sizeof(int))
 		+ (sh.nbIndex * sizeof(VERTEX2D));
 
-	if(sh.isTextured) s += sizeof(double)*sh.texWidth*sh.texHeight; //for 'element area' array
+	// Size of the 'element area' array passed to the geometry buffer
+	if (sh.isTextured) s += sizeof(double)*sh.texWidth*sh.texHeight;
 	return s;
 
 }
@@ -1396,10 +1410,11 @@ void Facet::SwapNormal() {
 	free(indices);
 	indices = tmp;
 
+	/* normal recalculated at reinitialize
 	// Invert normal
 	sh.N.x = -sh.N.x;
 	sh.N.y = -sh.N.y;
-	sh.N.z = -sh.N.z;
+	sh.N.z = -sh.N.z;*/
 
 }
 

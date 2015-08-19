@@ -139,9 +139,9 @@ typedef struct {
   FACET *lastHit;     // Last hitted facet
   //int sourceArea;  // Number of trajectory points
   double stepPerSec;  // Avg number of step per sec
-  int textTotalSize;  // Texture total size
-  int profTotalSize;  // Profile total size
-  int dirTotalSize;   // Direction field total size
+  size_t textTotalSize;  // Texture total size
+  size_t profTotalSize;  // Profile total size
+  size_t dirTotalSize;   // Direction field total size
   int spectrumTotalSize; //Spectrums total size
   BOOL loadOK;        // Load OK flag
   BOOL lastUpdateOK;  // Last hit update timeout
@@ -151,7 +151,7 @@ typedef struct {
   // Particle coordinates (MC)
   VERTEX3D pPos;    // Position
   VERTEX3D pDir;    // Direction
-  int      nbPHit;  // Number of hit (current particle)
+  //int      nbPHit;  // Number of hit (current particle) //Uncommented as it had no function
   double   dF;  //Flux carried by photon
   double   dP;  //Power carried by photon
   double   energy; //energy of the generated photon
@@ -207,6 +207,6 @@ BOOL Visible(VERTEX3D *c1,VERTEX3D *c2,FACET *f1,FACET *f2);
 void ProfileFacet(FACET *f,const double &dF,const double &dP,const double &E);
 BOOL IsInFacet(FACET *f,const double &u,const double &v);
 double GetTick();
-long   GetHitsSize();
+size_t   GetHitsSize();
 
 #endif /* _SIMULATIONH_ */

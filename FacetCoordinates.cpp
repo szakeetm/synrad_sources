@@ -334,7 +334,7 @@ void FacetCoordinates::ApplyChanges(){
 	//if( rep == GLDLG_OK ) {
 
 		if (mApp->AskToReset(worker)) {
-			changedSinceSave=TRUE;
+			mApp->changedSinceSave=TRUE;
 
 			//Change number of vertices
 			SAFE_FREE(selFacet->indices);

@@ -67,7 +67,7 @@ AlignFacet::AlignFacet(Geometry *g,Worker *w):GLWindow() {
 
 	invertNormal = new GLToggle(0,"Invert normal");
 	invertNormal->SetBounds(10,220,150,21);
-	invertNormal->SetCheck(TRUE);
+	invertNormal->SetState(TRUE);
 	step3->Add(invertNormal);
 
 	invertDir1 = new GLToggle(0,"Swap anchor/direction vertices on source");
@@ -201,12 +201,13 @@ void AlignFacet::ProcessMessage(GLComponent *src,int message) {
 
 			if (mApp->AskToReset()){
 				geom->AlignFacets(selection,nbMemo,Facet_source,Facet_dest,Anchor_source,Anchor_dest,Dir_source,Dir_dest,
-					invertNormal->IsChecked(),invertDir1->IsChecked(),invertDir2->IsChecked(),src==copyButton,work);
+					invertNormal->GetState(),invertDir1->GetState(),invertDir2->GetState(),src==copyButton,work);
 				//theApp->UpdateModelParams();
 				try { work->Reload(); } catch(Error &e) {
+
 					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
 				} 
-
+				mApp->changedSinceSave = TRUE;
 				mApp->UpdateFacetlistSelected();	
 				mApp->UpdateViewers();
 				//GLWindowManager::FullRepaint();
@@ -221,10 +222,13 @@ void AlignFacet::ProcessMessage(GLComponent *src,int message) {
 			}
 			geom->InitializeGeometry();
 			//for(int i=0;i<nbSelected;i++)
+
 			//	geom->SetFacetTexture(selection[i],geom->GetFacet(selection[i])->tRatio,geom->GetFacet(selection[i])->hasMesh);	
 			try { work->Reload(); } catch(Error &e) {
+
 					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
 			}  
+
 			mApp->UpdateFacetlistSelected();	
 			mApp->UpdateViewers();
 		}

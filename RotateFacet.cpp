@@ -314,13 +314,14 @@ void RotateFacet::ProcessMessage(GLComponent *src,int message) {
 			SAFE_FREE(vIdx);
 			if (mApp->AskToReset()) {
 				geom->RotateSelectedFacets(AXIS_P0,AXIS_DIR,deg,src==copyButton,work);
-				//theApp->UpdateModelParams();
+				//mApp->UpdateModelParams();
 				try { work->Reload(); } catch(Error &e) {
 					GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
 				} 
 				mApp->UpdateFacetlistSelected();
 				mApp->UpdateViewers();
 				//GLWindowManager::FullRepaint();
+				mApp->changedSinceSave = TRUE;
 			}
 		}
 		break;
@@ -330,17 +331,17 @@ void RotateFacet::ProcessMessage(GLComponent *src,int message) {
 }
 
 void RotateFacet::UpdateToggle(GLComponent *src) {
-	l1->SetCheck(FALSE);
-	l2->SetCheck(FALSE);
-	l3->SetCheck(FALSE);
-	l4->SetCheck(FALSE);
-	l5->SetCheck(FALSE);
-	l6->SetCheck(FALSE);
-	l7->SetCheck(FALSE);
-	l8->SetCheck(FALSE);
+	l1->SetState(FALSE);
+	l2->SetState(FALSE);
+	l3->SetState(FALSE);
+	l4->SetState(FALSE);
+	l5->SetState(FALSE);
+	l6->SetState(FALSE);
+	l7->SetState(FALSE);
+	l8->SetState(FALSE);
 
 	GLToggle *toggle=(GLToggle*)src;
-	toggle->SetCheck(TRUE);
+	toggle->SetState(TRUE);
 
 	facetNumber->SetEditable(src==l4||src==l5||src==l6);
 	aText->SetEditable(src==l8);

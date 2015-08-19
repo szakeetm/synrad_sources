@@ -134,7 +134,7 @@ TrajectoryDetails::TrajectoryDetails() :GLWindow() {
 
 	for (int i = 1; i < NB_TPCOLUMN; i++) {
 		show[i - 1] = new GLToggle(0, allColumn[i].name);
-		show[i - 1]->SetCheck(TRUE);
+		show[i - 1]->SetState(TRUE);
 		sPanel->Add(show[i - 1]);
 	}
 
@@ -395,7 +395,7 @@ void TrajectoryDetails::UpdateTable() {
 	int  nbCol = 0;
 
 	for (int i = 0; i < NB_TPCOLUMN; i++) {
-		if (i == 0 || show[i - 1]->IsChecked()) {
+		if (i == 0 || show[i - 1]->GetState()) {
 			tmpName[nbCol] = allColumn[i].name;
 			tmpWidth[nbCol] = allColumn[i].width;
 			tmpAlign[nbCol] = allColumn[i].align;
@@ -468,11 +468,11 @@ void TrajectoryDetails::ProcessMessage(GLComponent *src, int message) {
 			SetVisible(FALSE);
 		}
 		else if (src == checkAllButton) {
-			for (int i = 0; i < NB_TPCOLUMN - 1; i++) show[i]->SetCheck(TRUE);
+			for (int i = 0; i < NB_TPCOLUMN - 1; i++) show[i]->SetState(TRUE);
 			//UpdateTable();
 		}
 		else if (src == uncheckAllButton) {
-			for (int i = 0; i < NB_TPCOLUMN - 1; i++) show[i]->SetCheck(FALSE);
+			for (int i = 0; i < NB_TPCOLUMN - 1; i++) show[i]->SetState(FALSE);
 			//UpdateTable();
 		}
 		else if (src == updateButton) {

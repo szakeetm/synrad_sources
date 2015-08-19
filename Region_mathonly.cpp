@@ -57,7 +57,7 @@ Vector Region_mathonly::B(int pointId, const Vector &offset) {
 		case B_MODE_SINCOS:
 			*result_ptr[i]=0.0;
 			ratio=Ls_*2*PI/(*Bperiod_ptr[i]);
-			for (int j=0;j<distr_ptr[i]->size;j++) {
+			for (int j=0;j<distr_ptr[i]->size;j++) { //loop through orders
 				*result_ptr[i]+=distr_ptr[i]->valuesX[j]*pow(sin(((double)j+1.0)*ratio),j+1);
 				*result_ptr[i]+=distr_ptr[i]->valuesY[j]*pow(cos(((double)j+1.0)*ratio),j+1);
 			}
@@ -75,15 +75,15 @@ Vector Region_mathonly::B(int pointId, const Vector &offset) {
 			result.z=-K_/K_y*Bx_distr->valuesY[0]*cosh(K_x*position_with_offset.x)*sinh(K_y*position_with_offset.y)*sin(K_*position_with_offset.z);
 			Bset=true; //all is set, don't run again for the remaining two components
 			break;
-		case B_MODE_HELICOIDAL:  //mode 6
+		case B_MODE_HELICOIDAL:  //helicoidal field, as per PE 31/1/2001
 			*result_ptr[i]=0.0;
 			ratio=Ls_*2*PI/(*Bperiod_ptr[i]);
-			for (int j=0;j<distr_ptr[i]->size;j++) {
+			for (int j=0;j<distr_ptr[i]->size;j++) { //loop through orders (sinX+sin^2X+...)
 				*result_ptr[i]+=distr_ptr[i]->valuesX[j]*sin((double)j*ratio)*cos(PI*(*Bphase_ptr[i])/(*Bperiod_ptr[i]));
 				*result_ptr[i]+=distr_ptr[i]->valuesY[j]*cos((double)j*ratio)*sin(PI*(*Bphase_ptr[i])/(*Bperiod_ptr[i]));
 			}
 			break;
-		case B_MODE_ROTATING_DIPOLE:
+		case B_MODE_ROTATING_DIPOLE: //rotating dipole field ( see S. Duncan's presentation on generation of 20MeV circ.pol. photons 
 			*result_ptr[i]=0.0;
 			ratio=Ls_*2*PI/(*Bperiod_ptr[i]);
 			result.x=Bx_distr->valuesX[0]*sin(ratio);

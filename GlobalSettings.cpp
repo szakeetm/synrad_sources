@@ -175,18 +175,18 @@ GlobalSettings::GlobalSettings():GLWindow() {
 void GlobalSettings::Display(Worker *w) {
 	worker = w;
 	char tmp[256];
-	chkAntiAliasing->SetCheck(mApp->antiAliasing);
-	chkWhiteBg->SetCheck(mApp->whiteBg);
+	chkAntiAliasing->SetState(mApp->antiAliasing);
+	chkWhiteBg->SetState(mApp->whiteBg);
 
 	cutoffText->SetText(worker->lowFluxCutoff);
 	cutoffText->SetEditable(worker->lowFluxMode);
-	lowFluxToggle->SetCheck(worker->lowFluxMode);
+	lowFluxToggle->SetState(worker->lowFluxMode);
 
 	sprintf(tmp,"%g",mApp->autoSaveFrequency);
 	autoSaveText->SetText(tmp);
-	chkSimuOnly->SetCheck(mApp->autoSaveSimuOnly);
-	chkCheckForUpdates->SetCheck(mApp->checkForUpdates);
-	chkCompressSavedFiles->SetCheck(mApp->compressSavedFiles);
+	chkSimuOnly->SetState(mApp->autoSaveSimuOnly);
+	chkCheckForUpdates->SetState(mApp->checkForUpdates);
+	chkCompressSavedFiles->SetState(mApp->compressSavedFiles);
 	
 	int nb = worker->GetProcNumber();
 	sprintf(tmp,"%d",nb);
@@ -316,12 +316,12 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 				GLMessageBox::Display("No geometry loaded.","No geometry",GLDLG_OK,GLDLG_ICONERROR);
 			}
 		} else if (src==applyButton) {
-			mApp->antiAliasing = chkAntiAliasing->IsChecked();
-			mApp->whiteBg = chkWhiteBg->IsChecked();
-			mApp->checkForUpdates = chkCheckForUpdates->IsChecked();
-			mApp->compressSavedFiles = chkCompressSavedFiles->IsChecked();
-			mApp->autoUpdateFormulas = chkAutoUpdateFormulas->IsChecked();
-			mApp->autoSaveSimuOnly=chkSimuOnly->IsChecked();
+			mApp->antiAliasing = chkAntiAliasing->GetState();
+			mApp->whiteBg = chkWhiteBg->GetState();
+			mApp->checkForUpdates = chkCheckForUpdates->GetState();
+			mApp->compressSavedFiles = chkCompressSavedFiles->GetState();
+			mApp->autoUpdateFormulas = chkAutoUpdateFormulas->GetState();
+			mApp->autoSaveSimuOnly=chkSimuOnly->GetState();
 			double autosavefreq;
 			if (!autoSaveText->GetNumber(&autosavefreq) || !(autosavefreq>0.0)) {
 				GLMessageBox::Display("Invalid autosave frequency","Error",GLDLG_OK,GLDLG_ICONERROR);
@@ -335,11 +335,11 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 				return;
 			}
 
-			if (abs(worker->lowFluxCutoff - cutoffnumber)>1e-10 || worker->lowFluxMode!=lowFluxToggle->IsChecked()) {
+			if (abs(worker->lowFluxCutoff - cutoffnumber)>1e-10 || worker->lowFluxMode!=lowFluxToggle->GetState()) {
 				if (mApp->AskToReset()) {
 					worker->lowFluxCutoff = cutoffnumber;
-					worker->lowFluxMode = lowFluxToggle->IsChecked();
-					changedSinceSave = TRUE;
+					worker->lowFluxMode = lowFluxToggle->GetState();
+					mApp->changedSinceSave = TRUE;
 					// Send to sub process
 					try { worker->Reload(); }
 					catch (Error &e) {
@@ -376,7 +376,7 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 
 	case MSG_TOGGLE:
 		if (src == lowFluxToggle) {
-			cutoffText->SetEditable(lowFluxToggle->IsChecked());
+			cutoffText->SetEditable(lowFluxToggle->GetState());
 		}
 		break;
 	}

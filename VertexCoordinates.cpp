@@ -26,7 +26,6 @@
 #include "SynRad.h"
 #include "GLApp/GLInputBox.h"
 
-//extern GLApplication *theApp;
 extern SynRad *mApp;
 
 static const int   flWidth[] = {40,100,100,100};
@@ -217,7 +216,7 @@ void VertexCoordinates::ProcessMessage(GLComponent *src,int message) {
         if( rep == GLDLG_OK ) {
 			if (mApp->AskToReset(worker)) {
 			//if (worker->running) worker->Stop_Public();
-			changedSinceSave=TRUE;
+			mApp->changedSinceSave=TRUE;
 			for(int i=0;i<vertexListC->GetNbRow();i++) {
 				double x,y,z;
 				int id;

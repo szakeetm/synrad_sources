@@ -219,6 +219,7 @@ void GeometryViewer::ToOrigo() {
 	view.camAngleOx = 0.0;
 	view.camAngleOy = (view.projMode == PERSPECTIVE_PROJ)?0.0:PI;
 
+	view.camAngleOz = 0.0;
 
 
 	view.camDist = 100.0;
@@ -1355,9 +1356,9 @@ void GeometryViewer::Paint() {
 	}
 
 	sprintf(tmp,"");
-	topBtn->SetCheck(FALSE);
-	frontBtn->SetCheck(FALSE);
-	sideBtn->SetCheck(FALSE);
+	topBtn->SetState(FALSE);
+	frontBtn->SetState(FALSE);
+	sideBtn->SetState(FALSE);
 	if( view.performXY ) {
 		// Draw coordinates on screen when aligned
 		VERTEX3D org = geom->GetCenter();
@@ -1367,19 +1368,19 @@ void GeometryViewer::Paint() {
 			x = -view.vLeft - (1.0-(double)mXOrg/(double)width) * (view.vRight-view.vLeft) + (org.x+view.camOffset.x)*view.camDist;
 			z = -view.vTop - ((double)mYOrg/(double)(height-DOWN_MARGIN)) * (view.vBottom-view.vTop) + (org.z+view.camOffset.z)*view.camDist;
 			sprintf(tmp,"X=%g, Z=%g",-x/view.camDist,z/view.camDist);
-			topBtn->SetCheck(TRUE);
+			topBtn->SetState(TRUE);
 			break;
 		case XYZ_SIDE: // Side View
 			z = -view.vLeft - ((double)mXOrg/(double)width) * (view.vRight-view.vLeft) + (org.z+view.camOffset.z)*view.camDist;
 			y = -view.vTop - ((double)mYOrg/(double)(height-DOWN_MARGIN)) * (view.vBottom-view.vTop) + (org.y+view.camOffset.y)*view.camDist;
 			sprintf(tmp,"Z=%g, Y=%g",z/view.camDist,y/view.camDist);
-			sideBtn->SetCheck(TRUE);
+			sideBtn->SetState(TRUE);
 			break;
 		case XYZ_FRONT: // Front View
 			x = -view.vLeft - (1.0-(double)mXOrg/(double)width) * (view.vRight-view.vLeft) + (org.x+view.camOffset.x)*view.camDist;
 			y = -view.vTop - ((double)mYOrg/(double)(height-DOWN_MARGIN)) * (view.vBottom-view.vTop) + (org.y+view.camOffset.y)*view.camDist;
 			sprintf(tmp,"X=%g, Y=%g",x/view.camDist,y/view.camDist);
-			frontBtn->SetCheck(TRUE);
+			frontBtn->SetState(TRUE);
 			break;
 		}
 	}
@@ -1589,7 +1590,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 			}
 			UpdateMatrix();
 			autoScaleOn=FALSE;
-			autoBtn->SetCheck(FALSE);
+			autoBtn->SetState(FALSE);
 		}
 
 		if( unicode==SDLK_DOWN ) {
@@ -1616,7 +1617,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 			}
 			UpdateMatrix();
 			autoScaleOn=FALSE;
-			autoBtn->SetCheck(FALSE);
+			autoBtn->SetState(FALSE);
 		}
 
 		if( unicode==SDLK_LEFT ) {
@@ -1644,7 +1645,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 			}
 			UpdateMatrix();
 			autoScaleOn=FALSE;
-			autoBtn->SetCheck(FALSE);
+			autoBtn->SetState(FALSE);
 		}
 
 		if( unicode == SDLK_LCTRL ||  unicode == SDLK_RCTRL ) {
@@ -1736,7 +1737,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 				TranslateScale(-20.0);
 			}
 			autoScaleOn=FALSE;
-			autoBtn->SetCheck(FALSE);
+			autoBtn->SetState(FALSE);
 		}
 		if( evt->button.button == SDL_BUTTON_WHEELDOWN ) {
 			if (GetWindow()->IsShiftDown()) {
@@ -1748,7 +1749,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 				TranslateScale(20.0);
 			}
 			autoScaleOn=FALSE;
-			autoBtn->SetCheck(FALSE);
+			autoBtn->SetState(FALSE);
 		}
 		UpdateMouseCursor(mode);
 	}
@@ -1765,7 +1766,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 			case MODE_ZOOM:
 				Zoom();
 				autoScaleOn=FALSE;
-				autoBtn->SetCheck(FALSE);
+				autoBtn->SetState(FALSE);
 				break;
 			case MODE_SELECT:
 				GetWindow()->Clip(this,0,0,0,DOWN_MARGIN);
@@ -1872,7 +1873,7 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 
 			UpdateMatrix();
 			autoScaleOn=FALSE;
-			autoBtn->SetCheck(FALSE);
+			autoBtn->SetState(FALSE);
 			break;
 
 		case DRAGG_ROTATE:
@@ -1956,7 +1957,7 @@ void GeometryViewer::ProcessMessage(GLComponent *src,int message) {
 
 		} else if (src==autoBtn) {
 			autoScaleOn=!autoScaleOn;
-			//autoBtn->SetCheck(autoScaleOn);
+			//autoBtn->SetState(autoScaleOn);
 			if (autoScaleOn) AutoScale(FALSE);
 		} else if (src==handBtn) {
 			UpdateMouseCursor(MODE_MOVE);

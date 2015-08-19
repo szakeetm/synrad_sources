@@ -21,7 +21,7 @@
 #include "GLApp/GLMessageBox.h"
 #include "GLApp/GLFileBox.h"
 #include "SynRad.h"
-extern GLApplication *theApp;
+extern SynRad *theApp;
 
 //static const char *fileFilters = "Text files\0*.txt";
 //static const int   nbFilter = sizeof(fileFilters) / (2*sizeof(char *));
@@ -333,18 +333,18 @@ void OutgassingMap::ProcessMessage(GLComponent *src,int message) {
 			  
 		  }
 		  if( GLMessageBox::Display("Explode selected facet?","Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONINFO)==GLDLG_OK ) {
-				SynRad *mApp = (SynRad *)theApp;
-	
+
 			  if (mApp->AskToReset()) {
-				  changedSinceSave=TRUE;
-				  worker->GetGeometry()->ExplodeSelected(TRUE,desCombo->GetSelectedIndex(),desorbTypeN,values);
-					SAFE_FREE(values);
-					mApp->UpdateModelParams();
-					mApp->UpdateFacetParams(TRUE);
-					//worker->GetGeometry()->CalcTotalOutGassing();
-					// Send to sub process
-					try { worker->Reload(); } catch(Error &e) {
-						GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
+				  mApp->changedSinceSave=TRUE;
+				  try { 
+					  worker->GetGeometry()->ExplodeSelected(TRUE,desCombo->GetSelectedIndex(),desorbTypeN,values);
+					  SAFE_FREE(values);
+					  mApp->UpdateModelParams();
+					  mApp->UpdateFacetParams(TRUE);
+					  worker->GetGeometry()->CalcTotalOutGassing();
+					  // Send to sub process
+					  worker->Reload(); } catch(Error &e) {
+						  GLMessageBox::Display((char *)e.GetMsg(),"Error exploding facet (not enough memory?)",GLDLG_OK,GLDLG_ICONERROR);
 					}
 				}
 		  }
