@@ -469,7 +469,7 @@ void ProfilePlotter::SetViews(std::vector<int> views,int mode) {
 std::vector<int> ProfilePlotter::GetViews() {
 	std::vector<int>v;
 	v.reserve(nbView);
-	for (size_t i = 0; i < nbView; i++)
+	for (int i = 0; i < nbView; i++)
 		v.push_back(views[i]->userData1);
 	return v;
 }

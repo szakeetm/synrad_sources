@@ -47,37 +47,24 @@ const char *Error::GetMsg() {
 // FileUtils class
 // -------------------------------------------------
 
+BOOL FileUtils::Exist(std::string fileName) {
+	return Exist(fileName.c_str());
+}
+
 BOOL FileUtils::Exist(const char *fileName) {
 
 	if (FILE *file = fopen(fileName, "r")) {
 		fclose(file);
 		return TRUE;
-
 	}
-	else {
-		return FALSE;
-	}
-}
-
-// -------------------------------------------------
-
-char *FileUtils::GetPath(char *fileName) {
-
-  static char tmp[512];
-  strncpy(tmp,fileName,512);
-
-  char  *p = strrchr(tmp,'\\');
-  if(!p) p = strrchr(tmp,'/');
-  if(p)  *p=0;
-  return tmp;
-
+	return FALSE;
 }
 
 // -------------------------------------------------
 // FileReader class
 // -------------------------------------------------
 
-FileReader::FileReader(char *fileName) {
+FileReader::FileReader(const char *fileName) {
 
   file = fopen(fileName,"r");
   char tmp[512];
@@ -438,26 +425,28 @@ void FileWriter::WriteDouble(const double &v,char *sep) {
   if(sep) fprintf(file,"%s",sep);
 }
 
-void FileWriter::Write(char *s) {
+void FileWriter::Write(const char *s) {
 	if (*s==NULL) return; //null expression: don't do anything (for example formulas without name)
 	if( !fprintf(file,"%s",s) )
     throw Error("Error while writing to file");
 }
 
-std::string SplitFilename (const std::string& str)
+std::string FileUtils::GetFilename(const std::string& str)
 {
-  static std::string retval;
-  size_t found;
-  found=str.find_last_of("/\\");
-  retval=str.substr(found+1);
-  return retval;
+	size_t found = str.find_last_of("/\\");
+	if (found == std::string::npos) return str; //not found
+	return str.substr(found + 1);
 }
 
-std::string SplitPath (const std::string& str)
+std::string FileUtils::GetPath(const std::string& str)
 {
-  static std::string retval;
-  size_t found;
-  found=str.find_last_of("/\\");
-  retval=str.substr(0,found);
-  return retval;
+	size_t found = str.find_last_of("/\\");
+	if (found == std::string::npos) return str; //not found
+	else return str.substr(0, found);
+}
+
+std::string FileUtils::GetExtension(const std::string& str) {
+	size_t found = str.find_last_of(".");
+	if (found == std::string::npos) return ""; //not found
+	else return str.substr(found + 1);
 }

@@ -112,7 +112,7 @@ typedef struct {
 
 typedef struct {
 
-  int nbPts;
+  size_t nbPts;
   VERTEX2D *pts;
 
 } MESH;

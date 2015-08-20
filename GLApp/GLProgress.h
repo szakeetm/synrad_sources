@@ -17,6 +17,7 @@
 #include "..\..\molflow_project\lib\include\SDL\SDL_opengl.h"
 #include "GLWindow.h"
 #include "GLLabel.h"
+#include <string>
 
 #ifndef _GLPROGESSH_
 #define _GLPROGESSH_
@@ -30,7 +31,8 @@ public:
   // Update progress bar (0 to 1)
   void SetProgress(double value);
   double GetProgress();
-  void SetMessage(char *msg);
+  void SetMessage(const char *msg);
+  void SetMessage(std::string msg);
 
 private:
 

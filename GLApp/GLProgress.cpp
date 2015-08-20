@@ -125,9 +125,11 @@ double GLProgress::GetProgress() {
 
 }
 
-// -------------------------------------------------
+void GLProgress::SetMessage(std::string msg) {
+	SetMessage(msg.c_str());
+}
 
-void GLProgress::SetMessage(char *msg) {
+void GLProgress::SetMessage(const char *msg) {
 
     label->SetText(msg);
 	//GLWindowManager::Repaint();

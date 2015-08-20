@@ -22,6 +22,7 @@
 #include "GLApp/GLApp.h"
 #include "Shared.h"
 #include "File.h"
+#include "PugiXML/pugixml.hpp"
 
 class Facet {
 
@@ -88,6 +89,7 @@ public:
   void  LoadGEO(FileReader *file,int version,int nbVertex);
   //void  SaveGEO(FileWriter *file,int idx);
   void  LoadSYN(FileReader *file,int version,int nbVertex);
+  void  LoadXML(pugi::xml_node f, int nbVertex, BOOL isMolflowFile, int vertexOffset);
   void  SaveSYN(FileWriter *file,int idx,BOOL crashSave=FALSE);
   BOOL  IsCoplanar(Facet *f,double threshold);
   int   GetIndex(int idx);

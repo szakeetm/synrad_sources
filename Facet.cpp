@@ -136,7 +136,7 @@ Facet::~Facet() {
 	DELETE_LIST(glElem);
 	DELETE_LIST(glSelElem);
 	SAFE_FREE(visible);
-	for(int i=0;i<nbElem;i++)
+	for(size_t i=0;i<nbElem;i++)
 		SAFE_FREE(meshPts[i].pts);
 	SAFE_FREE(meshPts);
 }
@@ -334,7 +334,44 @@ void Facet::LoadTXT(FileReader *file) {
 
 }
 
-// -----------------------------------------------------------
+void Facet::LoadXML(xml_node f, int nbVertex, BOOL isSynradFile, int vertexOffset) {
+	int idx = 0;
+	for (xml_node indice : f.child("Indices").children("Indice")) {
+		indices[idx] = indice.attribute("vertex").as_int() + vertexOffset;
+		if (indices[idx] >= nbVertex) {
+			char err[128];
+			sprintf(err, "Facet %d refers to vertex %d which doesn't exist", f.attribute("id").as_int() + 1, idx + 1);
+			throw Error(err);
+		}
+		idx++;
+	}
+	sh.opacity = f.child("Opacity").attribute("constValue").as_double();
+	sh.is2sided = f.child("Opacity").attribute("is2sided").as_int();
+	sh.superIdx = f.child("Structure").attribute("inStructure").as_int();
+	sh.superDest = f.child("Structure").attribute("linksTo").as_int();
+	sh.teleportDest = f.child("Teleport").attribute("target").as_int();
+
+	if (isSynradFile) {
+		sh.sticking = f.child("Sticking").attribute("constValue").as_double();
+		xml_node recNode = f.child("Recordings");
+		sh.profileType = recNode.child("Profile").attribute("type").as_int();
+		sh.hasSpectrum = recNode.child("Spectrum").attribute("record").as_bool();
+		xml_node texNode = recNode.child("Texture");
+		hasMesh = texNode.attribute("hasMesh").as_bool();
+		sh.texWidthD = texNode.attribute("texDimX").as_double();
+		sh.texHeightD = texNode.attribute("texDimY").as_double();
+		sh.countAbs = texNode.attribute("countAbs").as_int();
+		sh.countRefl = texNode.attribute("countRefl").as_int();
+		sh.countTrans = texNode.attribute("countTrans").as_int();
+		sh.countDirection = texNode.attribute("countDir").as_int();
+	} //else use default values at Facet() constructor
+
+	textureVisible = f.child("ViewSettings").attribute("textureVisible").as_int();
+	volumeVisible = f.child("ViewSettings").attribute("volumeVisible").as_int();
+
+	UpdateFlags();
+}
+
 
 void Facet::SaveTXT(FileWriter *file) {
 
@@ -535,7 +572,7 @@ BOOL Facet::SetTexture(double width,double height,BOOL useMesh) {
 	DELETE_LIST(glList);
 	DELETE_LIST(glElem);
 	if (meshPts) {
-		for(int i=0;i<nbElem;i++)
+		for(size_t i=0;i<nbElem;i++)
 			SAFE_FREE(meshPts[i].pts);
 	}
 	SAFE_FREE(meshPts);
@@ -751,9 +788,9 @@ void Facet::BuildMeshList() {
 
 
 	glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-	for(int i=0;i<nbElem;i++) {
+	for(size_t i=0;i<nbElem;i++) {
 		glBegin(GL_POLYGON);
-		for(int n=0;n<meshPts[i].nbPts;n++) {
+		for(size_t n=0;n<meshPts[i].nbPts;n++) {
 			glEdgeFlag(TRUE);
 			glVertex2u(meshPts[i].pts[n].u,meshPts[i].pts[n].v);
 		}
@@ -857,14 +894,14 @@ void Facet::Explode(FACETGROUP *group) {
 	int nb=0;
 	if (!(group->facets = (Facet **)malloc(nbElem*sizeof(Facet *))))
 		throw Error("Not enough memory to create new facets");
-	for(int i=0;i<nbElem;i++) {
+	for(size_t i=0;i<nbElem;i++) {
 		try {
 			Facet *f = new Facet(meshPts[i].nbPts);
 			f->Copy(this);
 			group->facets[i] = f;
 		}
 		catch (...) {
-			for (int d = 0; d < i; d++)
+			for (size_t d = 0; d < i; d++)
 				SAFE_DELETE(group->facets[d]);
 			throw Error("Cannot reserve memory for new facet(s)");
 		}
@@ -881,8 +918,8 @@ void Facet::Explode(FACETGROUP *group) {
 void Facet::FillVertexArray(VERTEX3D *v) {
 
 	int nb=0;
-	for(int i=0;i<nbElem;i++) {
-		for(int j=0;j<meshPts[i].nbPts;j++) {
+	for(size_t i=0;i<nbElem;i++) {
+		for(size_t j=0;j<meshPts[i].nbPts;j++) {
 			v[nb].x = sh.O.x + sh.U.x*meshPts[i].pts[j].u + sh.V.x*meshPts[i].pts[j].v;
 			v[nb].y = sh.O.y + sh.U.y*meshPts[i].pts[j].u + sh.V.y*meshPts[i].pts[j].v;
 			v[nb].z = sh.O.z + sh.U.z*meshPts[i].pts[j].u + sh.V.z*meshPts[i].pts[j].v;

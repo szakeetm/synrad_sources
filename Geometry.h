@@ -63,7 +63,7 @@ public:
   void LoadSTL(FileReader *file,GLProgress *prg,double scaleFactor);
   void LoadASE(FileReader *file,GLProgress *prg);
   void LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleakLoad,HIT *pHits,int *nbHHitLoad,int *version);
-  PARfileList LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleakLoad,HIT *pHits,int *nbHHitLoad,int *version);
+  std::vector<std::string> LoadSYN(FileReader *file, GLProgress *prg, LEAK *pleak, int *nbleakLoad, HIT *pHits, int *nbHHitLoad, int *version);
   bool LoadTextures(FileReader *file,GLProgress *prg,Dataport *dpHit,int version);
 
   BOOL IsLoaded();
@@ -71,7 +71,7 @@ public:
   // Insert
   void InsertTXT(FileReader *file,GLProgress *prg,BOOL newStr);
   void InsertGEO(FileReader *file,GLProgress *prg,BOOL newStr);
-  PARfileList InsertSYN(FileReader *file,GLProgress *prg,BOOL newStr);
+  std::vector<std::string> InsertSYN(FileReader *file, GLProgress *prg, BOOL newStr);
   void InsertSTL(FileReader *file,GLProgress *prg,double scaleFactor,BOOL newStr);
 
   // Save
@@ -85,8 +85,8 @@ public:
   void SaveXML_geometry(pugi::xml_node saveDoc, Worker *work, GLProgress *prg, BOOL saveSelected);
   BOOL SaveXML_simustate(pugi::xml_node saveDoc, Worker *work, BYTE *buffer, SHGHITS *gHits, int nbLeakSave, int nbHHitSave,
 	  LEAK *pLeak, HIT *pHits, GLProgress *prg, BOOL saveSelected);
-  void LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, BOOL isSynxml = FALSE);
-  void InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, BOOL newStr, BOOL isSynxml = FALSE);
+  void LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg);
+  void InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, BOOL newStr);
   BOOL LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit, Worker *work, GLProgress *progressDlg);
 
   // Selection (drawing stuff)
@@ -181,7 +181,8 @@ public:
   void     InitializeGeometry(int facet_number=-1,BOOL BBOnly=FALSE);           // Initialiase all geometry related variable
   void     LoadProfileSYN(FileReader *file,Dataport *dpHit);
   void     LoadSpectrumSYN(FileReader *file,Dataport *dpHit);
-
+  void UpdateName(FileReader *file);
+  void UpdateName(const char *fileName);
 
  
   // Texture scaling
@@ -251,10 +252,9 @@ private:
   void LoadTXTGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0);
   void InsertTXTGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0,BOOL newStruct=FALSE);
   void InsertGEOGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0,BOOL newStruct=FALSE);
-  PARfileList InsertSYNGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0,BOOL newStruct=FALSE);
+  std::vector<std::string> InsertSYNGeom(FileReader *file, int *nbV, int *nbF, VERTEX3D **V, Facet ***F, int strIdx = 0, BOOL newStruct = FALSE);
   void InsertSTLGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0,BOOL newStruct=FALSE,double scaleFactor=1.0);
   void RemoveLinkFacet();
-  void UpdateName(FileReader *file);
   void SaveProfileSYN(FileWriter *file,Dataport *dpHit,int super=-1,BOOL saveSelected=FALSE,BOOL crashSave=FALSE);
   void SaveSpectrumSYN(FileWriter *file,Dataport *dpHit,int super=-1,BOOL saveSelected=FALSE,BOOL crashSave=FALSE);
   void SaveProfileGEO(FileWriter *file,int super=-1,BOOL saveSelected=FALSE);

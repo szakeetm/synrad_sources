@@ -39,9 +39,9 @@ public:
   // Return a handle to the currently loaded geometry
   Geometry *GetGeometry();
   void AddMaterial(string *fileName);
-  void LoadGeometry(char *fileName);// Load a geometry (throws Error)
-  void InsertGeometry(BOOL newStr,char *fileName); // Inserts a new geometry (throws Error)
-  void LoadTextures(char *fileName,int version);  // Load a textures(throws Error)
+  void LoadGeometry(char *fileName, BOOL insert=FALSE, BOOL newStr=FALSE);// Loads or inserts a geometry (throws Error)
+  //void InsertGeometry(BOOL newStr,char *fileName); // Inserts a new geometry (throws Error)
+  void LoadTexturesSYN(const char *fileName,int version);  // Load a textures(throws Error)
     void RebuildTextures();
   
   // Save a geometry (throws Error)
@@ -82,7 +82,7 @@ public:
   BYTE *GetHits(); // Access to dataport (HIT)
   void  ReleaseHits();
   void ClearRegions();
-  void AddRegion(char *fileName,int position=-1); //load region (position==-1: add as new region)
+  void AddRegion(const char *fileName,int position=-1); //load region (position==-1: add as new region)
   void RecalcRegion(int regionId);
   void SaveRegion(char *fileName,int position,BOOL overwrite=FALSE);
 

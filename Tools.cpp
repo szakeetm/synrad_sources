@@ -212,33 +212,3 @@ void Histogram::ResetCounts(){
 	max_count=total_count=0.0;
 	memset(counts,0,number_of_bins*sizeof(double));
 }
-
-PARfileList::PARfileList(int N){
-	fileNames=new char*[N];
-	for (int i=0;i<N;i++) {
-		fileNames[i]=new char[512];
-		*(fileNames[i])=NULL;
-	}
-	nbFiles=N;
-}
-
-PARfileList::~PARfileList(){
-	for (int i=0;i<nbFiles;i++)
-		SAFE_DELETE(fileNames[i]);
-	SAFE_DELETE(fileNames);
-}
-
-PARfileList& PARfileList::operator=(const PARfileList &src){
-	this->fileNames=new char*[src.nbFiles];
-	this->nbFiles=src.nbFiles;
-	for (int i=0;i<nbFiles;i++)
-		this->fileNames[i]=_strdup(src.fileNames[i]);
-	return *this;
-};
-
-PARfileList::PARfileList(const PARfileList &src) {
-	this->fileNames=new char*[src.nbFiles];
-	this->nbFiles=src.nbFiles;
-	for (int i=0;i<nbFiles;i++)
-		this->fileNames[i]=_strdup(src.fileNames[i]);
-};

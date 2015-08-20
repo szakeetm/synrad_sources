@@ -1030,7 +1030,7 @@ void Region_full::SaveParam(FileWriter *file) {
 	if (emittance!=0.0) { //non-ideal beam
 		file->Write("beta_x:");file->WriteDouble(betax,"\n");
 		if (betax<0.0) {//use BXY file
-			file->Write("BXYfileName:\"");file->Write((char*)SplitFilename(BXYfileName).c_str());file->Write("\"\n"); //truncate path
+			file->Write("BXYfileName:\"");file->Write(FileUtils::GetFilename(BXYfileName).c_str());file->Write("\"\n"); //truncate path
 		} else {//constants
 			file->Write("beta_y:");file->WriteDouble(betay,"\n");
 			file->Write("eta:");file->WriteDouble(eta,"\n");
@@ -1048,19 +1048,19 @@ void Region_full::SaveParam(FileWriter *file) {
 	if (Bx_mode==B_MODE_CONSTANT) {
 		file->Write("Bx_const_Tesla:");file->WriteDouble(B_const.x,"\n");
 	} else {
-		file->Write("Bx_fileName:\"");file->Write((char*)SplitFilename(MAGXfileName).c_str());file->Write("\"\n"); //truncate path
+		file->Write("Bx_fileName:\"");file->Write(FileUtils::GetFilename(MAGXfileName).c_str());file->Write("\"\n"); //truncate path
 	}
 	file->Write("By_mode:");file->WriteInt(By_mode,"\n");
 	if (By_mode==B_MODE_CONSTANT) {
 		file->Write("By_const_Tesla:");file->WriteDouble(B_const.y,"\n");
 	} else {
-		file->Write("By_fileName:\"");file->Write((char*)SplitFilename(MAGYfileName).c_str());file->Write("\"\n"); //truncate path
+		file->Write("By_fileName:\""); file->Write(FileUtils::GetFilename(MAGYfileName).c_str()); file->Write("\"\n"); //truncate path
 	}
 	file->Write("Bz_mode:");file->WriteInt(Bz_mode,"\n");
 	if (Bz_mode==B_MODE_CONSTANT) {
 		file->Write("Bz_const_Tesla:");file->WriteDouble(B_const.z,"\n");
 	} else {
-		file->Write("Bz_fileName:\"");file->Write((char*)SplitFilename(MAGZfileName).c_str());file->Write("\"\n"); //truncate path
+		file->Write("Bz_fileName:\""); file->Write(FileUtils::GetFilename(MAGZfileName).c_str()); file->Write("\"\n"); //truncate path
 	}
 }
 
@@ -1121,7 +1121,7 @@ void Region_full::LoadParam(FileReader *file){
 				if (FileUtils::Exist(tmp)) //file found in tmp directory
 					BXYfileName.assign(tmp);
 				else {//not found, look for it in current directory (syn files)				
-					std::string path=SplitPath(file->GetName());
+					std::string path=FileUtils::GetPath(file->GetName());
 					sprintf(tmp,"%s\\%s",path.c_str(),tmp2);
 					if (FileUtils::Exist(tmp)) //file found in current directory
 						BXYfileName.assign(tmp);
@@ -1170,7 +1170,7 @@ void Region_full::LoadParam(FileReader *file){
 				if (FileUtils::Exist(tmp)) //file found in tmp directory
 					MagFileNamePtr[i]->assign(tmp);
 				else {//not found, look for it in current directory (syn files)
-					std::string path=SplitPath(file->GetName());
+					std::string path=FileUtils::GetPath(file->GetName());
 					sprintf(tmp,"%s\\%s",path.c_str(),tmp2);
 					if (FileUtils::Exist(tmp)) //file found in current directory
 						MagFileNamePtr[i]->assign(tmp);

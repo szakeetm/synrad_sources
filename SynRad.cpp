@@ -40,10 +40,8 @@ GNU General Public License for more details.
 #define APP_NAME "Synrad+ 1.3.11 ("__DATE__")"
 #endif
 
-static const char *fileLFilters = "All SynRad supported files\0*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0SYN files\0*.syn;*.syn7z;\0GEO files\0*.geo;*.geo7z;\0TXT files\0*.txt\0STR files\0*.str\0STL files\0*.stl\0ASE files\0*.ase\0";
+static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
 static const int   nbLFilter = 8;
-static const char *fileInsFilters = "SYN files\0*.syn;*.syn7z;\0GEO files\0*.geo;*.geo7z;\0Text files\0*.txt\0STL files\0*.stl\0";
-static const int   nbInsFilter = 4;
 static const char *fileSFilters = "SYN files\0*.syn;*.syn7z;\0GEO files\0*.geo;*.geo7z;\0Text files\0*.txt\0All files\0*.*\0";
 static const int   nbSFilter = 4;
 static const char *fileSelFilters = "Selection files\0*.sel\0All files\0*.*\0";
@@ -2465,7 +2463,7 @@ void SynRad::InsertGeometry(BOOL newStr, char *fName) {
 	strcpy(fullName, "");
 
 	if (fName == NULL) {
-		FILENAME *fn = GLFileBox::OpenFile(currentDir, NULL, "Open File", fileInsFilters, nbInsFilter);
+		FILENAME *fn = GLFileBox::OpenFile(currentDir, NULL, "Open File", fileLFilters, nbLFilter);
 		if (fn)
 			strcpy(fullName, fn->fullName);
 	}
@@ -2491,7 +2489,7 @@ void SynRad::InsertGeometry(BOOL newStr, char *fName) {
 
 	try {
 
-		worker.InsertGeometry(newStr, fullName);
+		worker.LoadGeometry(fullName,TRUE,newStr);
 		Geometry *geom = worker.GetGeometry();
 
 		startSimu->SetEnabled(TRUE);
@@ -3331,18 +3329,18 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			LoadParam(recentPARs[src->GetId() - MENU_REGIONS_LOADRECENT]);
 		}
 		// Show structure menu
-		if (src->GetId() >= MENU_VIEW_STRUCTURE && src->GetId() < MENU_VIEW_STRUCTURE + geom->GetNbStructure()) {
+		if (src->GetId() > MENU_VIEW_STRUCTURE && src->GetId() <= MENU_VIEW_STRUCTURE + geom->GetNbStructure()) {
 			geom->viewStruct = src->GetId() - MENU_VIEW_STRUCTURE - 1;
 			if (src->GetId() > MENU_VIEW_STRUCTURE) geom->Unselect();
 			UpdateStructMenu();
 		}
 		// Load PAR to... menu
-		if (src->GetId() >= MENU_REGIONS_LOADTO && src->GetId() < MENU_REGIONS_LOADTO + worker.regions.size()) {
+		if (src->GetId() >= MENU_REGIONS_LOADTO && src->GetId() < MENU_REGIONS_LOADTO + (int)worker.regions.size()) {
 			if (worker.running) worker.Stop_Public();
 			LoadParam(NULL, src->GetId() - MENU_REGIONS_LOADTO);
 		}
 		// Remove region menu
-		if (src->GetId() >= MENU_REGIONS_REMOVE && src->GetId() < MENU_REGIONS_REMOVE + worker.regions.size()) {
+		if (src->GetId() >= MENU_REGIONS_REMOVE && src->GetId() < MENU_REGIONS_REMOVE + (int)worker.regions.size()) {
 			if (worker.running) worker.Stop_Public();
 			RemoveRegion(src->GetId() - MENU_REGIONS_REMOVE);
 		}
@@ -3366,7 +3364,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		}
 
 		// Select selection
-		if (MENU_SELECTION_SELECTIONS + nbSelection > src->GetId() >= MENU_SELECTION_SELECTIONS) { //Choose selection by number
+		if (MENU_SELECTION_SELECTIONS + nbSelection > src->GetId() && src->GetId() >= MENU_SELECTION_SELECTIONS) { //Choose selection by number
 			SelectSelection(src->GetId() - MENU_SELECTION_SELECTIONS);
 		}
 		else if (src->GetId() == (MENU_SELECTION_SELECTIONS + nbSelection)){ //Previous selection
@@ -3377,7 +3375,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		}
 
 		// Clear selection
-		if (src->GetId() >= MENU_SELECTION_CLEARSELECTIONS && src->GetId() < MENU_SELECTION_CLEARSELECTIONS + nbSelection) {
+		if (MENU_SELECTION_CLEARSELECTIONS <= src->GetId() && src->GetId() < MENU_SELECTION_CLEARSELECTIONS + nbSelection) {
 			char tmpname[256];
 			sprintf(tmpname, "Clear %s?", selections[src->GetId() - MENU_SELECTION_CLEARSELECTIONS].name);
 			if (GLMessageBox::Display(tmpname, "Confirmation", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONINFO) == GLDLG_OK) {

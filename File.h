@@ -44,8 +44,11 @@ class FileUtils {
 
 public:
   // Utils functions
-  static int Exist(const char *fileName);
-  static char *GetPath(char *fileName);
+	static int Exist(std::string fileName);
+	static int Exist(const char *fileName);
+	static std::string GetPath(const std::string &str); //Extracts string up to to last "\"
+	static std::string GetFilename(const std::string &str); //Extracts string after the last "\"
+	static std::string GetExtension(const std::string &str); //Extracts string after the last "."
 };
 
 // -------------------------------------------------------
@@ -54,8 +57,9 @@ class FileReader {
 
 public:
   // Constructor/Destructor
-  FileReader(char *fileName);
-  ~FileReader();
+	FileReader(std::string fileName) :FileReader(fileName.c_str()){};
+	FileReader(const char *fileName);
+	~FileReader();
 
   char *GetName();
 
@@ -111,7 +115,7 @@ public:
   void WriteLLong(const llong &v,char *sep=NULL);
   void WriteInt(const int &v,char *sep=NULL);
   void WriteDouble(const double &v,char *sep=NULL);
-  void Write(char *s);
+  void Write(const char *s);
 
 private:
 
@@ -119,9 +123,6 @@ private:
   char fileName[2048];
 
 };
-  
-std::string SplitFilename (const std::string& str);
-std::string SplitPath(const std::string& str);
 
 #endif /* FILERWH */
 

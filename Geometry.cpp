@@ -72,7 +72,7 @@ Geometry::~Geometry() {
 // -----------------------------------------------------------
 
 void Geometry::Clear() {
-
+	viewStruct = -1; //otherwise a nonexistent structure could stay selected
 	// Free memory
 	if(facets) {
 		for(int i=0;i<sh.nbFacet;i++)
@@ -1368,18 +1368,12 @@ void  Geometry::BuildPipe(double L,double R,double s,int step) {
 // -----------------------------------------------------------
 
 void Geometry::UpdateName(FileReader *file) {
-
-	char *p = strrchr(file->GetName(),'\\');
-	if(!p) p = strrchr(file->GetName(),'/');
-
-	if(!p)
-		strcpy(sh.name,file->GetName());
-	else
-		strcpy(sh.name,p+1);
-
+	UpdateName(file->GetName());
 }
 
-
+void Geometry::UpdateName(const char *fileName) {
+	strcpy(sh.name, FileUtils::GetFilename(fileName).c_str());
+}
 
 void Geometry::AdjustProfile() {
 
@@ -1469,7 +1463,7 @@ void Geometry::LoadSTR(FileReader *file,GLProgress *prg) {
 	sh.nbSuper = file->ReadInt();
 
 	strcpy(fPath,file->ReadLine());
-	strcpy(nPath,FileUtils::GetPath(file->GetName()));
+	strcpy(nPath,FileUtils::GetPath(file->GetName()).c_str());
 
 	for(int n=0;n<sh.nbSuper;n++) {
 
@@ -1681,11 +1675,11 @@ void Geometry::InsertGEO(FileReader *file,GLProgress *prg,BOOL newStr) {
 
 }
 
-PARfileList Geometry::InsertSYN(FileReader *file,GLProgress *prg,BOOL newStr) {
+std::vector<std::string> Geometry::InsertSYN(FileReader *file,GLProgress *prg,BOOL newStr) {
 
 	int structId=viewStruct;
 	if (structId==-1) structId=0;
-	PARfileList result=InsertSYNGeom(file,&(sh.nbVertex),&(sh.nbFacet),&vertices3,&facets,structId,newStr);
+	std::vector<std::string> result = InsertSYNGeom(file, &(sh.nbVertex), &(sh.nbFacet), &vertices3, &facets, structId, newStr);
 	char *e = strrchr(strName[0],'.');
 	if(e) *e=0;
 	InitializeGeometry();
@@ -1951,7 +1945,7 @@ void Geometry::InsertGEOGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3
 
 	file->ReadKeyword("structures");file->ReadKeyword("{");
 	for(int i=0;i<nbNewSuper;i++) {
-		strName[i] = _strdup(file->ReadString());
+		strName[sh.nbSuper+i] = _strdup(file->ReadString());
 		// For backward compatibilty with STR
 		/* //Commented out for GEO
 		sprintf(tmp,"%s.txt",strName[i]);
@@ -2046,7 +2040,6 @@ void Geometry::InsertGEOGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3
 			if ((*facets)[i]->sh.superDest > 0) (*facets)[i]->sh.superDest += sh.nbSuper;
 		}
 		else {
-
 			(*facets)[i]->sh.superIdx += strIdx;
 			if ((*facets)[i]->sh.superDest > 0) (*facets)[i]->sh.superDest += strIdx;
 		}
@@ -2060,9 +2053,9 @@ void Geometry::InsertGEOGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3
 
 }
 
-PARfileList Geometry::InsertSYNGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3D **vertices3,Facet ***facets,int strIdx,BOOL newStruct) {
+std::vector<std::string> Geometry::InsertSYNGeom(FileReader *file, int *nbVertex, int *nbFacet, VERTEX3D **vertices3, Facet ***facets, int strIdx, BOOL newStruct) {
 
-	PARfileList result(0);
+	std::vector<std::string> parFileList;
 	UnSelectAll();
 	//char tmp[512];
 
@@ -2113,13 +2106,11 @@ PARfileList Geometry::InsertSYNGeom(FileReader *file,int *nbVertex,int *nbFacet,
 	if (version2>1) {
 		file->ReadKeyword("nbRegions");file->ReadKeyword(":");
 		int nbR = file->ReadInt();
-		result=PARfileList(nbR);
+		parFileList.reserve(nbR);
 
 		file->ReadKeyword("PARfiles");file->ReadKeyword("{");
 		for (int i=0;i<nbR;i++) {
-			char tmp[512];
-			strcpy(tmp,file->ReadString());
-			result.fileNames[i]=_strdup(tmp);
+			parFileList.push_back(file->ReadString());
 		}
 		file->ReadKeyword("}");
 	}
@@ -2183,7 +2174,7 @@ PARfileList Geometry::InsertSYNGeom(FileReader *file,int *nbVertex,int *nbFacet,
 
 	file->ReadKeyword("structures");file->ReadKeyword("{");
 	for(int i=0;i<nbNewSuper;i++) {
-		strName[i] = _strdup(file->ReadString());
+		strName[sh.nbSuper+i] = _strdup(file->ReadString());
 		// For backward compatibilty with STR
 		/*sprintf(tmp,"%s.txt",strName[i]);
 		strFileName[i] = _strdup(tmp);*/
@@ -2273,16 +2264,21 @@ PARfileList Geometry::InsertSYNGeom(FileReader *file,int *nbVertex,int *nbFacet,
 		file->ReadKeyword("}");
 		if (newStruct) {
 			(*facets)[i]->sh.superIdx += sh.nbSuper;
-		} else {
-			(*facets)[i]->sh.superIdx = strIdx;
+			if ((*facets)[i]->sh.superDest > 0) (*facets)[i]->sh.superDest += sh.nbSuper;
+		}
+		else {
+
+			(*facets)[i]->sh.superIdx += strIdx;
+			if ((*facets)[i]->sh.superDest > 0) (*facets)[i]->sh.superDest += strIdx;
 		}
 	}
 
 
 	*nbVertex += nbNewVertex;
 	*nbFacet += nbNewFacets;
-	if (newStruct) sh.nbSuper+=nbNewSuper;
-	return result;
+	if (newStruct) sh.nbSuper += nbNewSuper;
+	else if (sh.nbSuper < strIdx + nbNewSuper) sh.nbSuper = strIdx + nbNewSuper;
+	return parFileList;
 }
 
 void Geometry::InsertSTLGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3D **vertices3,Facet ***facets,int strIdx,BOOL newStruct,double scaleFactor) {
@@ -2352,16 +2348,16 @@ void Geometry::InsertSTLGeom(FileReader *file,int *nbVertex,int *nbFacet,VERTEX3
 		(*facets)[i+*nbFacet]->indices[2] = *nbVertex+3*i+2;
 
 		if (newStruct) {
-			(*facets)[i+*nbFacet]->sh.superIdx = sh.nbSuper;
-		} else {
-			(*facets)[i+*nbFacet]->sh.superIdx = strIdx;
+			(*facets)[i + *nbFacet]->sh.superIdx = sh.nbSuper;
+		}
+		else {
+			(*facets)[i + *nbFacet]->sh.superIdx = strIdx;
 		}
 	}
 
 	*nbVertex += nbNewVertex;
 	*nbFacet += nbNewFacets;
 	if (newStruct) AddStruct("Inserted STL file");
-
 }
 
 
@@ -3551,12 +3547,12 @@ void Geometry::SaveSYN(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL sav
 }
 
 
-PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleak,HIT *pHits,int *nbHHit,int *version) {
+std::vector<std::string> Geometry::LoadSYN(FileReader *file, GLProgress *prg, LEAK *pleak, int *nbleak, HIT *pHits, int *nbHHit, int *version) {
 
 	prg->SetMessage("Clearing current geometry...");
 	Clear();
 
-	PARfileList result(0);
+	std::vector<std::string> result;
 
 	// Globals
 	char tmp[512];
@@ -3610,13 +3606,11 @@ PARfileList Geometry::LoadSYN(FileReader *file,GLProgress *prg,LEAK *pleak,int *
 	if (*version>1) {
 		file->ReadKeyword("nbRegions");file->ReadKeyword(":");
 		int nbR = file->ReadInt();
-		result=PARfileList(nbR);
+		result.reserve(nbR);
 
 		file->ReadKeyword("PARfiles");file->ReadKeyword("{");
 		for (int i=0;i<nbR;i++) {
-			char tmp[512];
-			strcpy(tmp,file->ReadString());
-			result.fileNames[i]=_strdup(tmp);
+			result.push_back(file->ReadString());
 		}
 		file->ReadKeyword("}");
 	}
@@ -3919,6 +3913,134 @@ BOOL Geometry::SaveXML_simustate(pugi::xml_node saveDoc, Worker *work, BYTE *buf
 	LEAK *pLeak, HIT *pHits, GLProgress *prg, BOOL saveSelected){
 	return FALSE;
 }
-void Geometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, BOOL isSynxml){}
-void Geometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, BOOL newStr, BOOL isSynxml){}
+void Geometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlgl){}
+void Geometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, BOOL newStr){
+	//mApp->ClearAllSelections();
+	//mApp->ClearAllViews();
+	//mApp->ClearFormula();
+	//Clear();
+	int structId = viewStruct;
+	if (structId == -1) structId = 0;
+	UnSelectAll();
+
+	xml_node geomNode = loadXML.child("Geometry");
+	//Vertices
+	int nbNewVertex = geomNode.child("Vertices").select_nodes("Vertex").size();
+	int nbNewFacets = geomNode.child("Facets").select_nodes("Facet").size();
+
+	// reallocate memory
+	facets = (Facet **)realloc(facets, (nbNewFacets + sh.nbFacet) * sizeof(Facet **));
+	memset(facets + sh.nbFacet, 0, nbNewFacets * sizeof(Facet *));
+
+	VERTEX3D *tmp_vertices3 = (VERTEX3D *)malloc((nbNewVertex + sh.nbVertex) * sizeof(VERTEX3D));
+	memmove(tmp_vertices3, vertices3, (sh.nbVertex)*sizeof(VERTEX3D));
+	memset(tmp_vertices3 + sh.nbVertex, 0, nbNewVertex * sizeof(VERTEX3D));
+	SAFE_FREE(vertices3);
+	vertices3 = tmp_vertices3;
+
+	// Read geometry vertices
+	int idx = sh.nbVertex;
+	for (xml_node vertex : geomNode.child("Vertices").children("Vertex")) {
+		vertices3[idx].x = vertex.attribute("x").as_double();
+		vertices3[idx].y = vertex.attribute("y").as_double();
+		vertices3[idx].z = vertex.attribute("z").as_double();
+		vertices3[idx].selected = FALSE;
+		idx++;
+	}
+
+	//Structures
+	int nbNewSuper = geomNode.child("Structures").select_nodes("Structure").size();
+	idx = 0;
+	for (xml_node structure : geomNode.child("Structures").children("Structure")) {
+		strName[idx] = _strdup(structure.attribute("name").value());
+		// For backward compatibilty with STR
+		char tmp[256];
+		sprintf(tmp, "%s.txt", strName[idx]);
+		strFileName[sh.nbSuper+idx] = _strdup(tmp);
+		idx++;
+	}
+
+	//Parameters (needs to precede facets)
+	xml_node simuParamNode = loadXML.child("SynradSimuSettings");
+	BOOL isSynradFile = (simuParamNode != NULL); //if no "SynradSimuSettings" node, it's a Molflow XML file
+
+	if (isSynradFile) {
+		//Nothing yet...
+	}
+
+	//Facets
+	idx = sh.nbFacet;
+	for (xml_node facetNode : geomNode.child("Facets").children("Facet")) {
+		int nbIndex = facetNode.child("Indices").select_nodes("Indice").size();
+		if (nbIndex < 3) {
+			char errMsg[128];
+			sprintf(errMsg, "Facet %d has only %d vertices. ", idx + 1, nbIndex);
+			throw Error(errMsg);
+		}
+		facets[idx] = new Facet(nbIndex);
+		facets[idx]->LoadXML(facetNode, sh.nbVertex + nbNewVertex, isSynradFile, sh.nbVertex);
+		facets[idx]->selected = TRUE;
+		facets[idx]->sh.superIdx += structId; //offset structure
+		if (facets[idx]->sh.superDest>0) facets[idx]->sh.superDest += structId;
+		if (isSynradFile) {
+			//Nothing yet...
+		}
+		idx++;
+	}
+
+	xml_node interfNode = loadXML.child("Interface");
+	xml_node selNode = interfNode.child("Selections");
+	//int nbS = selNode.select_nodes("Selection").size();
+
+	for (xml_node sNode : selNode.children("Selection")) {
+		ASELECTION s;
+		s.name = _strdup(sNode.attribute("name").as_string());
+		s.nbSel = sNode.select_nodes("selItem").size();
+		s.selection = (int *)malloc((s.nbSel)*sizeof(int));
+		idx = 0;
+		for (xml_node iNode : sNode.children("selItem"))
+			s.selection[idx++] = iNode.attribute("facet").as_int() + sh.nbFacet; //offset selection numbers
+		mApp->AddSelection(s.name, s);
+	}
+
+	xml_node viewNode = interfNode.child("Views");
+	for (xml_node newView : selNode.children("View")) {
+		AVIEW v;
+		v.name = _strdup(newView.attribute("name").as_string());
+		v.projMode = newView.attribute("projMode").as_int();
+		v.camAngleOx = newView.attribute("camAngleOx").as_double();
+		v.camAngleOy = newView.attribute("camAngleOy").as_double();
+		v.camDist = newView.attribute("camDist").as_double();
+		v.camOffset.x = newView.attribute("camOffset.x").as_double();
+		v.camOffset.y = newView.attribute("camOffset.y").as_double();
+		v.camOffset.z = newView.attribute("camOffset.z").as_double();
+		v.performXY = newView.attribute("performXY").as_int();
+		v.vLeft = newView.attribute("vLeft").as_double();
+		v.vRight = newView.attribute("vRight").as_double();
+		v.vTop = newView.attribute("vTop").as_double();
+		v.vBottom = newView.attribute("vBottom").as_double();
+		mApp->AddView(v.name, v);
+	}
+
+
+	sh.nbVertex += nbNewVertex;
+	sh.nbFacet += nbNewFacets; //formulas can refer to newly inserted facets
+
+	if (isSynradFile) {
+		xml_node formulaNode = interfNode.child("Formulas");
+		for (xml_node newFormula : formulaNode.children("Formula")) {
+			char tmpExpr[512];
+			strcpy(tmpExpr, newFormula.attribute("expression").as_string());
+			mApp->OffsetFormula(tmpExpr, sh.nbFacet);
+			mApp->AddFormula(newFormula.attribute("name").as_string(),
+				tmpExpr);
+		}
+	}
+
+	if (newStr) sh.nbSuper += nbNewSuper;
+	else if (sh.nbSuper < structId + nbNewSuper) sh.nbSuper = structId + nbNewSuper;
+	InitializeGeometry(); //Includes Buildgllist
+	isLoaded = TRUE;
+
+}
 BOOL Geometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit, Worker *work, GLProgress *progressDlg){ return FALSE; }

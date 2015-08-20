@@ -62,16 +62,6 @@ public:
 	void ResetCounts();
 };
 
-class PARfileList {
-public:
-	int nbFiles;
-	char** fileNames;
-	PARfileList(int N);
-	~PARfileList();
-	PARfileList& operator=(const PARfileList &src);
-	PARfileList(const PARfileList &src);
-};
-
 double DotProduct(const Vector &a,const Vector &b);
 Vector Crossproduct(const Vector &v1,const Vector &v2);
 Vector ScalarMult(const Vector &v,const double &r);
