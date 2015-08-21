@@ -424,13 +424,13 @@ void Geometry::InitializeGeometry(int facet_number,BOOL BBOnly) {
 			f->sh.hitOffset = fOffset;
 			fOffset += f->GetHitsSize();
 
-			// Texture ratio
-			f->tRatio = f->sh.texWidthD / uD;
+			/*// Texture ratio //Caused U/V side flip
+			f->tRatio = f->sh.texWidthD / uD;*/
 		}
 	}
 
-	/*
-	//Update mesh on all facets
+	
+	/*//Update mesh on all facets
 	if (facet_number==-1){
 		for(int i=0;i<sh.nbFacet;i++) {
 			if(facets[i]->hasMesh) {
@@ -2379,42 +2379,6 @@ void Geometry::SaveProfileGEO(FileWriter *file,int super,BOOL saveSelected) {
 	file->Write("}\n");
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void Geometry::LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleak,HIT *pHits,int *nbHHit,int *version) {
 
 	//mApp->ClearAllSelections();
@@ -2668,13 +2632,17 @@ void Geometry::LoadGEO(FileReader *file,GLProgress *prg,LEAK *pleak,int *nbleak,
 	isLoaded=TRUE;
 	UpdateName(file);
 
-	// Update mesh //Unnecessary in SynRad
-	/*prg->SetMessage("Building mesh...");
+	// Update mesh
+	/*prg->SetMessage("Building mesh..."); GEO file textures not loaded in Synrad
 	for(int i=0;i<sh.nbFacet;i++) {
 		double p = (double)i/(double)sh.nbFacet;
 		prg->SetProgress(p);
 		Facet *f = facets[i];
-		f->SetTexture(f->sh.texWidthD,f->sh.texHeightD,f->hasMesh); //here texWidthD
+				if (!f->SetTexture(f->sh.texWidthD, f->sh.texHeightD, f->hasMesh)) {
+			char errMsg[512];
+			sprintf(errMsg, "Not enough memory to build mesh on Facet %d. ", i + 1);
+			throw Error(errMsg);
+		}
 		BuildFacetList(f);
 		double nU = Norme(&(f->sh.U));
 		f->tRatio = f->sh.texWidthD / nU;
@@ -3754,22 +3722,26 @@ std::vector<std::string> Geometry::LoadSYN(FileReader *file, GLProgress *prg, LE
 	}
 
 	prg->SetMessage("Initalizing geometry and building mesh...");
-	InitializeGeometry(); //Contains SetFacetTexture
+	InitializeGeometry(); 
 	//AdjustProfile();
 	isLoaded = TRUE;
 	UpdateName(file);
 
-	// Update mesh //InitializeGeometry will do it for us
-	/*prg->SetMessage("Drawing textures...");
+	// Update mesh
+	prg->SetMessage("Building mesh...");
 	for(int i=0;i<sh.nbFacet;i++) {
 		double p = (double)i/(double)sh.nbFacet;
 		prg->SetProgress(p);
 		Facet *f = facets[i];
-		//f->sh.texWidthD,f->sh.texHeightD,f->hasMesh);
+				if (!f->SetTexture(f->sh.texWidthD, f->sh.texHeightD, f->hasMesh)) {
+			char errMsg[512];
+			sprintf(errMsg, "Not enough memory to build mesh on Facet %d. ", i + 1);
+			throw Error(errMsg);
+		}
 		BuildFacetList(f);
-		//double nU = Norme(&(f->sh.U));
-		//f->tRatio = f->sh.texWidthD / nU;
-	}*/
+		double nU = Norme(&(f->sh.U));
+		f->tRatio = f->sh.texWidthD / nU;
+	}
 	return result;
 }
 
@@ -3913,7 +3885,137 @@ BOOL Geometry::SaveXML_simustate(pugi::xml_node saveDoc, Worker *work, BYTE *buf
 	LEAK *pLeak, HIT *pHits, GLProgress *prg, BOOL saveSelected){
 	return FALSE;
 }
-void Geometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlgl){}
+void Geometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg){
+	//mApp->ClearAllSelections();
+	//mApp->ClearAllViews();
+	//mApp->ClearFormula();
+	Clear();
+	xml_node geomNode = loadXML.child("Geometry");
+
+	//Vertices
+	sh.nbVertex = geomNode.child("Vertices").select_nodes("Vertex").size();
+
+	vertices3 = (VERTEX3D *)malloc(sh.nbVertex * sizeof(VERTEX3D));
+	int idx = 0;
+	for (xml_node vertex : geomNode.child("Vertices").children("Vertex")) {
+		vertices3[idx].x = vertex.attribute("x").as_double();
+		vertices3[idx].y = vertex.attribute("y").as_double();
+		vertices3[idx].z = vertex.attribute("z").as_double();
+		vertices3[idx].selected = FALSE;
+		idx++;
+
+	}
+
+	//Structures
+	sh.nbSuper = geomNode.child("Structures").select_nodes("Structure").size();
+	idx = 0;
+	for (xml_node structure : geomNode.child("Structures").children("Structure")) {
+		strName[idx] = _strdup(structure.attribute("name").value());
+		// For backward compatibilty with STR
+		char tmp[256];
+		sprintf(tmp, "%s.txt", strName[idx]);
+		strFileName[sh.nbSuper + idx] = _strdup(tmp);
+		idx++;
+	}
+
+	//Parameters (needs to precede facets)
+	xml_node simuParamNode = loadXML.child("SynradSimuSettings");
+	BOOL isSynradFile = (simuParamNode != NULL); //if no "SynradSimuSettings" node, it's a Molflow XML file
+
+	if (isSynradFile) {
+		//Nothing yet...
+	}
+
+	//Facets
+	sh.nbFacet = geomNode.child("Facets").select_nodes("Facet").size();
+	facets = (Facet **)malloc(sh.nbFacet * sizeof(Facet *));
+	memset(facets, 0, sh.nbFacet * sizeof(Facet *));
+	idx = 0;
+	for (xml_node facetNode : geomNode.child("Facets").children("Facet")) {
+		size_t nbIndex = facetNode.child("Indices").select_nodes("Indice").size();
+		if (nbIndex < 3) {
+			char errMsg[128];
+			sprintf(errMsg, "Facet %d has only %d vertices. ", idx + 1, nbIndex);
+			throw Error(errMsg);
+		}
+
+		facets[idx] = new Facet(nbIndex);
+		facets[idx]->LoadXML(facetNode, sh.nbVertex, isSynradFile,isSynradFile);
+
+		if (isSynradFile) {
+			//Nothing yet...
+		}
+		idx++;
+	}
+
+	xml_node interfNode = loadXML.child("Interface");
+
+	xml_node selNode = interfNode.child("Selections");
+	//int nbS = selNode.select_nodes("Selection").size();
+
+	for (xml_node sNode : selNode.children("Selection")) {
+		ASELECTION s;
+		s.name = _strdup(sNode.attribute("name").as_string());
+		s.nbSel = sNode.select_nodes("selItem").size();
+		s.selection = (int *)malloc((s.nbSel)*sizeof(int));
+		idx = 0;
+		for (xml_node iNode : sNode.children("selItem"))
+			s.selection[idx++] = iNode.attribute("facet").as_int();
+		mApp->AddSelection(s.name, s);
+	}
+
+	xml_node viewNode = interfNode.child("Views");
+	for (xml_node newView : selNode.children("View")) {
+		AVIEW v;
+		v.name = _strdup(newView.attribute("name").as_string());
+		v.projMode = newView.attribute("projMode").as_int();
+		v.camAngleOx = newView.attribute("camAngleOx").as_double();
+		v.camAngleOy = newView.attribute("camAngleOy").as_double();
+		v.camDist = newView.attribute("camDist").as_double();
+		v.camOffset.x = newView.attribute("camOffset.x").as_double();
+		v.camOffset.y = newView.attribute("camOffset.y").as_double();
+		v.camOffset.z = newView.attribute("camOffset.z").as_double();
+		v.performXY = newView.attribute("performXY").as_int();
+		v.vLeft = newView.attribute("vLeft").as_double();
+		v.vRight = newView.attribute("vRight").as_double();
+		v.vTop = newView.attribute("vTop").as_double();
+		v.vBottom = newView.attribute("vBottom").as_double();
+		mApp->AddView(v.name, v);
+	}
+
+
+	if (isSynradFile) {
+		xml_node formulaNode = interfNode.child("Formulas");
+		for (xml_node newFormula : formulaNode.children("Formula")) {
+			char tmpExpr[512];
+			strcpy(tmpExpr, newFormula.attribute("expression").as_string());
+			mApp->OffsetFormula(tmpExpr, sh.nbFacet);
+			mApp->AddFormula(newFormula.attribute("name").as_string(),
+				tmpExpr);
+		}
+	}
+
+	InitializeGeometry(); //Includes Buildgllist
+
+	isLoaded = TRUE;
+
+	// Update mesh
+	progressDlg->SetMessage("Building mesh...");
+	for (int i = 0; i < sh.nbFacet; i++) {
+		double p = (double)i / (double)sh.nbFacet;
+
+		progressDlg->SetProgress(p);
+		Facet *f = facets[i];
+		if (!f->SetTexture(f->sh.texWidthD, f->sh.texHeightD, f->hasMesh)) {
+			char errMsg[512];
+			sprintf(errMsg, "Not enough memory to build mesh on Facet %d. ", i + 1);
+			throw Error(errMsg);
+		}
+		BuildFacetList(f);
+		double nU = Norme(&(f->sh.U));
+		f->tRatio = f->sh.texWidthD / nU;
+	}
+}
 void Geometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, BOOL newStr){
 	//mApp->ClearAllSelections();
 	//mApp->ClearAllViews();
@@ -3952,7 +4054,7 @@ void Geometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progr
 	int nbNewSuper = geomNode.child("Structures").select_nodes("Structure").size();
 	idx = 0;
 	for (xml_node structure : geomNode.child("Structures").children("Structure")) {
-		strName[idx] = _strdup(structure.attribute("name").value());
+		strName[sh.nbSuper+idx] = _strdup(structure.attribute("name").value());
 		// For backward compatibilty with STR
 		char tmp[256];
 		sprintf(tmp, "%s.txt", strName[idx]);

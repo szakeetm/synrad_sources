@@ -214,10 +214,10 @@ void SpectrumPlotter::refreshViews() {
 			case 0: //no normalization
 				if (mode==0) { //flux
 					for(int j=0;j<PROFILE_SIZE;j++)
-						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+j*delta),shSpectrum_fluxwise[j]/worker->no_scans,FALSE);
+						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+(0.5+j)*delta),shSpectrum_fluxwise[j]/worker->no_scans,FALSE); //0.5: point should be center of bin
 				} else if (mode==1) { //power
 					for(int j=0;j<PROFILE_SIZE;j++)
-						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+j*delta),shSpectrum_powerwise[j]/worker->no_scans,FALSE);
+						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+(0.5+j)*delta),shSpectrum_powerwise[j]/worker->no_scans,FALSE);
 				}
 				break;
 			case 1: //normalize max. value to 1
@@ -227,14 +227,14 @@ void SpectrumPlotter::refreshViews() {
 						if (shSpectrum_fluxwise[j]>max_flux) max_flux=shSpectrum_fluxwise[j];
 					if (max_flux>0.0)
 						for(int j=0;j<PROFILE_SIZE;j++)
-							v->Add(exp(log(chart->GetXAxis()->GetMinimum())+j*delta),shSpectrum_fluxwise[j]/max_flux,FALSE);
+							v->Add(exp(log(chart->GetXAxis()->GetMinimum()) + (0.5 + j)*delta), shSpectrum_fluxwise[j] / max_flux, FALSE);
 				} else if (mode==1) { //power
 					max_power=0.0;
 					for(int j=0;j<PROFILE_SIZE;j++)
 						if (shSpectrum_powerwise[j]>max_power) max_power=shSpectrum_powerwise[j];
 					if (max_power>0.0)
 						for(int j=0;j<PROFILE_SIZE;j++)
-							v->Add(exp(log(chart->GetXAxis()->GetMinimum())+j*delta),shSpectrum_powerwise[j]/max_power,FALSE);
+							v->Add(exp(log(chart->GetXAxis()->GetMinimum()) + (0.5 + j)*delta), shSpectrum_powerwise[j] / max_power, FALSE);
 				}
 				break;
 			}

@@ -54,11 +54,11 @@ public:
 	~Histogram();
 	double GetCount(int index);
 	double GetFrequency(int index);
-	double GetNormalized(int index);
+	//double GetNormalized(int index);
 	double GetX(int index);
 	void Add(const double &x,const double &dY,const double &bandwidth=-1);
 	bool logarithmic;
-	double max_count,total_count;
+	double /*max_count,*/total_count;
 	void ResetCounts();
 };
 

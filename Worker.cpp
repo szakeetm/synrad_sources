@@ -201,18 +201,6 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 			sprintf(tmp,"A .syn file of the same name exists. Overwrite that file ?\n%s",fileNameWithSyn);
 			if(!autoSave && FileUtils::Exist(fileNameWithSyn) ) {
 
-
-
-
-
-
-
-
-
-
-
-
-
 				ok = ( GLMessageBox::Display(tmp,"Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING)==GLDLG_OK );
 			}
 		}
@@ -229,9 +217,6 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 
 			} else {
 				try {
-
-
-
 
 					if (isSYN7Z) {
 						/*memcpy(fileNameWithSyn,fileName,sizeof(char)*(strlen(fileName)-2));
@@ -643,7 +628,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 				SetLeak(pLeak, &nbLastLeaks, gHits);
 				SetHHit(pHits, &nbHHit, gHits);
 				progressDlg->SetMessage("Loading textures...");
-				LoadTexturesSYN((ext=="syn7z") ? ((std::string)CWD+"\\tmp\\"+fileName).c_str() : fileName, version);
+				LoadTexturesSYN((ext=="syn7z") ? ((std::string)CWD+"\\tmp\\Geometry.syn").c_str() : fileName, version);
 				strcpy(fullFileName, fileName);
 			}
 		} catch(Error &e) {
@@ -1137,7 +1122,7 @@ void Worker::SetLeak(LEAK *buffer,int *nb,SHGHITS *gHits) { //When loading from 
 // -------------------------------------------------------------
 void Worker::LoadTexturesSYN(const char *fileName,int version) {
 
-	if (FileUtils::GetExtension(fileName) == "geo") {
+	if (FileUtils::GetExtension(fileName) == "syn") {
 		GLProgress *progressDlg = new GLProgress("Loading textures", "Please wait");
 		progressDlg->SetProgress(0.0);
 		FileReader *f = NULL;

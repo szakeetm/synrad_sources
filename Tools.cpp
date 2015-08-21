@@ -155,7 +155,7 @@ Histogram::Histogram(double min_V,double max_V,int N,bool logscale){
 	} else {
 		delta=(log(max)-log(min))/number_of_bins;
 	}
-	max_count=0.0;
+	//max_count=0.0;
 	total_count=0.0;
 }
 
@@ -167,9 +167,9 @@ void Histogram::Add(const double &x,const double &dY,const double &bandwidth) {
 	if (x<max && x>=min) {
 		int binIndex;
 		if (!logarithmic) {
-			binIndex = (int)(.5 + (x - min) / delta);
+			binIndex = (int)((x - min) / delta);
 		} else {
-			binIndex = (int)(.5 + (log(x) - log(min)) / delta);
+			binIndex = (int)((log(x) - log(min)) / delta);
 		}
 		double binX = GetX(binIndex);
 		/*if (binIndex<number_of_bins && bandwidth == -1 || (abs(x - binX) / binX) < (bandwidth / 2)) {
@@ -182,7 +182,7 @@ void Histogram::Add(const double &x,const double &dY,const double &bandwidth) {
 			counts[binIndex] += dY*factor;
 			total_count += dY*factor;
 		}
-		if (counts[binIndex]>max_count) max_count = counts[binIndex];
+		//if (counts[binIndex]>max_count) max_count = counts[binIndex];
 	}
 }
 
@@ -204,11 +204,11 @@ double Histogram::GetX(int index){
 	return X;
 }
 
-double Histogram::GetNormalized(int index){
-	return (counts[index]/max_count);
-}
+/*double Histogram::GetNormalized(int index){
+	//return (counts[index]/max_count);
+}*/
 
 void Histogram::ResetCounts(){
-	max_count=total_count=0.0;
+	/*max_count=*/total_count=0.0;
 	memset(counts,0,number_of_bins*sizeof(double));
 }

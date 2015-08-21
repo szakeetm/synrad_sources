@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <random>
 
 #define PI 3.14159265358979323846
 
@@ -139,13 +140,18 @@ void Rotate(VERTEX3D *P, VERTEX3D AXIS_P0, VERTEX3D AXIS_DIR, double theta) {
 }
 
 double Gaussian(const double &sigma) {
-	double v1,v2,r,fac;
+	
+	//Box-Muller transform
+	//return sigma*sqrt(-2 * log(rnd()))*cos(2 * PI*rnd());
+	
+	//Generates a random number following the Gaussian distribution around 0 with 'sigma' standard deviation
+	double v1, v2, r, fac;
 	do {
-		v1=2.0*rnd()-1.0;
-		v2=2.0*rnd()-1.0;
-		r=Sqr(v1)+Sqr(v2);
-	} while (r>=1.0);
-	fac=sqrt(-2.0*log(r)/r);
+		v1 = 2.0*rnd() - 1.0;
+		v2 = 2.0*rnd() - 1.0;
+		r = Sqr(v1) + Sqr(v2);
+	} while (r >= 1.0);
+	fac = sqrt(-2.0*log(r) / r);
 	return v2*fac*sigma;
 }
 
