@@ -55,10 +55,11 @@ double Distribution2D::InterpolateY(const double &x) {
 	int inferior_index, superior_index;
 	double slope, overshoot;
 
-	for (superior_index = 0; valuesX[superior_index] < x && superior_index < size; superior_index++);
-	if (superior_index == size) superior_index--; //not found, x too large
-	if (superior_index == 0)    superior_index++; //not found, x too small
-	inferior_index = superior_index - 1;
+	//for (superior_index = 0; valuesX[superior_index] < x && superior_index < size; superior_index++); //To replace by binary search
+	inferior_index = binary_search(x, valuesX, size);
+	if (inferior_index == size - 1) inferior_index--; //not found, x too large
+	if (inferior_index == -1)    inferior_index++; //not found, x too small
+	superior_index = inferior_index + 1;
 
 	double diffX = valuesX[superior_index] - valuesX[inferior_index];
 	double diffY = valuesY[superior_index] - valuesY[inferior_index];
@@ -72,10 +73,11 @@ double Distribution2D::InterpolateX(const double &y) {
 	int inferior_index, superior_index;
 	double slope, overshoot;
 
-	for (superior_index = 0; valuesY[superior_index] < y && superior_index < size; superior_index++);
-	if (superior_index == size) return valuesX[size - 1]; //not found, y too large
-	if (superior_index == 0)    return valuesX[0]; //not found, y too small
-	inferior_index = superior_index - 1;
+	//for (superior_index = 0; valuesY[superior_index] < y && superior_index < size; superior_index++); //To replace by binary search
+	inferior_index = binary_search(y, valuesY, size);
+	if (inferior_index == size-1) return valuesX[size - 1]; //not found, y too large
+	if (inferior_index == -1)    return valuesX[0]; //not found, y too small
+	superior_index = inferior_index + 1;
 
 	double diffX = valuesX[superior_index] - valuesX[inferior_index];
 	double diffY = valuesY[superior_index] - valuesY[inferior_index];
@@ -330,16 +332,42 @@ double find_psi(double lambda_ratios, std::vector<std::vector<double>> &psi_dist
 
 	double lookup = rnd();
 	int foundAngle = 0;
-	double interpolated_CDF;
+	/*double interpolated_CDF;
 	do { //to replace by binary search
 		foundAngle++;
 		interpolated_CDF = psi_distro[lambda_lower_index][foundAngle] + lambda_overshoot*(psi_distro[lambda_lower_index + 1][foundAngle] - psi_distro[lambda_lower_index][foundAngle]);
 
-	} while (interpolated_CDF < lookup);
+	} while (interpolated_CDF < lookup);*/
+
+	//Binary search
+	int imin = 0;
+	int size = psi_distro[0].size();
+	int imax = size;
+	double interpolated_CDF_lower, interpolated_CDF_higher;
+	// continue searching while [imin,imax] is not empty
+	while (imin <= imax)
+	{
+		// calculate the midpoint for roughly equal partition
+		int imid = (imin + imax) / 2;
+		interpolated_CDF_lower = WEIGH(psi_distro[lambda_lower_index][imid],psi_distro[lambda_lower_index + 1][imid],lambda_overshoot);
+		interpolated_CDF_higher = WEIGH(psi_distro[lambda_lower_index][imid+1], psi_distro[lambda_lower_index + 1][imid+1], lambda_overshoot);
+		if (imid == size - 1 || (interpolated_CDF_lower < lookup && lookup < interpolated_CDF_higher)) {
+			// key found at index imid
+			foundAngle = imid+1; //will be lowered by 1
+			break;
+		}
+		// determine which subarray to search
+		else if (interpolated_CDF_lower < lookup)
+			// change min index to search upper subarray
+			imin = imid + 1;
+		else
+			// change max index to search lower subarray
+			imax = imid - 1;
+	}
 	//TO DO: Treat not found errors
 	int psi_lower_index = foundAngle - 1;
-	double previous_interpolated_CDF = psi_distro[lambda_lower_index][psi_lower_index] + lambda_overshoot*(psi_distro[lambda_lower_index + 1][psi_lower_index] - psi_distro[lambda_lower_index][psi_lower_index]);
-	double psi_overshoot = (lookup - previous_interpolated_CDF) / (interpolated_CDF - previous_interpolated_CDF);
+	//double previous_interpolated_CDF = psi_distro[lambda_lower_index][psi_lower_index] + lambda_overshoot*(psi_distro[lambda_lower_index + 1][psi_lower_index] - psi_distro[lambda_lower_index][psi_lower_index]);
+	double psi_overshoot = (lookup - interpolated_CDF_lower) / (interpolated_CDF_higher - interpolated_CDF_lower);
 	double psi = (((double)psi_lower_index + psi_overshoot)*0.005) * (4.0 / pow(lambda_ratios, 0.35)); //psi_relative=1 corresponds to psi=4/lambda_ratios^0.35
 	return psi;
 	//return 0.15;
@@ -493,13 +521,41 @@ double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_
 	double lookup = rnd();
 
 	int foundAngle = 0;
-	double interpolated_CDF, previous_interpolated_CDF;
-	interpolated_CDF = 0.0;
+	/*interpolated_CDF = 0.0;
 	do { //to replace by binary search
 		previous_interpolated_CDF = interpolated_CDF;
 		foundAngle++;
 		interpolated_CDF = WEIGH(chi_distro[foundAngle][psi_lower_index], chi_distro[foundAngle][psi_lower_index + 1], psi_overshoot);
-	} while (interpolated_CDF < lookup);
+	} while (interpolated_CDF < lookup);*/
+
+	//Binary search
+	int imin = 0;
+	int size = chi_distro.size();
+	int imax = size;
+	double interpolated_CDF_lower, interpolated_CDF_higher;
+	// continue searching while [imin,imax] is not empty
+	while (imin <= imax)
+	{
+		// calculate the midpoint for roughly equal partition
+		int imid = (imin + imax) / 2;
+		interpolated_CDF_lower = WEIGH(chi_distro[imid][psi_lower_index], chi_distro[imid][psi_lower_index + 1], psi_overshoot);
+		interpolated_CDF_higher = WEIGH(chi_distro[imid + 1][psi_lower_index], chi_distro[imid + 1][psi_lower_index + 1], psi_overshoot);
+		if (imid == size - 1 || (interpolated_CDF_lower < lookup && lookup < interpolated_CDF_higher)) {
+			// key found at index imid
+			foundAngle = imid + 1; //will be lowered by 1
+			break;
+		}
+		// determine which subarray to search
+		else if (interpolated_CDF_lower < lookup)
+			// change min index to search upper subarray
+			imin = imid + 1;
+		else
+			// change max index to search lower subarray
+			imax = imid - 1;
+	}
+	//TO DO: Treat not found errors
+
+
 	//TO DO: Treat not found errors
 	int chi_lower_index = foundAngle - 1;
 
@@ -520,8 +576,8 @@ double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_
 		double a = pow(10, -7.0 + ((double)chi_lower_index + 0.0)*0.04) / (gamma / 10000.0);
 		double b = a*1.0964782; /* pow(10, -7.0 + ((double)chi_lower_index + 1.0)*0.04) / (gamma / 10000.0);*/ //1.09=10^0.04
 		double c = b*1.0964782; /*pow(10, -7.0 + ((double)chi_lower_index + 2.0)*0.04) / (gamma / 10000.0);*/
-		double FA = previous_interpolated_CDF;
-		double FB = interpolated_CDF;
+		double FA = interpolated_CDF_lower;
+		double FB = interpolated_CDF_higher;
 		double FC = next_interpolated_CDF;
 
 		//inverse 2nd degree polynomial interpolation
@@ -665,8 +721,11 @@ void Material::LoadCSV(FileReader *file){
 
 double Material::Interpolate(const double &energy, const double &angle) {
 	int angleLowerIndex, energyLowerIndex;
-	for (angleLowerIndex = 0; angleLowerIndex<((int)angleVals.size() - 1) && angle>angleVals[angleLowerIndex + 1]; angleLowerIndex++); //replace by binary search
-	for (energyLowerIndex = 0; energyLowerIndex<((int)energyVals.size() - 1) && energy>energyVals[energyLowerIndex + 1]; energyLowerIndex++); //replace by binary search
+	//for (angleLowerIndex = 0; angleLowerIndex<((int)angleVals.size() - 1) && angle>angleVals[angleLowerIndex + 1]; angleLowerIndex++); //replace by binary search
+	//for (energyLowerIndex = 0; energyLowerIndex<((int)energyVals.size() - 1) && energy>energyVals[energyLowerIndex + 1]; energyLowerIndex++); //replace by binary search
+
+	angleLowerIndex = binary_search(angle, angleVals, angleVals.size());
+	energyLowerIndex = binary_search(energy, energyVals, energyVals.size());
 
 	if (angleLowerIndex == ((int)angleVals.size() - 1)) angleLowerIndex--; //if not in table
 	if (energyLowerIndex == ((int)energyVals.size() - 1)) energyLowerIndex--; //if not in table
@@ -683,4 +742,28 @@ double Material::Interpolate(const double &energy, const double &angle) {
 	double interpRefl = WEIGH(interpolatedReflForLowerAngle, interpolatedReflForHigherAngle, angleOvershoot / angleDelta);
 	SATURATE(interpRefl, 0.0, 100.0);
 	return interpRefl;
+}
+
+template <typename T> int binary_search(double key, T A, int size)
+{
+	int imin = 0;
+	int imax = size - 1;
+	// continue searching while [imin,imax] is not empty
+	while (imin <= imax)
+	{
+		// calculate the midpoint for roughly equal partition
+		int imid = (imin+imax)/2;
+		if (imid==size-1 || (A[imid] < key && key < A[imid+1]))
+			// key found at index imid
+			return imid;
+		// determine which subarray to search
+		else if (A[imid] < key)
+			// change min index to search upper subarray
+			imin = imid + 1;
+		else
+			// change max index to search lower subarray
+			imax = imid - 1;
+	}
+	// key was not found
+	return -1;
 }

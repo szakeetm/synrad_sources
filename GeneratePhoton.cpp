@@ -81,7 +81,7 @@ GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int gener
 	//8.08E17 * 0.000511GeV = 4.1289E14
 
 	if (generation_mode == SYNGEN_MODE_POWERWISE)
-		result.SR_flux = result.SR_flux / (generated_energy / average_photon_energy_for_region);
+		result.SR_flux *= average_photon_energy_for_region / generated_energy;
 
 	if (result.B_factor > 0.0 && average_photon_energy_for_region > VERY_SMALL) {
 		result.SR_power = result.SR_flux*(generated_energy*result.critical_energy)*average_photon_energy_whole_range / average_photon_energy_for_region; //flux already multiplied by current

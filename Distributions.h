@@ -78,4 +78,7 @@ Distribution2D integral_SR_power=Generate_Integral(LOWER_LIMIT,UPPER_LIMIT,INTEG
 Distribution2D polarization_distribution=Generate_Polarization_Distribution(true,true);
 Distribution2D g1h2_distribution=Generate_G1_H2_Distribution();
 */
+
+template <typename T> int binary_search(double key, T A, int size);
+
 #endif
