@@ -1,10 +1,10 @@
 #include "Simulation.h"
 #include "Random.h"
 #include "GeneratePhoton.h"
-extern Distribution2D /*polarization_distribution,*/integral_N_photons,integral_SR_power/*,g1h2_distribution*/;
+extern Distribution2D /*polarization_distribution,*/integral_N_photons, integral_SR_power/*,g1h2_distribution*/;
 
 GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int generation_mode,
-	std::vector<std::vector<double>> &psi_distr,std::vector<std::vector<double>> &chi_distr, BOOL recalc) { //Generates a photon from point number 'pointId'
+	std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr, BOOL recalc) { //Generates a photon from point number 'pointId'
 
 	/* interpolation between source points removed, wasn't useful and slowed things down
 	//Interpolate source point
@@ -56,7 +56,8 @@ GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int gener
 		result.B_factor = last_Bfactor;
 		result.B_factor_power = last_Bfactor_power;
 		average_photon_energy_for_region = last_average_ans;
-	} else {
+	}
+	else {
 		//what part of all photons we cover in our region (Emin...Emax)
 		result.B_factor = (/*exp(*/integral_N_photons.InterpolateY(log(current_region->energy_hi / result.critical_energy))/*)*/
 			- /*exp(*/integral_N_photons.InterpolateY(log(current_region->energy_low / result.critical_energy)))/*)*/
@@ -79,10 +80,10 @@ GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int gener
 	//Total flux per revolution for electrons: 8.08E17*E[GeV]*I[mA] photons/sec
 	//8.08E17 * 0.000511GeV = 4.1289E14
 
-	if (generation_mode==SYNGEN_MODE_POWERWISE)
-		result.SR_flux = result.SR_flux / (generated_energy/average_photon_energy_for_region);
+	if (generation_mode == SYNGEN_MODE_POWERWISE)
+		result.SR_flux = result.SR_flux / (generated_energy / average_photon_energy_for_region);
 
-	if (result.B_factor>0.0 && average_photon_energy_for_region>VERY_SMALL) {
+	if (result.B_factor > 0.0 && average_photon_energy_for_region > VERY_SMALL) {
 		result.SR_power = result.SR_flux*(generated_energy*result.critical_energy)*average_photon_energy_whole_range / average_photon_energy_for_region; //flux already multiplied by current
 		result.SR_power *= result.B_factor_power / result.B_factor; //correction for not generating on every possible energy
 		result.SR_power *= 1.602189E-19; //eV per second -> J/second (Watts)
@@ -93,7 +94,7 @@ GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int gener
 	//double f=polarization_distribution.InterpolateY(generated_energy);
 	/*result.g1h2=exp(g1h2_distribution.InterpolateY(generated_energy));
 	double f_times_g1h2=f*result.g1h2;*/
-		
+
 	int retries = 0;
 	/*
 	//debug start
@@ -101,8 +102,8 @@ GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int gener
 	FileWriter *fileOut = new FileWriter("histout.csv");
 	fileOut->WriteDouble(generated_energy,"\n");
 	for (size_t i = 0; i < numSamples; i++)
-		fileOut->WriteDouble(find_psi(generated_energy, Sqr(current_region->gamma), f_times_g1h2,
-		current_region->enable_par_polarization, current_region->enable_ort_polarization),"\n");
+	fileOut->WriteDouble(find_psi(generated_energy, Sqr(current_region->gamma), f_times_g1h2,
+	current_region->enable_par_polarization, current_region->enable_ort_polarization),"\n");
 	delete(fileOut);
 	throw Error("blabla");
 	*/
@@ -111,30 +112,30 @@ GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int gener
 	do {
 		//result.natural_divy=find_psi(generated_energy,current_region->enable_par_polarization,current_region->enable_ort_polarization)/current_region->gamma;
 		result.natural_divy = find_psi(generated_energy, psi_distr) / current_region->gamma;
-	} while (result.natural_divy>current_region->psimaxY || (++retries)>1000);
-	
+	} while (result.natural_divy > current_region->psimaxY || (++retries) > 1000);
+
 	retries = 0;
 	do {
 		/*result.natural_divx=find_chi(result.natural_divy,current_region->gamma,
 			current_region->enable_par_polarization,current_region->enable_ort_polarization); //divided by sHandle->gamma inside the function*/
-		result.natural_divx=find_chi(result.natural_divy,current_region->gamma,
+		result.natural_divx = find_chi(result.natural_divy, current_region->gamma,
 			chi_distr);
-	} while (result.natural_divx>current_region->psimaxX || (++retries)>1000);
+	} while (result.natural_divx > current_region->psimaxX || (++retries) > 1000);
 
 	//Symmetrize distribution
-	if (rnd()<0.5) result.natural_divx *= -1;
-	if (rnd()<0.5) result.natural_divy *= -1;
+	if (rnd() < 0.5) result.natural_divx *= -1;
+	if (rnd() < 0.5) result.natural_divy *= -1;
 
 	//Store these calc results to speed up calculation for the same critical energy
-	last_critical_energy=result.critical_energy;
-	last_Bfactor=result.B_factor;
-	last_Bfactor_power=result.B_factor_power;
-	last_average_ans=average_photon_energy_for_region;
+	last_critical_energy = result.critical_energy;
+	last_Bfactor = result.B_factor;
+	last_Bfactor_power = result.B_factor_power;
+	last_average_ans = average_photon_energy_for_region;
 
 	//return values
-	result.start_dir=result.start_dir.Rotate(source->Y_local,result.natural_divx);
-	result.start_dir=result.start_dir.Rotate(source->X_local,result.natural_divy);
-	result.energy=generated_energy*result.critical_energy;
+	result.start_dir = result.start_dir.Rotate(source->Y_local, result.natural_divx);
+	result.start_dir = result.start_dir.Rotate(source->X_local, result.natural_divy);
+	result.energy = generated_energy*result.critical_energy;
 
 	return result;
 }

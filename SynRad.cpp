@@ -260,7 +260,7 @@ SynRad::SynRad()
 	nbFormula = 0;
 	nbRecent = 0;
 	nbRecentPAR = 0;
-	
+
 	nbView = 0;
 	nbSelection = 0;
 	idView = 0;
@@ -779,7 +779,7 @@ int SynRad::OneTimeSceneInit()
 		//each row is for a logarithm of lambda_ratio, starting from -10 to +2
 		//each column is for a psi angle, starting from 0 going to 1, with a delta of 0.005
 		//where 1 corresponds to 4/lambda_ratio^0.35
-		worker.ImportCSV(f,worker.psi_distr);
+		worker.ImportCSV(f, worker.psi_distr);
 		SAFE_DELETE(f);
 		f = new FileReader("param\\psi_chi_gamma10000_logsampled_-7to0_delta0.04.csv");
 		//each column corresponds to a Log10[PSI*(gamma/10000)] value. First column: -99, second column: -7, delta: 0.04, max: 0
@@ -1512,9 +1512,9 @@ void SynRad::UpdateFormula() {
 			}
 			else if (_stricmp(v->name, "ABSAR") == 0) {
 				double sumArea = 0.0;
-				for (int i = 0; i<geom->GetNbFacet(); i++) {
+				for (int i = 0; i < geom->GetNbFacet(); i++) {
 					Facet *f = geom->GetFacet(i);
-					if (f->sh.sticking>0.0) sumArea += f->sh.area*f->sh.opacity*(f->sh.is2sided ? 2.0 : 1.0);
+					if (f->sh.sticking > 0.0) sumArea += f->sh.area*f->sh.opacity*(f->sh.is2sided ? 2.0 : 1.0);
 				}
 				v->value = sumArea;
 			}
@@ -2509,7 +2509,7 @@ void SynRad::InsertGeometry(BOOL newStr, char *fName) {
 
 	try {
 
-		worker.LoadGeometry(fullName,TRUE,newStr);
+		worker.LoadGeometry(fullName, TRUE, newStr);
 		Geometry *geom = worker.GetGeometry();
 
 		startSimu->SetEnabled(TRUE);
@@ -2564,7 +2564,7 @@ void SynRad::UpdateModelParams() {
 
 	for (int i = 0; i < geom->GetNbFacet(); i++) {
 		Facet *f = geom->GetFacet(i);
-		if (f->sh.area>0) sumArea += f->sh.area;
+		if (f->sh.area > 0) sumArea += f->sh.area;
 	}
 
 	sprintf(tmp, "V:%d F:%d Dim:(%g,%g,%g) Area:%g", geom->GetNbVertex(), geom->GetNbFacet(),
@@ -2645,10 +2645,10 @@ void SynRad::ProcessFormulaButtons(GLComponent *src) {
 		if (!formulaSettings) formulaSettings = new FormulaSettings();
 		if (formulaSettings->EditFormula(formulas[i].parser)) {
 			// Apply change
-		std::string formulaName = formulas[i].parser->GetName();
-		if (formulaName.empty()) formulaName = formulas[i].parser->GetExpression();
-		formulas[i].name->SetText(formulaName.c_str());
-		UpdateFormula();
+			std::string formulaName = formulas[i].parser->GetName();
+			if (formulaName.empty()) formulaName = formulas[i].parser->GetExpression();
+			formulas[i].name->SetText(formulaName.c_str());
+			UpdateFormula();
 		}
 		else {
 			// Delete
@@ -4423,7 +4423,7 @@ void SynRad::SaveConfig() {
 #ifdef _DEBUG
 		f->Write("processNum:"); f->WriteInt(numCPU, "\n");
 #else
-		f->Write("processNum:");f->WriteInt(worker.GetProcNumber(),"\n");
+		f->Write("processNum:"); f->WriteInt(worker.GetProcNumber(), "\n");
 #endif
 		f->Write("recents:{\n");
 		for (int i = 0; i < nbRecent; i++) {
@@ -4542,7 +4542,7 @@ void SynRad::LoadParam(char *fName, int position) {
 
 	if (fName == NULL) {
 		if (position == -1)
-			files = GLFileBox::OpenMultipleFiles(fileParFilters,"Add magnetic region(s)");
+			files = GLFileBox::OpenMultipleFiles(fileParFilters, "Add magnetic region(s)");
 		else { //To given position, allow only one file
 			FILENAME *file = GLFileBox::OpenFile(currentDir, NULL, "Add magnetic region", fileParFilters, nbParFilter);
 			files.push_back(*file);
@@ -4569,7 +4569,7 @@ void SynRad::LoadParam(char *fName, int position) {
 		SAFE_DELETE(progressDlg2);
 		return;
 	}
-	for (size_t i=0; i < files.size(); i++) {
+	for (size_t i = 0; i < files.size(); i++) {
 		char tmp[256];
 		sprintf(tmp, "Adding %s...", files[i].file);
 		progressDlg2->SetMessage(tmp);

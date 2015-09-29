@@ -90,7 +90,7 @@ double Distribution2D::InterpolateX(const double &y) {
 	int superior_index;
 	for (superior_index = 0; valuesX[superior_index] < x && superior_index < size; superior_index++); //replace by binary search
 	return superior_index;
-}*/
+	}*/
 
 double g0ki(double x, double order, int kind) {
 	/*ported from CALCF1.PAS:function g0ki(x,ord:realt1;kind:integer):realt1;
@@ -152,7 +152,7 @@ Distribution2D Generate_K_Distribution(double order){
 	double stepDelta = (UPPER_LIMIT - LOWER_LIMIT) / NUMBER_OF_DISTRO_VALUES;
 	for (int i = 0; i < NUMBER_OF_DISTRO_VALUES; i++) {
 		//double x = LOWER_LIMIT*exp(i*stepDelta);
-		double x = exp(LOWER_LIMIT+i*stepDelta);
+		double x = exp(LOWER_LIMIT + i*stepDelta);
 		result.valuesX[i] = x;
 		result.valuesY[i] = g0ki(x, order, 0); //previously took the logarithm
 		//note: values go from 0 to 99 (in original code: 1 to 100)
@@ -189,7 +189,7 @@ Distribution2D Generate_Integral(double log_min, double log_max, int mode){
 	int i;
 	Distribution2D result(NUMBER_OF_INTEGR_VALUES);
 
-	delta = (log_max -log_min) / NUMBER_OF_INTEGR_VALUES;
+	delta = (log_max - log_min) / NUMBER_OF_INTEGR_VALUES;
 	sum_photons = sum_power = /*result.sum_photons = result.sum_energy =*/ 0.0;
 
 	for (i = 0; i < NUMBER_OF_INTEGR_VALUES; i++) {
@@ -197,9 +197,9 @@ Distribution2D Generate_Integral(double log_min, double log_max, int mode){
 		x_middle = exp(log_min + (i + 0.5)*delta); //middle energy
 		x_higher = exp(log_min + (i + 1.0)*delta); //higher energy
 		exp_delta = x_higher - x_lower; //actual energy range for the next index
-		
+
 		interval_dN = SYNRAD_FAST(x_middle)*exp_delta; //number of photons for the actual energy interval
-		interval_dN2 = (SYNRAD_FAST(x_lower) + SYNRAD_FAST(x_higher))/2.0*exp_delta; //number of photons for the actual interval, different averaging
+		interval_dN2 = (SYNRAD_FAST(x_lower) + SYNRAD_FAST(x_higher)) / 2.0*exp_delta; //number of photons for the actual interval, different averaging
 		sum_photons += interval_dN2; //flux increment
 		sum_power += interval_dN2*x_middle; //2*number of photons * average energy: 2*energy of the interval
 		result.valuesX[i] = log(x_middle);
@@ -531,11 +531,11 @@ double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_
 		double bmc = b - c;
 		double amb_amc = amb*amc;
 		double amc_bmc = amc*bmc;
-		chi = (FA / (amb) - (a*FA) / (amb_amc) - (b*FA) / (amb_amc) -FB / (amb) + (a*FB) / (amb_amc) +(b*FB) / (amb_amc) + (a*FB) / (amc_bmc) + (b*	FB) / (amc_bmc) - (a*FC) / (amc_bmc) 
-			-(b*FC) / (amc_bmc) - sqrt(Sqr(-(FA / (amb)) + (a*FA) / (amb_amc) + (b*FA) / (amb_amc) +FB / (amb) - (a*FB) / (amb_amc) - (b*FB) / (amb_amc) - (a*FB) / (amc_bmc) -	(b*FB) 
-			/ (amc_bmc) + (a*FC) / (amc_bmc) + (b*FC) / (amc_bmc)) - 4 * (-(FA / (amb_amc)) + FB / (amb_amc) +	FB / (amc_bmc) - FC / (amc_bmc))*(-FA + (a*FA) / (amb) - (a*b*FA) 
-			/ (amb_amc) - (a*FB) / (amb) + (a*b*FB) / (amb_amc) +(a*b*FB) / (amc_bmc) - (a*b*FC) / (amc_bmc) + V))) /(2 * (-(FA / (amb_amc)) + FB / (amb_amc) +	FB / (amc_bmc) - FC / (amc_bmc)));
-		
+		chi = (FA / (amb)-(a*FA) / (amb_amc)-(b*FA) / (amb_amc)-FB / (amb)+(a*FB) / (amb_amc)+(b*FB) / (amb_amc)+(a*FB) / (amc_bmc)+(b*	FB) / (amc_bmc)-(a*FC) / (amc_bmc)
+			-(b*FC) / (amc_bmc)-sqrt(Sqr(-(FA / (amb)) + (a*FA) / (amb_amc)+(b*FA) / (amb_amc)+FB / (amb)-(a*FB) / (amb_amc)-(b*FB) / (amb_amc)-(a*FB) / (amc_bmc)-(b*FB)
+			/ (amc_bmc)+(a*FC) / (amc_bmc)+(b*FC) / (amc_bmc)) - 4 * (-(FA / (amb_amc)) + FB / (amb_amc)+FB / (amc_bmc)-FC / (amc_bmc))*(-FA + (a*FA) / (amb)-(a*b*FA)
+			/ (amb_amc)-(a*FB) / (amb)+(a*b*FB) / (amb_amc)+(a*b*FB) / (amc_bmc)-(a*b*FC) / (amc_bmc)+V))) / (2 * (-(FA / (amb_amc)) + FB / (amb_amc)+FB / (amc_bmc)-FC / (amc_bmc)));
+
 		//inverse linear interpolation
 		//chi = WEIGH(a, b,rnd());
 
@@ -573,7 +573,7 @@ double SYNGEN1(double log_x_min, double log_x_max, int mode) {
 	else if (mode == SYNGEN_MODE_POWERWISE) {
 		double power_min = /*exp(*/integral_SR_power.InterpolateY(/*log(*/log_x_min/*)*/)/*)*/;
 		double power_max = /*exp(*/integral_SR_power.InterpolateY(/*log(*/log_x_max/*)*/)/*)*/;
-		double generated_power = WEIGH(power_min,power_max,rnd()); //uniform distribution between flux_min and flux_max
+		double generated_power = WEIGH(power_min, power_max, rnd()); //uniform distribution between flux_min and flux_max
 		generated_energy = exp(integral_SR_power.InterpolateX(/*log(*/generated_power/*)*/));
 	}
 	return generated_energy;
@@ -677,8 +677,8 @@ double Material::Interpolate(const double &energy, const double &angle) {
 	double energyOvershoot = log(energy) - log(energyVals[energyLowerIndex]);
 	double energyDelta = log(energyVals[energyLowerIndex + 1]) - log(energyVals[energyLowerIndex]);
 
-	double interpolatedReflForLowerAngle = WEIGH(reflVals[energyLowerIndex][angleLowerIndex],reflVals[energyLowerIndex + 1][angleLowerIndex],energyOvershoot / energyDelta);
-	double interpolatedReflForHigherAngle = WEIGH(reflVals[energyLowerIndex][angleLowerIndex + 1],reflVals[energyLowerIndex + 1][angleLowerIndex + 1],energyOvershoot / energyDelta);
+	double interpolatedReflForLowerAngle = WEIGH(reflVals[energyLowerIndex][angleLowerIndex], reflVals[energyLowerIndex + 1][angleLowerIndex], energyOvershoot / energyDelta);
+	double interpolatedReflForHigherAngle = WEIGH(reflVals[energyLowerIndex][angleLowerIndex + 1], reflVals[energyLowerIndex + 1][angleLowerIndex + 1], energyOvershoot / energyDelta);
 
 	double interpRefl = WEIGH(interpolatedReflForLowerAngle, interpolatedReflForHigherAngle, angleOvershoot / angleDelta);
 	SATURATE(interpRefl, 0.0, 100.0);

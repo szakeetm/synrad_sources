@@ -30,7 +30,7 @@ public:
 	~Distribution2D();
 	double InterpolateY(const double &x); //interpolates the Y value corresponding to X (allows extrapolation)
 	double InterpolateX(const double &y); //(no extrapolation, first/last X values are the output limits)
-	double *valuesX,*valuesY;
+	double *valuesX, *valuesY;
 	int findXindex(const double &x);
 	int size;
 	//double sum_energy,sum_photons;
@@ -40,8 +40,8 @@ class Material { //2-variable interpolation
 public:
 	//ReflectivityTable(const ReflectivityTable &copy_src); //copy constructor
 	//ReflectivityTable& operator= (const ReflectivityTable & other); //assignment op
-	double Interpolate(const double &energy,const double &angle);
-	std::vector<double> energyVals,angleVals; //energy and angle values (table headers)
+	double Interpolate(const double &energy, const double &angle);
+	std::vector<double> energyVals, angleVals; //energy and angle values (table headers)
 	std::vector<std::vector<double>> reflVals; //actual table values
 	void LoadCSV(FileReader *file);
 	std::string name; //For display in the program
@@ -49,8 +49,8 @@ public:
 
 class Indexes {
 public:
-	double inferior_flux,inferior_power;
-	double superior_flux,superior_power;
+	double inferior_flux, inferior_power;
+	double superior_flux, superior_power;
 	int i1;
 };
 
@@ -63,13 +63,13 @@ double SYNRAD_FAST(const double &x);
 //double find_chi(double psi,double gamma,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
 double find_psi(double psi, std::vector<std::vector<double>> &psi_distro);
 double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_distro);
-double SYNGEN1(double x_min,double x_max,int mode);
+double SYNGEN1(double x_min, double x_max, int mode);
 
 Distribution2D Generate_K_Distribution(double order);
 //Distribution2D Generate_G1_H2_Distribution();
 Distribution2D Generate_LN_Distribution(); //precalculated ln(x) values for the most used energies
 //Distribution2D Generate_Polarization_Distribution(bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
-Distribution2D Generate_Integral(double log_min,double log_max,int mode);
+Distribution2D Generate_Integral(double log_min, double log_max, int mode);
 /*
 Distribution2D K_1_3_distribution=Generate_K_Distribution(1.0/3.0);
 Distribution2D K_2_3_distribution=Generate_K_Distribution(2.0/3.0);
