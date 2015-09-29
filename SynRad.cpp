@@ -37,7 +37,7 @@ GNU General Public License for more details.
 #define APP_NAME "SynRad+ development version (Compiled "__DATE__" "__TIME__") DEBUG MODE"
 #else
 //#define APP_NAME "SynRad+ development version ("__DATE__")"
-#define APP_NAME "Synrad+ 1.3.11 ("__DATE__")"
+#define APP_NAME "Synrad+ 1.3.12 ("__DATE__")"
 #endif
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
@@ -770,6 +770,26 @@ int SynRad::OneTimeSceneInit()
 	catch (Error &e) {
 		char errMsg[512];
 		sprintf(errMsg, "Failed to load material reflection file:\n%s\n%s", materialPaths[index].c_str(), e.GetMsg());
+		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+	}
+
+	try {
+		FileReader *f = new FileReader("param\\sum_psi_distr_0to4perlambdar_0.35_delta5E-3.csv");
+		//vertical (psi) distribution for different e_crit/e values
+		//each row is for a logarithm of lambda_ratio, starting from -10 to +2
+		//each column is for a psi angle, starting from 0 going to 1, with a delta of 0.005
+		//where 1 corresponds to 4/lambda_ratio^0.35
+		worker.ImportCSV(f,worker.psi_distr);
+		SAFE_DELETE(f);
+		f = new FileReader("param\\psi_chi_gamma10000_logsampled_-7to0_delta0.04.csv");
+		//each column corresponds to a Log10[PSI*(gamma/10000)] value. First column: -99, second column: -7, delta: 0.04, max: 0
+		//each row corresponds to a    Log10[CHI*(gamma/10000)] value. First column: -7,                     delta: 0.04, max: 0
+		worker.ImportCSV(f, worker.chi_distr);
+		SAFE_DELETE(f);
+	}
+	catch (Error &e) {
+		char errMsg[512];
+		sprintf(errMsg, "Failed to load angular distribution file.");
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
 	}
 
@@ -1671,7 +1691,7 @@ void SynRad::CheckForRecovery() {
 	// Check for autosave files in current dir.
 	intptr_t file;
 	_finddata_t filedata;
-	file = _findfirst("Molflow_Autosave*.zip", &filedata);
+	file = _findfirst("Synrad_Autosave*.syn7z", &filedata);
 	if (file != -1)
 	{
 		do

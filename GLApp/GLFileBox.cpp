@@ -340,7 +340,7 @@ FILENAME *GLFileBox::OpenFile(char *path,char *fileName,char *title,const char *
 
 	char CWD [MAX_PATH];
 	_getcwd( CWD, MAX_PATH );
-	_chdir( CWD ); 				
+	//_chdir( CWD ); 				
 	if (GetOpenFileName(&ofn)==TRUE) {
 		_chdir( CWD ); //OpenFileName dialog changes the working driectory, so we must set it back
 		strcpy(retFile.fullName,fileNm);
@@ -377,12 +377,11 @@ FILENAME *GLFileBox::OpenFile(char *path,char *fileName,char *title,const char *
 
 std::vector<FILENAME> GLFileBox::OpenMultipleFiles(const char *filters, const char *title) {
 
-
 	std::vector<FILENAME> ret;
 
 	//Windows File Open dialog
 	OPENFILENAME ofn;       // common dialog box structure
-	char fileNm[1025];       // buffer for file name
+	char fileNm[65536];     // buffer for file name, increased size for multiple files
 
 	// Initialize OPENFILENAME
 	ZeroMemory(&ofn, sizeof(ofn));
@@ -399,10 +398,9 @@ std::vector<FILENAME> GLFileBox::OpenMultipleFiles(const char *filters, const ch
 	ofn.Flags = OFN_ALLOWMULTISELECT | OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
 	// Display the Open dialog box. 
-
 	char CWD[MAX_PATH];
 	_getcwd(CWD, MAX_PATH);
-	_chdir(CWD);
+	//_chdir(CWD);
 	if (GetOpenFileName(&ofn) == TRUE) {
 		_chdir(CWD); //OpenFileName dialog changes the working driectory, so we must set it back
 		
@@ -432,31 +430,6 @@ std::vector<FILENAME> GLFileBox::OpenMultipleFiles(const char *filters, const ch
 	}
 
 	return ret;
-	/* Original cross-platform OpenGl OpenFile dialog. Replaced with Windows file dialog
-	if(!title) title = "Open File";
-
-	#ifdef WIN32
-	if(!path || strcmp(path,".")==0) path=_getcwd(NULL,0);
-	GLFileBox::InitDrivePaths();
-	#endif
-
-	FILENAME *ret = NULL;
-
-	GLFileBox *f = new GLFileBox(path,fileName,title,filters,nbFilter,TRUE);
-	f->DoModal();
-
-	if( f->rCode == OK_BTN ) {
-	strcpy(retFile.path , f->curPath);
-	strcpy(retFile.file , f->curFile);
-	sprintf(retFile.fullName,"%s\\%s",f->curPath,f->curFile);
-	ret = &retFile;
-	f->AddToFileHist(f->curFile);
-	}
-
-	delete f;
-	return ret;
-	*/
-
 }
 
 // --------------------------------------------------------------

@@ -287,10 +287,12 @@ BOOL LoadSimulation(Dataport *loader) {
 		buffer+=sizeof(int);
 		int energyValsSize=*((int*)buffer); //copying number of energies (rows)
 		buffer+=sizeof(int);
+		newMaterial.angleVals.reserve(angleValsSize);
 		for (int j=0;j<angleValsSize;j++) {
 			newMaterial.angleVals.push_back(*((double*)buffer)); //copying angles (header)
 			buffer+=sizeof(double);
 		}
+		newMaterial.energyVals.reserve(energyValsSize);
 		for (int j=0;j<energyValsSize;j++) {
 			newMaterial.energyVals.push_back(*((double*)buffer)); //copying energies (column1)
 			buffer+=sizeof(double);
@@ -304,6 +306,38 @@ BOOL LoadSimulation(Dataport *loader) {
 			newMaterial.reflVals.push_back(currentEnergy);
 		}
 		sHandle->materials.push_back(newMaterial);
+	}
+
+	//Load psi_distr
+	int psi_size = *((int*)buffer);
+	buffer += sizeof(int);
+	sHandle->psi_distr.reserve(psi_size);
+	for (int j = 0; j < psi_size; j++) {
+		std::vector<double> row;
+		int row_size = *((int*)buffer);
+		buffer += sizeof(int);
+		sHandle->psi_distr.reserve(row_size);
+		for (int k = 0; k < row_size; k++) {
+			row.push_back(*((double*)buffer)); //cum. distr
+			buffer += sizeof(double);
+		}
+		sHandle->psi_distr.push_back(row);
+	}
+
+	//Load chi_distr
+	int chi_size = *((int*)buffer);
+	buffer += sizeof(int);
+	sHandle->chi_distr.reserve(chi_size);
+	for (int j = 0; j < chi_size; j++) {
+		std::vector<double> row;
+		int row_size = *((int*)buffer);
+		buffer += sizeof(int);
+		sHandle->chi_distr.reserve(row_size);
+		for (int k = 0; k < row_size; k++) {
+			row.push_back(*((double*)buffer)); //cum. distr
+			buffer += sizeof(double);
+		}
+		sHandle->chi_distr.push_back(row);
 	}
 
 	bufferAfterMaterials=buffer;

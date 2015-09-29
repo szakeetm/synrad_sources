@@ -456,7 +456,7 @@ void Geometry::RebuildLists() {
 
 // -----------------------------------------------------------
 
-DWORD Geometry::GetGeometrySize(std::vector<Region_full> *regions,std::vector<Material> *materials) {
+DWORD Geometry::GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials, std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr) {
 
 	// Compute number of bytes allocated
 	DWORD memoryUsage = 0;
@@ -483,12 +483,20 @@ DWORD Geometry::GetGeometrySize(std::vector<Region_full> *regions,std::vector<Ma
 		memoryUsage+=(int)((*materials)[i].energyVals.size())*sizeof(double);//copying energies (column1)
 		memoryUsage+=(int)((*materials)[i].angleVals.size())*(int)(*materials)[i].energyVals.size()*sizeof(double);//copying reflectivity probabilities (cells)
 	}
+
+	memoryUsage += sizeof(int); //psi number of rows
+	if (psi_distr.size()>0) memoryUsage += psi_distr.size()*(sizeof(int) + psi_distr[0].size()*sizeof(double));
+	
+	memoryUsage += sizeof(int); //chi number of rows
+	if (chi_distr.size()>0) memoryUsage += chi_distr.size()*(sizeof(int)+chi_distr[0].size()*sizeof(double));
+
 	return memoryUsage;
 }
 
 // -----------------------------------------------------------
 
-void Geometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *regions, std::vector<Material> *materials, int generation_mode, BOOL lowFluxMode, double lowFluxCutoff) {
+void Geometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *regions, std::vector<Material> *materials,
+	std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr, int generation_mode, BOOL lowFluxMode, double lowFluxCutoff) {
 
 	// Build shared buffer for geometry (see Shared.h)
 	int fOffset = sizeof(SHGHITS);
@@ -556,26 +564,51 @@ void Geometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *region
 
 	*((int*)buffer)=(int)(*materials).size(); //copying number of materials
 			buffer+=sizeof(int);
-			for (int i=0;i<(int)(*materials).size();i++) { //going through all materials
-				*((int*)buffer)=(int)(*materials)[i].angleVals.size(); //copying number of angles (columns)
+			for (auto material:*materials) { //going through all materials
+				*((int*)buffer)=(int)material.angleVals.size(); //copying number of angles (columns)
 				buffer+=sizeof(int);
-				*((int*)buffer)=(int)(*materials)[i].energyVals.size(); //copying number of energies (rows)
+				*((int*)buffer)=(int)material.energyVals.size(); //copying number of energies (rows)
 				buffer+=sizeof(int);
-				for (int j=0;j<(int)(*materials)[i].angleVals.size();j++) {
-					*((double*)buffer)=(*materials)[i].angleVals[j]; //copying angles (header)
+				for (auto angleval:material.angleVals) {
+					*((double*)buffer)=angleval; //copying angles (header)
 					buffer+=sizeof(double);
 				}
-				for (int j=0;j<(int)(*materials)[i].energyVals.size();j++) {
-					*((double*)buffer)=(*materials)[i].energyVals[j]; //copying energies (column1)
+				for (auto energyval:material.energyVals) {
+					*((double*)buffer)=energyval; //copying energies (column1)
 					buffer+=sizeof(double);
 				}
-				for (int j=0;j<(int)(*materials)[i].energyVals.size();j++) {
-					for (int k=0;k<(int)(*materials)[i].angleVals.size();k++) {
-						*((double*)buffer)=(*materials)[i].reflVals[j][k]; //copying reflectivity probabilities (cells)
+				for (int j=0;j<(int)material.energyVals.size();j++) {
+					for (int k = 0; k<(int)material.angleVals.size(); k++) {
+						*((double*)buffer) = material.reflVals[j][k]; //copying reflectivity probabilities (cells)
 						buffer+=sizeof(double);
 					}
 				}
 			}
+
+			//psi_distr
+			*((int*)buffer) = (int)psi_distr.size(); //copying number of rows
+			buffer += sizeof(int);
+			for (auto row : psi_distr) {
+				*((int*)buffer) = (int)row.size(); //copying number of values
+				buffer += sizeof(int);
+				for (auto value : row) {
+					*((double*)buffer) = value;
+					buffer += sizeof(double);
+				}
+			}
+
+			//chi_distr
+			*((int*)buffer) = (int)chi_distr.size(); //copying number of rows
+			buffer += sizeof(int);
+			for (auto row : chi_distr) {
+				*((int*)buffer) = (int)row.size(); //copying number of values
+				buffer += sizeof(int);
+				for (auto value : row) {
+					*((double*)buffer) = value;
+					buffer += sizeof(double);
+				}
+			}
+			
 
 	memcpy(buffer,vertices3,sizeof(VERTEX3D)*sh.nbVertex);
 	buffer += sizeof(VERTEX3D)*sh.nbVertex;

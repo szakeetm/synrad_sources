@@ -1,10 +1,12 @@
 #include "Simulation.h"
 #include "Random.h"
-extern Distribution2D polarization_distribution,integral_N_photons,integral_SR_power,g1h2_distribution;
+#include "GeneratePhoton.h"
+extern Distribution2D /*polarization_distribution,*/integral_N_photons,integral_SR_power/*,g1h2_distribution*/;
 
-GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int generation_mode,BOOL recalc) { //Generates a photon from point number 'pointId'
+GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int generation_mode,
+	std::vector<std::vector<double>> &psi_distr,std::vector<std::vector<double>> &chi_distr, BOOL recalc) { //Generates a photon from point number 'pointId'
 
-	/* interpolation removed, wasn't useful and slowed things down
+	/* interpolation between source points removed, wasn't useful and slowed things down
 	//Interpolate source point
 	SATURATE(sourceId,0,(double)current_region->Points.size()-1.0000001); //make sure we stay within limits
 	Trajectory_Point previousPoint=current_region->Points[(int)sourceId];
@@ -21,7 +23,7 @@ GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int gener
 
 	static double last_critical_energy, last_Bfactor, last_Bfactor_power; //to speed up calculation if critical energy didn't change
 	static double last_average_ans;
-	double average_;
+	double average_photon_energy_for_region;
 
 	if (recalc) last_critical_energy = 0.0; //force recalculation of B-factors (if, for example, region properties have changed)
 
@@ -53,49 +55,73 @@ GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int gener
 	if (result.critical_energy == last_critical_energy) { //check if we've calculated the results already
 		result.B_factor = last_Bfactor;
 		result.B_factor_power = last_Bfactor_power;
-		average_ = last_average_ans;
+		average_photon_energy_for_region = last_average_ans;
 	} else {
-		result.B_factor = (exp(integral_N_photons.InterpolateY(log(current_region->energy_hi / result.critical_energy)))
-			- exp(integral_N_photons.InterpolateY(log(current_region->energy_low / result.critical_energy))))
-			/ exp(integral_N_photons.valuesY[integral_N_photons.size - 1]);
-		result.B_factor_power = (exp(integral_SR_power.InterpolateY(log(current_region->energy_hi / result.critical_energy)))
-			- exp(integral_SR_power.InterpolateY(log(current_region->energy_low / result.critical_energy))))
-			/ exp(integral_SR_power.valuesY[integral_SR_power.size - 1]);
-		average_ = integral_N_photons.Interval_Mean(current_region->energy_low / result.critical_energy, current_region->energy_hi / result.critical_energy);
+		//what part of all photons we cover in our region (Emin...Emax)
+		result.B_factor = (/*exp(*/integral_N_photons.InterpolateY(log(current_region->energy_hi / result.critical_energy))/*)*/
+			- /*exp(*/integral_N_photons.InterpolateY(log(current_region->energy_low / result.critical_energy)))/*)*/
+			/ /*exp(*/integral_N_photons.valuesY[integral_N_photons.size - 1]/*)*/;
+		//what part of all power we cover in Emin...Emax
+		result.B_factor_power = (/*exp(*/integral_SR_power.InterpolateY(log(current_region->energy_hi / result.critical_energy))/*)*/
+			- /*exp(*/integral_SR_power.InterpolateY(log(current_region->energy_low / result.critical_energy)))/*)*/
+			/ /*exp(*/integral_SR_power.valuesY[integral_SR_power.size - 1]/*)*/;
+		average_photon_energy_for_region = Interval_Mean(current_region->energy_low / result.critical_energy, current_region->energy_hi / result.critical_energy);
 	}
-	double average = integral_N_photons.average;
+	//double average_photon_energy_whole_range = integral_N_photons.sum_energy / integral_N_photons.sum_photons;
+	double average_photon_energy_whole_range = integral_SR_power.valuesY[integral_SR_power.size - 1] / integral_N_photons.valuesY[integral_N_photons.size - 1];
 
-	double generated_energy = SYNGEN1(current_region->energy_low / result.critical_energy, current_region->energy_hi / result.critical_energy,
+	double generated_energy = SYNGEN1(log(current_region->energy_low / result.critical_energy), log(current_region->energy_hi / result.critical_energy),
 		generation_mode);
 
-	result.SR_flux=current_region->dL/(result.radius*2*PI)*current_region->gamma*4.1289E14*result.B_factor*current_region->current;
+	double ratio_of_full_revolution = current_region->dL / (result.radius * 2 * PI);
+	//result.SR_flux=ratio_of_full_revolution*current_region->gamma*4.1289E14*result.B_factor*current_region->current;
+	result.SR_flux = ratio_of_full_revolution*8.08E17*current_region->E*result.B_factor*current_region->current;
 	//Total flux per revolution for electrons: 8.08E17*E[GeV]*I[mA] photons/sec
 	//8.08E17 * 0.000511GeV = 4.1289E14
 
 	if (generation_mode==SYNGEN_MODE_POWERWISE)
-		result.SR_flux=result.SR_flux/generated_energy*average_;
+		result.SR_flux = result.SR_flux / (generated_energy/average_photon_energy_for_region);
 
-	if (result.B_factor>0.0 && average_>VERY_SMALL) {
-		result.SR_power = result.SR_flux*generated_energy*result.critical_energy*1.602189E-19*average / average_*result.B_factor_power / result.B_factor; //flux already multiplied by current
+	if (result.B_factor>0.0 && average_photon_energy_for_region>VERY_SMALL) {
+		result.SR_power = result.SR_flux*(generated_energy*result.critical_energy)*average_photon_energy_whole_range / average_photon_energy_for_region; //flux already multiplied by current
+		result.SR_power *= result.B_factor_power / result.B_factor; //correction for not generating on every possible energy
+		result.SR_power *= 1.602189E-19; //eV per second -> J/second (Watts)
 	}
 	else result.SR_power = 0.0;
 
 	//}
-	double f=polarization_distribution.InterpolateY(generated_energy);
-	result.g1h2=exp(g1h2_distribution.InterpolateY(generated_energy));
-	double f_times_g1h2=f*result.g1h2;
+	//double f=polarization_distribution.InterpolateY(generated_energy);
+	/*result.g1h2=exp(g1h2_distribution.InterpolateY(generated_energy));
+	double f_times_g1h2=f*result.g1h2;*/
 		
 	int retries = 0;
+	/*
+	//debug start
+	size_t numSamples = 500000;
+	FileWriter *fileOut = new FileWriter("histout.csv");
+	fileOut->WriteDouble(generated_energy,"\n");
+	for (size_t i = 0; i < numSamples; i++)
+		fileOut->WriteDouble(find_psi(generated_energy, Sqr(current_region->gamma), f_times_g1h2,
+		current_region->enable_par_polarization, current_region->enable_ort_polarization),"\n");
+	delete(fileOut);
+	throw Error("blabla");
+	*/
+	//debug end
+
 	do {
-		result.natural_divy=find_psi(generated_energy,Sqr(current_region->gamma),f_times_g1h2,
-			current_region->enable_par_polarization,current_region->enable_ort_polarization)/current_region->gamma;
+		//result.natural_divy=find_psi(generated_energy,current_region->enable_par_polarization,current_region->enable_ort_polarization)/current_region->gamma;
+		result.natural_divy = find_psi(generated_energy, psi_distr) / current_region->gamma;
 	} while (result.natural_divy>current_region->psimaxY || (++retries)>1000);
+	
 	retries = 0;
 	do {
-		result.natural_divx=find_chi(result.natural_divy,current_region->gamma,f_times_g1h2,
-			current_region->enable_par_polarization,current_region->enable_ort_polarization); //divided by sHandle->gamma inside the function
+		/*result.natural_divx=find_chi(result.natural_divy,current_region->gamma,
+			current_region->enable_par_polarization,current_region->enable_ort_polarization); //divided by sHandle->gamma inside the function*/
+		result.natural_divx=find_chi(result.natural_divy,current_region->gamma,
+			chi_distr);
 	} while (result.natural_divx>current_region->psimaxX || (++retries)>1000);
 
+	//Symmetrize distribution
 	if (rnd()<0.5) result.natural_divx *= -1;
 	if (rnd()<0.5) result.natural_divy *= -1;
 
@@ -103,7 +129,7 @@ GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int gener
 	last_critical_energy=result.critical_energy;
 	last_Bfactor=result.B_factor;
 	last_Bfactor_power=result.B_factor_power;
-	last_average_ans=average_;
+	last_average_ans=average_photon_energy_for_region;
 
 	//return values
 	result.start_dir=result.start_dir.Rotate(source->Y_local,result.natural_divx);
@@ -111,4 +137,39 @@ GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int gener
 	result.energy=generated_energy*result.critical_energy;
 
 	return result;
+}
+
+double Interval_Mean(const double &min, const double &max) {
+	//average of a cumulative distribution (differentiation included)
+
+	/*int i_min = integral_N_photons.findXindex(log(min)) + 1;
+	int i_max = integral_N_photons.findXindex(log(max)) + 1;
+	if (i_min == 0) i_min++;
+	if (i_min >= size - 1) {
+	i_min = size - 2;
+	i_max = size - 1;
+	}
+	if (i_max == 0) i_max++;
+
+	double delta = log(max / min);
+	int no_steps = i_max - i_min;
+	if (i_max > i_min) delta = delta / (no_steps);
+
+	double sum_power = 0.0;
+	double sum_photons = 0.0;
+	int i;
+	for (i = 0; i < no_steps; i++){
+	double x_lower = exp(log(min) + i*delta); //lower energy
+	double x_middle = exp(log(min) + (i + 0.5)*delta); //middle energy
+	double x_higher = exp(log(min) + (i + 1)*delta); //higher energy
+	double exp_delta = x_higher - x_lower; //actual energy range for the next index
+
+	double interval_dN = SYNRAD_FAST(x_middle)*exp_delta; //number of photons for the actual energy interval
+	sum_photons += interval_dN;        //already calculated as valuesY[i]
+	sum_power += interval_dN*x_middle; //already calculated as integral_SR_power.valuesY[i]
+	}*/
+	double sum_photons2 = integral_N_photons.InterpolateY(log(max)) - integral_N_photons.InterpolateY(log(min));
+	double sum_power2 = integral_SR_power.InterpolateY(log(max)) - integral_SR_power.InterpolateY(log(min));
+	if (sum_photons2 > VERY_SMALL) return sum_power2 / sum_photons2;
+	else return 0.5*(min + max);
 }

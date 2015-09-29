@@ -79,7 +79,7 @@ ProfilePlotter::ProfilePlotter():GLWindow() {
 	Add(profCombo);
 
 	logToggle = new GLToggle(0,"Log Y scale");
-	logToggle->SetState(TRUE);
+	logToggle->SetState(FALSE);
 	Add(logToggle);
 
 	normToggle = new GLToggle(0,"Normalize");

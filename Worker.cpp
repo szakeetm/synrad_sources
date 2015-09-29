@@ -596,7 +596,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 					GLProgress* prg = new GLProgress("", "Loading regions");
 					prg->SetVisible(TRUE);
 					int i = 0;
-					for (auto&& fileName:regionsToLoad) {
+					for (auto&& regionFileName:regionsToLoad) {
 						std::string toLoad;
 						if (ext=="syn7z") { //PAR file to load in tmp dir (just extracted)
 							toLoad=(std::string)CWD+"\\tmp\\";
@@ -608,10 +608,10 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 							memcpy(tmp,fileName,filebegin-fileName);
 							tmp[(int)(filebegin-fileName)]=NULL;
 							toLoad=tmp;*/
-							toLoad = FileUtils::GetPath(fileName);
+							toLoad = FileUtils::GetPath(fileName)+"\\";
 						}
-						toLoad+=fileName;
-						prg->SetMessage("Adding "+fileName+"...");
+						toLoad+=regionFileName;
+						prg->SetMessage("Adding "+regionFileName+"...");
 						prg->SetProgress((double)i++ / (double)regionsToLoad.size());
 						AddRegion(toLoad.c_str(), -1);
 					}
@@ -1411,14 +1411,14 @@ void Worker::RealReload() { //Sharing geometry with workers
 
 	progressDlg->SetMessage("Creating dataport...");
 	// Create the temporary geometry shared structure
-	int loadSize = geom->GetGeometrySize(&regions,&materials);
+	int loadSize = geom->GetGeometrySize(&regions,&materials,psi_distr,chi_distr);
 	Dataport *loader = CreateDataport(loadDpName,loadSize);
 	if( !loader )
 		throw Error("Failed to create 'loader' dataport.\nMost probably out of memory.\nReduce number of subprocesses or texture size.");
 	progressDlg->SetMessage("Accessing dataport...");
 	AccessDataportTimed(loader,3000+nbProcess*(int)((double)loadSize/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");
-	geom->CopyGeometryBuffer((BYTE *)loader->buff,&regions,&materials,generation_mode,lowFluxMode,lowFluxCutoff);
+	geom->CopyGeometryBuffer((BYTE *)loader->buff,&regions,&materials,psi_distr,chi_distr,generation_mode,lowFluxMode,lowFluxCutoff);
 	progressDlg->SetMessage("Releasing dataport...");
 	ReleaseDataport(loader);
 
@@ -1773,6 +1773,18 @@ void Worker::SetProcNumber(int n) {
 
 }
 
+void Worker::ImportCSV(FileReader *file,std::vector<std::vector<double>>& table){
+	table = std::vector<std::vector<double>>(); //reset table
+	do {
+		std::vector<double> currentRow;
+		do {
+			currentRow.push_back(file->ReadDouble());
+			if (!file->IsEol()) file->ReadKeyword(",");
+		} while (!file->IsEol());
+		table.push_back(currentRow);
+	} while (!file->IsEof());
+}
+
 int Worker::GetProcNumber() {
 	return nbProcess;
 }
@@ -1789,13 +1801,14 @@ void Worker::AddRegion(const char *fileName,int position) {
 	needsReload=TRUE;
 
 	std::string ext = FileUtils::GetExtension(fileName);
-
+	FileReader *f = NULL;
 	if(ext=="par" || ext=="PAR" || ext=="param") {
 
-			FileReader *f = new FileReader(fileName);
+			f = new FileReader(fileName);
 			Region_full newtraj;
 			if (ext=="par" || ext=="PAR") newtraj.LoadPAR(f);
 			else newtraj.LoadParam(f);
+			SAFE_DELETE(f);
 			newtraj.fileName=fileName;
 			if (position==-1) regions.push_back(newtraj);
 			else {
@@ -1806,6 +1819,7 @@ void Worker::AddRegion(const char *fileName,int position) {
 			geom->InitializeGeometry(-1,TRUE); //recalculate bounding box
 			nbTrajPoints+=(int)newtraj.Points.size();
 	}  else {
+		SAFE_DELETE(f);
 		throw Error("LoadParam(): Invalid file extension [Only par or param]");
 	}
 }
@@ -1835,7 +1849,7 @@ void Worker::ClearRegions() {
 	Reload();
 }
 
-void Worker::AddMaterial(string *fileName){
+void Worker::AddMaterial(std::string *fileName){
 	Material result;
 	char tmp[512];
 	sprintf(tmp,"param\\%s",fileName->c_str());

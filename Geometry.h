@@ -34,8 +34,6 @@
 #include <vector>
 #include <sstream>
 
-class Worker;
-
 #define SEL_HISTORY  100
 #define MAX_SUPERSTR 128
 #define SYNVERSION   8
@@ -45,6 +43,8 @@ class Worker;
 #define TEXTURE_MODE_MCHITS 0
 #define TEXTURE_MODE_FLUX 1
 #define TEXTURE_MODE_POWER 2
+
+class Worker;
 
 class Geometry {
 
@@ -56,7 +56,7 @@ public:
 
   // Clear this geometry
   void Clear();
-
+  
   // Load
   void LoadTXT(FileReader *file,GLProgress *prg);
   void LoadSTR(FileReader *file,GLProgress *prg);
@@ -216,13 +216,14 @@ public:
 
 
   // Memory usage (in bytes)
-  DWORD GetGeometrySize(std::vector<Region_full> *regions,std::vector<Material> *materials);
+  DWORD GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials, std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr);
   DWORD GetHitsSize();
 
 
 
   // Raw data buffer (geometry)
-  void CopyGeometryBuffer(BYTE *buffer,std::vector<Region_full> *regions,std::vector<Material> *materials,int generation_mode,BOOL lowFluxMode,double lowFluxCutoff);
+  void CopyGeometryBuffer(BYTE *buffer,std::vector<Region_full> *regions,std::vector<Material> *materials,
+	  std::vector<std::vector<double>> &psi_distr,std::vector<std::vector<double>> &chi_distr,int generation_mode,BOOL lowFluxMode,double lowFluxCutoff);
 
 
   // AC matrix

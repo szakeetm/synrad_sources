@@ -332,7 +332,7 @@ char *TrajectoryDetails::FormatCell(int idx, int mode, GenPhoton* photon) {
 		sprintf(ret, "%g", photon->energy / photon->critical_energy);
 		break;
 	case 40: //Photon_G1H2
-		sprintf(ret, "%g", photon->g1h2);
+		sprintf(ret, "%g", "g1h2 obsolete");
 		break;
 	case 41: //Photon_B_factor
 		sprintf(ret, "%g", photon->B_factor);
@@ -370,8 +370,8 @@ void TrajectoryDetails::UpdateTable() {
 	Distribution2D K_2_3_distribution = Generate_K_Distribution(2.0 / 3.0);
 	Distribution2D integral_N_photons = Generate_Integral(LOWER_LIMIT, UPPER_LIMIT, INTEGRAL_MODE_N_PHOTONS);
 	Distribution2D integral_SR_power = Generate_Integral(LOWER_LIMIT, UPPER_LIMIT, INTEGRAL_MODE_SR_POWER);
-	Distribution2D polarization_distribution = Generate_Polarization_Distribution(true, true);
-	Distribution2D g1h2_distribution = Generate_G1_H2_Distribution();
+	//Distribution2D polarization_distribution = Generate_Polarization_Distribution(true, true);
+	//Distribution2D g1h2_distribution = Generate_G1_H2_Distribution();
 
 	/*double integ_BX = 0.0;
 	double integ_BY = 0.0;
@@ -412,7 +412,7 @@ void TrajectoryDetails::UpdateTable() {
 	pointList->SetColumnAligns(tmpAlign);
 
 	for (int pointId = 0; pointId < nbPoints; pointId += freq) {
-		GenPhoton photon = GeneratePhoton(pointId, &worker->regions[displayedRegion], worker->generation_mode, pointId == 0);
+		GenPhoton photon = GeneratePhoton(pointId, &worker->regions[displayedRegion], worker->generation_mode, worker->psi_distr, worker->chi_distr,pointId == 0);
 		updatePrg->SetProgress((double)pointId / (double)nbPoints);
 		for (int j = 0; j < nbCol; j++)
 			pointList->SetValueAt(j, (int)((double)pointId / (double)freq), FormatCell(pointId, shown[j], &photon));

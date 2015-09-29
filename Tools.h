@@ -40,8 +40,9 @@ class GenPhoton {
 public:
 	double natural_divx, natural_divy, offset_x, offset_y, offset_divx, offset_divy;
 	double radius, critical_energy, B_ort, B_par, energy;
-	double g1h2, B_factor, B_factor_power, SR_flux, SR_power;
+	double/* g1h2,*/ B_factor, B_factor_power, SR_flux, SR_power;
 	Vector start_pos, start_dir,B;
+	
 };
 
 class Histogram {

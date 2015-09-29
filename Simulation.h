@@ -135,6 +135,8 @@ typedef struct {
 
   std::vector<Region_mathonly> regions;// Regions
   std::vector<Material> materials;//materials
+  std::vector<std::vector<double>> psi_distr;
+  std::vector<std::vector<double>> chi_distr;
 
   FACET *lastHit;     // Last hitted facet
   //int sourceArea;  // Number of trajectory points

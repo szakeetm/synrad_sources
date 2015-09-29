@@ -38,11 +38,12 @@ public:
 
   // Return a handle to the currently loaded geometry
   Geometry *GetGeometry();
-  void AddMaterial(string *fileName);
+  void AddMaterial(std::string *fileName);
   void LoadGeometry(char *fileName, BOOL insert=FALSE, BOOL newStr=FALSE);// Loads or inserts a geometry (throws Error)
   //void InsertGeometry(BOOL newStr,char *fileName); // Inserts a new geometry (throws Error)
   void LoadTexturesSYN(const char *fileName,int version);  // Load a textures(throws Error)
-    void RebuildTextures();
+  void RebuildTextures();
+  void ImportCSV(FileReader *file, std::vector<std::vector<double>> &table);
   
   // Save a geometry (throws Error)
   void SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm=TRUE,BOOL saveSelected=FALSE,BOOL autoSave=FALSE,BOOL crashSave=FALSE);
@@ -110,6 +111,8 @@ public:
   double lowFluxCutoff;
   std::vector<Region_full> regions;
   std::vector<Material> materials;
+  std::vector<std::vector<double>> psi_distr;
+  std::vector<std::vector<double>> chi_distr;
   char fullFileName[512]; // Current loaded file
 
   BOOL needsReload;

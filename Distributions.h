@@ -3,8 +3,8 @@
 #define NUMBER_OF_DISTRO_VALUES 100
 #define NUMBER_OF_INTEGR_VALUES 250
 #define VERY_SMALL 1.0E-30
-#define UPPER_LIMIT 100.0
-#define LOWER_LIMIT 1.0E-10
+#define UPPER_LIMIT /*100.0*/ 4.60517018599 //ln(100)
+#define LOWER_LIMIT /*1.0E-10*/-23.0258509299 //ln(1E-10)
 
 #define INTEGRAL_MODE_N_PHOTONS 1
 #define INTEGRAL_MODE_SR_POWER  2
@@ -33,8 +33,7 @@ public:
 	double *valuesX,*valuesY;
 	int findXindex(const double &x);
 	int size;
-	double average,average1;
-	double Interval_Mean(const double &x1,const double &x2);
+	//double sum_energy,sum_photons;
 };
 
 class Material { //2-variable interpolation
@@ -57,18 +56,20 @@ public:
 
 double g0ki(double x, double order, int kind);
 double SYNRAD_FAST(const double &x);
-double Gi(double x,int order);
-double H(double x, int order);
-double calc_polarization_percentage(double energy,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
-double find_psi(double x,double gamma_square,double f_times_g1h2,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
-double find_chi(double psi,double gamma_square,double f_times_g1h2,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
+//double Gi(double x,int order);
+//double H(double x, int order);
+//double calc_polarization_percentage(double energy,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
+//double find_psi(double x,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
+//double find_chi(double psi,double gamma,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
+double find_psi(double psi, std::vector<std::vector<double>> &psi_distro);
+double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_distro);
 double SYNGEN1(double x_min,double x_max,int mode);
 
 Distribution2D Generate_K_Distribution(double order);
-Distribution2D Generate_G1_H2_Distribution();
+//Distribution2D Generate_G1_H2_Distribution();
 Distribution2D Generate_LN_Distribution(); //precalculated ln(x) values for the most used energies
-Distribution2D Generate_Polarization_Distribution(bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
-Distribution2D Generate_Integral(double x1,double x2,int mode);
+//Distribution2D Generate_Polarization_Distribution(bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
+Distribution2D Generate_Integral(double log_min,double log_max,int mode);
 /*
 Distribution2D K_1_3_distribution=Generate_K_Distribution(1.0/3.0);
 Distribution2D K_2_3_distribution=Generate_K_Distribution(2.0/3.0);

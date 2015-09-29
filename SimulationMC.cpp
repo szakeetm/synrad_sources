@@ -36,7 +36,7 @@ extern Distribution2D K_2_3_distribution;
 extern Distribution2D integral_N_photons;
 extern Distribution2D integral_SR_power;
 extern Distribution2D polarization_distribution;
-extern Distribution2D g1h2_distribution;
+//extern Distribution2D g1h2_distribution;
 
 
 void ComputeSourceArea() {
@@ -624,7 +624,7 @@ BOOL StartFromSource() {
 	//Trajectory_Point *source=&(sHandle->regions[regionId].Points[pointIdLocal]);
 	Region_mathonly *sourceRegion=&(sHandle->regions[regionId]);
 	if (!(sourceRegion->psimaxX>0.0 && sourceRegion->psimaxY>0.0)) SetErrorSub("psiMaxX or psiMaxY not positive. No photon can be generated");
-	GenPhoton photon=GeneratePhoton(pointIdLocal,sourceRegion,sHandle->generation_mode,sHandle->tmpCount.nbDesorbed==0);
+	GenPhoton photon=GeneratePhoton(pointIdLocal,sourceRegion,sHandle->generation_mode,sHandle->psi_distr,sHandle->chi_distr,sHandle->tmpCount.nbDesorbed==0);
 
 	//sHandle->distTraveledCurrentParticle=0.0;
 	sHandle->dF=photon.SR_flux;
