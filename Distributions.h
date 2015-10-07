@@ -1,10 +1,12 @@
 #ifndef _DISTRIBUTIONS_
 #define _DISTRIBUTIONS_
 #define NUMBER_OF_DISTRO_VALUES 100
-#define NUMBER_OF_INTEGR_VALUES 250
 #define VERY_SMALL 1.0E-30
-#define UPPER_LIMIT /*100.0*/ 4.60517018599 //ln(100)
-#define LOWER_LIMIT /*1.0E-10*/-23.0258509299 //ln(1E-10)
+
+#define UPPER_LIMIT log(20)
+#define LOWER_LIMIT log(1E-10)
+#define NUMBER_OF_INTEGR_VALUES 5000
+//sampling SR spectrum from [1E-10...20]*critical_energy in 5000 steps
 
 #define INTEGRAL_MODE_N_PHOTONS 1
 #define INTEGRAL_MODE_SR_POWER  2

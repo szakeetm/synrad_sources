@@ -952,9 +952,9 @@ void RegionEditor::EnableDisableControls() {
 
 void RegionEditor::FillValues() {
 	char tmp[512];
-	sprintf(tmp,"%g",cr->startPoint.x);startPointXtext->SetText(tmp);
-	sprintf(tmp,"%g",cr->startPoint.y);startPointYtext->SetText(tmp);
-	sprintf(tmp,"%g",cr->startPoint.z);startPointZtext->SetText(tmp);
+	sprintf(tmp,"%.9g",cr->startPoint.x);startPointXtext->SetText(tmp);
+	sprintf(tmp,"%.9g",cr->startPoint.y);startPointYtext->SetText(tmp);
+	sprintf(tmp,"%.9g",cr->startPoint.z);startPointZtext->SetText(tmp);
 
 	double t0;
 	if (cr->startDir.z == 0) {

@@ -186,7 +186,7 @@ Distribution2D Generate_Integral(double log_min, double log_max, int mode){
 	//log_min: log(ratio of minimal energy / critical energy)
 	//log_max: log(ratio of maximal energy / critical energy)
 
-	double delta, exp_delta, interval_dN, interval_dN2, sum_photons, sum_power, temp2_power, x_middle, x_lower, x_higher;
+	double delta, exp_delta, interval_dN, sum_photons, sum_power, mean_photons, x_lower, x_middle, x_higher;
 
 	int i;
 	Distribution2D result(NUMBER_OF_INTEGR_VALUES);
@@ -196,25 +196,19 @@ Distribution2D Generate_Integral(double log_min, double log_max, int mode){
 
 	for (i = 0; i < NUMBER_OF_INTEGR_VALUES; i++) {
 		x_lower = exp(log_min + i*delta); //lower energy
-		x_middle = exp(log_min + (i + 0.5)*delta); //middle energy
 		x_higher = exp(log_min + (i + 1.0)*delta); //higher energy
 		exp_delta = x_higher - x_lower; //actual energy range for the next index
+		
+		x_middle = (x_lower + x_higher) / 2.0;
+		mean_photons = (SYNRAD_FAST(x_lower) + SYNRAD_FAST(x_higher)) / 2.0;
 
-		interval_dN = SYNRAD_FAST(x_middle)*exp_delta; //number of photons for the actual energy interval
-		interval_dN2 = (SYNRAD_FAST(x_lower) + SYNRAD_FAST(x_higher)) / 2.0*exp_delta; //number of photons for the actual interval, different averaging
-		sum_photons += interval_dN2; //flux increment
-		sum_power += interval_dN2*x_middle; //2*number of photons * average energy: 2*energy of the interval
+		interval_dN = mean_photons*exp_delta; //number of photons for the actual interval, different averaging
+		sum_photons += interval_dN; //flux increment
+		sum_power += interval_dN*x_middle; //number of photons * average energy: energy of the interval
 		result.valuesX[i] = log(x_middle);
-		if (mode == INTEGRAL_MODE_N_PHOTONS) result.valuesY[i] = sum_photons; //used to be log(sum_flux)
+		if (mode == INTEGRAL_MODE_N_PHOTONS) result.valuesY[i] =  sum_photons; //used to be log(sum_flux)
 		else if (mode == INTEGRAL_MODE_SR_POWER) result.valuesY[i] = sum_power; //used to be log(sum_power)
-
-		//values are filled from 0 to 249!
-		//result.sum_photons += interval_dN2;
-		//result.sum_energy += interval_dN2*x_middle;
 	}
-	//i=NUMBER_OF_INTEGR_VALUES;
-	//integral:=sum*7.7085761E16; //No return value in this implementation
-	//{ integral(1e-10,100)=8.084227E17 ph/s/mA/GeV }
 	return result;
 }
 
@@ -512,7 +506,7 @@ double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_
 		psi_index = 0; //use lowest angle
 	}
 	else {
-		psi_index = (psi_relative + 7.0) / 0.04; //sampled from -7 to 0 with delta=0.04
+		psi_index = (psi_relative + 7.0) / 0.02; //sampled from -7 to 0 with delta=0.02
 	}
 
 	int psi_lower_index = (int)(psi_index); //digitized for -2PI/10 .. +2PI/10 with delta=0.0025
@@ -573,9 +567,9 @@ double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_
 	}
 	else {
 
-		double a = pow(10, -7.0 + ((double)chi_lower_index + 0.0)*0.04) / (gamma / 10000.0);
-		double b = a*1.0964782; /* pow(10, -7.0 + ((double)chi_lower_index + 1.0)*0.04) / (gamma / 10000.0);*/ //1.09=10^0.04
-		double c = b*1.0964782; /*pow(10, -7.0 + ((double)chi_lower_index + 2.0)*0.04) / (gamma / 10000.0);*/
+		double a = pow(10, -7.0 + ((double)chi_lower_index + 0.0)*0.02) / (gamma / 10000.0);
+		double b = a*1.04712854805; /* pow(10, -7.0 + ((double)chi_lower_index + 1.0)*0.02) / (gamma / 10000.0);*/ //1.047=10^0.02
+		double c = b*1.04712854805; /*pow(10, -7.0 + ((double)chi_lower_index + 2.0)*0.02) / (gamma / 10000.0);*/
 		double FA = interpolated_CDF_lower;
 		double FB = interpolated_CDF_higher;
 		double FC = next_interpolated_CDF;
@@ -621,16 +615,16 @@ double SYNGEN1(double log_x_min, double log_x_max, int mode) {
 
 	double generated_energy;
 	if (mode == SYNGEN_MODE_FLUXWISE) {
-		double flux_min = /*exp(*/integral_N_photons.InterpolateY(/*log(*/log_x_min/*)*/)/*)*/;
-		double flux_max = /*exp(*/integral_N_photons.InterpolateY(/*log(*/log_x_max/*)*/)/*)*/;
-		double generated_flux = WEIGH(flux_min, flux_max, rnd());//uniform distribution between flux_min and flux_max
-		generated_energy = exp(integral_N_photons.InterpolateX(/*log(*/generated_flux/*)*/));
+		double flux_min = integral_N_photons.InterpolateY(MAX(LOWER_LIMIT,log_x_min));
+		double flux_max = integral_N_photons.InterpolateY(MIN(UPPER_LIMIT,log_x_max));
+		double generated_flux = WEIGH(flux_min, flux_max, rnd()); //uniform distribution between flux_min and flux_max
+		generated_energy = exp(integral_N_photons.InterpolateX(generated_flux));
 	}
 	else if (mode == SYNGEN_MODE_POWERWISE) {
-		double power_min = /*exp(*/integral_SR_power.InterpolateY(/*log(*/log_x_min/*)*/)/*)*/;
-		double power_max = /*exp(*/integral_SR_power.InterpolateY(/*log(*/log_x_max/*)*/)/*)*/;
+		double power_min = integral_SR_power.InterpolateY(MAX(LOWER_LIMIT, log_x_min));
+		double power_max = integral_SR_power.InterpolateY(MIN(UPPER_LIMIT, log_x_max));
 		double generated_power = WEIGH(power_min, power_max, rnd()); //uniform distribution between flux_min and flux_max
-		generated_energy = exp(integral_SR_power.InterpolateX(/*log(*/generated_power/*)*/));
+		generated_energy = exp(integral_SR_power.InterpolateX(generated_power));
 	}
 	return generated_energy;
 }
@@ -745,6 +739,7 @@ double Material::Interpolate(const double &energy, const double &angle) {
 }
 
 template <typename T> int binary_search(double key, T A, int size)
+//"iterative" version of algorithm, modified from https://en.wikipedia.org/wiki/Binary_search_algorithm
 {
 	int imin = 0;
 	int imax = size - 1;
@@ -753,7 +748,7 @@ template <typename T> int binary_search(double key, T A, int size)
 	{
 		// calculate the midpoint for roughly equal partition
 		int imid = (imin+imax)/2;
-		if (imid==size-1 || (A[imid] < key && key < A[imid+1]))
+		if (imid==size-1 || imid==0 || (A[imid] < key && key < A[imid+1]))
 			// key found at index imid
 			return imid;
 		// determine which subarray to search

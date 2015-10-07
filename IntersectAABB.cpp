@@ -271,15 +271,15 @@ void ProfileFacet(FACET *f,const double &dF,const double &dP,const double &E) {
   switch( f->sh.profileType ) {
 
     case REC_ANGULAR: {
-      double dot = DOT3(f->sh.N.x,f->sh.N.y,f->sh.N.z,rayDir->x,rayDir->y,rayDir->z);
-      double theta = acos(dot);              // Angle to normal (PI/2 => PI)
-      int grad = (int)(2.0*((double)PROFILE_SIZE)*(PI-theta)/PI); // To Grad
+      double dot = abs(DOT3(f->sh.N.x,f->sh.N.y,f->sh.N.z,rayDir->x,rayDir->y,rayDir->z));
+      double theta = acos(dot);              // Angle to normal (0 to PI/2)
+      int grad = (int)(((double)PROFILE_SIZE)*(theta)/(PI/2)); // To Grad
       SATURATE(grad,0,PROFILE_SIZE-1);
       f->profile_hits[grad]++;
 	  f->profile_flux[grad]+=dF;
 	  f->profile_power[grad]+=dP;
 
-    }break;
+    } break;
 
     case REC_PRESSUREU:
       pos = (int)( (f->colU)*(double)PROFILE_SIZE );

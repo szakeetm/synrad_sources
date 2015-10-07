@@ -37,7 +37,7 @@ GNU General Public License for more details.
 #define APP_NAME "SynRad+ development version (Compiled "__DATE__" "__TIME__") DEBUG MODE"
 #else
 //#define APP_NAME "SynRad+ development version ("__DATE__")"
-#define APP_NAME "Synrad+ 1.3.13 ("__DATE__")"
+#define APP_NAME "Synrad+ 1.3.14 ("__DATE__")"
 #endif
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
@@ -370,9 +370,7 @@ int SynRad::OneTimeSceneInit()
 	menu->Add("Regions");
 	menu->GetSubMenu("Regions")->Add("New...", MENU_REGIONS_NEW);
 	menu->GetSubMenu("Regions")->Add("Load...", MENU_REGIONS_LOADPAR);
-	menu->GetSubMenu("Regions")->Add("Load recent", MENU_REGIONS_LOADRECENT);
-	for (int i = nbRecentPAR - 1; i >= 0; i--)
-		menu->GetSubMenu("Regions")->GetSubMenu("Load recent")->Add(recentPARs[i], MENU_REGIONS_LOADRECENT + i);
+	menu->GetSubMenu("Regions")->Add("Load recent", MENU_REGIONS_LOADRECENT); //Will add recent files after loading config
 	menu->GetSubMenu("Regions")->Add("Remove all", MENU_REGIONS_CLEARALL);
 	menu->GetSubMenu("Regions")->Add(NULL); // Separator
 	menu->GetSubMenu("Regions")->Add("Load to");
@@ -752,6 +750,8 @@ int SynRad::OneTimeSceneInit()
 	UpdateViewerParams();
 	PlaceComponents();
 	LoadConfig();
+	UpdateRecentMenu();
+	UpdateRecentPARMenu();
 
 	try {
 		worker.SetProcNumber(nbProc);
@@ -781,9 +781,9 @@ int SynRad::OneTimeSceneInit()
 		//where 1 corresponds to 4/lambda_ratio^0.35
 		worker.ImportCSV(f, worker.psi_distr);
 		SAFE_DELETE(f);
-		f = new FileReader("param\\psi_chi_gamma10000_logsampled_-7to0_delta0.04.csv");
-		//each column corresponds to a Log10[PSI*(gamma/10000)] value. First column: -99, second column: -7, delta: 0.04, max: 0
-		//each row corresponds to a    Log10[CHI*(gamma/10000)] value. First column: -7,                     delta: 0.04, max: 0
+		f = new FileReader("param\\psi_chi_gamma10000_logsampled_-7to0_delta0.02.csv");
+		//each column corresponds to a Log10[PSI*(gamma/10000)] value. First column: -99, second column: -7, delta: 0.02, max: 0
+		//each row corresponds to a    Log10[CHI*(gamma/10000)] value. First column: -7,                     delta: 0.02, max: 0
 		worker.ImportCSV(f, worker.chi_distr);
 		SAFE_DELETE(f);
 	}
@@ -1691,7 +1691,7 @@ void SynRad::CheckForRecovery() {
 	// Check for autosave files in current dir.
 	intptr_t file;
 	_finddata_t filedata;
-	file = _findfirst("Synrad_Autosave*.syn7z", &filedata);
+	file = _findfirst("Synrad_Autosave*.syn*", &filedata);
 	if (file != -1)
 	{
 		do
@@ -4086,11 +4086,7 @@ void SynRad::AddRecent(char *fileName) {
 			recents[j] = recents[j + 1];
 		}
 		recents[nbRecent - 1] = _strdup(fileName);
-		// Update menu
-		GLMenu *m = menu->GetSubMenu("File")->GetSubMenu("Load recent");
-		m->Clear();
-		for (int i = nbRecent - 1; i >= 0; i--)
-			m->Add(recents[i], MENU_FILE_LOADRECENT + i);
+		UpdateRecentMenu();
 		SaveConfig();
 		return;
 	}
@@ -4108,11 +4104,7 @@ void SynRad::AddRecent(char *fileName) {
 		recents[MAX_RECENT - 1] = _strdup(fileName);
 	}
 
-	// Update menu
-	GLMenu *m = menu->GetSubMenu("File")->GetSubMenu("Load recent");
-	m->Clear();
-	for (int i = nbRecent - 1; i >= 0; i--)
-		m->Add(recents[i], MENU_FILE_LOADRECENT + i);
+	UpdateRecentMenu();
 	SaveConfig();
 }
 
@@ -4157,11 +4149,7 @@ void SynRad::AddRecentPAR(char *fileName) {
 			recentPARs[j] = recentPARs[j + 1];
 		}
 		recentPARs[nbRecentPAR - 1] = _strdup(fileName);
-		// Update menu
-		GLMenu *m = menu->GetSubMenu("Regions")->GetSubMenu("Load recent");
-		m->Clear();
-		for (int i = nbRecentPAR - 1; i >= 0; i--)
-			m->Add(recentPARs[i], MENU_REGIONS_LOADRECENT + i);
+		UpdateRecentPARMenu();
 		SaveConfig();
 		return;
 	}
@@ -4179,11 +4167,7 @@ void SynRad::AddRecentPAR(char *fileName) {
 		recentPARs[MAX_RECENT - 1] = _strdup(fileName);
 	}
 
-	// Update menu
-	GLMenu *m = menu->GetSubMenu("Regions")->GetSubMenu("Load recent");
-	m->Clear();
-	for (int i = nbRecentPAR - 1; i >= 0; i--)
-		m->Add(recentPARs[i], MENU_REGIONS_LOADRECENT + i);
+	UpdateRecentPARMenu();
 	SaveConfig();
 }
 
@@ -4291,8 +4275,6 @@ void SynRad::LoadConfig() {
 			nbRecent++;
 			w = f->ReadString();
 		}
-		for (int i = nbRecent - 1; i >= 0; i--)
-			menu->GetSubMenu("File")->GetSubMenu("Load recent")->Add(recents[i], MENU_FILE_LOADRECENT + i);
 
 		f->ReadKeyword("recentPARs"); f->ReadKeyword(":"); f->ReadKeyword("{");
 		w = f->ReadString();
@@ -4698,3 +4680,19 @@ ret = 1;
 
 return ret;
 }*/
+
+void SynRad::UpdateRecentPARMenu(){
+	// Update menu
+	GLMenu *m = menu->GetSubMenu("Regions")->GetSubMenu("Load recent");
+	m->Clear();
+	for (int i = nbRecentPAR - 1; i >= 0; i--)
+		m->Add(recentPARs[i], MENU_REGIONS_LOADRECENT + i);
+}
+
+void SynRad::UpdateRecentMenu(){
+	// Update menu
+	GLMenu *m = menu->GetSubMenu("File")->GetSubMenu("Load recent");
+	m->Clear();
+	for (int i = nbRecent - 1; i >= 0; i--)
+		m->Add(recents[i], MENU_FILE_LOADRECENT + i);
+}

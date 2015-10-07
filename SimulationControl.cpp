@@ -32,7 +32,7 @@ GNU General Public License for more details.
 //#include "Tools.h"
 #include <vector>
 
-extern void SetErrorSub(char *message);
+extern void SetErrorSub(const char *message);
 
 // -------------------------------------------------------
 // Global handles

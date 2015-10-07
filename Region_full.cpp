@@ -284,7 +284,7 @@ Distribution2D Region_full::LoadMAGFile(FileReader *file,Vector *dir,double *per
 		quad.rot_q=file->ReadDouble();
 		file->JumpComment();
 
-		quad.K_q=file->ReadDouble()/100.0; //m->cm conversion
+		quad.K_q=file->ReadDouble()/100.0; //T/m->T/cm conversion
 		quad.L_q=file->ReadDouble();
 
 		quad.cosalfa_q=cos(quad.alfa_q);

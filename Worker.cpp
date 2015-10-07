@@ -148,7 +148,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 		GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
 		crashSave=TRUE;
 	} 
-	char tmp[10000]; //compress.exe command line
+	char tmp[65536]; //compress.exe command line
 	/*char fileNameWithGeo[2048]; //file name with .geo extension (instead of .geo7z)
 	char fileNameWithGeo7z[2048];*/
 	char fileNameWithSyn[2048]; //file name with .syn extension (instead of .syn7z)

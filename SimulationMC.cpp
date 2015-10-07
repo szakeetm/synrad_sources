@@ -1,6 +1,6 @@
 /*
 File:        SimulationMC.c
-Description: Monte-Carlo Simulation for UHV (Physics related routines) 
+Description: Monte-Carlo Simulation for UHV (Physics related routines)
 Program:     SynRad
 Author:      R. KERSEVAN / M ADY
 Copyright:   E.S.R.F / CERN
@@ -29,7 +29,7 @@ GNU General Public License for more details.
 #include "GeneratePhoton.h"
 
 extern SIMULATION *sHandle;
-extern void SetErrorSub(char *message);
+extern void SetErrorSub(const char *message);
 
 extern Distribution2D K_1_3_distribution;
 extern Distribution2D K_2_3_distribution;
@@ -40,7 +40,7 @@ extern Distribution2D polarization_distribution;
 
 
 void ComputeSourceArea() {
-	sHandle->sourceArea=sHandle->nbTrajPoints;
+	sHandle->sourceArea = sHandle->nbTrajPoints;
 }
 
 
@@ -48,10 +48,10 @@ void ComputeSourceArea() {
 
 // -------------------------------------------------------
 
-void PolarToCartesian(FACET *iFacet,double theta,double phi,BOOL reverse) {
+void PolarToCartesian(FACET *iFacet, double theta, double phi, BOOL reverse) {
 
-	VERTEX3D U,V,N;
-	double u,v,n;
+	VERTEX3D U, V, N;
+	double u, v, n;
 
 	// Polar in (nU,nV,N) to Cartesian(x,y,z) transformation  ( nU = U/|U| , nV = V/|V| )
 	// tetha is the angle to the normal of the facet N, phi to U
@@ -82,9 +82,9 @@ void PolarToCartesian(FACET *iFacet,double theta,double phi,BOOL reverse) {
 	V = iFacet->sh.nV;
 	N = iFacet->sh.N;
 	if (reverse) {
-		N.x=N.x*(-1.0);
-		N.y=N.y*(-1.0);
-		N.z=N.z*(-1.0);
+		N.x = N.x*(-1.0);
+		N.y = N.y*(-1.0);
+		N.z = N.z*(-1.0);
 	}
 
 	// Basis change (nU,nV,N) -> (x,y,z)
@@ -96,7 +96,7 @@ void PolarToCartesian(FACET *iFacet,double theta,double phi,BOOL reverse) {
 
 // -------------------------------------------------------
 
-void CartesianToPolar(FACET *iFacet,double *theta,double *phi) {
+void CartesianToPolar(FACET *iFacet, double *theta, double *phi) {
 
 	// Get polar coordinates of the incoming particule direction in the (U,V,N) facet space.
 	// Note: The facet is parallel to (U,V), we use its (nU,nV,N) orthonormal basis here.
@@ -106,119 +106,114 @@ void CartesianToPolar(FACET *iFacet,double *theta,double *phi) {
 
 	// Basis change (x,y,z) -> (nU,nV,N)
 	// We use the fact that (nU,nV,N) belongs to SO(3)
-	double u = DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,
-		iFacet->sh.nU.x,iFacet->sh.nU.y,iFacet->sh.nU.z);
-	double v = DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,
-		iFacet->sh.nV.x,iFacet->sh.nV.y,iFacet->sh.nV.z);
-	double n = DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,
-		iFacet->sh.N.x,iFacet->sh.N.y,iFacet->sh.N.z);
-	SATURATE(n,-1.0,1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
+	double u = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
+		iFacet->sh.nU.x, iFacet->sh.nU.y, iFacet->sh.nU.z);
+	double v = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
+		iFacet->sh.nV.x, iFacet->sh.nV.y, iFacet->sh.nV.z);
+	double n = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
+		iFacet->sh.N.x, iFacet->sh.N.y, iFacet->sh.N.z);
+	SATURATE(n, -1.0, 1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
 
 	// (u,v,n) -> (theta,phi)
-	double rho = sqrt( v*v + u*u );
+	double rho = sqrt(v*v + u*u);
 	*theta = acos(n);              // Angle to normal (PI/2 => PI)
-	*phi = asin(v/rho);
-	if( u<0.0 ) *phi = PI - *phi;  // Angle to U
+	*phi = asin(v / rho);
+	if (u < 0.0) *phi = PI - *phi;  // Angle to U
 
 }
 
-int RoughReflection(FACET *iFacet,double sigmaRatio,double theta,double phi,
-	Vector N_rotated,Vector nU_rotated,Vector nV_rotated) {
-		//_ASSERTE(theta>(PI/2.0));
+int RoughReflection(FACET *iFacet, double sigmaRatio, double theta, double phi,
+	Vector N_rotated, Vector nU_rotated, Vector nV_rotated) {
 
-	Vector nU_facet=Vector(iFacet->sh.nU.x,iFacet->sh.nU.y,iFacet->sh.nU.z);
-	Vector nV_facet=Vector(iFacet->sh.nV.x,iFacet->sh.nV.y,iFacet->sh.nV.z);
-	Vector N_facet=Vector(iFacet->sh.N.x,iFacet->sh.N.y,iFacet->sh.N.z);
+	Vector N_facet = Vector(iFacet->sh.N.x, iFacet->sh.N.y, iFacet->sh.N.z);
 
 	Vector newDir;
-	double u,v,n;
+	double u, v, n;
 
-	//Polar to cartesian routineF-_
-	theta=PI-theta; //perform reflection
+	theta = PI - theta; //perform reflection
 
 	u = sin(theta)*cos(phi);
 	v = sin(theta)*sin(phi);
 	n = cos(theta);
 
-	newDir=Vector(u*nU_rotated.x + v*nV_rotated.x + n*N_rotated.x,
+	newDir = Vector(u*nU_rotated.x + v*nV_rotated.x + n*N_rotated.x,
 		u*nU_rotated.y + v*nV_rotated.y + n*N_rotated.y,
 		u*nU_rotated.z + v*nV_rotated.z + n*N_rotated.z);
 
-	if ((DOT3(newDir.x,newDir.y,newDir.z,
-		N_facet.x,N_facet.y,N_facet.z)>0) != (theta<PI/2)) {
-			return 0; //if reflection would go against the surface, generate new angles
+	if ((DOT3(newDir.x, newDir.y, newDir.z,
+		N_facet.x, N_facet.y, N_facet.z) > 0) != (theta < PI / 2)) {
+		return 0; //if reflection would go against the surface, generate new angles
 	}
 
 	sHandle->pDir.x = newDir.x;
 	sHandle->pDir.y = newDir.y;
 	sHandle->pDir.z = newDir.z;
-	//_ASSERTE(Norme(&sHandle->pDir)<=1.0);
 	return 1;
 }
 
 // -------------------------------------------------------
 
-void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout) {
+void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 
 	BYTE *buffer;
 	SHGHITS *gHits;
 	llong minHitsOld_MC;
 	llong maxHitsOld_MC;
-	double minHitsOld_flux,minHitsOld_power;
-	double maxHitsOld_flux,maxHitsOld_power;
-	int i,j,s,x,y,nb;
+	double minHitsOld_flux, minHitsOld_power;
+	double maxHitsOld_flux, maxHitsOld_power;
+	int i, j, s, x, y, nb;
 #ifdef _DEBUG
-	double t0,t1;
+	double t0, t1;
 	t0 = GetTick();
 #endif
-	sHandle->lastUpdateOK = AccessDataportTimed(dpHit,timeout);
-	if( !sHandle->lastUpdateOK ) return;
+	sHandle->lastUpdateOK = AccessDataportTimed(dpHit, timeout);
+	if (!sHandle->lastUpdateOK) return;
 
 	buffer = (BYTE*)dpHit->buff;
 	gHits = (SHGHITS *)buffer;
 
 	// Global hits and leaks
-	gHits->total.nbHit      += sHandle->tmpCount.nbHit;
+	gHits->total.nbHit += sHandle->tmpCount.nbHit;
 	gHits->total.nbAbsorbed += sHandle->tmpCount.nbAbsorbed;
 	gHits->total.nbDesorbed += sHandle->tmpCount.nbDesorbed;
-	gHits->distTraveledTotal    += sHandle->distTraveledSinceUpdate;
+	gHits->distTraveledTotal += sHandle->distTraveledSinceUpdate;
 	gHits->total.fluxAbs += sHandle->tmpCount.fluxAbs;
 	gHits->total.powerAbs += sHandle->tmpCount.powerAbs;
 
-	minHitsOld_MC=gHits->minHit_MC;
-	maxHitsOld_MC=gHits->maxHit_MC;
-	minHitsOld_flux=gHits->minHit_flux;
-	maxHitsOld_flux=gHits->maxHit_flux;
-	minHitsOld_power=gHits->minHit_power;
-	maxHitsOld_power=gHits->maxHit_power;
+	minHitsOld_MC = gHits->minHit_MC;
+	maxHitsOld_MC = gHits->maxHit_MC;
+	minHitsOld_flux = gHits->minHit_flux;
+	maxHitsOld_flux = gHits->maxHit_flux;
+	minHitsOld_power = gHits->minHit_power;
+	maxHitsOld_power = gHits->maxHit_power;
 
-	gHits->minHit_MC=HITMAX_INT64;
-	gHits->maxHit_MC=0;
-	gHits->minHit_flux=HITMAX_DOUBLE;
-	gHits->maxHit_flux=0;
-	gHits->minHit_power=HITMAX_DOUBLE;
-	gHits->maxHit_power=0;
+	gHits->minHit_MC = HITMAX_INT64;
+	gHits->maxHit_MC = 0;
+	gHits->minHit_flux = HITMAX_DOUBLE;
+	gHits->maxHit_flux = 0;
+	gHits->minHit_power = HITMAX_DOUBLE;
+	gHits->maxHit_power = 0;
 	//for(i=0;i<BOUNCEMAX;i++) gHits->wallHits[i] += sHandle->wallHits[i];
 
 	// Leak
 	nb = gHits->nbLastLeaks;
-	for(i=0;i<sHandle->nbLastLeak && i<NBHLEAK;i++)
-		gHits->pLeak[(i+nb) % NBHLEAK] = sHandle->pLeak[i];
+	for (i = 0; i < sHandle->nbLastLeak && i < NBHLEAK; i++)
+		gHits->pLeak[(i + nb) % NBHLEAK] = sHandle->pLeak[i];
 	gHits->nbLeakTotal += sHandle->nbLeakTotal;
 	gHits->nbLastLeaks += sHandle->nbLastLeak;
 
 	// HHit (Only prIdx 0)
-	if( prIdx==0 ) {
+	if (prIdx == 0) {
 		gHits->nbHHit = sHandle->nbHHit;
-		memcpy(gHits->pHits,sHandle->pHits,NBHHIT*sizeof(HIT));
+		memcpy(gHits->pHits, sHandle->pHits, NBHHIT*sizeof(HIT));
 	}
 
 	// Facets
-	for(s=0;s<sHandle->nbSuper;s++) {
-		for(i=0;i<sHandle->str[s].nbFacet;i++) {
+	for (s = 0; s < sHandle->nbSuper; s++) {
+		for (i = 0; i < sHandle->str[s].nbFacet; i++) {
 
 			FACET *f = sHandle->str[s].facets[i];
-			if( f->hitted ) {
+			if (f->hitted) {
 
 				SHHITS *fFit = (SHHITS *)(buffer + f->sh.hitOffset);
 				fFit->nbAbsorbed += f->sh.counter.nbAbsorbed;
@@ -227,67 +222,67 @@ void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 				fFit->powerAbs += f->sh.counter.powerAbs;
 				fFit->nbHit += f->sh.counter.nbHit;
 
-				if( f->sh.isProfile ) {
+				if (f->sh.isProfile) {
 					llong *shProfile = (llong *)(buffer + (f->sh.hitOffset + sizeof(SHHITS)));
-					for(j=0;j<PROFILE_SIZE;j++)
+					for (j = 0; j < PROFILE_SIZE; j++)
 						shProfile[j] += f->profile_hits[j];
 
-					double *shProfile2 = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS))+PROFILE_SIZE*sizeof(llong));
-					for(j=0;j<PROFILE_SIZE;j++)
+					double *shProfile2 = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS)) + PROFILE_SIZE*sizeof(llong));
+					for (j = 0; j < PROFILE_SIZE; j++)
 						shProfile2[j] += f->profile_flux[j];
 
-					double *shProfile3 = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS))+PROFILE_SIZE*(sizeof(double)+sizeof(llong)));
-					for(j=0;j<PROFILE_SIZE;j++)
+					double *shProfile3 = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS)) + PROFILE_SIZE*(sizeof(double) + sizeof(llong)));
+					for (j = 0; j < PROFILE_SIZE; j++)
 						shProfile3[j] += f->profile_power[j];
 				}
 
 
-				int profileSize=(f->sh.isProfile)?PROFILE_SIZE*(2*sizeof(double)+sizeof(llong)):0;
-				if( f->sh.isTextured ) {
-					int textureElements=f->sh.texHeight*f->sh.texWidth;
+				int profileSize = (f->sh.isProfile) ? PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong)) : 0;
+				if (f->sh.isTextured) {
+					int textureElements = f->sh.texHeight*f->sh.texWidth;
 					llong *shTexture = (llong *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize));
-					for(y=0;y<f->sh.texHeight;y++) {
-						for(x=0;x<f->sh.texWidth;x++) {
+					for (y = 0; y < f->sh.texHeight; y++) {
+						for (x = 0; x < f->sh.texWidth; x++) {
 							int add = x + y*f->sh.texWidth;
 							llong val = shTexture[add] + f->hits_MC[add];
-							if(val>gHits->maxHit_MC)	//no cell size check for MC						
-								gHits->maxHit_MC=val;
-							if (val>0 && val<gHits->minHit_MC)
-								gHits->minHit_MC=val;
+							if (val > gHits->maxHit_MC)	//no cell size check for MC						
+								gHits->maxHit_MC = val;
+							if (val > 0 && val < gHits->minHit_MC)
+								gHits->minHit_MC = val;
 							shTexture[add] = val;
 						}
 					}
 
-					double *shTexture2 = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize+textureElements*sizeof(llong)));
-					for(y=0;y<f->sh.texHeight;y++) {
-						for(x=0;x<f->sh.texWidth;x++) {
+					double *shTexture2 = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize + textureElements*sizeof(llong)));
+					for (y = 0; y < f->sh.texHeight; y++) {
+						for (x = 0; x < f->sh.texWidth; x++) {
 							int add = x + y*f->sh.texWidth;
 							double val2 = shTexture2[add] + f->hits_flux[add];
-							if(val2>gHits->maxHit_flux&& f->largeEnough[add]) {
-								gHits->maxHit_flux=val2;
+							if (val2 > gHits->maxHit_flux&& f->largeEnough[add]) {
+								gHits->maxHit_flux = val2;
 							}
-							if (val2>0.0 && val2<gHits->minHit_flux&& f->largeEnough[add]) gHits->minHit_flux=val2;
+							if (val2 > 0.0 && val2 < gHits->minHit_flux&& f->largeEnough[add]) gHits->minHit_flux = val2;
 							shTexture2[add] = val2;
 						}
 					}
 
-					double *shTexture3 = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize+textureElements*(sizeof(llong)+sizeof(double))));
-					for(y=0;y<f->sh.texHeight;y++) {
-						for(x=0;x<f->sh.texWidth;x++) {
+					double *shTexture3 = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize + textureElements*(sizeof(llong) + sizeof(double))));
+					for (y = 0; y < f->sh.texHeight; y++) {
+						for (x = 0; x < f->sh.texWidth; x++) {
 							int add = x + y*f->sh.texWidth;
 							double val3 = shTexture3[add] + f->hits_power[add];
-							if(val3>gHits->maxHit_power&& f->largeEnough[add]) 
-								gHits->maxHit_power=val3;
-							if (val3>0.0 && val3<gHits->minHit_power&& f->largeEnough[add]) gHits->minHit_power=val3; //disregard very small elements
+							if (val3 > gHits->maxHit_power&& f->largeEnough[add])
+								gHits->maxHit_power = val3;
+							if (val3 > 0.0 && val3 < gHits->minHit_power&& f->largeEnough[add]) gHits->minHit_power = val3; //disregard very small elements
 							shTexture3[add] = val3;
 						}
 					}
 				}
 
-				if( f->sh.countDirection ) {
+				if (f->sh.countDirection) {
 					VHIT *shDir = (VHIT *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + f->profileSize + f->textureSize));
-					for(y=0;y<f->sh.texHeight;y++) {
-						for(x=0;x<f->sh.texWidth;x++) {
+					for (y = 0; y < f->sh.texHeight; y++) {
+						for (x = 0; x < f->sh.texWidth; x++) {
 							int add = x + y*f->sh.texWidth;
 							shDir[add].dir.x += f->direction[add].dir.x;
 							shDir[add].dir.y += f->direction[add].dir.y;
@@ -297,15 +292,15 @@ void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 					}
 				}
 
-				if ( f->sh.hasSpectrum ) {
-					double *shSpectrum_fluxwise = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + f->profileSize 
+				if (f->sh.hasSpectrum) {
+					double *shSpectrum_fluxwise = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + f->profileSize
 						+ f->textureSize + f->directionSize));
-					for(j=0;j<SPECTRUM_SIZE;j++)
+					for (j = 0; j < SPECTRUM_SIZE; j++)
 						shSpectrum_fluxwise[j] += f->spectrum_fluxwise->GetCount(j);
 
-					double *shSpectrum_powerwise = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + f->profileSize 
+					double *shSpectrum_powerwise = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + f->profileSize
 						+ f->textureSize + f->directionSize + SPECTRUM_SIZE*sizeof(double)));
-					for(j=0;j<SPECTRUM_SIZE;j++)
+					for (j = 0; j < SPECTRUM_SIZE; j++)
 						shSpectrum_powerwise[j] += f->spectrum_powerwise->GetCount(j);
 				}
 
@@ -314,12 +309,12 @@ void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 	} // End nbSuper
 
 	//if there were no textures:
-	if (gHits->minHit_MC==HITMAX_INT64) gHits->minHit_MC=minHitsOld_MC;
-	if (gHits->maxHit_MC==0) gHits->maxHit_MC=maxHitsOld_MC;
-	if (gHits->minHit_flux==HITMAX_DOUBLE) gHits->minHit_flux=minHitsOld_flux;
-	if (gHits->maxHit_flux==0.0) gHits->maxHit_flux=maxHitsOld_flux;
-	if (gHits->minHit_power==HITMAX_DOUBLE) gHits->minHit_power=minHitsOld_power;
-	if (gHits->maxHit_power==0.0) gHits->maxHit_power=maxHitsOld_power;
+	if (gHits->minHit_MC == HITMAX_INT64) gHits->minHit_MC = minHitsOld_MC;
+	if (gHits->maxHit_MC == 0) gHits->maxHit_MC = maxHitsOld_MC;
+	if (gHits->minHit_flux == HITMAX_DOUBLE) gHits->minHit_flux = minHitsOld_flux;
+	if (gHits->maxHit_flux == 0.0) gHits->maxHit_flux = maxHitsOld_flux;
+	if (gHits->minHit_power == HITMAX_DOUBLE) gHits->minHit_power = minHitsOld_power;
+	if (gHits->maxHit_power == 0.0) gHits->maxHit_power = maxHitsOld_power;
 
 	ReleaseDataport(dpHit);
 
@@ -328,7 +323,7 @@ void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 
 #ifdef _DEBUG
 	t1 = GetTick();
-	printf("Update hits: %f us\n",(t1-t0)*1000000.0);
+	printf("Update hits: %f us\n", (t1 - t0)*1000000.0);
 #endif
 
 }
@@ -344,47 +339,47 @@ void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 
 void PerformTeleport(FACET *iFacet) {
 
-	double inPhi,inTheta;
+	double inPhi, inTheta;
 	//Search destination
 	FACET *destination;
-	BOOL found=FALSE;
-	BOOL revert=FALSE;
-	int i,j;
+	BOOL found = FALSE;
+	int i, j;
 	//Look in which superstructure is the destination facet:
-	if (sHandle->nbSuper==1) { //speedup for mono-structure systems
-		found=iFacet->sh.teleportDest<=sHandle->str[0].nbFacet;
-		if (found) destination=sHandle->str[0].facets[iFacet->sh.teleportDest-1];
-	} else {
-		for (i=0;i<sHandle->nbSuper&&(!found);i++) {
-			for (j=0;j<sHandle->str[i].nbFacet&&(!found);j++) {
-				if ((iFacet->sh.teleportDest-1)==sHandle->str[i].facets[j]->globalId) {
-					destination=sHandle->str[i].facets[j];
+	if (sHandle->nbSuper == 1) { //speedup for mono-structure systems
+		found = iFacet->sh.teleportDest <= sHandle->str[0].nbFacet;
+		if (found) destination = sHandle->str[0].facets[iFacet->sh.teleportDest - 1];
+	}
+	else {
+		for (i = 0; i < sHandle->nbSuper && (!found); i++) {
+			for (j = 0; j < sHandle->str[i].nbFacet && (!found); j++) {
+				if ((iFacet->sh.teleportDest - 1) == sHandle->str[i].facets[j]->globalId) {
+					destination = sHandle->str[i].facets[j];
 					sHandle->curStruct = destination->sh.superIdx; //change current superstructure
-					found=TRUE;
+					found = TRUE;
 				}
 			}
 		}
 	}
 	if (!found) {
 		char err[128];
-		sprintf(err,"Teleport destination of facet %d not found (facet %d does not exist)",iFacet->globalId+1,iFacet->sh.teleportDest);
+		sprintf(err, "Teleport destination of facet %d not found (facet %d does not exist)", iFacet->globalId + 1, iFacet->sh.teleportDest);
 		SetErrorSub(err);
 		return;
 	}
 
 	// Count this hit as a transparent pass
-	RecordHit(HIT_TELEPORT,sHandle->dF,sHandle->dP);
-	if( iFacet->hits_MC && iFacet->sh.countTrans ) RecordHitOnTexture(iFacet,sHandle->dF,sHandle->dP);
+	RecordHit(HIT_TELEPORT, sHandle->dF, sHandle->dP);
+	if (iFacet->hits_MC && iFacet->sh.countTrans) RecordHitOnTexture(iFacet, sHandle->dF, sHandle->dP);
 
 
 	// Relaunch particle from new facet
-	CartesianToPolar(iFacet,&inTheta,&inPhi);
-	PolarToCartesian(destination,inTheta,inPhi,FALSE);
+	CartesianToPolar(iFacet, &inTheta, &inPhi);
+	PolarToCartesian(destination, inTheta, inPhi, FALSE);
 	// Move particle to teleport destination point
-	sHandle->pPos.x = destination->sh.O.x+iFacet->colU*destination->sh.U.x+iFacet->colV*destination->sh.V.x;
-	sHandle->pPos.y = destination->sh.O.y+iFacet->colU*destination->sh.U.y+iFacet->colV*destination->sh.V.y;
-	sHandle->pPos.z = destination->sh.O.z+iFacet->colU*destination->sh.U.z+iFacet->colV*destination->sh.V.z;
-	RecordHit(HIT_TELEPORT,sHandle->dF,sHandle->dP);
+	sHandle->pPos.x = destination->sh.O.x + iFacet->colU*destination->sh.U.x + iFacet->colV*destination->sh.V.x;
+	sHandle->pPos.y = destination->sh.O.y + iFacet->colU*destination->sh.U.y + iFacet->colV*destination->sh.V.y;
+	sHandle->pPos.z = destination->sh.O.z + iFacet->colU*destination->sh.U.z + iFacet->colV*destination->sh.V.z;
+	RecordHit(HIT_TELEPORT, sHandle->dF, sHandle->dP);
 	sHandle->lastHit = destination;
 
 	//Count hits on teleport facets (only TP source)
@@ -392,8 +387,8 @@ void PerformTeleport(FACET *iFacet) {
 	//destination->sh.counter.nbDesorbed++;
 
 	iFacet->sh.counter.nbHit++;//destination->sh.counter.nbHit++;
-	iFacet->sh.counter.fluxAbs+=sHandle->dF;//destination->sh.counter.fluxAbs+=sHandle->dF;
-	iFacet->sh.counter.powerAbs+=sHandle->dP;//destination->sh.counter.powerAbs+=sHandle->dP;
+	iFacet->sh.counter.fluxAbs += sHandle->dF;//destination->sh.counter.fluxAbs+=sHandle->dF;
+	iFacet->sh.counter.powerAbs += sHandle->dP;//destination->sh.counter.powerAbs+=sHandle->dP;
 }
 
 // -------------------------------------------------------------
@@ -408,11 +403,11 @@ BOOL SimulationMCStep(int nbStep) {
 	int      i;
 
 	// Perform simulation steps
-	for(i=0;i<nbStep;i++) {
+	for (i = 0; i < nbStep; i++) {
 
-		found = Intersect(&(sHandle->pPos),&(sHandle->pDir),&d,&collidedFacet,sHandle->lastHit);
+		found = Intersect(&(sHandle->pPos), &(sHandle->pDir), &d, &collidedFacet, sHandle->lastHit);
 
-		if( found ) {
+		if (found) {
 
 			// Move particule to intersection point
 			sHandle->pPos.x += d*sHandle->pDir.x;
@@ -422,16 +417,14 @@ BOOL SimulationMCStep(int nbStep) {
 			sHandle->distTraveledSinceUpdate += d;
 
 			if (collidedFacet->sh.teleportDest) {
-				PerformTeleport(collidedFacet); 
+				PerformTeleport(collidedFacet);
 			}
 			else if (collidedFacet->sh.superDest) {	// Handle super structure link facet
-				
-
 				sHandle->curStruct = collidedFacet->sh.superDest - 1;
-					// Count this hit as a transparent pass
-					RecordHit(HIT_TRANS, sHandle->dF, sHandle->dP);
-					if (collidedFacet->hits_MC && collidedFacet->sh.countTrans) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
-				}
+				// Count this hit as a transparent pass
+				RecordHit(HIT_TRANS, sHandle->dF, sHandle->dP);
+				if (collidedFacet->hits_MC && collidedFacet->sh.countTrans) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
+			}
 
 			// Handle volatile facet
 			else if (collidedFacet->sh.isVolatile) {
@@ -443,58 +436,59 @@ BOOL SimulationMCStep(int nbStep) {
 					collidedFacet->ready = FALSE;
 					if (collidedFacet->hits_MC && collidedFacet->sh.countAbs) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
 				}
-			}  else if(collidedFacet->sh.reflectType>=2) { //rough surface reflection
-				if (sHandle->dF==0.0 || sHandle->dP==0.0 || sHandle->energy<1E-3) { //stick non real photons (from beam beginning)
+			}
+			else if (collidedFacet->sh.reflectType >= 2) { //rough surface reflection
+				if (sHandle->dF == 0.0 || sHandle->dP == 0.0 || sHandle->energy < 1E-3) { //stick non real photons (from beam beginning)
 					if (!Stick(collidedFacet)) return FALSE;
-				} else {
-				double sigmaRatio=collidedFacet->sh.roughness; 
-				for (int m=0;m<(int)sHandle->materials.size();m++) {
-					if (collidedFacet->sh.reflectType==m+2) { //found material type
+				}
+				else {
+					double sigmaRatio = collidedFacet->sh.roughness;
+					if ((collidedFacet->sh.reflectType - 2) < (int)sHandle->materials.size()) { //found material type
 						//Generate incident angle
-							Vector nU_facet=Vector(collidedFacet->sh.nU.x,collidedFacet->sh.nU.y,collidedFacet->sh.nU.z);
-							Vector nV_facet=Vector(collidedFacet->sh.nV.x,collidedFacet->sh.nV.y,collidedFacet->sh.nV.z);
-							Vector N_facet=Vector(collidedFacet->sh.N.x,collidedFacet->sh.N.y,collidedFacet->sh.N.z);
-						Vector nU_rotated,N_rotated,nV_rotated;
-						double n,u,v,thetaOffset,phiOffset;
-						BOOL reflected;
-						do {
-							double n_ori= DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,
-									N_facet.x,N_facet.y,N_facet.z); //original incident angle (negative if front collision, positive if back collision);
-							do {
+						Vector nU_facet = Vector(collidedFacet->sh.nU.x, collidedFacet->sh.nU.y, collidedFacet->sh.nU.z);
+						Vector nV_facet = Vector(collidedFacet->sh.nV.x, collidedFacet->sh.nV.y, collidedFacet->sh.nV.z);
+						Vector N_facet = Vector(collidedFacet->sh.N.x, collidedFacet->sh.N.y, collidedFacet->sh.N.z);
+						Vector nU_rotated, N_rotated, nV_rotated;
+						double n, u, v, thetaOffset, phiOffset;
+						BOOL reflected = FALSE;
+						do { //generate angles until reflecting away from surface
+							double n_ori = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
+								N_facet.x, N_facet.y, N_facet.z); //original incident angle (negative if front collision, positive if back collision);
+							do { //generate angles until incidence is from front
 								//Generating bending angle due to local roughness
-								double rnd1=rnd();
-								double rnd2=rnd(); //for debug
-								thetaOffset=atan(sigmaRatio*tan(PI*(rnd1-0.5)));
-								phiOffset=atan(sigmaRatio*tan(PI*(rnd2-0.5)));
+								double rnd1 = rnd();
+								double rnd2 = rnd(); //for debug
+								thetaOffset = atan(sigmaRatio*tan(PI*(rnd1 - 0.5)));
+								phiOffset = atan(sigmaRatio*tan(PI*(rnd2 - 0.5)));
 
 								//Random rotation around N (to discard U orientation thus make scattering isotropic)
-								double randomAngle=rnd()*2*PI;
-								nU_facet=nU_facet.Rotate(N_facet,randomAngle);
-								nV_facet=nV_facet.Rotate(N_facet,randomAngle);
-								
+								double randomAngle = rnd() * 2 * PI;
+								nU_facet = nU_facet.Rotate(N_facet, randomAngle);
+								nV_facet = nV_facet.Rotate(N_facet, randomAngle);
+
 								//Bending surface base vectors
-								nU_rotated=nU_facet.Rotate(nV_facet,thetaOffset);
-								N_rotated=N_facet.Rotate(nV_facet,thetaOffset);
-								nU_rotated=nU_rotated.Rotate(nU_facet,phiOffset); //check if correct
-								nV_rotated=nV_facet.Rotate(nU_facet,phiOffset);
-								N_rotated=N_rotated.Rotate(nU_facet,phiOffset);
+								nU_rotated = nU_facet.Rotate(nV_facet, thetaOffset);
+								N_rotated = N_facet.Rotate(nV_facet, thetaOffset);
+								nU_rotated = nU_rotated.Rotate(nU_facet, phiOffset); //check if correct
+								nV_rotated = nV_facet.Rotate(nU_facet, phiOffset);
+								N_rotated = N_rotated.Rotate(nU_facet, phiOffset);
 
 								//Calculate incident angles to bent surface (Cartesian to Polar routine modified)
-								u = DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,
-									nU_rotated.x,nU_rotated.y,nU_rotated.z);
-								v = DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,
-									nV_rotated.x,nV_rotated.y,nV_rotated.z);
-								n = DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,
-									N_rotated.x,N_rotated.y,N_rotated.z);
-								SATURATE(n,-1.0,1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
+								u = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
+									nU_rotated.x, nU_rotated.y, nU_rotated.z);
+								v = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
+									nV_rotated.x, nV_rotated.y, nV_rotated.z);
+								n = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
+									N_rotated.x, N_rotated.y, N_rotated.z);
+								SATURATE(n, -1.0, 1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
 
-							} while (n*n_ori<=0.0 ); //regenerate random numbers if grazing angle would be over 90deg
+							} while (n*n_ori <= 0.0); //regenerate random numbers if grazing angle would be over 90deg
 
-							double rho = sqrt( v*v + u*u );
-							double theta = acos(n);              // Angle to normal (PI/2 => PI)
-							double phi = asin(v/rho);
-							if( u<0.0 ) phi = PI - phi;  // Angle to U
-							double reflProbability=sHandle->materials[m].Interpolate(sHandle->energy,abs(theta-PI/2)*1000.0)/100.0;
+							double rho = sqrt(v*v + u*u);
+							double theta = acos(n);              // Angle to normal (PI/2 => PI if front collision, 0..PI/2 if back)
+							double phi = asin(v / rho);
+							if (u < 0.0) phi = PI - phi;  // Angle to U
+							double reflProbability = sHandle->materials[collidedFacet->sh.reflectType - 2].Interpolate(sHandle->energy, abs(theta - PI / 2)*1000.0) / 100.0;
 							if (!sHandle->lowFluxMode) { //original algorithm, bounce or stick
 								if (rnd() < reflProbability) {
 									reflected = PerformBounce(collidedFacet, sigmaRatio, theta, phi, N_rotated, nU_rotated, nV_rotated);
@@ -526,13 +520,17 @@ BOOL SimulationMCStep(int nbStep) {
 									reflected = PerformBounce(collidedFacet, sigmaRatio, theta, phi, N_rotated, nU_rotated, nV_rotated);
 								}
 							}
-						} while (!reflected); //do it again if reflection wasn't successful (ie. new angle was over 90deg)
-						//}while (FALSE);
-						break;
+						} while (!reflected); //do it again if reflection wasn't successful (reflected against the surface due to roughness)
 					}
+					else {
+						std::string err = "Facet " + (collidedFacet->globalId + 1);
+						err += "reflection material type not found";
+						SetErrorSub(err.c_str());
+					}
+
 				}
-				}
-			} else if( collidedFacet->sh.sticking>0.0 ) {
+			}
+			else if (collidedFacet->sh.sticking > 0.0) {
 				if (!sHandle->lowFluxMode) {//original algorithm, bounce or stick
 					if (collidedFacet->sh.sticking == 1.0 || rnd() < collidedFacet->sh.sticking) { //sticking
 						if (!Stick(collidedFacet)) return FALSE;
@@ -564,7 +562,8 @@ BOOL SimulationMCStep(int nbStep) {
 						}
 					}
 				}
-			} else {
+			}
+			else {
 				PerformBounce(collidedFacet); //if sticking==0, bounce without generating random number
 			}
 
@@ -576,12 +575,13 @@ BOOL SimulationMCStep(int nbStep) {
 				//dF,dP comes here?
 			}
 
-		} else {
+		}
+		else {
 
 			// Leak (simulation error)
 			RecordLeakPos();
 			sHandle->nbLeakTotal++;
-			if( !StartFromSource() )
+			if (!StartFromSource())
 				// maxDesorption reached
 				return FALSE;
 
@@ -600,36 +600,37 @@ BOOL SimulationMCStep(int nbStep) {
 BOOL StartFromSource() {
 
 	// Check end of simulation
-	if( sHandle->maxDesorption>0 ) {
-		if( sHandle->totalDesorbed>=sHandle->maxDesorption ) {
-			sHandle->lastHit=NULL;
+	if (sHandle->maxDesorption > 0) {
+		if (sHandle->totalDesorbed >= sHandle->maxDesorption) {
+			sHandle->lastHit = NULL;
 			return FALSE;
 		}
 	}
 
 	//find source point
-	int pointIdGlobal=(int)(rnd()*sHandle->sourceArea);
-	BOOL found=false;
+	int pointIdGlobal = (int)(rnd()*sHandle->sourceArea);
+	BOOL found = false;
 	int regionId;
 	int pointIdLocal;
-	int sum=0;
-	for (regionId=0;regionId<sHandle->nbRegion&&!found;regionId++) {
-		if ((pointIdGlobal>=sum) && (pointIdGlobal<(sum+(int)sHandle->regions[regionId].Points.size()))) {
-			pointIdLocal=pointIdGlobal-sum;
-			found=true;
-		} else sum+=(int)sHandle->regions[regionId].Points.size();
+	int sum = 0;
+	for (regionId = 0; regionId<sHandle->nbRegion&&!found; regionId++) {
+		if ((pointIdGlobal >= sum) && (pointIdGlobal < (sum + (int)sHandle->regions[regionId].Points.size()))) {
+			pointIdLocal = pointIdGlobal - sum;
+			found = true;
+		}
+		else sum += (int)sHandle->regions[regionId].Points.size();
 	}
 	if (!found) SetErrorSub("No start point found");
 	regionId--;
 	//Trajectory_Point *source=&(sHandle->regions[regionId].Points[pointIdLocal]);
-	Region_mathonly *sourceRegion=&(sHandle->regions[regionId]);
-	if (!(sourceRegion->psimaxX>0.0 && sourceRegion->psimaxY>0.0)) SetErrorSub("psiMaxX or psiMaxY not positive. No photon can be generated");
-	GenPhoton photon=GeneratePhoton(pointIdLocal,sourceRegion,sHandle->generation_mode,sHandle->psi_distr,sHandle->chi_distr,sHandle->tmpCount.nbDesorbed==0);
+	Region_mathonly *sourceRegion = &(sHandle->regions[regionId]);
+	if (!(sourceRegion->psimaxX > 0.0 && sourceRegion->psimaxY>0.0)) SetErrorSub("psiMaxX or psiMaxY not positive. No photon can be generated");
+	GenPhoton photon = GeneratePhoton(pointIdLocal, sourceRegion, sHandle->generation_mode, sHandle->psi_distr, sHandle->chi_distr, sHandle->tmpCount.nbDesorbed == 0);
 
 	//sHandle->distTraveledCurrentParticle=0.0;
-	sHandle->dF=photon.SR_flux;
-	sHandle->dP=photon.SR_power;
-	sHandle->energy=photon.energy;
+	sHandle->dF = photon.SR_flux;
+	sHandle->dP = photon.SR_power;
+	sHandle->energy = photon.energy;
 
 	sHandle->oriRatio = 1.0;
 
@@ -645,8 +646,8 @@ BOOL StartFromSource() {
 	sHandle->pPos.x = photon.start_pos.x;
 	sHandle->pPos.y = photon.start_pos.y;
 	sHandle->pPos.z = photon.start_pos.z;
-	
-	RecordHit(HIT_DES,sHandle->dF,sHandle->dP);
+
+	RecordHit(HIT_DES, sHandle->dF, sHandle->dP);
 
 	//angle
 	/*Vector start_dir=Z_local;
@@ -661,7 +662,7 @@ BOOL StartFromSource() {
 	// Current structure = 0
 	//sHandle->curStruct = src->sh.superIdx;
 	//sHandle->curStruct=sourceRegion->i_struct1;
-	sHandle->curStruct=0;
+	sHandle->curStruct = 0;
 
 	// Count
 	sHandle->totalDesorbed++;
@@ -669,7 +670,7 @@ BOOL StartFromSource() {
 	sHandle->tmpCount.powerAbs += sHandle->dP;
 	sHandle->tmpCount.nbDesorbed++;
 
-	sHandle->lastHit=NULL;
+	sHandle->lastHit = NULL;
 
 	return TRUE;
 
@@ -679,58 +680,52 @@ BOOL StartFromSource() {
 // Compute bounce against a facet
 // -------------------------------------------------------------
 
-int PerformBounce(FACET *iFacet,double sigmaRatio,double theta,double phi,
-	Vector N_rotated,Vector nU_rotated,Vector nV_rotated) {
+int PerformBounce(FACET *iFacet, double sigmaRatio, double theta, double phi,
+	Vector N_rotated, Vector nU_rotated, Vector nV_rotated) {
 
-	double inPhi,inTheta;
-	BOOL revert=FALSE;
+	double inPhi, inTheta;
+	//BOOL revert=FALSE;
 
-	if( iFacet->sh.is2sided ) {
+	/*if( iFacet->sh.is2sided ) {
 		// We may need to revert normal in case of 2 sided hit
 		revert = DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,
-			iFacet->sh.N.x,iFacet->sh.N.y,iFacet->sh.N.z)>0.0;
-	}
+		iFacet->sh.N.x,iFacet->sh.N.y,iFacet->sh.N.z)>0.0;
+		} //on the other hand, theta alrady contains this information*/
+
+	// 0<theta<PI/2:  back reflection
+	// PI/2<theta<PI: front reflection
 
 	// Relaunch particle
-	switch( iFacet->sh.reflectType ) {
+	switch (iFacet->sh.reflectType) {
 	case REF_MIRROR:
-		//here comes a super complicated photon reflection routine?
-		CartesianToPolar(iFacet,&inTheta,&inPhi);
-		PolarToCartesian(iFacet,PI-inTheta,inPhi,FALSE);
+		CartesianToPolar(iFacet, &inTheta, &inPhi);
+		PolarToCartesian(iFacet, PI - inTheta, inPhi, FALSE);
 		break;
 	case REF_DIFFUSE:
 		//See docs/theta_gen.png for further details on angular distribution generation
-		PolarToCartesian(iFacet,acos(sqrt(rnd())),rnd()*2.0*PI,FALSE);
+		PolarToCartesian(iFacet, acos(sqrt(rnd())), rnd()*2.0*PI, FALSE);
 		break;
 	default: //Material reflection - theta, etc. are already calculated
-		for (int i=0;i<(sHandle->nbMaterials);i++) {
-			if (iFacet->sh.reflectType==(2+i)) {
-				if (!RoughReflection(iFacet,sigmaRatio,theta,phi,
-					N_rotated,nU_rotated,nV_rotated)) {
-						return 0;
-				}
-				break;
-			}
-		}
-	}
-	/*if( revert ) {
-		sHandle->pDir.x = -sHandle->pDir.x;
-		sHandle->pDir.y = -sHandle->pDir.y;
-		sHandle->pDir.z = -sHandle->pDir.z;
-	}*/
 
-	RecordHit(HIT_REF,sHandle->dF,sHandle->dP);
+		if (!RoughReflection(iFacet, sigmaRatio, theta, phi,
+			N_rotated, nU_rotated, nV_rotated)) {
+			return 0;
+		}
+		break;
+
+
+	}
+	RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
 	sHandle->lastHit = iFacet;
 
 
-	if( iFacet->hits_MC && iFacet->sh.countRefl ) RecordHitOnTexture(iFacet,sHandle->dF,sHandle->dP);
-	//sHandle->temperature = iFacet->sh.temperature; //Thermalize particle
+	if (iFacet->hits_MC && iFacet->sh.countRefl) RecordHitOnTexture(iFacet, sHandle->dF, sHandle->dP);
 	return 1;
 }
 
-void RecordHitOnTexture(FACET *f,double dF,double dP) {                            
-	int tu = (int)(f->colU * f->sh.texWidthD);  
-	int tv = (int)(f->colV * f->sh.texHeightD); 
+void RecordHitOnTexture(FACET *f, double dF, double dP) {
+	int tu = (int)(f->colU * f->sh.texWidthD);
+	int tv = (int)(f->colV * f->sh.texHeightD);
 	int add = tu + tv*f->sh.texWidth;
 	f->hits_MC[add]++;
 	f->hits_flux[add] += dF*f->inc[add]; //normalized by area
@@ -754,16 +749,16 @@ double Gaussian(const double &sigma) {
 
 int Stick(FACET* collidedFacet) {
 	collidedFacet->sh.counter.nbAbsorbed++;
-	collidedFacet->sh.counter.fluxAbs+=sHandle->dF;
-	collidedFacet->sh.counter.powerAbs+=sHandle->dP;
+	collidedFacet->sh.counter.fluxAbs += sHandle->dF;
+	collidedFacet->sh.counter.powerAbs += sHandle->dP;
 	sHandle->tmpCount.nbAbsorbed++;
 	//sHandle->distTraveledSinceUpdate+=sHandle->distTraveledCurrentParticle;
 	//sHandle->counter.nbAbsorbed++;
 	//sHandle->counter.fluxAbs+=sHandle->dF;
 	//sHandle->counter.powerAbs+=sHandle->dP;
-	RecordHit(HIT_ABS,sHandle->dF,sHandle->dP); //for hits and lines display
-	if( collidedFacet->hits_MC && collidedFacet->sh.countAbs ) RecordHitOnTexture(collidedFacet,sHandle->dF,sHandle->dP);
-	if( !StartFromSource() )
+	RecordHit(HIT_ABS, sHandle->dF, sHandle->dP); //for hits and lines display
+	if (collidedFacet->hits_MC && collidedFacet->sh.countAbs) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
+	if (!StartFromSource())
 		// maxDesorption reached
 		return 0; //FALSE
 	return 1;

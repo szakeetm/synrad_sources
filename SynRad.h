@@ -187,11 +187,13 @@ public:
     int  nbRecent;
     void AddRecent(char *fileName);
     void RemoveRecent(char *fileName);
+	void UpdateRecentMenu();
 	
 	char *recentPARs[MAX_RECENT];
     int  nbRecentPAR;
     void AddRecentPAR(char *fileName);
     void RemoveRecentPAR(char *fileName);
+	void UpdateRecentPARMenu();
 
     // Components
     GLMenuBar     *menu;

@@ -75,10 +75,9 @@ GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int gener
 		generation_mode);
 
 	double ratio_of_full_revolution = current_region->dL / (result.radius * 2 * PI);
-	//result.SR_flux=ratio_of_full_revolution*current_region->gamma*4.1289E14*result.B_factor*current_region->current;
-	result.SR_flux = ratio_of_full_revolution*8.08E17*current_region->E*result.B_factor*current_region->current;
-	//Total flux per revolution for electrons: 8.08E17*E[GeV]*I[mA] photons/sec
-	//8.08E17 * 0.000511GeV = 4.1289E14
+	result.SR_flux = ratio_of_full_revolution*current_region->gamma*4.13104E14*result.B_factor*current_region->current;
+	//Total flux per revolution for electrons: 8.084227E17*E[GeV]*I[mA] photons/sec
+	//8.084227E17 * 0.000511GeV = 4.13104E14
 
 	if (generation_mode == SYNGEN_MODE_POWERWISE)
 		result.SR_flux *= average_photon_energy_for_region / generated_energy;
