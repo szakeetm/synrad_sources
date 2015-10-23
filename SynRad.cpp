@@ -37,7 +37,7 @@ GNU General Public License for more details.
 #define APP_NAME "SynRad+ development version (Compiled "__DATE__" "__TIME__") DEBUG MODE"
 #else
 //#define APP_NAME "SynRad+ development version ("__DATE__")"
-#define APP_NAME "Synrad+ 1.3.14 ("__DATE__")"
+#define APP_NAME "Synrad+ 1.3.15 ("__DATE__")"
 #endif
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
@@ -204,7 +204,7 @@ INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
 #ifdef WIN32
 		if (logs) MessageBox(NULL, logs, "Synrad [Fatal error]", MB_OK);
 #else
-		if( logs ) {
+		if (logs) {
 			printf("Synrad [Fatal error]\n");
 			printf(logs);
 		}
@@ -621,22 +621,54 @@ int SynRad::OneTimeSceneInit()
 	sTime->SetEditable(FALSE);
 	simuPanel->Add(sTime);
 
+	//Reflection materials
+	//Find material files in param directory
+	intptr_t file;
+	_finddata_t filedata;
+	file = _findfirst("param\\Materials\\*.csv", &filedata);
+	if (file != -1)
+	{
+		do
+		{
+			materialPaths.push_back(filedata.name);
+		} while (_findnext(file, &filedata) == 0);
+	}
+	_findclose(file);
+
 	facetPanel = new GLTitledPanel("Selected Facet");
 	facetPanel->SetClosable(TRUE);
 	Add(facetPanel);
 
+	facetRLabel = new GLLabel("Refl:");
+	facetPanel->Add(facetRLabel);
+	facetReflType = new GLCombo(0);
+	facetReflType->SetSize((int)materialPaths.size() + 2);
+	facetReflType->SetValueAt(0, "Diffuse, Sticking->", REF_DIFFUSE);
+	facetReflType->SetValueAt(1, "Mirror, Sticking->", REF_MIRROR);
+	for (int i = 0; i < (int)materialPaths.size(); i++) {
+		int lastindex = materialPaths[i].find_last_of("."); //cut extension
+		facetReflType->SetValueAt(i + 2, materialPaths[i].substr(0, lastindex).c_str(), REF_MATERIAL + i);
+	}
+	facetPanel->Add(facetReflType);
 
-	facetStickingLabel = new GLLabel("Sticking factor:");
-	facetPanel->Add(facetStickingLabel);
-	facetSticking = new GLTextField(0, NULL);
+	facetSticking = new GLTextField(0, "");
 	facetPanel->Add(facetSticking);
 
-	facetRoughnessLabel = new GLLabel("Material roughness:");
-	facetRoughnessLabel->SetVisible(FALSE);
-	facetPanel->Add(facetRoughnessLabel);
-	facetRoughness = new GLTextField(0, NULL);
-	facetRoughness->SetVisible(FALSE);
-	facetPanel->Add(facetRoughness);
+	facetDoScattering = new GLToggle(0, "Rough surface scattering");
+	facetDoScattering->SetState(0);
+	facetPanel->Add(facetDoScattering);
+
+	facetRMSroughnessLabel = new GLLabel("sigma (nm):");
+	facetPanel->Add(facetRMSroughnessLabel);
+	facetRMSroughness = new GLTextField(0, NULL);
+	facetRMSroughness->SetEditable(FALSE);
+	facetPanel->Add(facetRMSroughness);
+
+	facetAutoCorrLengthLabel = new GLLabel("T (nm):");
+	facetPanel->Add(facetAutoCorrLengthLabel);
+	facetAutoCorrLength = new GLTextField(0, NULL);
+	facetAutoCorrLength->SetEditable(FALSE);
+	facetPanel->Add(facetAutoCorrLength);
 
 	facetSideLabel = new GLLabel("Sides:");
 	facetPanel->Add(facetSideLabel);
@@ -684,13 +716,8 @@ int SynRad::OneTimeSceneInit()
 	facetRecType->SetValueAt(3, "Angular");
 	facetPanel->Add(facetRecType);
 
-	facetSpectrumLabel = new GLLabel("Record spectrum:");
-	facetPanel->Add(facetSpectrumLabel);
-	facetSpectrumCombo = new GLCombo(0);
-	facetSpectrumCombo->SetSize(2);
-	facetSpectrumCombo->SetValueAt(0, "Off");
-	facetSpectrumCombo->SetValueAt(1, "On");
-	facetPanel->Add(facetSpectrumCombo);
+	facetSpectrumToggle = new GLToggle(0, "Record Spectrum");
+	facetPanel->Add(facetSpectrumToggle);
 
 	facetTexBtn = new GLButton(0, "Mesh...");
 	facetTexBtn->SetEnabled(FALSE);
@@ -718,33 +745,7 @@ int SynRad::OneTimeSceneInit()
 	facetList->Sortable = TRUE;
 	Add(facetList);
 
-	//Reflection materials
-	//Find material files in param directory
-	intptr_t file;
-	_finddata_t filedata;
-	file = _findfirst("param\\*.csv", &filedata);
-	if (file != -1)
-	{
-		do
-		{
-			materialPaths.push_back(filedata.name);
-		} while (_findnext(file, &filedata) == 0);
-	}
-	_findclose(file);
 	int index;
-
-
-	facetRLabel = new GLLabel("Reflection:");
-	facetPanel->Add(facetRLabel);
-	facetReflType = new GLCombo(0);
-	facetReflType->SetSize((int)materialPaths.size() + 2);
-	facetReflType->SetValueAt(0, "Diffuse", REF_DIFFUSE);
-	facetReflType->SetValueAt(1, "Mirror", REF_MIRROR);
-	for (int i = 0; i < (int)materialPaths.size(); i++) {
-		int lastindex = materialPaths[i].find_last_of("."); //cut extension
-		facetReflType->SetValueAt(i + 2, materialPaths[i].substr(0, lastindex).c_str(), REF_MATERIAL + i);
-	}
-	facetPanel->Add(facetReflType);
 
 	ClearFacetParams();
 	UpdateViewerParams();
@@ -774,14 +775,14 @@ int SynRad::OneTimeSceneInit()
 	}
 
 	try {
-		FileReader *f = new FileReader("param\\sum_psi_distr_0to4perlambdar_0.35_delta5E-3.csv");
+		FileReader *f = new FileReader("param\\Distributions\\sum_psi_distr_0to4perlambdar_0.35_delta5E-3.csv");
 		//vertical (psi) distribution for different e_crit/e values
 		//each row is for a logarithm of lambda_ratio, starting from -10 to +2
 		//each column is for a psi angle, starting from 0 going to 1, with a delta of 0.005
 		//where 1 corresponds to 4/lambda_ratio^0.35
 		worker.ImportCSV(f, worker.psi_distr);
 		SAFE_DELETE(f);
-		f = new FileReader("param\\psi_chi_gamma10000_logsampled_-7to0_delta0.02.csv");
+		f = new FileReader("param\\Distributions\\psi_chi_gamma10000_logsampled_-7to0_delta0.02.csv");
 		//each column corresponds to a Log10[PSI*(gamma/10000)] value. First column: -99, second column: -7, delta: 0.02, max: 0
 		//each row corresponds to a    Log10[CHI*(gamma/10000)] value. First column: -7,                     delta: 0.02, max: 0
 		worker.ImportCSV(f, worker.chi_distr);
@@ -789,7 +790,7 @@ int SynRad::OneTimeSceneInit()
 	}
 	catch (Error &e) {
 		char errMsg[512];
-		sprintf(errMsg, "Failed to load angular distribution file.");
+		sprintf(errMsg, "Failed to load angular distribution file.\nIt should be in the param\\Distributions directory.");
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
 	}
 
@@ -866,44 +867,47 @@ void SynRad::PlaceComponents() {
 	sy += (togglePanel->GetHeight() + 5);
 
 	// Selected facet -----------------------------------------
-	facetPanel->SetBounds(sx, sy, 202, 265);
+	facetPanel->SetBounds(sx, sy, 202, 280);
 
-	facetPanel->SetCompBounds(facetStickingLabel, 7, 15, 100, 18);
-	facetPanel->SetCompBounds(facetSticking, 110, 15, 82, 18);
+	facetPanel->SetCompBounds(facetRLabel, 7, 15, 35, 18);
+	facetPanel->SetCompBounds(facetReflType, 48, 15, 115, 18);
 
-	facetPanel->SetCompBounds(facetRoughnessLabel, 7, 15, 100, 18);
-	facetPanel->SetCompBounds(facetRoughness, 110, 15, 82, 18);
+	facetPanel->SetCompBounds(facetSticking, 165, 15, 32, 18);
 
-	facetPanel->SetCompBounds(facetRLabel, 7, 40, 60, 18);
-	facetPanel->SetCompBounds(facetReflType, 65, 40, 130, 18);
+	facetPanel->SetCompBounds(facetDoScattering, 5, 36, 150, 18);
 
-	facetPanel->SetCompBounds(facetSideLabel, 7, 65, 50, 18);
-	facetPanel->SetCompBounds(facetSideType, 65, 65, 130, 18);
+	facetPanel->SetCompBounds(facetRMSroughnessLabel, 7, 55, 35, 18);
+	facetPanel->SetCompBounds(facetRMSroughness, 65, 55, 45, 18);
 
-	facetPanel->SetCompBounds(facetTLabel, 7, 90, 100, 18);
-	facetPanel->SetCompBounds(facetOpacity, 110, 90, 82, 18);
+	facetPanel->SetCompBounds(facetAutoCorrLengthLabel, 113, 55, 35, 18);
+	facetPanel->SetCompBounds(facetAutoCorrLength, 150, 55, 45, 18);
 
-	facetPanel->SetCompBounds(facetAreaLabel, 7, 115, 100, 18);
-	facetPanel->SetCompBounds(facetArea, 110, 115, 82, 18);
+	facetPanel->SetCompBounds(facetSideLabel, 7, 80, 50, 18);
+	facetPanel->SetCompBounds(facetSideType, 65, 80, 130, 18);
 
-	facetPanel->SetCompBounds(facetTPLabel, 7, 140, 100, 18);
-	facetPanel->SetCompBounds(facetTeleport, 110, 140, 82, 18);
+	facetPanel->SetCompBounds(facetTLabel, 7, 105, 100, 18);
+	facetPanel->SetCompBounds(facetOpacity, 110, 105, 82, 18);
 
-	facetPanel->SetCompBounds(facetStrLabel, 7, 165, 55, 18); //Structure:
-	facetPanel->SetCompBounds(facetSILabel, 65, 165, 42, 18); //Editable Textfield
-	facetPanel->SetCompBounds(facetLinkLabel, 115, 165, 18, 18); //Link
-	facetPanel->SetCompBounds(facetSuperDest, 148, 165, 42, 18); //Textfield
+	facetPanel->SetCompBounds(facetAreaLabel, 7, 130, 100, 18);
+	facetPanel->SetCompBounds(facetArea, 110, 130, 82, 18);
 
-	facetPanel->SetCompBounds(facetReLabel, 7, 190, 60, 18);
-	facetPanel->SetCompBounds(facetRecType, 65, 190, 130, 18);
+	facetPanel->SetCompBounds(facetTPLabel, 7, 155, 100, 18);
+	facetPanel->SetCompBounds(facetTeleport, 110, 155, 82, 18);
 
-	facetPanel->SetCompBounds(facetSpectrumLabel, 7, 215, 70, 18);
-	facetPanel->SetCompBounds(facetSpectrumCombo, 100, 215, 50, 18);
+	facetPanel->SetCompBounds(facetStrLabel, 7, 180, 55, 18); //Structure:
+	facetPanel->SetCompBounds(facetSILabel, 65, 180, 42, 18); //Editable Textfield
+	facetPanel->SetCompBounds(facetLinkLabel, 115, 180, 18, 18); //Link
+	facetPanel->SetCompBounds(facetSuperDest, 148, 180, 42, 18); //Textfield
 
-	facetPanel->SetCompBounds(facetMoreBtn, 5, 240, 45, 18);
-	facetPanel->SetCompBounds(facetCoordBtn, 53, 240, 44, 18);
-	facetPanel->SetCompBounds(facetTexBtn, 101, 240, 50, 18);
-	facetPanel->SetCompBounds(facetApplyBtn, 155, 240, 40, 18);
+	facetPanel->SetCompBounds(facetReLabel, 7, 205, 60, 18);
+	facetPanel->SetCompBounds(facetRecType, 65, 205, 130, 18);
+
+	facetPanel->SetCompBounds(facetSpectrumToggle, 5, 230, 150, 18);
+
+	facetPanel->SetCompBounds(facetMoreBtn, 5, 255, 45, 18);
+	facetPanel->SetCompBounds(facetCoordBtn, 53, 255, 44, 18);
+	facetPanel->SetCompBounds(facetTexBtn, 101, 255, 50, 18);
+	facetPanel->SetCompBounds(facetApplyBtn, 155, 255, 40, 18);
 
 
 	sy += (facetPanel->GetHeight() + 5);
@@ -1014,11 +1018,16 @@ void SynRad::UpdateViewerParams() {
 void SynRad::ClearFacetParams()
 {
 	facetPanel->SetTitle("Selected Facet (none)");
+	facetReflType->SetSelectedValue("");
+	facetReflType->SetEditable(FALSE);
 	facetSticking->Clear();
-	facetSticking->SetEditable(FALSE);
-	facetRoughness->Clear();
-	facetRoughnessLabel->SetVisible(FALSE);
-	facetRoughness->SetVisible(FALSE);
+	facetSticking->SetVisible(FALSE);
+	facetDoScattering->SetState(0);
+	facetDoScattering->SetEnabled(FALSE);
+	facetRMSroughness->Clear();
+	facetRMSroughness->SetEditable(FALSE);
+	facetAutoCorrLength->Clear();
+	facetAutoCorrLength->SetEditable(FALSE);
 	facetTeleport->Clear();
 	facetTeleport->SetEditable(FALSE);
 	facetArea->SetEditable(FALSE);
@@ -1031,12 +1040,11 @@ void SynRad::ClearFacetParams()
 	facetOpacity->SetEditable(FALSE);
 	facetSideType->SetSelectedValue("");
 	facetSideType->SetEditable(FALSE);
-	facetReflType->SetSelectedValue("");
-	facetReflType->SetEditable(FALSE);
+
 	facetRecType->SetSelectedValue("");
 	facetRecType->SetEditable(FALSE);
-	facetSpectrumCombo->SetSelectedValue("");
-	facetSpectrumCombo->SetEditable(FALSE);
+	facetSpectrumToggle->SetState(0);
+	facetSpectrumToggle->SetEnabled(FALSE);
 }
 
 //-----------------------------------------------------------------------------
@@ -1050,52 +1058,88 @@ void SynRad::ApplyFacetParams() {
 	Geometry *geom = worker.GetGeometry();
 	int nbFacet = geom->GetNbFacet();
 
-	// Sticking
+	//Reflection type and sticking
 	double sticking;
 	BOOL doSticking = FALSE;
-	if (facetSticking->GetNumber(&sticking)) {
-		if (sticking<0.0 || sticking>1.0) {
-			GLMessageBox::Display("Sticking must be in the range [0,1]", "Error", GLDLG_OK, GLDLG_ICONERROR);
-			UpdateFacetParams();
-			return;
+	int reflType = facetReflType->GetSelectedIndex();
+
+	if (reflType == 0 || reflType == 1) { //Diffuse or mirror
+		if (facetSticking->GetNumber(&sticking)) {
+			if (sticking<0.0 || sticking>1.0) {
+				GLMessageBox::Display("Sticking must be in the range [0,1]", "Error", GLDLG_OK, GLDLG_ICONERROR);
+				UpdateFacetParams();
+				return;
+			}
+			doSticking = TRUE;
 		}
-		doSticking = TRUE;
-	}
-	else {
-		if (strcmp(facetSticking->GetText(), "...") == 0) doSticking = FALSE;
-		else {
-			GLMessageBox::Display("Invalid sticking number", "Error", GLDLG_OK, GLDLG_ICONERROR);
-			UpdateFacetParams();
-			return;
+		else { //Not a double number
+			if (strcmp(facetSticking->GetText(), "...") == 0) doSticking = FALSE;
+			else {
+				GLMessageBox::Display("Invalid sticking number", "Error", GLDLG_OK, GLDLG_ICONERROR);
+				UpdateFacetParams();
+				return;
+			}
 		}
 	}
 
-	// Roughness
-	double roughness;
+	//Scattering, roughness, autocorr.length
+	BOOL doScattering = FALSE;
 	BOOL doRoughness = FALSE;
-	if (facetRoughness->GetNumber(&roughness)) {
-		if (sticking < 0.0) {
-			GLMessageBox::Display("Roughness must be non-negative", "Error", GLDLG_OK, GLDLG_ICONERROR);
-			UpdateFacetParams();
-			return;
+	BOOL doCorrLength = FALSE;
+	double roughness, corrLength;
+
+	if (facetDoScattering->GetState() < 2) {
+		doScattering = TRUE;
+		if (facetDoScattering->GetState() == 1) { //Do scattering, read roughness and autocorr.length
+			// Roughness
+
+
+			if (facetRMSroughness->GetNumber(&roughness)) {
+				if (roughness < 0.0) {
+					GLMessageBox::Display("Roughness must be non-negative", "Error", GLDLG_OK, GLDLG_ICONERROR);
+					UpdateFacetParams();
+					return;
+				}
+				doRoughness = TRUE;
+			}
+			else {
+				if (strcmp(facetRMSroughness->GetText(), "...") == 0) doRoughness = FALSE;
+				else {
+					GLMessageBox::Display("Invalid roughness number", "Error", GLDLG_OK, GLDLG_ICONERROR);
+					UpdateFacetParams();
+					return;
+				}
+			}
+
+			// Autocorrelation length
+
+
+			if (facetAutoCorrLength->GetNumber(&corrLength)) {
+				if (corrLength <= 0.0) {
+					GLMessageBox::Display("Autocorr.length must be positive", "Error", GLDLG_OK, GLDLG_ICONERROR);
+					UpdateFacetParams();
+					return;
+				}
+				doCorrLength = TRUE;
+			}
+			else {
+				if (strcmp(facetAutoCorrLength->GetText(), "...") == 0) doCorrLength = FALSE;
+				else {
+					GLMessageBox::Display("Invalid autocorrelation length", "Error", GLDLG_OK, GLDLG_ICONERROR);
+					UpdateFacetParams();
+					return;
+				}
+			}
 		}
-		doRoughness = TRUE;
 	}
-	else {
-		if (strcmp(facetRoughness->GetText(), "...") == 0) doRoughness = FALSE;
-		else {
-			GLMessageBox::Display("Invalid roughness number", "Error", GLDLG_OK, GLDLG_ICONERROR);
-			UpdateFacetParams();
-			return;
-		}
-	}
+
 
 	// teleport
 	int teleport;
 	BOOL doTeleport = FALSE;
 
 	if (facetTeleport->GetNumberInt(&teleport)) {
-		if (teleport<0 || teleport>nbFacet) {
+		if (teleport<-1 || teleport>nbFacet) {
 			GLMessageBox::Display("Invalid teleport destination\n(If no teleport: set number to 0)", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			UpdateFacetParams();
 			return;
@@ -1177,14 +1221,13 @@ void SynRad::ApplyFacetParams() {
 	}
 
 
-	// Reflection type
-	int reflType = facetReflType->GetSelectedIndex();
+
 
 	// Record type
 	int rType = facetRecType->GetSelectedIndex();
 
 	// Spectrum recording
-	int specType = facetSpectrumCombo->GetSelectedIndex();
+	int specType = facetSpectrumToggle->GetState();
 
 	// 2sided
 	int is2Sided = facetSideType->GetSelectedIndex();
@@ -1194,17 +1237,25 @@ void SynRad::ApplyFacetParams() {
 	for (int i = 0; i < nbFacet; i++) {
 		Facet *f = geom->GetFacet(i);
 		if (f->selected) {
+			if (reflType >= 0) {
+				if (reflType >= 2)
+					f->sh.reflectType = reflType + 8; //Material reflections: 10, 11, 12...
+				else //Diffuse or Mirror
+					f->sh.reflectType = reflType;
+			}
 			if (doSticking) f->sh.sticking = sticking;
-			if (doRoughness) f->sh.roughness = roughness;
+			if (doScattering) f->sh.doScattering = facetDoScattering->GetState();
+			if (doRoughness) f->sh.rmsRoughness = roughness*1E-9; //nm->m
+			if (doCorrLength) f->sh.autoCorrLength = corrLength*1E-9; //nm->m
 			if (doTeleport) f->sh.teleportDest = teleport;
 			if (doOpacity) f->sh.opacity = opacity;
-			if (reflType >= 0) f->sh.reflectType = reflType;
+
 			if (rType >= 0) {
 				f->sh.profileType = rType;
 				f->sh.isProfile = (rType != REC_NONE);
 
 			} if (profilePlotter) profilePlotter->Refresh();
-			if (specType >= 0) {
+			if (specType < 2) { //Not mixed state
 				f->sh.hasSpectrum = specType;
 
 			} if (spectrumPlotter) spectrumPlotter->Refresh();
@@ -1281,41 +1332,38 @@ void SynRad::UpdateFacetParams(BOOL updateSelection) {
 		sel0 = selection[0];
 		f0 = geom->GetFacet(selection[0]);
 
-		double sticking = f0->sh.sticking;
-		double roughness = f0->sh.roughness;
-		int    teleport = f0->sh.teleportDest;
-		double opacity = f0->sh.opacity;
 		double area = f0->sh.area;
-		int    superDest = f0->sh.superDest;
-		int    superIdx = f0->sh.superIdx;
-		int    reflectType = f0->sh.reflectType;
-		int    recType = f0->sh.profileType;
-		int    is2sided = f0->sh.is2sided;
-		int    hasSpectrum = f0->sh.hasSpectrum;
 
+		BOOL reflectTypeE = TRUE;
 		BOOL stickingE = TRUE;
-		BOOL roughnessE = TRUE;
+		BOOL rmsRoughnessE = TRUE;
+		BOOL autoCorrLengthE = TRUE;
 		BOOL teleportE = TRUE;
 		BOOL opacityE = TRUE;
 		BOOL superDestE = TRUE;
 		BOOL superIdxE = TRUE;
-		BOOL reflectTypeE = TRUE;
 		BOOL recordE = TRUE;
 		BOOL is2sidedE = TRUE;
 		BOOL hasSpectrumE = TRUE;
-		BOOL isMaterialE = TRUE;
+		BOOL doScatteringE = TRUE;
+		BOOL isAllRegular = (f0->sh.reflectType < 2); //All facets are (mirror OR diffuse)
+		BOOL isAllDiffuse = (f0->sh.reflectType == 0);; //All facets are diffuse (otherwise enable choice for rough surface scattering)
 
 		for (int i = 1; i < count; i++) {
 			f = geom->GetFacet(selection[i]);
+			reflectTypeE = reflectTypeE && (f0->sh.reflectType == f->sh.reflectType);
 			stickingE = stickingE && (abs(f0->sh.sticking - f->sh.sticking) < 1e-7);
-			roughnessE = roughnessE && (abs(f0->sh.roughness - f->sh.roughness) < 1e-7);
-			isMaterialE = isMaterialE && ((f0->sh.reflectType < 2) == (f->sh.reflectType < 2));
+			rmsRoughnessE = rmsRoughnessE && (abs(f0->sh.rmsRoughness - f->sh.rmsRoughness) < 1e-15);
+			autoCorrLengthE = autoCorrLengthE && (abs(f0->sh.autoCorrLength - f->sh.autoCorrLength) < 1e-15);
+			doScatteringE = doScatteringE && (f0->sh.doScattering == f->sh.doScattering);
+			isAllRegular = isAllRegular && (f->sh.reflectType < 2);
+			isAllDiffuse = isAllDiffuse && (f->sh.reflectType == 0);
 			teleportE = teleportE && (f0->sh.teleportDest == f->sh.teleportDest);
 			opacityE = opacityE && (abs(f0->sh.opacity - f->sh.opacity) < 1e-7);
 			superDestE = superDestE && (f0->sh.superDest == f->sh.superDest);
 			superIdxE = superIdxE && (f0->sh.superIdx == f->sh.superIdx);
 			is2sidedE = is2sidedE && (f0->sh.is2sided == f->sh.is2sided);
-			reflectTypeE = reflectTypeE && (f0->sh.reflectType == f->sh.reflectType);
+
 			recordE = recordE && (f0->sh.profileType == f->sh.profileType);
 			hasSpectrumE = hasSpectrumE && (f0->sh.hasSpectrum == f->sh.hasSpectrum);
 			if (f->sh.area > 0) area += f->sh.area;
@@ -1334,14 +1382,47 @@ void SynRad::UpdateFacetParams(BOOL updateSelection) {
 		else facetAreaLabel->SetText("Area (cm\262):");
 		sprintf(tmp, "%g", area);
 		facetArea->SetText(tmp);
-		if (stickingE && isMaterialE) SetParam(facetSticking, sticking); else facetSticking->SetText("...");
-		if (roughnessE && isMaterialE) SetParam(facetRoughness, roughness); else facetRoughness->SetText("...");
-		if (teleportE) SetParam(facetTeleport, teleport); else facetTeleport->SetText("...");
-		if (opacityE) SetParam(facetOpacity, opacity); else facetOpacity->SetText("...");
+
+		if (reflectTypeE) {
+			if (isAllRegular) facetReflType->SetSelectedIndex(f0->sh.reflectType); //Diffuse or Mirror
+			else if (f0->sh.reflectType >= 10 && f0->sh.reflectType < 10 + worker.materials.size())
+				facetReflType->SetSelectedIndex(f0->sh.reflectType - 8); //Map 10,11,12 to 2,3,4...
+			else
+				facetReflType->SetSelectedValue("Invalid material");
+		}
+		else facetReflType->SetSelectedValue("...");
+
+		if (isAllRegular) {
+			if (stickingE) SetParam(facetSticking, f0->sh.sticking);
+			else facetSticking->SetText("...");
+		}
+		else {
+			facetSticking->SetText("");
+		}
+		if (doScatteringE)
+			facetDoScattering->SetState(f0->sh.doScattering);
+		else
+			facetDoScattering->SetState(2); //Mixed state
+		facetDoScattering->AllowMixedState(!doScatteringE);
+
+		if (isAllDiffuse) {
+			facetDoScattering->SetEnabled(FALSE);
+			facetRMSroughness->SetText("");
+			facetAutoCorrLength->SetText("");
+		}
+		else {
+			facetDoScattering->SetEnabled(TRUE);
+			if (rmsRoughnessE) SetParam(facetRMSroughness, f0->sh.rmsRoughness*1E9); else facetRMSroughness->SetText("..."); //m->nm
+			if (autoCorrLengthE) SetParam(facetAutoCorrLength, f0->sh.autoCorrLength*1E9); else facetAutoCorrLength->SetText("..."); //m->nm
+		}
+
+		if (teleportE) SetParam(facetTeleport, f0->sh.teleportDest); else facetTeleport->SetText("...");
+		if (opacityE) SetParam(facetOpacity, f0->sh.opacity); else facetOpacity->SetText("...");
 		if (is2sidedE) facetSideType->SetSelectedIndex(f0->sh.is2sided); else facetSideType->SetSelectedValue("...");
-		if (reflectTypeE) facetReflType->SetSelectedIndex(f0->sh.reflectType); else facetReflType->SetSelectedValue("...");
+
 		if (recordE) facetRecType->SetSelectedIndex(f0->sh.profileType); else facetRecType->SetSelectedValue("...");
-		if (hasSpectrumE) facetSpectrumCombo->SetSelectedIndex(f0->sh.hasSpectrum); else facetSpectrumCombo->SetSelectedValue("...");
+		if (hasSpectrumE) facetSpectrumToggle->SetState(f0->sh.hasSpectrum); else facetSpectrumToggle->SetState(2);
+		facetSpectrumToggle->AllowMixedState(!hasSpectrumE);
 		if (superDestE) {
 			if (f0->sh.superDest == 0) {
 				facetSuperDest->SetText("no");
@@ -1374,21 +1455,20 @@ void SynRad::UpdateFacetParams(BOOL updateSelection) {
 
 		free(selection);
 
-		facetSticking->SetEditable(isMaterialE);
-		facetRoughness->SetEditable(isMaterialE);
-		BOOL isMaterial = facetReflType->GetSelectedIndex() >= 2;
-		facetSticking->SetVisible(!isMaterial);
-		facetStickingLabel->SetVisible(!isMaterial);
-		facetRoughness->SetVisible(isMaterial);
-		facetRoughnessLabel->SetVisible(isMaterial);
+		facetReflType->SetEditable(TRUE);
+		facetSticking->SetVisible(isAllRegular);
+		facetDoScattering->SetEnabled(!isAllDiffuse);
+		facetRMSroughness->SetEditable(!doScatteringE || f0->sh.doScattering);
+		facetAutoCorrLength->SetEditable(!doScatteringE || f0->sh.doScattering);
+
 		facetTeleport->SetEditable(TRUE);
 		facetOpacity->SetEditable(TRUE);
 		facetSuperDest->SetEditable(TRUE);
 		facetSILabel->SetEditable(TRUE);
 		facetSideType->SetEditable(TRUE);
-		facetReflType->SetEditable(TRUE);
+
 		facetRecType->SetEditable(TRUE);
-		facetSpectrumCombo->SetEditable(TRUE);
+		facetSpectrumToggle->SetEnabled(TRUE);
 
 		facetApplyBtn->SetEnabled(FALSE);
 		facetMenu->SetEnabled(MENU_FACET_MESH, TRUE);
@@ -3430,7 +3510,8 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		if (src == facetSticking) {
 			facetApplyBtn->SetEnabled(TRUE);
 		}
-		else if (src == facetRoughness) {
+		else if (src == facetRMSroughness || src == facetAutoCorrLength) {
+			facetDoScattering->SetState(1);
 			facetApplyBtn->SetEnabled(TRUE);
 		}
 		else if (src == facetTeleport) {
@@ -3445,8 +3526,8 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		break;
 
 	case MSG_TEXT:
-		if (src == facetSticking || src == facetRoughness || src == facetTeleport
-			|| src == facetOpacity || src == facetSuperDest || src == facetSILabel) {
+		if (src == facetSticking || src == facetRMSroughness || src == facetAutoCorrLength
+			|| src == facetTeleport || src == facetOpacity || src == facetSuperDest || src == facetSILabel) {
 			ApplyFacetParams();
 		}
 		break;
@@ -3456,14 +3537,15 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		if (src == facetReflType) {
 			facetApplyBtn->SetEnabled(TRUE);
 			BOOL isMaterial = facetReflType->GetSelectedIndex() >= 2;
-			facetSticking->SetEditable(TRUE);
-			facetRoughness->SetEditable(TRUE);
+			if (isMaterial) facetSticking->SetText("");
 			facetSticking->SetVisible(!isMaterial);
-			facetStickingLabel->SetVisible(!isMaterial);
-			facetRoughness->SetVisible(isMaterial);
-			facetRoughnessLabel->SetVisible(isMaterial);
+			BOOL isDiffuse = facetReflType->GetSelectedIndex() == 0;
+			facetDoScattering->SetEnabled(!isDiffuse); //Diffuse surface overrides rough scattering model
+			BOOL scatter = (facetDoScattering->GetState() == 2);
+			facetRMSroughness->SetEditable(facetDoScattering->IsEnabled() && scatter);
+			facetAutoCorrLength->SetEditable(facetDoScattering->IsEnabled() && scatter);
 		}
-		else if (src == facetRecType || src == facetSideType || src == facetSpectrumCombo) {
+		else if (src == facetRecType || src == facetSideType) {
 			facetApplyBtn->SetEnabled(TRUE);
 		}
 		else if (src == modeCombo) {
@@ -3486,7 +3568,15 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		//TOGGLE ------------------------------------------------------------------
 	case MSG_TOGGLE:
 		// Update viewer flags
-		UpdateViewerFlags();
+		if (src == facetDoScattering) {
+			BOOL scatter = (facetDoScattering->GetState() == 1);
+			facetRMSroughness->SetEditable(facetDoScattering->IsEnabled() && scatter);
+			facetAutoCorrLength->SetEditable(facetDoScattering->IsEnabled() && scatter);
+			facetApplyBtn->SetEnabled(TRUE);
+		}
+		else if (src == facetSpectrumToggle)
+			facetApplyBtn->SetEnabled(TRUE);
+		else UpdateViewerFlags(); //Viewer flags clicked
 		break;
 
 		//LIST --------------------------------------------------------------------

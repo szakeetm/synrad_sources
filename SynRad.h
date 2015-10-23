@@ -226,22 +226,16 @@ public:
     GLMenu        *facetMenu;
 	GLTextField   *facetTeleport;
     GLTextField   *facetSticking;
-	GLTextField   *facetRoughness;
+	GLTextField   *facetRMSroughness;
+	GLTextField   *facetAutoCorrLength;
+	GLCombo       *facetReflType;
+	GLToggle      *facetDoScattering;
     GLTextField   *facetSuperDest;
     GLTextField   *facetOpacity;
-
-
-
-
-
-
 	GLTextField   *facetArea;
-
 	GLCombo       *facetSideType;
-
-
-    GLCombo       *facetReflType;
     GLCombo       *facetRecType;
+	GLToggle      *facetSpectrumToggle;
     GLButton      *facetApplyBtn;
     GLButton      *facetMoreBtn;
     GLButton      *facetCoordBtn;
@@ -249,12 +243,8 @@ public:
     GLTitledPanel *facetPanel;
     GLList        *facetList;
     GLTitledPanel *togglePanel;
-
     GLLabel       *modeLabel;
 	GLLabel       *facetAreaLabel;
-
-
-
     GLButton      *singleACBtn;
     GLLabel       *hitLabel;
     GLLabel       *desLabel;
@@ -263,22 +253,15 @@ public:
     GLLabel       *sTimeLabel;
     GLTitledPanel *simuPanel;
 	GLLabel       *facetTPLabel;
-    GLLabel       *facetStickingLabel;
-	GLLabel       *facetRoughnessLabel;
-
+	GLLabel       *facetRMSroughnessLabel;
+	GLLabel       *facetAutoCorrLengthLabel;
 	GLLabel       *facetSideLabel;
     GLLabel       *facetLinkLabel;
     GLLabel       *facetStrLabel;
     GLTextField   *facetSILabel;
     GLLabel       *facetTLabel;
-
-
     GLLabel       *facetRLabel;
     GLLabel       *facetReLabel;
-	GLLabel       *facetSpectrumLabel;
-	GLCombo      *facetSpectrumCombo;
-
-
 
     GLMenu        *structMenu;
     GLMenu        *viewsMenu;

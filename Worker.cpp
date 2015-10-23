@@ -593,13 +593,13 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 				sprintf(tmp,"This geometry refers to %d regions. Load them now?",regionsToLoad.size());
 				BOOL loadThem = ( GLMessageBox::Display(tmp,"File load",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONINFO)==GLDLG_OK );
 				if (loadThem) {
-					GLProgress* prg = new GLProgress("", "Loading regions");
-					prg->SetVisible(TRUE);
+					progressDlg->SetMessage("Loading regions");
 					int i = 0;
 					for (auto&& regionFileName:regionsToLoad) {
 						std::string toLoad;
 						if (ext=="syn7z") { //PAR file to load in tmp dir (just extracted)
 							toLoad=(std::string)CWD+"\\tmp\\";
+							toLoad += FileUtils::GetFilename(regionFileName);
 						} else { //PAR file in same dir as SYN file
 							/*char tmp[512];
 							filebegin= strrchr(fileName,'\\'); //throw out absolute path, keep only filename
@@ -609,14 +609,12 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 							tmp[(int)(filebegin-fileName)]=NULL;
 							toLoad=tmp;*/
 							toLoad = FileUtils::GetPath(fileName)+"\\";
+							toLoad+=regionFileName;
 						}
-						toLoad+=regionFileName;
-						prg->SetMessage("Adding "+regionFileName+"...");
-						prg->SetProgress((double)i++ / (double)regionsToLoad.size());
+						progressDlg->SetMessage("Adding "+regionFileName+"...");
+						progressDlg->SetProgress((double)i++ / (double)regionsToLoad.size());
 						AddRegion(toLoad.c_str(), -1);
 					}
-					prg->SetVisible(FALSE);
-					SAFE_DELETE(prg);
 				}
 			}
 			if (!insert) {
@@ -627,14 +625,14 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 				SHGHITS *gHits = (SHGHITS *)dpHit->buff;
 				SetLeak(pLeak, &nbLastLeaks, gHits);
 				SetHHit(pHits, &nbHHit, gHits);
-				progressDlg->SetMessage("Loading textures...");
+				progressDlg->SetMessage("Loading texture values...");
 				LoadTexturesSYN((ext=="syn7z") ? ((std::string)CWD+"\\tmp\\Geometry.syn").c_str() : fileName, version);
 				strcpy(fullFileName, fileName);
 			}
 		} catch(Error &e) {
 			geom->Clear();
 			SAFE_DELETE(f);
-
+			
 			progressDlg->SetVisible(FALSE);
 			SAFE_DELETE(progressDlg);
 			throw e;
@@ -1123,7 +1121,7 @@ void Worker::SetLeak(LEAK *buffer,int *nb,SHGHITS *gHits) { //When loading from 
 void Worker::LoadTexturesSYN(const char *fileName,int version) {
 
 	if (FileUtils::GetExtension(fileName) == "syn") {
-		GLProgress *progressDlg = new GLProgress("Loading textures", "Please wait");
+		GLProgress *progressDlg = new GLProgress("Loading texture values", "Please wait");
 		progressDlg->SetProgress(0.0);
 		FileReader *f = NULL;
 		try {
@@ -1411,10 +1409,13 @@ void Worker::RealReload() { //Sharing geometry with workers
 
 	progressDlg->SetMessage("Creating dataport...");
 	// Create the temporary geometry shared structure
-	int loadSize = geom->GetGeometrySize(&regions,&materials,psi_distr,chi_distr);
+	size_t loadSize = geom->GetGeometrySize(&regions, &materials, psi_distr, chi_distr);
 	Dataport *loader = CreateDataport(loadDpName,loadSize);
-	if( !loader )
+	if (!loader) {
+		progressDlg->SetVisible(FALSE);
+		SAFE_DELETE(progressDlg);
 		throw Error("Failed to create 'loader' dataport.\nMost probably out of memory.\nReduce number of subprocesses or texture size.");
+	}
 	progressDlg->SetMessage("Accessing dataport...");
 	AccessDataportTimed(loader,3000+nbProcess*(int)((double)loadSize/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");
@@ -1852,9 +1853,9 @@ void Worker::ClearRegions() {
 void Worker::AddMaterial(std::string *fileName){
 	Material result;
 	char tmp[512];
-	sprintf(tmp,"param\\%s",fileName->c_str());
+	sprintf(tmp,"param\\Materials\\%s",fileName->c_str());
 	FileReader *f=new FileReader(tmp);
-	result.LoadCSV(f);
+	result.LoadMaterialCSV(f);
 	int lastindex = fileName->find_last_of(".");
 	result.name = fileName->substr(0, lastindex);
 	materials.push_back(result);

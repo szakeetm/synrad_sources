@@ -123,20 +123,20 @@ FacetMesh::FacetMesh():GLWindow() {
 	mPanel->SetBounds(5,245,wD-10,72);
 	Add(mPanel);
 
-	GLLabel *l7 = new GLLabel("Memory");
+	GLLabel *l7 = new GLLabel("Memory estimate:");
 	l7->SetBounds(10,265,70,18);
 	Add(l7);
 
 	ramText = new GLTextField(0,"");
-	ramText->SetBounds(80,265,100,18);
+	ramText->SetBounds(130,265,100,18);
 	Add(ramText);
 
-	GLLabel *l8 = new GLLabel("Cells");
+	GLLabel *l8 = new GLLabel("Cells:");
 	l8->SetBounds(10,290,70,18);
 	Add(l8);
 
 	cellText = new GLTextField(0,"");
-	cellText->SetBounds(80,290,100,18);
+	cellText->SetBounds(130,290,100,18);
 	Add(cellText);
 
 	applyButton = new GLButton(0,"Apply mesh");

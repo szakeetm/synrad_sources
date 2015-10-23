@@ -32,6 +32,8 @@ GNU General Public License for more details.
 //#include "Tools.h"
 #include <vector>
 
+#define READBUFFER(_type) *(_type*)buffer;buffer+=sizeof(_type)
+
 extern void SetErrorSub(const char *message);
 
 // -------------------------------------------------------
@@ -210,7 +212,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	buffer+=sizeof(SHGEOM);
 	sHandle->nbTrajPoints=0;
 	//Regions
-	for (int r=0;r<sHandle->nbRegion;r++) {
+	for (size_t r = 0; r<sHandle->nbRegion; r++) {
 		Region_mathonly *reg = (Region_mathonly *) buffer;
 		Region_mathonly newreg=*reg;
 		buffer += sizeof(Region_mathonly);
@@ -219,10 +221,10 @@ BOOL LoadSimulation(Dataport *loader) {
 		sHandle->regions.push_back(newreg);
 	}
 	//copy trajectory points	
-	for (int r=0;r<sHandle->nbRegion;r++) {
+	for (size_t r = 0; r<sHandle->nbRegion; r++) {
 		sHandle->regions[r].Points.reserve(sHandle->regions[r].nbPointsToCopy);
 		for (int k=0;k<sHandle->regions[r].nbPointsToCopy;k++) {
-			sHandle->regions[r].Points.push_back(*((Trajectory_Point*)(buffer)));
+			sHandle->regions[r].Points.push_back(*(Trajectory_Point*)(buffer));
 			buffer+=sizeof(Trajectory_Point);
 		}
 		sHandle->nbTrajPoints+=sHandle->regions[r].nbPointsToCopy;
@@ -231,77 +233,74 @@ BOOL LoadSimulation(Dataport *loader) {
 	//copy distribution points
 	sHandle->nbDistrPoints_MAG=0;
 	sHandle->nbDistrPoints_BXY=0;
-	for (int r=0;r<sHandle->nbRegion;r++) {
+	for (size_t r = 0; r<sHandle->nbRegion; r++) {
 
-		for (int j=0;j<sHandle->regions[r].nbDistr_MAG.x;j++) {
-			sHandle->regions[r].Bx_distr->valuesX[j]=*((double*)(buffer));
-			buffer+=sizeof(double);
-			sHandle->regions[r].Bx_distr->valuesY[j]=*((double*)(buffer));
-			buffer+=sizeof(double);
+		for (size_t j = 0; j<sHandle->regions[r].nbDistr_MAG.x; j++) {
+			sHandle->regions[r].Bx_distr->valuesX[j]=READBUFFER(double);
+			sHandle->regions[r].Bx_distr->valuesY[j]=READBUFFER(double);
 		}
 
-		for (int j=0;j<sHandle->regions[r].nbDistr_MAG.y;j++) {
-			sHandle->regions[r].By_distr->valuesX[j]=*((double*)(buffer));
-			buffer+=sizeof(double);
-			sHandle->regions[r].By_distr->valuesY[j]=*((double*)(buffer));
-			buffer+=sizeof(double);
+		for (size_t j = 0; j<sHandle->regions[r].nbDistr_MAG.y; j++) {
+			sHandle->regions[r].By_distr->valuesX[j] = READBUFFER(double);
+			sHandle->regions[r].By_distr->valuesY[j] = READBUFFER(double);
 		}
 
-		for (int j=0;j<sHandle->regions[r].nbDistr_MAG.z;j++) {
-			sHandle->regions[r].Bz_distr->valuesX[j]=*((double*)(buffer));
-			buffer+=sizeof(double);
-			sHandle->regions[r].Bz_distr->valuesY[j]=*((double*)(buffer));
-			buffer+=sizeof(double);
+		for (size_t j = 0; j<sHandle->regions[r].nbDistr_MAG.z; j++) {
+			sHandle->regions[r].Bz_distr->valuesX[j] = READBUFFER(double);
+			sHandle->regions[r].Bz_distr->valuesY[j] = READBUFFER(double);
 		}
 
-		for (int j=0;j<sHandle->regions[r].nbDistr_BXY;j++) {
+		for (size_t j = 0; j<sHandle->regions[r].nbDistr_BXY; j++) {
 			sHandle->regions[r].beta_x_distr->valuesX[j]=
 				sHandle->regions[r].beta_y_distr->valuesX[j]=
 				sHandle->regions[r].eta_distr->valuesX[j]=
 				sHandle->regions[r].etaprime_distr->valuesX[j]=
 				sHandle->regions[r].e_spread_distr->valuesX[j]=
-				*((double*)(buffer));
-			buffer+=sizeof(double);
-			sHandle->regions[r].beta_x_distr->valuesY[j]=*((double*)(buffer));
-			buffer+=sizeof(double);
-			sHandle->regions[r].beta_y_distr->valuesY[j]=*((double*)(buffer));
-			buffer+=sizeof(double);
-			sHandle->regions[r].eta_distr->valuesY[j]=*((double*)(buffer));
-			buffer+=sizeof(double);
-			sHandle->regions[r].etaprime_distr->valuesY[j]=*((double*)(buffer));
-			buffer+=sizeof(double);
-			sHandle->regions[r].e_spread_distr->valuesY[j]=*((double*)(buffer));
-			buffer+=sizeof(double);
+				READBUFFER(double);
+			sHandle->regions[r].beta_x_distr->valuesY[j] = READBUFFER(double);
+			sHandle->regions[r].beta_y_distr->valuesY[j] = READBUFFER(double);
+			sHandle->regions[r].eta_distr->valuesY[j] = READBUFFER(double);
+			sHandle->regions[r].etaprime_distr->valuesY[j] = READBUFFER(double);
+			sHandle->regions[r].e_spread_distr->valuesY[j] = READBUFFER(double);
 		}
 
-		sHandle->nbDistrPoints_MAG+=(int)(sHandle->regions[r].nbDistr_MAG.x+sHandle->regions[r].nbDistr_MAG.y+sHandle->regions[r].nbDistr_MAG.z);
+		sHandle->nbDistrPoints_MAG += (size_t)(sHandle->regions[r].nbDistr_MAG.x + sHandle->regions[r].nbDistr_MAG.y + sHandle->regions[r].nbDistr_MAG.z);
 		sHandle->nbDistrPoints_BXY+=sHandle->regions[r].nbDistr_BXY;
 	}
 
 	//Load materials
-	sHandle->nbMaterials=*((int*)buffer); //copying number of materials
-	buffer+=sizeof(int);
-	for (int i=0;i<sHandle->nbMaterials;i++) { //going through all materials
+	sHandle->nbMaterials = READBUFFER(size_t); //copying number of materials
+	for (size_t i = 0; i<sHandle->nbMaterials; i++) { //going through all materials
 		Material newMaterial;
-		int angleValsSize=*((int*)buffer); //copying number of angles (columns)
-		buffer+=sizeof(int);
-		int energyValsSize=*((int*)buffer); //copying number of energies (rows)
-		buffer+=sizeof(int);
+		newMaterial.hasBackscattering = READBUFFER(BOOL);
+		size_t angleValsSize = READBUFFER(size_t); //copying number of angles (columns)
+		size_t energyValsSize = READBUFFER(size_t); //copying number of energies (rows)
 		newMaterial.angleVals.reserve(angleValsSize);
-		for (int j=0;j<angleValsSize;j++) {
+		for (size_t j = 0; j<angleValsSize; j++) {
 			newMaterial.angleVals.push_back(*((double*)buffer)); //copying angles (header)
 			buffer+=sizeof(double);
 		}
 		newMaterial.energyVals.reserve(energyValsSize);
-		for (int j=0;j<energyValsSize;j++) {
+		for (size_t j = 0; j<energyValsSize; j++) {
 			newMaterial.energyVals.push_back(*((double*)buffer)); //copying energies (column1)
 			buffer+=sizeof(double);
 		}
-		for (int j=0;j<(int)newMaterial.energyVals.size();j++) {
-			std::vector<double> currentEnergy;
-			for (int k=0;k<(int)newMaterial.angleVals.size();k++) {
-				currentEnergy.push_back(*((double*)buffer)); //copying reflectivity probabilities (cells)
+		//copying reflectivity probabilities (cells)
+		for (size_t j = 0; j<newMaterial.energyVals.size(); j++) {
+			std::vector<std::vector<double>> currentEnergy;
+			for (size_t k = 0; k<newMaterial.angleVals.size(); k++) {
+				std::vector<double> reflProbability;
+				reflProbability.push_back(*((double*)buffer)); //forward scattering
 				buffer+=sizeof(double);
+				if (newMaterial.hasBackscattering) {
+					reflProbability.push_back(*((double*)buffer)); //diffuse scattering
+					buffer += sizeof(double);
+					reflProbability.push_back(*((double*)buffer)); //backscattering
+					buffer += sizeof(double);
+					reflProbability.push_back(*((double*)buffer)); //transparent pass
+					buffer += sizeof(double);
+				}
+				currentEnergy.push_back(reflProbability);
 			}
 			newMaterial.reflVals.push_back(currentEnergy);
 		}
@@ -309,15 +308,13 @@ BOOL LoadSimulation(Dataport *loader) {
 	}
 
 	//Load psi_distr
-	int psi_size = *((int*)buffer);
-	buffer += sizeof(int);
+	size_t psi_size = READBUFFER(size_t);
 	sHandle->psi_distr.reserve(psi_size);
-	for (int j = 0; j < psi_size; j++) {
+	for (size_t j = 0; j < psi_size; j++) {
 		std::vector<double> row;
-		int row_size = *((int*)buffer);
-		buffer += sizeof(int);
+		size_t row_size = READBUFFER(size_t);
 		sHandle->psi_distr.reserve(row_size);
-		for (int k = 0; k < row_size; k++) {
+		for (size_t k = 0; k < row_size; k++) {
 			row.push_back(*((double*)buffer)); //cum. distr
 			buffer += sizeof(double);
 		}
@@ -325,15 +322,13 @@ BOOL LoadSimulation(Dataport *loader) {
 	}
 
 	//Load chi_distr
-	int chi_size = *((int*)buffer);
-	buffer += sizeof(int);
+	size_t chi_size = READBUFFER(size_t);
 	sHandle->chi_distr.reserve(chi_size);
-	for (int j = 0; j < chi_size; j++) {
+	for (size_t j = 0; j < chi_size; j++) {
 		std::vector<double> row;
-		int row_size = *((int*)buffer);
-		buffer += sizeof(int);
+		int row_size = READBUFFER(size_t);
 		sHandle->chi_distr.reserve(row_size);
-		for (int k = 0; k < row_size; k++) {
+		for (size_t k = 0; k < row_size; k++) {
 			row.push_back(*((double*)buffer)); //cum. distr
 			buffer += sizeof(double);
 		}

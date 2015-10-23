@@ -124,13 +124,14 @@ typedef struct {
   int         totalFacet;       // Total number of facet
   VERTEX3D   *vertices3;        // Vertices
   int         nbSuper;          // Number of super structure
-  int         nbRegion;
-  int         nbMaterials;
-  int         nbTrajPoints;
+  size_t         nbRegion;
+  size_t         nbMaterials;
+  size_t         nbTrajPoints;
   double      sourceArea;       //number of trajectory points weighed by 1/dL
-  int         nbDistrPoints_MAG;
-  int         nbDistrPoints_BXY;
+  size_t         nbDistrPoints_MAG;
+  size_t         nbDistrPoints_BXY;
   int         curStruct;        // Current structure
+  int			teleportedFrom;
   SUPERSTRUCT str[MAX_STRUCT];
 
   std::vector<Region_mathonly> regions;// Regions
@@ -144,7 +145,7 @@ typedef struct {
   size_t textTotalSize;  // Texture total size
   size_t profTotalSize;  // Profile total size
   size_t dirTotalSize;   // Direction field total size
-  int spectrumTotalSize; //Spectrums total size
+  size_t spectrumTotalSize; //Spectrums total size
   BOOL loadOK;        // Load OK flag
   BOOL lastUpdateOK;  // Last hit update timeout
   BOOL hasVolatile;   // Contains volatile facet
@@ -188,13 +189,13 @@ void RecordHit(const int &type,const double &dF,const double &dP);
 void RecordLeakPos();
 BOOL StartFromSource();
 void ComputeSourceArea();
-int PerformBounce(FACET *iFacet,double sigmaRatio=0.0,double theta=0.0,double phi=0.0,
-	Vector N_rotated=Vector(0,0,0),Vector nU_rotated=Vector(0,0,0),Vector nV_rotated=Vector(0,0,0));
+//int PerformBounce(FACET *iFacet,double sigmaRatio=0.0,double theta=0.0,double phi=0.0,
+//	Vector N_rotated=Vector(0,0,0),Vector nU_rotated=Vector(0,0,0),Vector nV_rotated=Vector(0,0,0),double thetaOffset=0.0,double phiOffset=0.0, double randomAngle=0.0, int reflType=1);
+void PerformBounce(FACET *iFacet, const double &theta, const double &phi, const int &reflType);
 int Stick(FACET *collidedFacet);
 void PerformTeleport(FACET *iFacet);
-void PolarToCartesian(FACET *iFacet,double theta,double phi,BOOL reverse);
-int RoughReflection(FACET *iFacet,double sigmaRatio,double theta,double phi,
-	Vector N_rotated,Vector nU_rotated,Vector nV_rotated);
+void PolarToCartesian(FACET *iFacet,double theta,double phi,BOOL reverse,double rotateUV=0.0);
+
 void CartesianToPolar(FACET *iFacet,double *theta,double *phi);
 void UpdateHits(Dataport *dpHit,int prIdx,DWORD timeout);
 void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout);

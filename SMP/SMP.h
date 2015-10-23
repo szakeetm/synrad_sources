@@ -64,8 +64,8 @@ typedef struct {
 } PROCESS_INFO;
 
 // Shared memory
-extern Dataport *CreateDataport(char *,long);
-extern Dataport *OpenDataport(char *,long);
+extern Dataport *CreateDataport(char *, size_t);
+extern Dataport *OpenDataport(char *, size_t);
 extern BOOL AccessDataport(Dataport *);
 extern BOOL AccessDataportTimed(Dataport *,DWORD);
 extern BOOL ReleaseDataport(Dataport *);

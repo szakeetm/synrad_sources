@@ -14,15 +14,21 @@
 #define SYNGEN_MODE_FLUXWISE  0
 #define SYNGEN_MODE_POWERWISE 1
 
+#define REFL_ABSORB 0
+#define REFL_FORWARD 1
+#define REFL_DIFFUSE 2
+#define REFL_BACK 3
+#define REFL_TRANS 4
+
 #include "File.h" //FileReader for LoadCSV
 #include <vector>
 
-class Averages {
+/*class Averages {
 public:
 	double average;
 	double average1;
 	double average_;
-};
+};*/
 
 class Distribution2D {
 public:
@@ -42,11 +48,14 @@ class Material { //2-variable interpolation
 public:
 	//ReflectivityTable(const ReflectivityTable &copy_src); //copy constructor
 	//ReflectivityTable& operator= (const ReflectivityTable & other); //assignment op
-	double Interpolate(const double &energy, const double &angle);
+	std::vector<double> Interpolate(const double &energy, const double &angle);
 	std::vector<double> energyVals, angleVals; //energy and angle values (table headers)
-	std::vector<std::vector<double>> reflVals; //actual table values
-	void LoadCSV(FileReader *file);
+	std::vector<std::vector<std::vector<double>>> reflVals; //actual table values, 3 components for forward/diffuse/back reflection
+	void LoadMaterialCSV(FileReader *file);
 	std::string name; //For display in the program
+	int GetReflectionType(const double &energy, const double &angle,const double &rnd);
+	int hasBackscattering; //has forward/diffuse/backscattering/transparent pass probabilities
+	void InitAngles(std::vector<std::string> data);
 };
 
 class Indexes {

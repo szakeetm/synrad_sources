@@ -28,7 +28,7 @@ void PrintLastErrorText( LPTSTR suff );
 // CreateDataport: Create a block of shared memory
 // --------------------------------------------------------------------------
 
-Dataport *CreateDataport(char *name,long size)
+Dataport *CreateDataport(char *name, size_t size)
 {
    Dataport  *dp;
    
@@ -108,7 +108,7 @@ Dataport *CreateDataport(char *name,long size)
 // OpenDataport: Connect to an existing block
 // --------------------------------------------------------------------------
 
-Dataport *OpenDataport(char *name,long size)
+Dataport *OpenDataport(char *name, size_t size)
 {
    Dataport *dp;
 

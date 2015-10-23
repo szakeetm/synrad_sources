@@ -255,7 +255,7 @@ char *FacetDetails::FormatCell(int idx,Facet *f,int mode) {
 		else sprintf(ret,"%s",worker->materials[f->sh.reflectType-2].name.c_str());
 		break;
 	case 6:
-		sprintf(ret,"%g",f->sh.roughness);
+		sprintf(ret,"%g",f->sh.rmsRoughness);
 		break;
 	case 7:
 		sprintf(ret,"%s",ynStr[f->sh.is2sided]);      

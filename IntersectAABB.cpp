@@ -530,8 +530,12 @@ void IntersectTree(struct AABBNODE *node) {
                 // Now check intersection with the facet polygon (in the u,v space)
                 // This check could be avoided on rectangular facet.
                 if( IsInFacet(f,u,v) ) {
-
-					if( (f->sh.opacity > 0.999999) || (rnd()<f->sh.opacity) ) {
+					if ((f->sh.opacity > 0.999999) //Opaque facet
+						|| (rnd()<f->sh.opacity)  //Regular partially transparent facet
+						|| (f->sh.reflectType >= 10 //Material reflection
+							&& sHandle->materials[f->sh.reflectType - 10].hasBackscattering //Has several reflectivity cases
+							&& sHandle->materials[f->sh.reflectType - 10].GetReflectionType(sHandle->energy,
+								acos(DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,f->sh.N.x,f->sh.N.y,f->sh.N.z)) - PI / 2, rnd()) != REFL_TRANS)) { //But not transparent for this angle and energy
 
 						// Hard hit
 						if( d < intMinLgth ) {

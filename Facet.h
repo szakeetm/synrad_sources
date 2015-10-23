@@ -23,6 +23,7 @@
 #include "Shared.h"
 #include "File.h"
 #include "PugiXML/pugixml.hpp"
+#include "Distributions.h"
 
 class Facet {
 
@@ -88,10 +89,9 @@ public:
   void  SaveTXT(FileWriter *file);
   void  LoadGEO(FileReader *file,int version,int nbVertex);
   //void  SaveGEO(FileWriter *file,int idx);
-  void  LoadSYN(FileReader *file,int version,int nbVertex);
-  void  LoadXML(pugi::xml_node f, int nbVertex, BOOL isMolflowFile, int vertexOffset);
-  void  SaveSYN(FileWriter *file,int idx,BOOL crashSave=FALSE);
-  BOOL  IsCoplanar(Facet *f,double threshold);
+  void  LoadSYN(FileReader *file, const std::vector<Material> &materials, int version, int nbVertex);
+  void  SaveSYN(FileWriter *file, const std::vector<Material> &materials, int idx,BOOL crashSave=FALSE);
+  void  LoadXML(pugi::xml_node f, int nbVertex, BOOL isMolflowFile, int vertexOffset);BOOL  IsCoplanar(Facet *f,double threshold);
   int   GetIndex(int idx);
   void  Copy(Facet *f,BOOL copyMesh=FALSE);
   void  SwapNormal();
@@ -100,7 +100,7 @@ public:
   void  BuildMeshList();
   void  InitVisibleEdge();
   BOOL  SetTexture(double width,double height,BOOL useMesh);
-  DWORD GetGeometrySize();
+  size_t GetGeometrySize();
   DWORD GetHitsSize();
   DWORD GetTexSwapSize(BOOL useColormap);
   DWORD GetTexRamSize();

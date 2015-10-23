@@ -425,6 +425,10 @@ void FileWriter::WriteDouble(const double &v,char *sep) {
   if(sep) fprintf(file,"%s",sep);
 }
 
+void FileWriter::Write(std::string str) {
+	Write(str.c_str()); 
+}
+
 void FileWriter::Write(const char *s) {
 	if (*s==NULL) return; //null expression: don't do anything (for example formulas without name)
 	if( !fprintf(file,"%s",s) )

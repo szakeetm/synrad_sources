@@ -36,7 +36,7 @@
 
 #define SEL_HISTORY  100
 #define MAX_SUPERSTR 128
-#define SYNVERSION   8
+#define SYNVERSION   9
 #define GEOVERSION   15
 #define PARAMVERSION 2
 
@@ -216,7 +216,7 @@ public:
 
 
   // Memory usage (in bytes)
-  DWORD GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials, std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr);
+  size_t GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials, std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr);
   DWORD GetHitsSize();
 
 

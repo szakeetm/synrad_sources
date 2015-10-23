@@ -39,21 +39,23 @@ Facet::Facet(int nbIndex) {
 
 	indices = (int *)malloc(nbIndex*sizeof(int));                    // Ref to Geometry VERTEX3D
 	vertices2 = (VERTEX2D *)malloc(nbIndex * sizeof(VERTEX2D));      // Local U,V coordinates
-	memset(vertices2,0,nbIndex * sizeof(VERTEX2D));
+	memset(vertices2, 0, nbIndex * sizeof(VERTEX2D));
 
 	sh.nbIndex = nbIndex;
 	memset(&sh.counter, 0, sizeof(sh.counter));
-	
+
 	sh.sticking = 0.0;
 	sh.opacity = 1.0;
-	sh.roughness = 0.004; //=20/5000
+	sh.doScattering = FALSE;
+	sh.rmsRoughness = 100.0E-9; //100nm
+	sh.autoCorrLength = 100 * 100E-9; //tau=autoCorr/RMS=100
 	sh.reflectType = REF_MIRROR;
 	sh.profileType = REC_NONE;
 	sh.hasSpectrum = FALSE;
 	sh.texWidth = 0;
 	sh.texHeight = 0;
 	sh.texWidthD = 0.0;
-	sh.texHeightD = 0.0;  
+	sh.texHeightD = 0.0;
 	sh.center.x = 0.0;
 	sh.center.y = 0.0;
 	sh.center.z = 0.0;
@@ -71,8 +73,8 @@ Facet::Facet(int nbIndex) {
 	sh.teleportDest = 0;
 	sh.isVolatile = FALSE;
 
-	textureVisible=TRUE;
-	volumeVisible=TRUE;
+	textureVisible = TRUE;
+	volumeVisible = TRUE;
 
 	texDimW = 0;
 	texDimH = 0;
@@ -90,25 +92,25 @@ Facet::Facet(int nbIndex) {
 	textureError = FALSE;
 
 	// Init the colormap at the first facet construction
-	for(int i=0;i<65536 && !colorInited;i++) {
+	for (int i = 0; i < 65536 && !colorInited; i++) {
 
-		double r1,g1,b1;
-		double r2,g2,b2;
-		int colId = i/8192;
+		double r1, g1, b1;
+		double r2, g2, b2;
+		int colId = i / 8192;
 
-		r1 = (double) ((rainbowCol[colId] >> 16) & 0xFF);
-		g1 = (double) ((rainbowCol[colId] >>  8) & 0xFF);
-		b1 = (double) ((rainbowCol[colId] >>  0) & 0xFF);
+		r1 = (double)((rainbowCol[colId] >> 16) & 0xFF);
+		g1 = (double)((rainbowCol[colId] >> 8) & 0xFF);
+		b1 = (double)((rainbowCol[colId] >> 0) & 0xFF);
 
-		r2 = (double) ((rainbowCol[colId+1] >> 16) & 0xFF);
-		g2 = (double) ((rainbowCol[colId+1] >>  8) & 0xFF);
-		b2 = (double) ((rainbowCol[colId+1] >>  0) & 0xFF);
+		r2 = (double)((rainbowCol[colId + 1] >> 16) & 0xFF);
+		g2 = (double)((rainbowCol[colId + 1] >> 8) & 0xFF);
+		b2 = (double)((rainbowCol[colId + 1] >> 0) & 0xFF);
 
-		double rr = (double)(i-colId*8192) / 8192.0;
-		SATURATE(rr,0.0,1.0);
-		colorMap[i] = (COLORREF)((int)( r1 + (r2-r1)*rr )+
-			(int)( g1 + (g2-g1)*rr )* 256 +
-			(int)( b1 + (b2-b1)*rr )* 65536 );
+		double rr = (double)(i - colId * 8192) / 8192.0;
+		SATURATE(rr, 0.0, 1.0);
+		colorMap[i] = (COLORREF)((int)(r1 + (r2 - r1)*rr) +
+			(int)(g1 + (g2 - g1)*rr) * 256 +
+			(int)(b1 + (b2 - b1)*rr) * 65536);
 
 	}
 	colorMap[65535] = 0xFFFFFF; // Saturation color
@@ -120,7 +122,7 @@ Facet::Facet(int nbIndex) {
 	glSelElem = 0;
 	selected = FALSE;
 	visible = (BOOL *)malloc(nbIndex*sizeof(BOOL));
-	memset(visible,0xFF,nbIndex*sizeof(BOOL));
+	memset(visible, 0xFF, nbIndex*sizeof(BOOL));
 
 }
 
@@ -136,7 +138,7 @@ Facet::~Facet() {
 	DELETE_LIST(glElem);
 	DELETE_LIST(glSelElem);
 	SAFE_FREE(visible);
-	for(size_t i=0;i<nbElem;i++)
+	for (size_t i = 0; i < nbElem; i++)
 		SAFE_FREE(meshPts[i].pts);
 	SAFE_FREE(meshPts);
 }
@@ -144,98 +146,98 @@ Facet::~Facet() {
 // -----------------------------------------------------------
 
 BOOL Facet::IsLinkFacet() {
-	return ( (sh.opacity==0.0) && (sh.sticking>=1.0) );
+	return ((sh.opacity == 0.0) && (sh.sticking >= 1.0));
 }
 
 // -----------------------------------------------------------
 
-void Facet::LoadGEO(FileReader *file,int version,int nbVertex) {
+void Facet::LoadGEO(FileReader *file, int version, int nbVertex) {
 
-	file->ReadKeyword("indices");file->ReadKeyword(":");
-	for(int i=0;i<sh.nbIndex;i++) {
-		indices[i] = file->ReadInt()-1;
-		if( indices[i]>=nbVertex )
+	file->ReadKeyword("indices"); file->ReadKeyword(":");
+	for (int i = 0; i < sh.nbIndex; i++) {
+		indices[i] = file->ReadInt() - 1;
+		if (indices[i] >= nbVertex)
 			throw Error(file->MakeError("Facet index out of bounds"));
 	}
 
-	file->ReadKeyword("sticking");file->ReadKeyword(":");
+	file->ReadKeyword("sticking"); file->ReadKeyword(":");
 	sh.sticking = file->ReadDouble();
-	file->ReadKeyword("opacity");file->ReadKeyword(":");
+	file->ReadKeyword("opacity"); file->ReadKeyword(":");
 	sh.opacity = file->ReadDouble();
-	file->ReadKeyword("desorbType");file->ReadKeyword(":");
+	file->ReadKeyword("desorbType"); file->ReadKeyword(":");
 	file->ReadInt();
-	if (version>=9) {
-		file->ReadKeyword("desorbTypeN");file->ReadKeyword(":");
+	if (version >= 9) {
+		file->ReadKeyword("desorbTypeN"); file->ReadKeyword(":");
 		file->ReadDouble();
 	}
-	file->ReadKeyword("reflectType");file->ReadKeyword(":");
+	file->ReadKeyword("reflectType"); file->ReadKeyword(":");
 	sh.reflectType = file->ReadInt();
-	file->ReadKeyword("profileType");file->ReadKeyword(":");
+	file->ReadKeyword("profileType"); file->ReadKeyword(":");
 	file->ReadInt();
 	sh.profileType = REC_NONE;
-	file->ReadKeyword("superDest");file->ReadKeyword(":");
+	file->ReadKeyword("superDest"); file->ReadKeyword(":");
 	sh.superDest = file->ReadInt();
-	file->ReadKeyword("superIdx");file->ReadKeyword(":");
+	file->ReadKeyword("superIdx"); file->ReadKeyword(":");
 	sh.superIdx = file->ReadInt();
-	file->ReadKeyword("is2sided");file->ReadKeyword(":");
+	file->ReadKeyword("is2sided"); file->ReadKeyword(":");
 	sh.is2sided = file->ReadInt();
-	if (version<8) {
-		file->ReadKeyword("area");file->ReadKeyword(":");
+	if (version < 8) {
+		file->ReadKeyword("area"); file->ReadKeyword(":");
 		sh.area = file->ReadDouble();
 	}
-	file->ReadKeyword("mesh");file->ReadKeyword(":");
+	file->ReadKeyword("mesh"); file->ReadKeyword(":");
 	hasMesh = file->ReadInt();
-	if (version>=7) {
-		file->ReadKeyword("outgassing");file->ReadKeyword(":");
+	if (version >= 7) {
+		file->ReadKeyword("outgassing"); file->ReadKeyword(":");
 		file->ReadDouble();
 	}
-	file->ReadKeyword("texDimX");file->ReadKeyword(":");
+	file->ReadKeyword("texDimX"); file->ReadKeyword(":");
 	file->ReadDouble();
 	sh.texWidthD = 0;
-	file->ReadKeyword("texDimY");file->ReadKeyword(":");
+	file->ReadKeyword("texDimY"); file->ReadKeyword(":");
 	sh.texHeightD = 0;
 	file->ReadDouble();
-	file->ReadKeyword("countDes");file->ReadKeyword(":");
+	file->ReadKeyword("countDes"); file->ReadKeyword(":");
 	file->ReadInt();
-	file->ReadKeyword("countAbs");file->ReadKeyword(":");
+	file->ReadKeyword("countAbs"); file->ReadKeyword(":");
 	sh.countAbs = 0;
 	file->ReadInt();
-	file->ReadKeyword("countRefl");file->ReadKeyword(":");
+	file->ReadKeyword("countRefl"); file->ReadKeyword(":");
 	sh.countRefl = 0;
 	file->ReadInt();
-	file->ReadKeyword("countTrans");file->ReadKeyword(":");
+	file->ReadKeyword("countTrans"); file->ReadKeyword(":");
 	sh.countTrans = 0;
 	file->ReadInt();
-	file->ReadKeyword("acMode");file->ReadKeyword(":");
+	file->ReadKeyword("acMode"); file->ReadKeyword(":");
 	file->ReadInt();
-	file->ReadKeyword("nbAbs");file->ReadKeyword(":");
+	file->ReadKeyword("nbAbs"); file->ReadKeyword(":");
 	sh.counter.nbAbsorbed = 0;
 	file->ReadLLong();
-	file->ReadKeyword("nbDes");file->ReadKeyword(":");
+	file->ReadKeyword("nbDes"); file->ReadKeyword(":");
 	sh.counter.nbDesorbed = 0;
 	file->ReadLLong();
-	file->ReadKeyword("nbHit");file->ReadKeyword(":");
+	file->ReadKeyword("nbHit"); file->ReadKeyword(":");
 	sh.counter.nbHit = 0;
 	file->ReadLLong();
-	if(version>=2) {
+	if (version >= 2) {
 		// Added in GEO version 2
-		file->ReadKeyword("temperature");file->ReadKeyword(":");
+		file->ReadKeyword("temperature"); file->ReadKeyword(":");
 		file->ReadDouble();
-		file->ReadKeyword("countDirection");file->ReadKeyword(":");
+		file->ReadKeyword("countDirection"); file->ReadKeyword(":");
 		sh.countDirection = 0;
 		file->ReadInt();
 	}
-	if(version>=4) {
+	if (version >= 4) {
 		// Added in GEO version 4
-		file->ReadKeyword("textureVisible");file->ReadKeyword(":");
+		file->ReadKeyword("textureVisible"); file->ReadKeyword(":");
 		textureVisible = file->ReadInt();
-		file->ReadKeyword("volumeVisible");file->ReadKeyword(":");
+		file->ReadKeyword("volumeVisible"); file->ReadKeyword(":");
 		volumeVisible = file->ReadInt();
 	}
 
-	if(version>=5) {
+	if (version >= 5) {
 		// Added in GEO version 5
-		file->ReadKeyword("teleportDest");file->ReadKeyword(":");
+		file->ReadKeyword("teleportDest"); file->ReadKeyword(":");
 		sh.teleportDest = file->ReadInt();
 	}
 
@@ -263,57 +265,59 @@ void Facet::LoadTXT(FileReader *file) {
 	// [1,2] => Partial opacity (2 sided)
 
 	// Read facet parameters from TXT format
-	sh.sticking     = file->ReadDouble();
-	double o        = file->ReadDouble();
-	sh.area         = file->ReadDouble();
-	sh.counter.nbDesorbed   = 0;file->ReadDouble();
-	sh.counter.nbHit        = 0;file->ReadDouble();
-	sh.counter.nbAbsorbed   = 0;file->ReadDouble();
-	sh.counter.fluxAbs=0.0;sh.counter.powerAbs=0.0;
+	sh.sticking = file->ReadDouble();
+	double o = file->ReadDouble();
+	sh.area = file->ReadDouble();
+	sh.counter.nbDesorbed = 0; file->ReadDouble();
+	sh.counter.nbHit = 0; file->ReadDouble();
+	sh.counter.nbAbsorbed = 0; file->ReadDouble();
+	sh.counter.fluxAbs = 0.0; sh.counter.powerAbs = 0.0;
 
 	// Convert opacity
 	sh.profileType = REC_NONE;
-	if( o<0.0 ) {
+	if (o < 0.0) {
 
 		sh.opacity = 0.0;
-		if( IS_ZERO(o+1.0) ) {
+		if (IS_ZERO(o + 1.0)) {
 			//sh.profileType = REC_PRESSUREU;
 			sh.is2sided = TRUE;
 		}
-		if( IS_ZERO(o+2.0) )
+		if (IS_ZERO(o + 2.0))
 			//sh.profileType = REC_ANGULAR;
-		if( IS_ZERO(o+4.0) ) {
-			//sh.profileType = REC_PRESSUREU;
-			sh.is2sided = FALSE;
-		}
+			if (IS_ZERO(o + 4.0)) {
+				//sh.profileType = REC_PRESSUREU;
+				sh.is2sided = FALSE;
+			}
 
-	} else {
-		if( o>=1.0000001 ) {
-			sh.opacity = o-1.0;
+	}
+	else {
+		if (o >= 1.0000001) {
+			sh.opacity = o - 1.0;
 			sh.is2sided = TRUE;
-		} else
+		}
+		else
 			sh.opacity = o;
 	}
 
 	// Convert desorbType
 	/*switch(sh.desorbType) {
 	case 0:
-		sh.desorbType = DES_COSINE;
-		break;
+	sh.desorbType = DES_COSINE;
+	break;
 	case 1:
-		sh.desorbType = DES_UNIFORM;
-		break;
+	sh.desorbType = DES_UNIFORM;
+	break;
 	case 2:
 	case 3:
 	case 4:
-		sh.desorbType = sh.desorbType+1; // cos^n
-		break;
+	sh.desorbType = sh.desorbType+1; // cos^n
+	break;
 	}
 	ConvertOldDesorbType();*/
-	sh.reflectType  = (int)(file->ReadDouble()+0.5);
+	sh.reflectType = (int)(file->ReadDouble() + 0.5);
 
 	// Convert reflectType
-	switch(sh.reflectType) {
+	switch (sh.reflectType) {
 	case 0:
 		sh.reflectType = REF_DIFFUSE;
 		break;
@@ -327,7 +331,7 @@ void Facet::LoadTXT(FileReader *file) {
 
 	file->ReadDouble(); // Unused
 
-	if( IsLinkFacet() )
+	if (IsLinkFacet())
 		sh.superDest = (int)(sh.sticking + 0.5);
 
 	UpdateFlags();
@@ -375,91 +379,91 @@ void Facet::LoadXML(xml_node f, int nbVertex, BOOL isSynradFile, int vertexOffse
 
 void Facet::SaveTXT(FileWriter *file) {
 
-	if(!sh.superDest)
-		file->WriteDouble(sh.sticking,"\n");
+	if (!sh.superDest)
+		file->WriteDouble(sh.sticking, "\n");
 	else {
-		file->WriteDouble((double)sh.superDest,"\n");
+		file->WriteDouble((double)sh.superDest, "\n");
 		sh.opacity = 0.0;
 	}
 
-	if(sh.is2sided)
-		file->WriteDouble(sh.opacity+1.0,"\n");
+	if (sh.is2sided)
+		file->WriteDouble(sh.opacity + 1.0, "\n");
 	else
-		file->WriteDouble(sh.opacity,"\n");
+		file->WriteDouble(sh.opacity, "\n");
 
-	file->WriteDouble(sh.area,"\n");
+	file->WriteDouble(sh.area, "\n");
 
 	file->WriteDouble(0.0, "\n"); //no desorption
-	file->WriteDouble(0.0,"\n"); //nbHit
-	file->WriteDouble(0.0,"\n"); //nbAbsorbed
+	file->WriteDouble(0.0, "\n"); //nbHit
+	file->WriteDouble(0.0, "\n"); //nbAbsorbed
 
-	file->WriteDouble(0.0,"\n"); //no desorption
+	file->WriteDouble(0.0, "\n"); //no desorption
 
-	switch(sh.reflectType) {
+	switch (sh.reflectType) {
 	case REF_DIFFUSE:
-		file->WriteDouble(0.0,"\n");
+		file->WriteDouble(0.0, "\n");
 		break;
 	case REF_MIRROR:
-		file->WriteDouble(1.0,"\n");
+		file->WriteDouble(1.0, "\n");
 		break;
 	default:
-		file->WriteDouble((double)(sh.reflectType),"\n");
+		file->WriteDouble((double)(sh.reflectType), "\n");
 		break;
 	}
 
-	file->WriteDouble(0.0,"\n"); // Unused
+	file->WriteDouble(0.0, "\n"); // Unused
 }
 
 // -----------------------------------------------------------
 /*
 void Facet::SaveGEO(FileWriter *file,int idx) {
 
-	char tmp[256];
+char tmp[256];
 
-	sprintf(tmp,"facet %d {\n",idx+1);
-	file->Write(tmp);
-	file->Write("  nbIndex:");file->WriteInt(sh.nbIndex,"\n");
-	file->Write("  indices:\n");
-	for(int i=0;i<sh.nbIndex;i++) {
-		file->Write("    ");
-		file->WriteInt(indices[i]+1,"\n");
-	}
-	//file->Write("\n");
-	file->Write("  sticking:");file->WriteDouble(sh.sticking,"\n");
-	file->Write("  opacity:");file->WriteDouble(sh.opacity,"\n");
-	file->Write("  desorbType:");file->WriteInt(0,"\n");
-	file->Write("  desorbTypeN:");file->WriteDouble(0.0,"\n");
-	file->Write("  reflectType:");file->WriteInt(sh.reflectType,"\n");
-	file->Write("  profileType:");file->WriteInt(REC_NONE,"\n");
-	file->Write("  superDest:");file->WriteInt(sh.superDest,"\n");
-	file->Write("  superIdx:");file->WriteInt(sh.superIdx,"\n");
-	file->Write("  is2sided:");file->WriteInt(sh.is2sided,"\n");
-	//file->Write("  area:");file->WriteDouble(sh.area,"\n");
-	file->Write("  mesh:");file->WriteInt( FALSE ,"\n");
-	file->Write("  outgassing:");file->WriteDouble(0.0 ,"\n");
-	file->Write("  texDimX:");file->WriteDouble(0,"\n");
-	file->Write("  texDimY:");file->WriteDouble(0,"\n");
-	file->Write("  countDes:");file->WriteInt(0,"\n");
-	file->Write("  countAbs:");file->WriteInt(sh.countAbs,"\n");
-	file->Write("  countRefl:");file->WriteInt(sh.countRefl,"\n");
-	file->Write("  countTrans:");file->WriteInt(sh.countTrans,"\n");
-	file->Write("  acMode:");file->WriteInt(0,"\n");
-	file->Write("  nbAbs:");file->WriteLLong(0,"\n");
-	file->Write("  nbDes:");file->WriteLLong(0,"\n");
-	file->Write("  nbHit:");file->WriteLLong(0,"\n");
+sprintf(tmp,"facet %d {\n",idx+1);
+file->Write(tmp);
+file->Write("  nbIndex:");file->WriteInt(sh.nbIndex,"\n");
+file->Write("  indices:\n");
+for(int i=0;i<sh.nbIndex;i++) {
+file->Write("    ");
+file->WriteInt(indices[i]+1,"\n");
+}
+//file->Write("\n");
+file->Write("  sticking:");file->WriteDouble(sh.sticking,"\n");
+file->Write("  opacity:");file->WriteDouble(sh.opacity,"\n");
+file->Write("  desorbType:");file->WriteInt(0,"\n");
+file->Write("  desorbTypeN:");file->WriteDouble(0.0,"\n");
+file->Write("  reflectType:");file->WriteInt(sh.reflectType,"\n");
+file->Write("  profileType:");file->WriteInt(REC_NONE,"\n");
+file->Write("  superDest:");file->WriteInt(sh.superDest,"\n");
+file->Write("  superIdx:");file->WriteInt(sh.superIdx,"\n");
+file->Write("  is2sided:");file->WriteInt(sh.is2sided,"\n");
+//file->Write("  area:");file->WriteDouble(sh.area,"\n");
+file->Write("  mesh:");file->WriteInt( FALSE ,"\n");
+file->Write("  outgassing:");file->WriteDouble(0.0 ,"\n");
+file->Write("  texDimX:");file->WriteDouble(0,"\n");
+file->Write("  texDimY:");file->WriteDouble(0,"\n");
+file->Write("  countDes:");file->WriteInt(0,"\n");
+file->Write("  countAbs:");file->WriteInt(sh.countAbs,"\n");
+file->Write("  countRefl:");file->WriteInt(sh.countRefl,"\n");
+file->Write("  countTrans:");file->WriteInt(sh.countTrans,"\n");
+file->Write("  acMode:");file->WriteInt(0,"\n");
+file->Write("  nbAbs:");file->WriteLLong(0,"\n");
+file->Write("  nbDes:");file->WriteLLong(0,"\n");
+file->Write("  nbHit:");file->WriteLLong(0,"\n");
 
-	// Version 2
-	file->Write("  temperature:");file->WriteDouble(293.15,"\n");
-	file->Write("  countDirection:");file->WriteInt(sh.countDirection,"\n");
+// Version 2
+file->Write("  temperature:");file->WriteDouble(293.15,"\n");
+file->Write("  countDirection:");file->WriteInt(sh.countDirection,"\n");
 
-	// Version 4
-	file->Write("  textureVisible:");file->WriteInt(textureVisible,"\n");
-	file->Write("  volumeVisible:");file->WriteInt(volumeVisible,"\n");
+// Version 4
+file->Write("  textureVisible:");file->WriteInt(textureVisible,"\n");
+file->Write("  volumeVisible:");file->WriteInt(volumeVisible,"\n");
 
-	// Version 5
-	file->Write("  teleportDest:");file->WriteInt(sh.teleportDest,"\n");
+// Version 5
+file->Write("  teleportDest:");file->WriteInt(sh.teleportDest,"\n");
 
-	file->Write("}\n");
+file->Write("}\n");
 }
 */
 // -----------------------------------------------------------
@@ -473,32 +477,33 @@ void Facet::DetectOrientation() {
 
 	POLYGON p;
 	p.nbPts = sh.nbIndex;
-	p.pts   = vertices2;
-	p.sign  = 1.0;
+	p.pts = vertices2;
+	p.sign = 1.0;
 
 	BOOL convexFound = FALSE;
 	int i = 0;
-	while( i<p.nbPts && !convexFound ) {
+	while (i < p.nbPts && !convexFound) {
 		VERTEX2D c;
-		BOOL empty = EmptyTriangle(&p,i-1,i,i+1,&c);
-		if( empty || sh.nbIndex==3 ) {
-			int _i1 = IDX(i-1,p.nbPts);
-			int _i2 = IDX(i  ,p.nbPts);
-			int _i3 = IDX(i+1,p.nbPts);
-			if( IsInPoly(c.u,c.v,p.pts,p.nbPts) ) {
+		BOOL empty = EmptyTriangle(&p, i - 1, i, i + 1, &c);
+		if (empty || sh.nbIndex == 3) {
+			int _i1 = IDX(i - 1, p.nbPts);
+			int _i2 = IDX(i, p.nbPts);
+			int _i3 = IDX(i + 1, p.nbPts);
+			if (IsInPoly(c.u, c.v, p.pts, p.nbPts)) {
 				convexFound = TRUE;
 				// Orientation
-				if( IsConvex(&p,i) ) p.sign = 1.0;
+				if (IsConvex(&p, i)) p.sign = 1.0;
 				else                 p.sign = -1.0;
 			}
 		}
 		i++;
 	}
 
-	if( !convexFound ) {
+	if (!convexFound) {
 		// Not a simple polygon
 		sh.sign = 0.0;
-	} else {
+	}
+	else {
 		sh.sign = p.sign;
 	}
 
@@ -508,9 +513,9 @@ void Facet::DetectOrientation() {
 
 void Facet::UpdateFlags() {
 
-	sh.isProfile  = (sh.profileType!=REC_NONE);
+	sh.isProfile = (sh.profileType != REC_NONE);
 	//sh.isOpaque   = (sh.opacity!=0.0);
-	sh.isTextured = ((texDimW*texDimH)>0);
+	sh.isTextured = ((texDimW*texDimH) > 0);
 
 }
 
@@ -519,8 +524,8 @@ void Facet::UpdateFlags() {
 int Facet::RestoreDeviceObjects() {
 
 	// Initialize scene objects (OpenGL)
-	if( sh.isTextured>0 ) {
-		glGenTextures(1,&glTex);
+	if (sh.isTextured > 0) {
+		glGenTextures(1, &glTex);
 		glList = glGenLists(1);
 	}
 
@@ -546,20 +551,21 @@ int Facet::InvalidateDeviceObjects() {
 
 // -----------------------------------------------------------
 
-BOOL Facet::SetTexture(double width,double height,BOOL useMesh) {
+BOOL Facet::SetTexture(double width, double height, BOOL useMesh) {
 
-	BOOL dimOK = (width*height>0.0000001);
+	BOOL dimOK = (width*height > 0.0000001);
 
-	if( dimOK ) {
-		sh.texWidthD  = width;
+	if (dimOK) {
+		sh.texWidthD = width;
 		sh.texHeightD = height;
 		sh.texWidth = (int)ceil(width *0.9999999); //0.9999999: cut the last few digits (convert rounding error 1.00000001 to 1, not 2)
 		sh.texHeight = (int)ceil(height *0.9999999);
 		dimOK = (sh.texWidth > 0 && sh.texHeight > 0);
-	} else {
-		sh.texWidth   = 0;
-		sh.texHeight  = 0;
-		sh.texWidthD  = 0.0;
+	}
+	else {
+		sh.texWidth = 0;
+		sh.texHeight = 0;
+		sh.texWidthD = 0.0;
 		sh.texHeightD = 0.0;
 	}
 
@@ -572,25 +578,25 @@ BOOL Facet::SetTexture(double width,double height,BOOL useMesh) {
 	DELETE_LIST(glList);
 	DELETE_LIST(glElem);
 	if (meshPts) {
-		for(size_t i=0;i<nbElem;i++)
+		for (size_t i = 0; i < nbElem; i++)
 			SAFE_FREE(meshPts[i].pts);
 	}
 	SAFE_FREE(meshPts);
 	nbElem = 0;
 	UnselectElem();
 
-	if( dimOK ) {
+	if (dimOK) {
 
 		// Add a 1 texel border for bilinear filtering (rendering purpose)
-		texDimW = GetPower2(sh.texWidth+2);
-		texDimH = GetPower2(sh.texHeight+2);
-		if( texDimW<4 ) texDimW=4;
-		if( texDimH<4 ) texDimH=4;
-		glGenTextures(1,&glTex);
+		texDimW = GetPower2(sh.texWidth + 2);
+		texDimH = GetPower2(sh.texHeight + 2);
+		if (texDimW < 4) texDimW = 4;
+		if (texDimH < 4) texDimH = 4;
+		glGenTextures(1, &glTex);
 		glList = glGenLists(1);
 		if (useMesh)
 			if (!BuildMesh()) return FALSE;
-		if( sh.countDirection ) {
+		if (sh.countDirection) {
 			dirCache = (VHIT *)calloc(sh.texWidth*sh.texHeight, sizeof(VHIT));
 			if (!dirCache) return FALSE;
 			//memset(dirCache,0,dirSize); //already done by calloc
@@ -605,11 +611,11 @@ BOOL Facet::SetTexture(double width,double height,BOOL useMesh) {
 
 // -----------------------------------------------------------
 
-void Facet::glVertex2u(double u,double v) {
+void Facet::glVertex2u(double u, double v) {
 
-	glVertex3d( sh.O.x + sh.U.x*u + sh.V.x*v ,
-		sh.O.y + sh.U.y*u + sh.V.y*v ,
-		sh.O.z + sh.U.z*u + sh.V.z*v );
+	glVertex3d(sh.O.x + sh.U.x*u + sh.V.x*v,
+		sh.O.y + sh.U.y*u + sh.V.y*v,
+		sh.O.z + sh.U.z*u + sh.V.z*v);
 
 }
 
@@ -630,11 +636,11 @@ BOOL Facet::BuildMesh() {
 
 	}
 	hasMesh = TRUE;
-	memset(mesh,0,sh.texWidth * sh.texHeight * sizeof(SHELEM));
-	memset(meshPts,0,sh.texWidth * sh.texHeight * sizeof(MESH));
+	memset(mesh, 0, sh.texWidth * sh.texHeight * sizeof(SHELEM));
+	memset(meshPts, 0, sh.texWidth * sh.texHeight * sizeof(MESH));
 
-	POLYGON P1,P2;
-	double sx,sy,A,tA;
+	POLYGON P1, P2;
+	double sx, sy, A, tA;
 	double iw = 1.0 / (double)sh.texWidthD;
 	double ih = 1.0 / (double)sh.texHeightD;
 	double rw = Norme(&sh.U) * iw;
@@ -643,7 +649,7 @@ BOOL Facet::BuildMesh() {
 	double fA = iw*ih;
 	int    nbv;
 
-	P1.pts = (VERTEX2D *)malloc(4*sizeof(VERTEX2D));
+	P1.pts = (VERTEX2D *)malloc(4 * sizeof(VERTEX2D));
 	if (!P1.pts) {
 		throw Error("Couldn't allocate memory for texture mesh points.");
 	}
@@ -655,9 +661,9 @@ BOOL Facet::BuildMesh() {
 	tA = 0.0;
 	nbElem = 0;
 
-	for(int j=0;j<sh.texHeight;j++) {
+	for (int j = 0; j < sh.texHeight; j++) {
 		sy = (double)j;
-		for(int i=0;i<sh.texWidth;i++) {
+		for (int i = 0; i < sh.texWidth; i++) {
 			sx = (double)i;
 
 			BOOL allInside = FALSE;
@@ -665,20 +671,20 @@ BOOL Facet::BuildMesh() {
 			double v0 = sy * ih;
 			double u1 = (sx + 1.0) * iw;
 			double v1 = (sy + 1.0) * ih;
-			float  uC,vC;
-			mesh[i+j*sh.texWidth].elemId = -1;
+			float  uC, vC;
+			mesh[i + j*sh.texWidth].elemId = -1;
 
-			if( sh.nbIndex<=4 ) {
+			if (sh.nbIndex <= 4) {
 
 				// Optimization for quad and triangle
-				allInside = IsInPoly(u0,v0,vertices2,sh.nbIndex);
-				allInside = allInside && IsInPoly(u0,v1,vertices2,sh.nbIndex);
-				allInside = allInside && IsInPoly(u1,v0,vertices2,sh.nbIndex);
-				allInside = allInside && IsInPoly(u1,v1,vertices2,sh.nbIndex);
+				allInside = IsInPoly(u0, v0, vertices2, sh.nbIndex);
+				allInside = allInside && IsInPoly(u0, v1, vertices2, sh.nbIndex);
+				allInside = allInside && IsInPoly(u1, v0, vertices2, sh.nbIndex);
+				allInside = allInside && IsInPoly(u1, v1, vertices2, sh.nbIndex);
 
 			}
 
-			if( !allInside ) {
+			if (!allInside) {
 
 				// Intersect element with the facet (facet boundaries)
 				P1.pts[0].u = u0;
@@ -689,27 +695,28 @@ BOOL Facet::BuildMesh() {
 				P1.pts[2].v = v1;
 				P1.pts[3].u = u0;
 				P1.pts[3].v = v1;
-				A = GetInterArea(&P1,&P2,visible,&uC,&vC,&nbv,&vList);
-				if(!IS_ZERO(A)) {
+				A = GetInterArea(&P1, &P2, visible, &uC, &vC, &nbv, &vList);
+				if (!IS_ZERO(A)) {
 
-					if( A>(fA+1e-10) ) {
+					if (A > (fA + 1e-10)) {
 
 						// Polyon intersection error !
 						// Switch back to brute force
-						A = GetInterAreaBF(&P2,u0,v0,u1,v1,&uC,&vC);
-						mesh[i+j*sh.texWidth].area = (float)( A*(rw*rh)/(iw*ih) );
-						mesh[i+j*sh.texWidth].uCenter = uC;
-						mesh[i+j*sh.texWidth].vCenter = vC;
-						mesh[i+j*sh.texWidth].full = IS_ZERO(fA-A);
+						A = GetInterAreaBF(&P2, u0, v0, u1, v1, &uC, &vC);
+						mesh[i + j*sh.texWidth].area = (float)(A*(rw*rh) / (iw*ih));
+						mesh[i + j*sh.texWidth].uCenter = uC;
+						mesh[i + j*sh.texWidth].vCenter = vC;
+						mesh[i + j*sh.texWidth].full = IS_ZERO(fA - A);
 
-					} else {
+					}
+					else {
 
 						// !! P1 and P2 are in u,v coordinates !!
-						mesh[i+j*sh.texWidth].area = (float)( A*(rw*rh)/(iw*ih) );
-						mesh[i+j*sh.texWidth].uCenter = uC;
-						mesh[i+j*sh.texWidth].vCenter = vC;
-						mesh[i+j*sh.texWidth].full = IS_ZERO(fA-A);
-						mesh[i+j*sh.texWidth].elemId = nbElem;
+						mesh[i + j*sh.texWidth].area = (float)(A*(rw*rh) / (iw*ih));
+						mesh[i + j*sh.texWidth].uCenter = uC;
+						mesh[i + j*sh.texWidth].vCenter = vC;
+						mesh[i + j*sh.texWidth].full = IS_ZERO(fA - A);
+						mesh[i + j*sh.texWidth].elemId = nbElem;
 
 						// Mesh coordinates
 						meshPts[nbElem].nbPts = nbv;
@@ -717,9 +724,9 @@ BOOL Facet::BuildMesh() {
 						if (!meshPts[nbElem].pts) {
 							throw Error("Couldn't allocate memory for texture mesh points.");
 						}
-						for(int n=0;n<nbv;n++) {
-							meshPts[nbElem].pts[n].u = vList[2*n];
-							meshPts[nbElem].pts[n].v = vList[2*n+1];
+						for (int n = 0; n < nbv; n++) {
+							meshPts[nbElem].pts[n].u = vList[2 * n];
+							meshPts[nbElem].pts[n].v = vList[2 * n + 1];
 						}
 						nbElem++;
 
@@ -728,13 +735,14 @@ BOOL Facet::BuildMesh() {
 				}
 				SAFE_FREE(vList);
 
-			} else {
+			}
+			else {
 
-				mesh[i+j*sh.texWidth].area    = (float)(rw*rh);
-				mesh[i+j*sh.texWidth].uCenter = (float)(u0 + u1) / 2.0f;
-				mesh[i+j*sh.texWidth].vCenter = (float)(v0 + v1) / 2.0f;
-				mesh[i+j*sh.texWidth].full = TRUE;
-				mesh[i+j*sh.texWidth].elemId = nbElem;
+				mesh[i + j*sh.texWidth].area = (float)(rw*rh);
+				mesh[i + j*sh.texWidth].uCenter = (float)(u0 + u1) / 2.0f;
+				mesh[i + j*sh.texWidth].vCenter = (float)(v0 + v1) / 2.0f;
+				mesh[i + j*sh.texWidth].full = TRUE;
+				mesh[i + j*sh.texWidth].elemId = nbElem;
 
 				// Mesh coordinates
 				meshPts[nbElem].nbPts = 4;
@@ -754,7 +762,7 @@ BOOL Facet::BuildMesh() {
 
 			}
 
-			tA += mesh[i+j*sh.texWidth].area;
+			tA += mesh[i + j*sh.texWidth].area;
 
 		}
 	}
@@ -777,28 +785,28 @@ BOOL Facet::BuildMesh() {
 
 void Facet::BuildMeshList() {
 
-	if(!meshPts) 
+	if (!meshPts)
 		return;
 
 	DELETE_LIST(glElem);
 
 	// Build OpenGL geometry for meshing
 	glElem = glGenLists(1);
-	glNewList(glElem,GL_COMPILE);
+	glNewList(glElem, GL_COMPILE);
 
 
-	glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-	for(size_t i=0;i<nbElem;i++) {
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	for (size_t i = 0; i < nbElem; i++) {
 		glBegin(GL_POLYGON);
-		for(size_t n=0;n<meshPts[i].nbPts;n++) {
+		for (size_t n = 0; n < meshPts[i].nbPts; n++) {
 			glEdgeFlag(TRUE);
-			glVertex2u(meshPts[i].pts[n].u,meshPts[i].pts[n].v);
+			glVertex2u(meshPts[i].pts[n].u, meshPts[i].pts[n].v);
 		}
 		glEnd();
 
 	}
 
-	glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glEndList();
 
 }
@@ -810,26 +818,26 @@ void Facet::BuildSelElemList() {
 	DELETE_LIST(glSelElem);
 	int nbSel = 0;
 
-	if( mesh && selectedElem.width!=0 && selectedElem.height!=0 ) {
+	if (mesh && selectedElem.width != 0 && selectedElem.height != 0) {
 
 		glSelElem = glGenLists(1);
-		glNewList(glSelElem,GL_COMPILE);
-		glColor3f(1.0f,1.0f,1.0f);
+		glNewList(glSelElem, GL_COMPILE);
+		glColor3f(1.0f, 1.0f, 1.0f);
 		glLineWidth(1.0f);
 		glEnable(GL_LINE_SMOOTH);
-		glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		glEnable(GL_POLYGON_OFFSET_LINE);
-		glPolygonOffset(-1.0f,-1.0f);
-		for(int i=0;i<selectedElem.width;i++) {
-			for(int j=0;j<selectedElem.height;j++) {
+		glPolygonOffset(-1.0f, -1.0f);
+		for (int i = 0; i < selectedElem.width; i++) {
+			for (int j = 0; j < selectedElem.height; j++) {
 
-				int add = (selectedElem.u+i)+(selectedElem.v+j)*sh.texWidth;
+				int add = (selectedElem.u + i) + (selectedElem.v + j)*sh.texWidth;
 				int elId = mesh[add].elemId;
-				if( elId>=0 ) {
+				if (elId >= 0) {
 					glBegin(GL_POLYGON);
-					for(int n=0;n<meshPts[elId].nbPts;n++) {
+					for (int n = 0; n < meshPts[elId].nbPts; n++) {
 						glEdgeFlag(TRUE);
-						glVertex2u(meshPts[elId].pts[n].u,meshPts[elId].pts[n].v);
+						glVertex2u(meshPts[elId].pts[n].u, meshPts[elId].pts[n].v);
 					}
 					glEnd();
 					nbSel++;
@@ -839,13 +847,13 @@ void Facet::BuildSelElemList() {
 		}
 
 
-		glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glDisable(GL_POLYGON_OFFSET_LINE);
 		glDisable(GL_LINE_SMOOTH);
 		glEndList();
 
 		// Empty selection
-		if( nbSel==0 ) UnselectElem();
+		if (nbSel == 0) UnselectElem();
 
 	}
 
@@ -863,18 +871,18 @@ void Facet::UnselectElem() {
 
 // -----------------------------------------------------------
 
-void Facet::SelectElem(int u,int v,int width,int height) {
+void Facet::SelectElem(int u, int v, int width, int height) {
 
 	UnselectElem();
 
-	if( mesh && u>=0 && u<sh.texWidth && v>=0 && v<sh.texHeight ) {
+	if (mesh && u >= 0 && u < sh.texWidth && v >= 0 && v < sh.texHeight) {
 
 		int maxW = sh.texWidth - u;
 		int maxH = sh.texHeight - v;
 		selectedElem.u = u;
 		selectedElem.v = v;
-		selectedElem.width = MIN(maxW,width);
-		selectedElem.height = MIN(maxH,height);
+		selectedElem.width = MIN(maxW, width);
+		selectedElem.height = MIN(maxH, height);
 		BuildSelElemList();
 
 	}
@@ -884,17 +892,17 @@ void Facet::SelectElem(int u,int v,int width,int height) {
 // -----------------------------------------------------------
 
 void Facet::RenderSelectedElem() {
-	if( glSelElem ) glCallList(glSelElem);
+	if (glSelElem) glCallList(glSelElem);
 }
 
 // -----------------------------------------------------------
 
 void Facet::Explode(FACETGROUP *group) {
 
-	int nb=0;
+	int nb = 0;
 	if (!(group->facets = (Facet **)malloc(nbElem*sizeof(Facet *))))
 		throw Error("Not enough memory to create new facets");
-	for(size_t i=0;i<nbElem;i++) {
+	for (size_t i = 0; i < nbElem; i++) {
 		try {
 			Facet *f = new Facet(meshPts[i].nbPts);
 			f->Copy(this);
@@ -917,9 +925,9 @@ void Facet::Explode(FACETGROUP *group) {
 
 void Facet::FillVertexArray(VERTEX3D *v) {
 
-	int nb=0;
-	for(size_t i=0;i<nbElem;i++) {
-		for(size_t j=0;j<meshPts[i].nbPts;j++) {
+	int nb = 0;
+	for (size_t i = 0; i < nbElem; i++) {
+		for (size_t j = 0; j < meshPts[i].nbPts; j++) {
 			v[nb].x = sh.O.x + sh.U.x*meshPts[i].pts[j].u + sh.V.x*meshPts[i].pts[j].v;
 			v[nb].y = sh.O.y + sh.U.y*meshPts[i].pts[j].u + sh.V.y*meshPts[i].pts[j].v;
 			v[nb].z = sh.O.z + sh.U.z*meshPts[i].pts[j].u + sh.V.z*meshPts[i].pts[j].v;
@@ -931,9 +939,9 @@ void Facet::FillVertexArray(VERTEX3D *v) {
 
 // -----------------------------------------------------------
 
-DWORD Facet::GetGeometrySize() {
+size_t Facet::GetGeometrySize() {
 
-	DWORD s =  sizeof(SHFACET) 
+	size_t s = sizeof(SHFACET)
 		+ (sh.nbIndex * sizeof(int))
 		+ (sh.nbIndex * sizeof(VERTEX2D));
 
@@ -948,10 +956,10 @@ DWORD Facet::GetGeometrySize() {
 DWORD Facet::GetHitsSize() {
 
 	return   sizeof(SHHITS)
-		+ (sh.texWidth*sh.texHeight*(sizeof(llong)+2*sizeof(double)))
-		+ (sh.isProfile?(PROFILE_SIZE*(sizeof(llong)+2*sizeof(double))):0)
-		+ (sh.countDirection?(sh.texWidth*sh.texHeight*sizeof(VHIT)):0)
-		+ (sh.hasSpectrum?(SPECTRUM_SIZE*2*sizeof(double)):0);
+		+ (sh.texWidth*sh.texHeight*(sizeof(llong) + 2 * sizeof(double)))
+		+ (sh.isProfile ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0)
+		+ (sh.countDirection ? (sh.texWidth*sh.texHeight*sizeof(VHIT)) : 0)
+		+ (sh.hasSpectrum ? (SPECTRUM_SIZE * 2 * sizeof(double)) : 0);
 
 }
 
@@ -960,34 +968,35 @@ DWORD Facet::GetHitsSize() {
 DWORD Facet::GetTexSwapSize(BOOL useColormap) {
 
 	DWORD tSize = texDimW*texDimH;
-	if(useColormap) tSize = tSize*4;
+	if (useColormap) tSize = tSize*(sizeof(llong) + 2 * sizeof(double));
 	return tSize;
 
 }
 
 // -----------------------------------------------------------
 
-DWORD Facet::GetTexSwapSizeForRatio(double ratio,BOOL useColor) {
+DWORD Facet::GetTexSwapSizeForRatio(double ratio, BOOL useColor) {
 
 	double nU = Norme(&(sh.U));
 	double nV = Norme(&(sh.V));
-	double width = nU*ratio; 
+	double width = nU*ratio;
 	double height = nV*ratio;
 
-	BOOL dimOK = (width*height>0.0000001);
+	BOOL dimOK = (width*height > 0.0000001);
 
-	if( dimOK ) {
+	if (dimOK) {
 
-		int iwidth  = (int)ceil(width);
+		int iwidth = (int)ceil(width);
 		int iheight = (int)ceil(height);
-		int m = MAX(iwidth,iheight);
+		int m = MAX(iwidth, iheight);
 		int tDim = GetPower2(m);
-		if( tDim<16 ) tDim=16;
+		if (tDim < 16) tDim = 16;
 		DWORD tSize = tDim*tDim;
-		if(useColor) tSize = tSize*4;
+		if (useColor) tSize = tSize*(sizeof(llong) + 2 * sizeof(double));
 		return tSize;
 
-	} else {
+	}
+	else {
 
 		return 0;
 
@@ -1007,63 +1016,51 @@ DWORD Facet::GetNbCellForRatio(double ratio) {
 
 	double nU = Norme(&(sh.U));
 	double nV = Norme(&(sh.V));
-	double width = nU*ratio; 
+	double width = nU*ratio;
 	double height = nV*ratio;
 
-	BOOL dimOK = (width*height>0.0000001);
+	BOOL dimOK = (width*height > 0.0000001);
 
-	if( dimOK ) {
-		int iwidth  = (int)ceil(width);
+	if (dimOK) {
+		int iwidth = (int)ceil(width);
 		int iheight = (int)ceil(height);
 		return iwidth*iheight;
-	} else {
+	}
+	else {
 		return 0;
 	}
 
 }
 
-// -----------------------------------------------------------
-
 DWORD Facet::GetTexRamSize() {
 
-	/*int size = 2*sizeof(double)+sizeof(llong);
-	if(mesh) size += sizeof(SHELEM)+sizeof(MESH);
-	if(sh.countDirection) size += sizeof(VHIT);*/
-	int size=220; //estimation
-	return (sh.texWidth*sh.texHeight*size);
+	int sizePerCell = 220; //estimation
+	int sizePerFacet = 9000; //estimation
+	return (sh.texWidth*sh.texHeight*sizePerCell + sh.isTextured*sizePerFacet);
 
 }
 
-// -----------------------------------------------------------
-
-DWORD Facet::GetTexRamSizeForRatio(double ratio,BOOL useMesh,BOOL countDir) {
-
+DWORD Facet::GetTexRamSizeForRatio(double ratio, BOOL useMesh, BOOL countDir) {
 	double nU = Norme(&(sh.U));
 	double nV = Norme(&(sh.V));
-	double width = nU*ratio; 
+	double width = nU*ratio;
 	double height = nV*ratio;
 
-	BOOL dimOK = (width*height>0.0000001);
+	BOOL dimOK = (width*height > 0.0000001);
 
-	if( dimOK ) {
-
-		int iwidth  = (int)ceil(width);
+	if (dimOK) {
+		int iwidth = (int)ceil(width);
 		int iheight = (int)ceil(height);
 		/*int size = 2*sizeof(double)+sizeof(llong);
 		if(useMesh) size += sizeof(SHELEM)+sizeof(MESH);
 		if(countDir) size += sizeof(VHIT);*/
-		int size=220; //estimation
-		return iwidth * iheight * size;
-
-	} else {
-
-		return 0;
-
+		int size = 220; //estimation
+		return iwidth * iheight * size + 9000;
 	}
-
+	else {
+		return 0;
+	}
 }
-
-// -----------------------------------------------------------
 
 #define SUM_NEIGHBOR(i,j,we)                      \
 	if( (i)>=0 && (i)<=w && (j)>=0 && (j)<=h ) {    \
@@ -1071,53 +1068,53 @@ DWORD Facet::GetTexRamSizeForRatio(double ratio,BOOL useMesh,BOOL countDir) {
 	if( mesh[add].area>0.0 ) {                   \
 	sum += we*(texBuffer[add]/mesh[add].area*scaleF);          \
 	W=W+we;                                     \
-	}                                             \
-	}
+		}                                             \
+		}
 
-double Facet::GetSmooth(const int &i,const int &j,double *texBuffer,const float &scaleF) {
+double Facet::GetSmooth(const int &i, const int &j, double *texBuffer, const float &scaleF) {
 
 	double W = 0.0;
-	double sum=0.0;
-	int w = sh.texWidth  - 1;
+	double sum = 0.0;
+	int w = sh.texWidth - 1;
 	int h = sh.texHeight - 1;
 	int add;
 
-	SUM_NEIGHBOR((i-1),(j-1),1.0);
-	SUM_NEIGHBOR((i-1),(j+1),1.0);
-	SUM_NEIGHBOR((i+1),(j-1),1.0);
-	SUM_NEIGHBOR((i+1),(j+1),1.0);
-	SUM_NEIGHBOR(i  ,(j-1),2.0);
-	SUM_NEIGHBOR(i  ,(j+1),2.0);
-	SUM_NEIGHBOR((i-1),j  ,2.0);
-	SUM_NEIGHBOR((i+1),j  ,2.0);
+	SUM_NEIGHBOR((i - 1), (j - 1), 1.0);
+	SUM_NEIGHBOR((i - 1), (j + 1), 1.0);
+	SUM_NEIGHBOR((i + 1), (j - 1), 1.0);
+	SUM_NEIGHBOR((i + 1), (j + 1), 1.0);
+	SUM_NEIGHBOR(i, (j - 1), 2.0);
+	SUM_NEIGHBOR(i, (j + 1), 2.0);
+	SUM_NEIGHBOR((i - 1), j, 2.0);
+	SUM_NEIGHBOR((i + 1), j, 2.0);
 
-	if(W==0.0)
+	if (W == 0.0)
 		return 0.0;
 	else
-		return sum/W;
+		return sum / W;
 }
 
-double Facet::GetSmooth(const int &i,const int &j,llong *texBuffer,const float &scaleF) {
+double Facet::GetSmooth(const int &i, const int &j, llong *texBuffer, const float &scaleF) {
 
 	float W = 0.0f;
-	float sum=0.0;
-	int w = sh.texWidth  - 1;
+	float sum = 0.0;
+	int w = sh.texWidth - 1;
 	int h = sh.texHeight - 1;
 	int add;
 
-	SUM_NEIGHBOR(i-1,j-1,1.0f);
-	SUM_NEIGHBOR(i-1,j+1,1.0f);
-	SUM_NEIGHBOR(i+1,j-1,1.0f);
-	SUM_NEIGHBOR(i+1,j+1,1.0f);
-	SUM_NEIGHBOR(i  ,j-1,2.0f);
-	SUM_NEIGHBOR(i  ,j+1,2.0f);
-	SUM_NEIGHBOR(i-1,j  ,2.0f);
-	SUM_NEIGHBOR(i+1,j  ,2.0f);
+	SUM_NEIGHBOR(i - 1, j - 1, 1.0f);
+	SUM_NEIGHBOR(i - 1, j + 1, 1.0f);
+	SUM_NEIGHBOR(i + 1, j - 1, 1.0f);
+	SUM_NEIGHBOR(i + 1, j + 1, 1.0f);
+	SUM_NEIGHBOR(i, j - 1, 2.0f);
+	SUM_NEIGHBOR(i, j + 1, 2.0f);
+	SUM_NEIGHBOR(i - 1, j, 2.0f);
+	SUM_NEIGHBOR(i + 1, j, 2.0f);
 
-	if(W==0.0f)
+	if (W == 0.0f)
 		return 0.0f;
 	else
-		return sum/W;
+		return sum / W;
 
 
 }
@@ -1125,67 +1122,71 @@ double Facet::GetSmooth(const int &i,const int &j,llong *texBuffer,const float &
 // -----------------------------------------------------------
 #define LOG10(x) log10f((float)x)
 
-void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans,BOOL useColorMap,BOOL doLog,BOOL normalize) {
-	min=min*no_scans;
-	max=max*no_scans;
-	size_t size  = sh.texWidth*sh.texHeight;
+void Facet::BuildTexture(double *texBuffer, double min, double max, double no_scans, BOOL useColorMap, BOOL doLog, BOOL normalize) {
+	min = min*no_scans;
+	max = max*no_scans;
+	size_t size = sh.texWidth*sh.texHeight;
 	size_t tSize = texDimW*texDimH;
-	if( size==0 || tSize==0 ) return;
+	if (size == 0 || tSize == 0) return;
 
 	float scaleFactor = 1.0f;
 	int val;
 
-	glBindTexture(GL_TEXTURE_2D,glTex);
-	if( useColorMap ) {
+	glBindTexture(GL_TEXTURE_2D, glTex);
+	if (useColorMap) {
 
 		// -------------------------------------------------------
 		// 16 Bit rainbow colormap
 		// -------------------------------------------------------
 
 		// Scale
-		if( min<max ) {
-			if( doLog ) {
-				if( min<1e-20f ) min=1e-20f;
-				scaleFactor = 65534.0f/(LOG10(max)-LOG10(min)); // -1 for saturation color
-			} else {
-				scaleFactor = 65534.0f/(float)(max-min); // -1 for saturation color
+		if (min < max) {
+			if (doLog) {
+				if (min < 1e-20f) min = 1e-20f;
+				scaleFactor = 65534.0f / (LOG10(max) - LOG10(min)); // -1 for saturation color
 			}
-		} else {
+			else {
+				scaleFactor = 65534.0f / (float)(max - min); // -1 for saturation color
+			}
+		}
+		else {
 			doLog = FALSE;
 			min = 0;
 		}
 
-		int *buff32 = (int *)malloc(tSize*4);
+		int *buff32 = (int *)malloc(tSize * 4);
 		if (!buff32) throw Error("Cannot allocate memory for texture buffer");
-		memset(buff32,0,tSize*4);
-		for(int j=0;j<sh.texHeight;j++) {
-			for(int i=0;i<sh.texWidth;i++) {
-				int idx = i+j*sh.texWidth;
-				if( doLog ) {
-					val = (int)((LOG10(texBuffer[idx])-LOG10(min))*scaleFactor+0.5f);
-				} else {
-					val = (int)((texBuffer[idx]-min)*scaleFactor+0.5f);
+		memset(buff32, 0, tSize * 4);
+		for (int j = 0; j < sh.texHeight; j++) {
+			for (int i = 0; i < sh.texWidth; i++) {
+				int idx = i + j*sh.texWidth;
+				if (doLog) {
+					val = (int)((LOG10(texBuffer[idx]) - LOG10(min))*scaleFactor + 0.5f);
 				}
-				SATURATE(val,0,65535);	
-				buff32[(i+1) + (j+1)*texDimW] = colorMap[val];
-				if (texBuffer[idx]==0.0f) buff32[(i+1) + (j+1)*texDimW] =(COLORREF)(65535+256+1); //show unset value as white
+				else {
+					val = (int)((texBuffer[idx] - min)*scaleFactor + 0.5f);
+				}
+				SATURATE(val, 0, 65535);
+				buff32[(i + 1) + (j + 1)*texDimW] = colorMap[val];
+				if (texBuffer[idx] == 0.0f) buff32[(i + 1) + (j + 1)*texDimW] = (COLORREF)(65535 + 256 + 1); //show unset value as white
 			}
 		}
 		// Perform edge smoothing (only with mesh)
-		if( mesh ) {
-			for(int j=-1;j<=sh.texHeight;j++) {
-				for(int i=-1;i<=sh.texWidth;i++) {
-					BOOL doSmooth = (i<0) || (i>=sh.texWidth) ||
-						(j<0) || (j>=sh.texHeight) ||
-						mesh[i+j*sh.texWidth].area==0.0f;
-					if( doSmooth ) {
-						if( doLog ) {
-							val = (int)((LOG10(GetSmooth(i,j,texBuffer,1.0f))-LOG10(min))*scaleFactor+0.5f);
-						} else {
-							val = (int)((GetSmooth(i,j,texBuffer,1.0f)-min)*scaleFactor+0.5f);
+		if (mesh) {
+			for (int j = -1; j <= sh.texHeight; j++) {
+				for (int i = -1; i <= sh.texWidth; i++) {
+					BOOL doSmooth = (i < 0) || (i >= sh.texWidth) ||
+						(j < 0) || (j >= sh.texHeight) ||
+						mesh[i + j*sh.texWidth].area == 0.0f;
+					if (doSmooth) {
+						if (doLog) {
+							val = (int)((LOG10(GetSmooth(i, j, texBuffer, 1.0f)) - LOG10(min))*scaleFactor + 0.5f);
 						}
-						SATURATE(val,0,65535);
-						buff32[(i+1) + (j+1)*texDimW] = colorMap[val];
+						else {
+							val = (int)((GetSmooth(i, j, texBuffer, 1.0f) - min)*scaleFactor + 0.5f);
+						}
+						SATURATE(val, 0, 65535);
+						buff32[(i + 1) + (j + 1)*texDimW] = colorMap[val];
 					}
 				}
 			}
@@ -1194,7 +1195,7 @@ void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans
 
 
 
-		glTexImage2D (
+		glTexImage2D(
 			GL_TEXTURE_2D,       // Type
 			0,                   // No Mipmap
 			GL_RGBA,             // Format RGBA
@@ -1209,60 +1210,65 @@ void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans
 		GLToolkit::CheckGLErrors("Facet::BuildTexture()");
 
 		free(buff32);
-	} else {
+	}
+	else {
 
 		// -------------------------------------------------------
 		// 8 bit Luminance
 		// -------------------------------------------------------
-		if( min<max ) {
-			if( doLog ) {
-				if( min<1e-20f ) min=1e-20f;
-				scaleFactor = 255.0f/(LOG10(max)-LOG10(min)); // -1 for saturation color
-			} else {
-				scaleFactor = 255.0f/(float)(max-min); // -1 for saturation color
+		if (min < max) {
+			if (doLog) {
+				if (min < 1e-20f) min = 1e-20f;
+				scaleFactor = 255.0f / (LOG10(max) - LOG10(min)); // -1 for saturation color
 			}
-		} else {
+			else {
+				scaleFactor = 255.0f / (float)(max - min); // -1 for saturation color
+			}
+		}
+		else {
 			doLog = FALSE;
 			min = 0;
 		}
 
 		unsigned char *buff8 = (unsigned char *)malloc(tSize*sizeof(unsigned char));
 		if (!buff8) throw Error("Cannot allocate memory for texture buffer");
-		memset(buff8,0,tSize*sizeof(unsigned char));
+		memset(buff8, 0, tSize*sizeof(unsigned char));
 		float fmin = (float)min;
 
-		for(int j=0;j<sh.texHeight;j++) {
-			for(int i=0;i<sh.texWidth;i++) {
-				int idx = i+j*sh.texWidth;
-				if( doLog ) {
-					val = (int)((LOG10(texBuffer[idx])-LOG10(min))*scaleFactor+0.5f);
-				} else {
-					val = (int)((texBuffer[idx]-min)*scaleFactor+0.5f);
+		for (int j = 0; j < sh.texHeight; j++) {
+			for (int i = 0; i < sh.texWidth; i++) {
+				int idx = i + j*sh.texWidth;
+				if (doLog) {
+					val = (int)((LOG10(texBuffer[idx]) - LOG10(min))*scaleFactor + 0.5f);
 				}
-				SATURATE(val,0,255);
-				buff8[(i+1) + (j+1)*texDimW] = val;
+				else {
+					val = (int)((texBuffer[idx] - min)*scaleFactor + 0.5f);
+				}
+				SATURATE(val, 0, 255);
+				buff8[(i + 1) + (j + 1)*texDimW] = val;
 			}
 		}
 		// Perform edge smoothing (only with mesh)
-		if( mesh ) {
-			for(int j=-1;j<=sh.texHeight;j++) {
-				for(int i=-1;i<=sh.texWidth;i++) {
-					BOOL doSmooth = (i<0) || (i>=sh.texWidth) ||
-						(j<0) || (j>=sh.texHeight) ||
-						mesh[i+j*sh.texWidth].area==0.0;
-					if( doSmooth ) {
-						if( doLog ) {
-							val = (int)((LOG10(GetSmooth(i,j,texBuffer,1.0f))-LOG10(min))*scaleFactor+0.5f);
-						} else {
-							val = (int)((GetSmooth(i,j,texBuffer,1.0f)-min)*scaleFactor+0.5f);
+		if (mesh) {
+			for (int j = -1; j <= sh.texHeight; j++) {
+				for (int i = -1; i <= sh.texWidth; i++) {
+					BOOL doSmooth = (i < 0) || (i >= sh.texWidth) ||
+						(j < 0) || (j >= sh.texHeight) ||
+						mesh[i + j*sh.texWidth].area == 0.0;
+					if (doSmooth) {
+						if (doLog) {
+							val = (int)((LOG10(GetSmooth(i, j, texBuffer, 1.0f)) - LOG10(min))*scaleFactor + 0.5f);
 						}
-						SATURATE(val,0,255);
-						buff8[(i+1) + (j+1)*texDimW] = val;
+						else {
+							val = (int)((GetSmooth(i, j, texBuffer, 1.0f) - min)*scaleFactor + 0.5f);
+						}
+						SATURATE(val, 0, 255);
+						buff8[(i + 1) + (j + 1)*texDimW] = val;
 					}
 				}
 			}
 		}
-		glTexImage2D (
+		glTexImage2D(
 			GL_TEXTURE_2D,       // Type
 			0,                   // No Mipmap
 			GL_LUMINANCE,        // Format luminance
@@ -1280,66 +1286,70 @@ void Facet::BuildTexture(double *texBuffer,double min,double max,double no_scans
 	GLToolkit::CheckGLErrors("Facet::BuildTexture()");
 }
 
-void Facet::BuildTexture(llong *texBuffer,llong min,llong max,BOOL useColorMap,BOOL doLog) {
+void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMap, BOOL doLog) {
 
-	size_t size  = sh.texWidth*sh.texHeight;
+	size_t size = sh.texWidth*sh.texHeight;
 	size_t tSize = texDimW*texDimH;
-	if( size==0 || tSize==0 ) return;
+	if (size == 0 || tSize == 0) return;
 
 	float scaleFactor = 1.0f;
 	int val;
 
-	glBindTexture(GL_TEXTURE_2D,glTex);
-	if( useColorMap ) {
+	glBindTexture(GL_TEXTURE_2D, glTex);
+	if (useColorMap) {
 
 		// -------------------------------------------------------
 		// 16 Bit rainbow colormap
 		// -------------------------------------------------------
 
 		// Scale
-		if( min<max ) {
-			if( doLog ) {
-				if( min<1 ) min=1;
-				scaleFactor = 65534.0f/(LOG10(max)-LOG10(min)); // -1 for saturation color
-			} else {
-				scaleFactor = 65534.0f/(float)(max-min); // -1 for saturation color
+		if (min < max) {
+			if (doLog) {
+				if (min < 1) min = 1;
+				scaleFactor = 65534.0f / (LOG10(max) - LOG10(min)); // -1 for saturation color
 			}
-		} else {
+			else {
+				scaleFactor = 65534.0f / (float)(max - min); // -1 for saturation color
+			}
+		}
+		else {
 			doLog = FALSE;
 			min = 0;
 		}
 
-		int *buff32 = (int *)malloc(tSize*4);
+		int *buff32 = (int *)malloc(tSize * 4);
 		if (!buff32) throw Error("Cannot allocate memory for texture buffer");
-		memset(buff32,0,tSize*4);
-		for(int j=0;j<sh.texHeight;j++) {
-			for(int i=0;i<sh.texWidth;i++) {
-				int idx = i+j*sh.texWidth;
-				if( doLog ) {
-					val = (int)((LOG10(texBuffer[idx])-LOG10(min))*scaleFactor+0.5f);
-				} else {
-					val = (int)((texBuffer[idx]-min)*scaleFactor+0.5f);
+		memset(buff32, 0, tSize * 4);
+		for (int j = 0; j < sh.texHeight; j++) {
+			for (int i = 0; i < sh.texWidth; i++) {
+				int idx = i + j*sh.texWidth;
+				if (doLog) {
+					val = (int)((LOG10(texBuffer[idx]) - LOG10(min))*scaleFactor + 0.5f);
 				}
-				SATURATE(val,0,65535);	
-				buff32[(i+1) + (j+1)*texDimW] = colorMap[val];
-				if (texBuffer[idx]==0.0f) buff32[(i+1) + (j+1)*texDimW] =(COLORREF)(65535+256+1); //show unset value as white
+				else {
+					val = (int)((texBuffer[idx] - min)*scaleFactor + 0.5f);
+				}
+				SATURATE(val, 0, 65535);
+				buff32[(i + 1) + (j + 1)*texDimW] = colorMap[val];
+				if (texBuffer[idx] == 0.0f) buff32[(i + 1) + (j + 1)*texDimW] = (COLORREF)(65535 + 256 + 1); //show unset value as white
 			}
 		}
 		// Perform edge smoothing (only with mesh)
-		if( mesh ) {
-			for(int j=-1;j<=sh.texHeight;j++) {
-				for(int i=-1;i<=sh.texWidth;i++) {
-					BOOL doSmooth = (i<0) || (i>=sh.texWidth) ||
-						(j<0) || (j>=sh.texHeight) ||
-						mesh[i+j*sh.texWidth].area==0.0f;
-					if( doSmooth ) {
-						if( doLog ) {
-							val = (int)((LOG10(GetSmooth(i,j,texBuffer,1.0f))-LOG10(min))*scaleFactor+0.5f);
-						} else {
-							val = (int)((GetSmooth(i,j,texBuffer,1.0f)-min)*scaleFactor+0.5f);
+		if (mesh) {
+			for (int j = -1; j <= sh.texHeight; j++) {
+				for (int i = -1; i <= sh.texWidth; i++) {
+					BOOL doSmooth = (i < 0) || (i >= sh.texWidth) ||
+						(j < 0) || (j >= sh.texHeight) ||
+						mesh[i + j*sh.texWidth].area == 0.0f;
+					if (doSmooth) {
+						if (doLog) {
+							val = (int)((LOG10(GetSmooth(i, j, texBuffer, 1.0f)) - LOG10(min))*scaleFactor + 0.5f);
 						}
-						SATURATE(val,0,65535);
-						buff32[(i+1) + (j+1)*texDimW] = colorMap[val];
+						else {
+							val = (int)((GetSmooth(i, j, texBuffer, 1.0f) - min)*scaleFactor + 0.5f);
+						}
+						SATURATE(val, 0, 65535);
+						buff32[(i + 1) + (j + 1)*texDimW] = colorMap[val];
 					}
 				}
 			}
@@ -1348,7 +1358,7 @@ void Facet::BuildTexture(llong *texBuffer,llong min,llong max,BOOL useColorMap,B
 
 
 
-		glTexImage2D (
+		glTexImage2D(
 			GL_TEXTURE_2D,       // Type
 			0,                   // No Mipmap
 			GL_RGBA,             // Format RGBA
@@ -1363,60 +1373,65 @@ void Facet::BuildTexture(llong *texBuffer,llong min,llong max,BOOL useColorMap,B
 		GLToolkit::CheckGLErrors("Facet::BuildTexture()");
 
 		free(buff32);
-	} else {
+	}
+	else {
 
 		// -------------------------------------------------------
 		// 8 bit Luminance
 		// -------------------------------------------------------
-		if( min<max ) {
-			if( doLog ) {
-				if( min<1 ) min=1;
-				scaleFactor = 255.0f/(LOG10(max)-LOG10(min)); // -1 for saturation color
-			} else {
-				scaleFactor = 255.0f/(float)(max-min); // -1 for saturation color
+		if (min < max) {
+			if (doLog) {
+				if (min < 1) min = 1;
+				scaleFactor = 255.0f / (LOG10(max) - LOG10(min)); // -1 for saturation color
 			}
-		} else {
+			else {
+				scaleFactor = 255.0f / (float)(max - min); // -1 for saturation color
+			}
+		}
+		else {
 			doLog = FALSE;
 			min = 0;
 		}
 
 		unsigned char *buff8 = (unsigned char *)malloc(tSize*sizeof(unsigned char));
 		if (!buff8) throw Error("Cannot allocate memory for texture buffer");
-		memset(buff8,0,tSize*sizeof(unsigned char));
+		memset(buff8, 0, tSize*sizeof(unsigned char));
 		float fmin = (float)min;
 
-		for(int j=0;j<sh.texHeight;j++) {
-			for(int i=0;i<sh.texWidth;i++) {
-				int idx = i+j*sh.texWidth;
+		for (int j = 0; j < sh.texHeight; j++) {
+			for (int i = 0; i < sh.texWidth; i++) {
+				int idx = i + j*sh.texWidth;
 				if (doLog) {
-					val = (int)((LOG10(texBuffer[idx])-LOG10(min))*scaleFactor+0.5f);
-				} else {
-					val = (int)((texBuffer[idx]-min)*scaleFactor+0.5f);
+					val = (int)((LOG10(texBuffer[idx]) - LOG10(min))*scaleFactor + 0.5f);
 				}
-				SATURATE(val,0,255);
-				buff8[(i+1) + (j+1)*texDimW] = val;
+				else {
+					val = (int)((texBuffer[idx] - min)*scaleFactor + 0.5f);
+				}
+				SATURATE(val, 0, 255);
+				buff8[(i + 1) + (j + 1)*texDimW] = val;
 			}
 		}
 		// Perform edge smoothing (only with mesh)
-		if( mesh ) {
-			for(int j=-1;j<=sh.texHeight;j++) {
-				for(int i=-1;i<=sh.texWidth;i++) {
-					BOOL doSmooth = (i<0) || (i>=sh.texWidth) ||
-						(j<0) || (j>=sh.texHeight) ||
-						mesh[i+j*sh.texWidth].area==0.0;
-					if( doSmooth ) {
-						if( doLog ) {
-							val = (int)((LOG10(GetSmooth(i,j,(double*)texBuffer,1.0f))-LOG10(min))*scaleFactor+0.5f);
-						} else {
-							val = (int)((GetSmooth(i,j,texBuffer,1.0f)-min)*scaleFactor+0.5f);
+		if (mesh) {
+			for (int j = -1; j <= sh.texHeight; j++) {
+				for (int i = -1; i <= sh.texWidth; i++) {
+					BOOL doSmooth = (i < 0) || (i >= sh.texWidth) ||
+						(j < 0) || (j >= sh.texHeight) ||
+						mesh[i + j*sh.texWidth].area == 0.0;
+					if (doSmooth) {
+						if (doLog) {
+							val = (int)((LOG10(GetSmooth(i, j, (double*)texBuffer, 1.0f)) - LOG10(min))*scaleFactor + 0.5f);
 						}
-						SATURATE(val,0,255);
-						buff8[(i+1) + (j+1)*texDimW] = val;
+						else {
+							val = (int)((GetSmooth(i, j, texBuffer, 1.0f) - min)*scaleFactor + 0.5f);
+						}
+						SATURATE(val, 0, 255);
+						buff8[(i + 1) + (j + 1)*texDimW] = val;
 					}
 				}
 			}
 		}
-		glTexImage2D (
+		glTexImage2D(
 			GL_TEXTURE_2D,       // Type
 			0,                   // No Mipmap
 			GL_LUMINANCE,        // Format luminance
@@ -1442,8 +1457,8 @@ void Facet::SwapNormal() {
 	// Revert vertex order (around the second point)
 
 	int *tmp = (int *)malloc(sh.nbIndex*sizeof(int));
-	for(int i=sh.nbIndex,j=0 ; i>0 ; i--,j++)
-		tmp[(i+1) % sh.nbIndex]=GetIndex(j+1);
+	for (int i = sh.nbIndex, j = 0; i > 0; i--, j++)
+		tmp[(i + 1) % sh.nbIndex] = GetIndex(j + 1);
 	free(indices);
 	indices = tmp;
 
@@ -1462,8 +1477,8 @@ void Facet::ShiftVertex() {
 	// Shift vertex
 
 	int *tmp = (int *)malloc(sh.nbIndex*sizeof(int));
-	for(int i=0; i<sh.nbIndex ; i++)
-		tmp[i]=GetIndex(i+1);
+	for (int i = 0; i < sh.nbIndex; i++)
+		tmp[i] = GetIndex(i + 1);
 	free(indices);
 	indices = tmp;
 
@@ -1474,19 +1489,19 @@ void Facet::ShiftVertex() {
 void Facet::InitVisibleEdge() {
 
 	// Detect non visible edge (for polygon which contains holes)
-	memset(visible,0xFF,sh.nbIndex*sizeof(BOOL));
+	memset(visible, 0xFF, sh.nbIndex*sizeof(BOOL));
 
-	for(int i=0;i<sh.nbIndex;i++) {
+	for (int i = 0; i < sh.nbIndex; i++) {
 
 		int p11 = GetIndex(i);
-		int p12 = GetIndex(i+1);
+		int p12 = GetIndex(i + 1);
 
-		for(int j=i+1;j<sh.nbIndex;j++) {
+		for (int j = i + 1; j < sh.nbIndex; j++) {
 
 			int p21 = GetIndex(j);
-			int p22 = GetIndex(j+1);
+			int p22 = GetIndex(j + 1);
 
-			if( (p11==p22 && p12==p21) || (p11==p21 && p12==p22) ) {
+			if ((p11 == p22 && p12 == p21) || (p11 == p21 && p12 == p22)) {
 				// Invisible edge found
 				visible[i] = FALSE;
 				visible[j] = FALSE;
@@ -1500,15 +1515,15 @@ void Facet::InitVisibleEdge() {
 
 // -----------------------------------------------------------
 
-BOOL Facet::IsCoplanar(Facet *f,double threshold) {
+BOOL Facet::IsCoplanar(Facet *f, double threshold) {
 
 	// Detect if 2 facets are in the same plane (orientation preserving)
 	// and have same parameters (used by collapse)
 
-	return (fabs( a - f->a )<threshold) &&
-		(fabs( b - f->b )<threshold) &&
-		(fabs( c - f->c )<threshold) &&
-		(fabs( d - f->d )<threshold) && 
+	return (fabs(a - f->a) < threshold) &&
+		(fabs(b - f->b) < threshold) &&
+		(fabs(c - f->c) < threshold) &&
+		(fabs(d - f->d) < threshold) &&
 		(sh.sticking == f->sh.sticking) &&
 		(sh.opacity == f->sh.opacity) &&
 		(sh.is2sided == f->sh.is2sided) &&
@@ -1519,22 +1534,22 @@ BOOL Facet::IsCoplanar(Facet *f,double threshold) {
 
 // -----------------------------------------------------------
 
-void Facet::Copy(Facet *f,BOOL copyMesh) {
+void Facet::Copy(Facet *f, BOOL copyMesh) {
 
-	sh.sticking     = f->sh.sticking;
-	sh.opacity      = f->sh.opacity;
-	sh.area         = f->sh.area;
-	sh.reflectType  = f->sh.reflectType;
-	if (copyMesh) sh.profileType  = f->sh.profileType;
+	sh.sticking = f->sh.sticking;
+	sh.opacity = f->sh.opacity;
+	sh.area = f->sh.area;
+	sh.reflectType = f->sh.reflectType;
+	if (copyMesh) sh.profileType = f->sh.profileType;
 	else sh.profileType = REC_NONE;
-	sh.is2sided     = f->sh.is2sided;
+	sh.is2sided = f->sh.is2sided;
 	sh.superIdx = f->sh.superIdx;
 	sh.superDest = f->sh.superDest;
 	sh.teleportDest = f->sh.teleportDest;
 	if (copyMesh) {
-		sh.countAbs     = f->sh.countAbs;
-		sh.countRefl    = f->sh.countRefl;
-		sh.countTrans   = f->sh.countTrans;
+		sh.countAbs = f->sh.countAbs;
+		sh.countRefl = f->sh.countRefl;
+		sh.countTrans = f->sh.countTrans;
 		sh.countDirection = f->sh.countDirection;
 		sh.isTextured = f->sh.isTextured;
 		hasMesh = f->hasMesh;
@@ -1556,121 +1571,170 @@ void Facet::Copy(Facet *f,BOOL copyMesh) {
 
 int Facet::GetIndex(int idx) {
 
-	if( idx < 0 ) {
+	if (idx < 0) {
 		return indices[(sh.nbIndex + idx) % sh.nbIndex];
-	} else {
+	}
+	else {
 		return indices[idx % sh.nbIndex];
 	}
 
 }
 
-void Facet::SaveSYN(FileWriter *file,int idx,BOOL crashSave) {
+void Facet::SaveSYN(FileWriter *file, const std::vector<Material> &materials, int idx, BOOL crashSave) {
 
-  char tmp[256];
+	char tmp[256];
 
-  sprintf(tmp,"facet %d {\n",idx+1);
-  file->Write(tmp);
-  file->Write("  nbIndex:");file->WriteInt(sh.nbIndex,"\n");
-  file->Write("  indices:\n");
-  for(int i=0;i<sh.nbIndex;i++) {
-	  file->Write("    ");
-	  file->WriteInt(indices[i]+1,"\n");
-  }
-  file->Write("  sticking:");file->WriteDouble(sh.sticking,"\n");
-  file->Write("  roughness:");file->WriteDouble(sh.roughness,"\n");
-  file->Write("  opacity:");file->WriteDouble(sh.opacity,"\n");
-  file->Write("  reflectType:");file->WriteInt(sh.reflectType,"\n");
-  file->Write("  profileType:");file->WriteInt(sh.profileType,"\n");
-  file->Write("  hasSpectrum:");file->WriteInt(sh.hasSpectrum,"\n");
-  file->Write("  superDest:");file->WriteInt(sh.superDest,"\n");
-  file->Write("  superIdx:");file->WriteInt(sh.superIdx,"\n");
-  file->Write("  is2sided:");file->WriteInt(sh.is2sided,"\n");
-  file->Write("  mesh:");file->WriteInt( (mesh!=NULL) ,"\n");
-  file->Write("  texDimX:");file->WriteDouble(sh.texWidthD,"\n");
-  file->Write("  texDimY:");file->WriteDouble(sh.texHeightD,"\n");
-  file->Write("  countAbs:");file->WriteInt(sh.countAbs,"\n");
-  file->Write("  countRefl:");file->WriteInt(sh.countRefl,"\n");
-  file->Write("  countTrans:");file->WriteInt(sh.countTrans,"\n");
-  file->Write("  nbAbs:");file->WriteLLong(sh.counter.nbAbsorbed,"\n");
-  file->Write("  nbHit:");file->WriteLLong(sh.counter.nbHit,"\n");
-  file->Write("  fluxAbs:");file->WriteDouble(sh.counter.fluxAbs,"\n");
-  file->Write("  powerAbs:");file->WriteDouble(sh.counter.powerAbs,"\n");
-  file->Write("  countDirection:");file->WriteInt(sh.countDirection,"\n");
-  file->Write("  textureVisible:");file->WriteInt(textureVisible,"\n");
-  file->Write("  volumeVisible:");file->WriteInt(volumeVisible,"\n");
-  file->Write("  teleportDest:");file->WriteInt(sh.teleportDest,"\n");
-  
-  file->Write("}\n");
+	sprintf(tmp, "facet %d {\n", idx + 1);
+	file->Write(tmp);
+	file->Write("  nbIndex:"); file->WriteInt(sh.nbIndex, "\n");
+	file->Write("  indices:\n");
+	for (int i = 0; i < sh.nbIndex; i++) {
+		file->Write("    ");
+		file->WriteInt(indices[i] + 1, "\n");
+	}
+	file->Write("  reflectType:"); file->WriteInt(sh.reflectType, "\n");
+	file->Write("  sticking:"); file->WriteDouble(sh.sticking, "\n");
+
+	if (sh.reflectType >= 10) { //material reflection
+		file->Write("  materialName:"); file->Write(materials[sh.reflectType - 10].name + "\n");
+	}
+
+	file->Write("  doScattering:"); file->WriteInt(sh.doScattering, "\n");
+	file->Write("  rmsRoughness:"); file->WriteDouble(sh.rmsRoughness, "\n");
+	file->Write("  autoCorrLength:"); file->WriteDouble(sh.autoCorrLength, "\n");
+
+	file->Write("  opacity:"); file->WriteDouble(sh.opacity, "\n");
+	file->Write("  profileType:"); file->WriteInt(sh.profileType, "\n");
+	file->Write("  hasSpectrum:"); file->WriteInt(sh.hasSpectrum, "\n");
+	file->Write("  superDest:"); file->WriteInt(sh.superDest, "\n");
+	file->Write("  superIdx:"); file->WriteInt(sh.superIdx, "\n");
+	file->Write("  is2sided:"); file->WriteInt(sh.is2sided, "\n");
+	file->Write("  mesh:"); file->WriteInt((mesh != NULL), "\n");
+	file->Write("  texDimX:"); file->WriteDouble(sh.texWidthD, "\n");
+	file->Write("  texDimY:"); file->WriteDouble(sh.texHeightD, "\n");
+	file->Write("  countAbs:"); file->WriteInt(sh.countAbs, "\n");
+	file->Write("  countRefl:"); file->WriteInt(sh.countRefl, "\n");
+	file->Write("  countTrans:"); file->WriteInt(sh.countTrans, "\n");
+	file->Write("  nbAbs:"); file->WriteLLong(sh.counter.nbAbsorbed, "\n");
+	file->Write("  nbHit:"); file->WriteLLong(sh.counter.nbHit, "\n");
+	file->Write("  fluxAbs:"); file->WriteDouble(sh.counter.fluxAbs, "\n");
+	file->Write("  powerAbs:"); file->WriteDouble(sh.counter.powerAbs, "\n");
+	file->Write("  countDirection:"); file->WriteInt(sh.countDirection, "\n");
+	file->Write("  textureVisible:"); file->WriteInt(textureVisible, "\n");
+	file->Write("  volumeVisible:"); file->WriteInt(volumeVisible, "\n");
+	file->Write("  teleportDest:"); file->WriteInt(sh.teleportDest, "\n");
+
+	file->Write("}\n");
 }
-void Facet::LoadSYN(FileReader *file,int version,int nbVertex) {
+void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, int version, int nbVertex) {
 
-  file->ReadKeyword("indices");file->ReadKeyword(":");
-  for(int i=0;i<sh.nbIndex;i++) {
-    indices[i] = file->ReadInt()-1;
-    if( indices[i]>=nbVertex )
-      throw Error(file->MakeError("Facet index out of bounds"));
-  }
+	file->ReadKeyword("indices"); file->ReadKeyword(":");
+	for (int i = 0; i < sh.nbIndex; i++) {
+		indices[i] = file->ReadInt() - 1;
+		if (indices[i] >= nbVertex)
+			throw Error(file->MakeError("Facet index out of bounds"));
+	}
 
-  file->ReadKeyword("sticking");file->ReadKeyword(":");
-  sh.sticking = file->ReadDouble();
-  if (version>=4) {
-	  file->ReadKeyword("roughness");file->ReadKeyword(":");
-	  sh.roughness = file->ReadDouble();
-  }
-  file->ReadKeyword("opacity");file->ReadKeyword(":");
-  sh.opacity = file->ReadDouble();
-  file->ReadKeyword("reflectType");file->ReadKeyword(":");
-  sh.reflectType = file->ReadInt();
-  file->ReadKeyword("profileType");file->ReadKeyword(":");
-  sh.profileType = file->ReadInt();
-  file->ReadKeyword("hasSpectrum");file->ReadKeyword(":");
-  sh.hasSpectrum = file->ReadInt();
-  file->ReadKeyword("superDest");file->ReadKeyword(":");
-  sh.superDest = file->ReadInt();
-  file->ReadKeyword("superIdx");file->ReadKeyword(":");
-  sh.superIdx = file->ReadInt();
-  file->ReadKeyword("is2sided");file->ReadKeyword(":");
-  sh.is2sided = file->ReadInt();
-  file->ReadKeyword("mesh");file->ReadKeyword(":");
-  hasMesh = file->ReadInt();
-  file->ReadKeyword("texDimX");file->ReadKeyword(":");
-  sh.texWidthD = file->ReadDouble();
-  file->ReadKeyword("texDimY");file->ReadKeyword(":");
-  sh.texHeightD = file->ReadDouble();
-  if (version<3) {
-	  file->ReadKeyword("countDes");file->ReadKeyword(":");
-	  file->ReadInt();
-  }
-  file->ReadKeyword("countAbs");file->ReadKeyword(":");
-  sh.countAbs = file->ReadInt();
-  file->ReadKeyword("countRefl");file->ReadKeyword(":");
-  sh.countRefl = file->ReadInt();
-  file->ReadKeyword("countTrans");file->ReadKeyword(":");
-  sh.countTrans = file->ReadInt();
-  file->ReadKeyword("nbAbs");file->ReadKeyword(":");
-  sh.counter.nbAbsorbed = file->ReadLLong();
-  if (version<3) {
-	  file->ReadKeyword("nbDes");file->ReadKeyword(":");
-	  sh.counter.nbDesorbed = file->ReadLLong();
-  }
-  file->ReadKeyword("nbHit");file->ReadKeyword(":");
-  sh.counter.nbHit = file->ReadLLong();
-  if (version>=3) {
-	  file->ReadKeyword("fluxAbs");file->ReadKeyword(":");
-	  sh.counter.fluxAbs = file->ReadDouble();
-	  file->ReadKeyword("powerAbs");file->ReadKeyword(":");
-	  sh.counter.powerAbs = file->ReadDouble();
-  }
-  file->ReadKeyword("countDirection");file->ReadKeyword(":");
-  sh.countDirection = file->ReadInt();
-  file->ReadKeyword("textureVisible");file->ReadKeyword(":");
-  textureVisible = file->ReadInt();
-  file->ReadKeyword("volumeVisible");file->ReadKeyword(":");
-  volumeVisible = file->ReadInt();
-  file->ReadKeyword("teleportDest");file->ReadKeyword(":");
-  sh.teleportDest = file->ReadInt();
+	if (version >= 9) { //new reflection model
+		file->ReadKeyword("reflectType"); file->ReadKeyword(":");
+		sh.reflectType = file->ReadInt();
+		file->ReadKeyword("sticking"); file->ReadKeyword(":");
+		sh.sticking = file->ReadDouble();
 
-  UpdateFlags();
+		if (sh.reflectType >= 2) { //Material reflection: update index from the material's name
+			file->ReadKeyword("materialName"); file->ReadKeyword(":"); std::string matName = file->ReadWord();
+			sh.reflectType = 9; //Invalid material, unless we find it below
+			for (size_t i = 0; i < materials.size(); i++) {
+				if (materials[i].name == matName) {
+					sh.reflectType = 10 + i;
+					break;
+				}
+			}
+		}
+		file->ReadKeyword("doScattering"); file->ReadKeyword(":");
+		sh.doScattering = file->ReadInt();
+		file->ReadKeyword("rmsRoughness"); file->ReadKeyword(":");
+		sh.rmsRoughness = file->ReadDouble();
+		file->ReadKeyword("autoCorrLength"); file->ReadKeyword(":");
+		sh.autoCorrLength = file->ReadDouble();
+		file->ReadKeyword("opacity"); file->ReadKeyword(":");
+		sh.opacity = file->ReadDouble();
+	}
+	else { //legacy reflection model
+		file->ReadKeyword("sticking"); file->ReadKeyword(":");
+		sh.sticking = file->ReadDouble();
+		if (version >= 4) {
+			file->ReadKeyword("roughness"); file->ReadKeyword(":");
+			sh.autoCorrLength = 100.0E-9; //We need a number here
+			sh.rmsRoughness = file->ReadDouble()*sh.autoCorrLength;
+		}
+		file->ReadKeyword("opacity"); file->ReadKeyword(":");
+		sh.opacity = file->ReadDouble();
+		file->ReadKeyword("reflectType"); file->ReadKeyword(":");
+		sh.reflectType = file->ReadInt();
+		if (sh.reflectType >= 2) { //material reflection
+			if (sh.reflectType - 2 < materials.size()) { //material exists
+				sh.reflectType += 8; //Material reflections now run from 10 upwards
+			}
+			else { //invalid material
+				sh.reflectType = 9; //invalid material
+			}
+			sh.doScattering = TRUE;
+		}
+		else { //diffuse or mirror reflection
+			sh.doScattering = FALSE;
+		}
+	}
+	file->ReadKeyword("profileType"); file->ReadKeyword(":");
+	sh.profileType = file->ReadInt();
+	file->ReadKeyword("hasSpectrum"); file->ReadKeyword(":");
+	sh.hasSpectrum = file->ReadInt();
+	file->ReadKeyword("superDest"); file->ReadKeyword(":");
+	sh.superDest = file->ReadInt();
+	file->ReadKeyword("superIdx"); file->ReadKeyword(":");
+	sh.superIdx = file->ReadInt();
+	file->ReadKeyword("is2sided"); file->ReadKeyword(":");
+	sh.is2sided = file->ReadInt();
+	file->ReadKeyword("mesh"); file->ReadKeyword(":");
+	hasMesh = file->ReadInt();
+	file->ReadKeyword("texDimX"); file->ReadKeyword(":");
+	sh.texWidthD = file->ReadDouble();
+	file->ReadKeyword("texDimY"); file->ReadKeyword(":");
+	sh.texHeightD = file->ReadDouble();
+	if (version < 3) {
+		file->ReadKeyword("countDes"); file->ReadKeyword(":");
+		file->ReadInt();
+	}
+	file->ReadKeyword("countAbs"); file->ReadKeyword(":");
+	sh.countAbs = file->ReadInt();
+	file->ReadKeyword("countRefl"); file->ReadKeyword(":");
+	sh.countRefl = file->ReadInt();
+	file->ReadKeyword("countTrans"); file->ReadKeyword(":");
+	sh.countTrans = file->ReadInt();
+	file->ReadKeyword("nbAbs"); file->ReadKeyword(":");
+	sh.counter.nbAbsorbed = file->ReadLLong();
+	if (version < 3) {
+		file->ReadKeyword("nbDes"); file->ReadKeyword(":");
+		sh.counter.nbDesorbed = file->ReadLLong();
+	}
+	file->ReadKeyword("nbHit"); file->ReadKeyword(":");
+	sh.counter.nbHit = file->ReadLLong();
+	if (version >= 3) {
+		file->ReadKeyword("fluxAbs"); file->ReadKeyword(":");
+		sh.counter.fluxAbs = file->ReadDouble();
+		file->ReadKeyword("powerAbs"); file->ReadKeyword(":");
+		sh.counter.powerAbs = file->ReadDouble();
+	}
+	file->ReadKeyword("countDirection"); file->ReadKeyword(":");
+	sh.countDirection = file->ReadInt();
+	file->ReadKeyword("textureVisible"); file->ReadKeyword(":");
+	textureVisible = file->ReadInt();
+	file->ReadKeyword("volumeVisible"); file->ReadKeyword(":");
+	volumeVisible = file->ReadInt();
+	file->ReadKeyword("teleportDest"); file->ReadKeyword(":");
+	sh.teleportDest = file->ReadInt();
+
+	UpdateFlags();
 
 }
 
