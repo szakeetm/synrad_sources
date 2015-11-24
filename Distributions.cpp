@@ -768,7 +768,7 @@ std::vector<double> Material::Interpolate(const double &energy, const double &an
 		double interpolatedReflForLowerAngle = WEIGH(reflVals[energyLowerIndex][angleLowerIndex][comp], reflVals[energyLowerIndex + 1][angleLowerIndex][comp], energyOvershoot / energyDelta);
 		double interpolatedReflForHigherAngle = WEIGH(reflVals[energyLowerIndex][angleLowerIndex + 1][comp], reflVals[energyLowerIndex + 1][angleLowerIndex + 1][comp], energyOvershoot / energyDelta);
 		double refl = WEIGH(interpolatedReflForLowerAngle, interpolatedReflForHigherAngle, angleOvershoot / angleDelta);
-		SATURATE(refl, 0.0, 100.0);
+		SATURATE(refl, 0.0, 1.0);
 		interpRefl.push_back(refl);
 	}
 	return interpRefl;
