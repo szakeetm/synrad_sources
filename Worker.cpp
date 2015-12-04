@@ -608,7 +608,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 							memcpy(tmp,fileName,filebegin-fileName);
 							tmp[(int)(filebegin-fileName)]=NULL;
 							toLoad=tmp;*/
-							toLoad = FileUtils::GetPath(fileName)+"\\";
+							toLoad = FileUtils::GetPath(fileName);
 							toLoad+=regionFileName;
 						}
 						progressDlg->SetMessage("Adding "+regionFileName+"...");

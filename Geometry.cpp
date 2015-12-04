@@ -1505,7 +1505,7 @@ void Geometry::LoadSTR(FileReader *file, GLProgress *prg) {
 		char *e = strrchr(strName[n], '.');
 		if (e) *e = 0;
 
-		sprintf(fName, "%s\\%s", nPath, sName);
+		sprintf(fName, "%s%s", nPath, sName);
 		if (FileUtils::Exist(fName)) {
 			fr = new FileReader(fName);
 			strcpy(strPath, nPath);

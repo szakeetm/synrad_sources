@@ -1122,7 +1122,7 @@ void Region_full::LoadParam(FileReader *file){
 					BXYfileName.assign(tmp);
 				else {//not found, look for it in current directory (syn files)				
 					std::string path=FileUtils::GetPath(file->GetName());
-					sprintf(tmp,"%s\\%s",path.c_str(),tmp2);
+					sprintf(tmp,"%s%s",path.c_str(),tmp2);
 					if (FileUtils::Exist(tmp)) //file found in current directory
 						BXYfileName.assign(tmp);
 					else {//not in tmp, nor in current, error.
@@ -1171,7 +1171,7 @@ void Region_full::LoadParam(FileReader *file){
 					MagFileNamePtr[i]->assign(tmp);
 				else {//not found, look for it in current directory (syn files)
 					std::string path=FileUtils::GetPath(file->GetName());
-					sprintf(tmp,"%s\\%s",path.c_str(),tmp2);
+					sprintf(tmp,"%s%s",path.c_str(),tmp2);
 					if (FileUtils::Exist(tmp)) //file found in current directory
 						MagFileNamePtr[i]->assign(tmp);
 					else {//not in tmp, nor in current, error.
