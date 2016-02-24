@@ -1540,6 +1540,9 @@ void Facet::Copy(Facet *f, BOOL copyMesh) {
 	sh.opacity = f->sh.opacity;
 	sh.area = f->sh.area;
 	sh.reflectType = f->sh.reflectType;
+	sh.doScattering = f->sh.doScattering;
+	sh.rmsRoughness = f->sh.rmsRoughness;
+	sh.autoCorrLength = f->sh.autoCorrLength;
 	if (copyMesh) sh.profileType = f->sh.profileType;
 	else sh.profileType = REC_NONE;
 	sh.is2sided = f->sh.is2sided;

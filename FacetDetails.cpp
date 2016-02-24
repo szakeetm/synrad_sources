@@ -252,7 +252,7 @@ char *FacetDetails::FormatCell(int idx,Facet *f,int mode) {
 	case 5:
 		if (f->sh.reflectType == 0) sprintf(ret, "Diffuse");
 		else if (f->sh.reflectType == 1) sprintf(ret, "Mirror");
-		else sprintf(ret,"%s",worker->materials[f->sh.reflectType-2].name.c_str());
+		else sprintf(ret,"%s",worker->materials[f->sh.reflectType-10].name.c_str());
 		break;
 	case 6:
 		sprintf(ret,"%g",f->sh.rmsRoughness);

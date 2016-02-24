@@ -1207,7 +1207,9 @@ void RegionEditor::ApplyChanges() {
 			FileReader MAGfile(MAGfileXtext->GetText());
 			*(cr->Bx_distr)=cr->LoadMAGFile(&MAGfile,&cr->Bx_dir,&cr->Bx_period,&cr->Bx_phase,cr->Bx_mode);
 		} catch(Error &e) {
-			throw e;
+			char tmp[256];
+			sprintf(tmp, "Couldn't load MAG file. Error message:\n%s", e.GetMsg());
+			GLMessageBox::Display(tmp, "MAG file problem", GLDLG_OK, GLDLG_ICONERROR);
 			return;
 		}
 	}
@@ -1222,7 +1224,9 @@ void RegionEditor::ApplyChanges() {
 			FileReader MAGfile(MAGfileYtext->GetText());
 			*(cr->By_distr)=cr->LoadMAGFile(&MAGfile,&cr->By_dir,&cr->By_period,&cr->By_phase,cr->By_mode);
 		} catch(Error &e) {
-			throw e;
+			char tmp[256];
+			sprintf(tmp, "Couldn't load MAG file. Error message:\n%s", e.GetMsg());
+			GLMessageBox::Display(tmp, "MAG file problem", GLDLG_OK, GLDLG_ICONERROR);
 			return;
 		}
 	}
@@ -1237,7 +1241,9 @@ void RegionEditor::ApplyChanges() {
 			FileReader MAGfile(MAGfileZtext->GetText());
 			*(cr->Bz_distr)=cr->LoadMAGFile(&MAGfile,&cr->Bz_dir,&cr->Bz_period,&cr->Bz_phase,cr->Bz_mode);
 		} catch(Error &e) {
-			throw e;
+			char tmp[256];
+			sprintf(tmp, "Couldn't load MAG file. Error message:\n%s", e.GetMsg());
+			GLMessageBox::Display(tmp, "MAG file problem", GLDLG_OK, GLDLG_ICONERROR);
 			return;
 		}
 	}

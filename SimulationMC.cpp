@@ -388,7 +388,7 @@ BOOL SimulationMCStep(int nbStep) {
 	// Perform simulation steps
 	for (i = 0; i < nbStep; i++) {
 
-		found = Intersect(&(sHandle->pPos), &(sHandle->pDir), &d, &collidedFacet, sHandle->lastHit);
+		found = Intersect(&(sHandle->pPos), &(sHandle->pDir), &d, &collidedFacet, sHandle->lastHit); //May decide reflection type
 
 		if (found) {
 
@@ -428,10 +428,10 @@ BOOL SimulationMCStep(int nbStep) {
 				double theta, phi;
 				CartesianToPolar(collidedFacet, &theta, &phi);
 
-				double stickingProbability;
+				double stickingProbability, random;
+				double nonTransparentProbability = 1.0;
 				BOOL complexScattering = FALSE; //forward/diffuse/back/transparent/stick
 				std::vector<double> materialReflProbabilities;
-
 				if (sHandle->dF == 0.0 || sHandle->dP == 0.0 || sHandle->energy < 1E-3)
 					stickingProbability = 1.0; //stick non real photons (from beam beginning)
 				else if (collidedFacet->sh.reflectType < 2) //Diffuse or Mirror
@@ -440,32 +440,38 @@ BOOL SimulationMCStep(int nbStep) {
 					Material *mat = &(sHandle->materials[collidedFacet->sh.reflectType - 10]);
 					complexScattering = mat->hasBackscattering;
 					materialReflProbabilities = mat->Interpolate(sHandle->energy, abs(theta - PI / 2));
+
+					//At this point we already know that it's not a transparent pass (Intersect() routine has ran)
+
+					if (complexScattering) nonTransparentProbability -= materialReflProbabilities[3];
+
 					stickingProbability = 1.0;
-					for (double component : materialReflProbabilities)
-						stickingProbability -= component;	//1-all other possibilities
+					size_t nbComponents = complexScattering ? 3 : 1;
+					for (size_t i = 0; i < nbComponents; i++) //exclude transparent pass probability
+						stickingProbability -= materialReflProbabilities[i];
 				}
 				if (!sHandle->lowFluxMode || complexScattering) {
+					int reflType;
 					//Do the original bounce or stick algorithm
-					double random = rnd();
-					if (random < stickingProbability) {
-						//Stick
-						if (!Stick(collidedFacet)) return FALSE; //Record absorption and try to launch a new particle from source
+					random = rnd()*nonTransparentProbability;
+					if (random >(nonTransparentProbability - stickingProbability)) reflType = REFL_ABSORB;
+					else if (!complexScattering) {
+						reflType = REFL_FORWARD; //Not absorbed, so reflected
 					}
-					else {
-						//Doesn't stick, decide what happens
-						int reflType;
-						if (!complexScattering) reflType = REFL_FORWARD;
-						else {
-							if (random < materialReflProbabilities[0]) reflType = REFL_FORWARD; //forward reflection
-							else if (random < (materialReflProbabilities[0] + materialReflProbabilities[1])) reflType = REFL_DIFFUSE;
-							else reflType = REFL_BACK; //trasparent already excluded in Intersect() routine, and in this "else" branch we know that it doesn't stick
-						}
-						PerformBounce(collidedFacet, theta, phi, reflType);
+					else { //complex scattering
+
+						if (random < materialReflProbabilities[0]) reflType = REFL_FORWARD; //forward reflection
+						else if (random < (materialReflProbabilities[0] + materialReflProbabilities[1])) reflType = REFL_DIFFUSE;
+						else if (random < (materialReflProbabilities[0] + materialReflProbabilities[1] + materialReflProbabilities[2])) reflType = REFL_BACK;
+						else reflType = REFL_BACK; //trasparent already excluded in Intersect() routine, and in this "else" branch we know that it doesn't stick
 					}
+					if (reflType == REFL_ABSORB) { if (!Stick(collidedFacet)) return FALSE; }
+					else PerformBounce(collidedFacet, theta, phi, reflType);
 				}
 				else {
 					//Low flux mode and simple scattering:
-					//modified Stick() routine to record only the absorbed part						
+					//modified Stick() routine to record only the absorbed part	
+					//No transparent pass in this case
 					collidedFacet->sh.counter.fluxAbs += sHandle->dF*stickingProbability;
 					collidedFacet->sh.counter.powerAbs += sHandle->dP*stickingProbability;
 					if (collidedFacet->hits_MC && collidedFacet->sh.countAbs) RecordHitOnTexture(collidedFacet,
@@ -723,7 +729,7 @@ BOOL StartFromSource() {
 
 void PerformBounce(FACET *iFacet, const double &inTheta, const double &inPhi, const int &reflType) {
 
-	double outTheta, outPhi; //perform bounce wothout scattering, will perturbate these angles later if it's a rough surface
+	double outTheta, outPhi; //perform bounce without scattering, will perturbate these angles later if it's a rough surface
 	if (iFacet->sh.reflectType == REF_DIFFUSE) {
 		outTheta = acos(sqrt(rnd()));
 		outPhi = rnd()*2.0*PI;
@@ -746,14 +752,15 @@ void PerformBounce(FACET *iFacet, const double &inTheta, const double &inPhi, co
 			outTheta = PI + inTheta;
 			outPhi = inPhi;
 			break;
-		} //end switch
+		} //end switch (transparent pass treated at the Intersect() routine
 	} //end material reflection
 
 	if (iFacet->sh.doScattering) {
 		double incidentAngle = abs(inTheta);
+		if (incidentAngle > PI / 2) incidentAngle = PI - incidentAngle; //coming from the normal side
 		double y = cos(incidentAngle);
 		double wavelength = 3E8*6.626E-34 / (sHandle->energy*1.6E-19); //energy[eV] to wavelength[m]
-		double specularReflProbability = exp(-Sqr(4 * PI*iFacet->sh.rmsRoughness*y / wavelength)); //See "Measurements of x-ray scattering..." by Dugan, Sonnad, Cimino, Ishibashi, Scafers, eq.2
+		double specularReflProbability = exp(-Sqr(4 * PI*iFacet->sh.rmsRoughness*y / wavelength)); //Debye-Wallers factor, See "Measurements of x-ray scattering..." by Dugan, Sonnad, Cimino, Ishibashi, Scafers, eq.2
 		BOOL specularReflection = rnd() < specularReflProbability;
 		if (!specularReflection) {
 			//Smooth surface reflection performed, now let's perturbate the angles
@@ -764,7 +771,8 @@ void PerformBounce(FACET *iFacet, const double &inTheta, const double &inPhi, co
 			do {
 				double dTheta = Gaussian(2.9264*onePerTau); //Grazing angle perturbation, depends only on roughness, must assure it doesn't go against the surface
 				outThetaPerturbated = outTheta + dTheta;
-			} while ((outTheta < PI / 2) != ((outThetaPerturbated < PI / 2) && nbTries < 10));
+				nbTries++;
+			} while (((outTheta < PI / 2) != (outThetaPerturbated < PI / 2)) && nbTries < 10);
 			double dPhi = Gaussian((2.80657*pow(incidentAngle, -1.00238) - 1.00293*pow(incidentAngle, 1.22425))*onePerTau); //Out-of-plane angle perturbation, depends on roughness and incident angle
 			outTheta = outThetaPerturbated;
 			outPhi += dPhi;

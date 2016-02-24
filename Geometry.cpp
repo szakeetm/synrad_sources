@@ -1559,7 +1559,7 @@ void Geometry::LoadSTL(FileReader *file, GLProgress *prg, double scaleFactor) {
 		file->JumpSection("endfacet");
 		w = file->ReadWord();
 	}
-	if (strcmp(w, "endsolid") != 0) throw Error("Unexpected or not supported STL keyword, 'endsolid' required");
+	if (strcmp(w, "endsolid") != 0) throw Error("Unexpected or not supported STL keyword, 'endsolid' required\nMaybe the STL file was saved in binary instead of ASCII format?");
 
 	// Allocate mem
 	sh.nbVertex = 3 * sh.nbFacet;
@@ -1928,8 +1928,8 @@ void Geometry::InsertGEOGeom(FileReader *file, int *nbVertex, int *nbFacet, VERT
 			char tmpExpr[512];
 			strcpy(tmpName, file->ReadString());
 			strcpy(tmpExpr, file->ReadString());
-			mApp->OffsetFormula(tmpExpr, sh.nbFacet);
-			mApp->AddFormula(tmpName, tmpExpr);
+			//mApp->OffsetFormula(tmpExpr, sh.nbFacet-1);
+			//mApp->AddFormula(tmpName, tmpExpr);
 		}
 		file->ReadKeyword("}");
 
@@ -4024,11 +4024,8 @@ void Geometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *pr
 	if (isSynradFile) {
 		xml_node formulaNode = interfNode.child("Formulas");
 		for (xml_node newFormula : formulaNode.children("Formula")) {
-			char tmpExpr[512];
-			strcpy(tmpExpr, newFormula.attribute("expression").as_string());
-			mApp->OffsetFormula(tmpExpr, sh.nbFacet);
 			mApp->AddFormula(newFormula.attribute("name").as_string(),
-				tmpExpr);
+				newFormula.attribute("expression").as_string());
 		}
 	}
 

@@ -62,7 +62,7 @@ public:
   char *GetShortFileName();
   char *GetShortFileName(char* longFileName);
   void  SetFileName(char *fileName);
-  void SetProcNumber(int n);// Set number of processes [1..16] (throws Error)
+  void SetProcNumber(int n);// Set number of processes [1..32] (throws Error)
   int GetProcNumber();  // Get number of processes
   void SetMaxDesorption(llong max);// Set the number of maximum desorption
   DWORD GetPID(int prIdx);// Get PID

@@ -26,7 +26,7 @@
 
 #define NBHLEAK     2048  // Leak history max length
 #define NBHHIT      2048  // Max. displayed number of lines and Porto (OPO)hits.
-#define MAX_PROCESS 16    // Maximum number of process
+#define MAX_PROCESS 32    // Maximum number of process
 
 typedef  struct {
     // Counts

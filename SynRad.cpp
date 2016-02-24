@@ -269,7 +269,9 @@ SynRad::SynRad()
 #ifdef _DEBUG
 	nbProc = 1;
 #else
-	nbProc = numCPU;
+	int nc = numCPU;
+	SATURATE(nc, 1, MIN(MAX_PROCESS, 16));
+	nbProc = nc;
 #endif
 
 	curViewer = 0;

@@ -112,7 +112,7 @@ Vector& Vector::operator=(const Vector &src){
 }
 
 double Trajectory_Point::Critical_Energy(const double &gamma) {
-	double crit_en=2.959E-5*pow(gamma,3)/rho.Norme();
+	double crit_en=2.959E-5*pow(gamma,3)/rho.Norme(); //rho in cm...
 	//if (!(crit_en==crit_en)) __debugbreak();
 	return crit_en;
 }
