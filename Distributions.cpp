@@ -784,7 +784,7 @@ template <typename T> int binary_search(double key, T A, int size)
 	{
 		// calculate the midpoint for roughly equal partition
 		int imid = (imin + imax) / 2;
-		if (imid == size - 1 || imid == 0 || (A[imid] < key && key < A[imid + 1]))
+		if (imid == size - 1 || imid == 0 || (A[imid] <= key && key < A[imid + 1]))
 			// key found at index imid
 			return imid;
 		// determine which subarray to search

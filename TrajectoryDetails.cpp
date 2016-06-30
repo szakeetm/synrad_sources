@@ -412,7 +412,7 @@ void TrajectoryDetails::UpdateTable() {
 	pointList->SetColumnAligns(tmpAlign);
 
 	for (int pointId = 0; pointId < nbPoints; pointId += freq) {
-		GenPhoton photon = GeneratePhoton(pointId, &worker->regions[displayedRegion], worker->generation_mode, worker->psi_distr, worker->chi_distr,pointId == 0);
+ 		GenPhoton photon = GeneratePhoton(pointId, &worker->regions[displayedRegion], worker->generation_mode, worker->psi_distr, worker->chi_distr,pointId == 0);
 		updatePrg->SetProgress((double)pointId / (double)nbPoints);
 		for (int j = 0; j < nbCol; j++)
 			pointList->SetValueAt(j, (int)((double)pointId / (double)freq), FormatCell(pointId, shown[j], &photon));
