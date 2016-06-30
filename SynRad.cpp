@@ -201,7 +201,7 @@ INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
 
 	if (!mApp->Create(1024, 768, FALSE)) {
 		char *logs = GLToolkit::GetLogs();
-#ifdef WIN32
+#ifdef WIN
 		if (logs) MessageBox(NULL, logs, "Synrad [Fatal error]", MB_OK);
 #else
 		if (logs) {

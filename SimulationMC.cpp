@@ -56,7 +56,7 @@ void PolarToCartesian(FACET *iFacet, double theta, double phi, BOOL reverse, dou
 	// ! See Geometry::InitializeGeometry() for further informations on the (U,V,N) basis !
 	// (nU,nV,N) and (x,y,z) are both left handed
 
-	/*#ifdef WIN32
+	/*#ifdef WIN
 	_asm {                    // FPU stack
 	fld qword ptr [theta]
 	fsincos                 // cos(t)        sin(t)

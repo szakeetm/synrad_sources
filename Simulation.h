@@ -20,8 +20,7 @@
 typedef int BOOL;
 #define MAX(x,y) (((x)<(y))?(y):(x))
 #define MIN(x,y) (((x)<(y))?(x):(y))
-#define TRUE  1
-#define FALSE 0
+
 #define SAFE_FREE(x) if(x) { free(x);x=NULL; }
 #define SATURATE(x,min,max) {if(x<(min)) x=(min); if(x>(max)) x=(max);}
 #define MAX_STRUCT 512

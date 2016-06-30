@@ -18,12 +18,13 @@
 
 #include "File.h"
 #include <string.h>
+#include "GLApp\GLTypes.h"
 
-#ifdef WIN32
+#ifdef WIN
 #include <direct.h>
 #include <io.h>
 #include <iostream>
-#include "GLApp\GLMessageBox.h"
+//#include "GLApp\GLMessageBox.h"
 #endif
 
 #define MAX_WORD_LENGTH 65536 //expected length of the longest line
@@ -407,7 +408,7 @@ void FileWriter::WriteInt(const int &v,char *sep) {
 }
 
 void FileWriter::WriteLLong(const llong &v,char *sep) {
-#ifdef WIN32
+#ifdef WIN
   if( !fprintf(file,"%I64d",v) )
     throw Error("Error while writing to file");
 #else

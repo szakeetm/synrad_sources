@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#ifdef WIN32
+#ifdef WIN
 #include <direct.h>
 #include <io.h>
 #include <windows.h>
@@ -56,7 +56,7 @@ int          nbPath = 0;
 char        *fileHistory[MAX_HIST];
 int          nbFile = 0;
 
-#ifdef WIN32
+#ifdef WIN
 char        *drivePaths[MAX_DRIVE];
 char        *driveNames[MAX_DRIVE];
 int          nbDrive = 0;
@@ -280,7 +280,7 @@ void GLFileBox::ProcessMessage(GLComponent *src,int message) {
 
 BOOL GLFileBox::CheckDirectory(char *dirName) {
 
-#ifdef WIN32
+#ifdef WIN
 
   if(strcmp(dirName,":B:My Computer")==0)
     return TRUE;
@@ -351,7 +351,7 @@ FILENAME *GLFileBox::OpenFile(char *path,char *fileName,char *title,const char *
 	/* Original cross-platform OpenGl OpenFile dialog. Replaced with Windows file dialog
   if(!title) title = "Open File";
 
-#ifdef WIN32
+#ifdef WIN
   if(!path || strcmp(path,".")==0) path=_getcwd(NULL,0);
   GLFileBox::InitDrivePaths();
 #endif
@@ -469,7 +469,7 @@ FILENAME *GLFileBox::SaveFile(char *path,char *fileName,char *title,const char *
   /* Old cross-platform OpenGl SaveFile dialog, replaced by windows dialog
   if(!title) title = "Save File";
 
-#ifdef WIN32
+#ifdef WIN
   if(!path || strcmp(path,".")==0) path=_getcwd(NULL,0);
   GLFileBox::InitDrivePaths();
 #endif
@@ -495,7 +495,7 @@ FILENAME *GLFileBox::SaveFile(char *path,char *fileName,char *title,const char *
 // --------------------------------------------------------------
 
 void GLFileBox::InitDrivePaths() {
-#ifdef WIN32
+#ifdef WIN
 
   TCHAR szPath[MAX_PATH];
   TCHAR sDrive[3];
@@ -640,7 +640,7 @@ void GLFileBox::AddToPathHist(char *path) {
   nbPath++;
 
   // Update the combo
-#ifdef WIN32
+#ifdef WIN
   pathText->SetSize(nbPath+1);
   pathText->SetValueAt(0,":B:My Computer");
   for(int i=1;i<=nbPath;i++) {
@@ -753,7 +753,7 @@ void GLFileBox::UpdateFileList(char *path) {
   vector<string> files;
   int nbFile = 0;
 
-#ifdef WIN32
+#ifdef WIN
 
   if( strcmp(path,":B:My Computer")==0 ) {
 

@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#ifdef WIN32
+#ifdef WIN
 
  #include <windows.h>
 

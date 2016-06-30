@@ -65,6 +65,8 @@
 #define GL_OK   1
 #define GL_FAIL 0
 #define PI 3.14159265358979323846
+#define TRUE  1
+#define FALSE 0
 
 // Type definitions
 
