@@ -464,18 +464,15 @@ size_t Geometry::GetGeometrySize(std::vector<Region_full> *regions, std::vector<
 	// Compute number of bytes allocated
 	size_t memoryUsage = 0;
 	memoryUsage += sizeof(SHGEOM);
-	memoryUsage += sh.nbVertex * sizeof(VERTEX3D);
-	for (int i = 0; i < sh.nbFacet; i++) {
-		memoryUsage += facets[i]->GetGeometrySize();
-	}
+	
 	//Regions
-	memoryUsage += (int)(*regions).size()*sizeof(Region_mathonly);
+	memoryUsage += (*regions).size()*sizeof(Region_mathonly);
 	for (int i = 0; i < (int)(*regions).size(); i++) {
 		memoryUsage += sizeof(Trajectory_Point)*(*regions)[i].Points.size();
 		memoryUsage += 2 * sizeof(double)*(*regions)[i].Bx_distr->size;
 		memoryUsage += 2 * sizeof(double)*(*regions)[i].By_distr->size;
 		memoryUsage += 2 * sizeof(double)*(*regions)[i].Bz_distr->size;
-		memoryUsage += 6 * sizeof(double)*(*regions)[i].nbDistr_BXY;
+		memoryUsage += 6 * sizeof(double)*(*regions)[i].nbDistr_BXY; //Coord, BetaX, BetaY, EtaX, EtaX' , E_spread
 	}
 	//Material library
 	memoryUsage += sizeof(size_t); //number of (*materials)
@@ -489,11 +486,17 @@ size_t Geometry::GetGeometrySize(std::vector<Region_full> *regions, std::vector<
 		memoryUsage += ((*materials)[i].angleVals.size())*(*materials)[i].energyVals.size()*nbComponents*sizeof(double);//copying reflectivity probabilities (cells)
 	}
 
-	memoryUsage += sizeof(int); //psi number of rows
-	if (psi_distr.size() > 0) memoryUsage += psi_distr.size()*(sizeof(int) + psi_distr[0].size()*sizeof(double));
+	memoryUsage += sizeof(size_t); //psi number of rows
+	if (psi_distr.size() > 0) memoryUsage += psi_distr.size()*(sizeof(size_t) + psi_distr[0].size()*sizeof(double));
 
-	memoryUsage += sizeof(int); //chi number of rows
-	if (chi_distr.size() > 0) memoryUsage += chi_distr.size()*(sizeof(int) + chi_distr[0].size()*sizeof(double));
+	memoryUsage += sizeof(size_t); //chi number of rows
+	if (chi_distr.size() > 0) memoryUsage += chi_distr.size()*(sizeof(size_t) + chi_distr[0].size()*sizeof(double));
+
+	memoryUsage += sh.nbVertex * sizeof(VERTEX3D);
+	
+	for (int i = 0; i < sh.nbFacet; i++) {
+		memoryUsage += facets[i]->GetGeometrySize();
+	}
 
 	return memoryUsage;
 }
