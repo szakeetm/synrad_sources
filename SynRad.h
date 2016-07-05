@@ -166,7 +166,7 @@ public:
 	void UpdateViewers();
 	void SetFacetSearchPrg(BOOL visible,char *text);
 	void DisplayCollapseDialog();
-	void ClearTraj();
+	void ClearRegions();
 	void RemoveRegion(int index);
 	void RenumberSelections(int startFacetId);
 	void NewRegion();

@@ -180,7 +180,7 @@ void TexturePlotter::UpdateTable() {
 		int textureSize_llong=w*h*sizeof(llong);
 		int profile_memory=PROFILE_SIZE*(2*sizeof(double)+sizeof(llong));
 		mapList->SetSize(w,h);
-		mapList->SetColumnAlign(ALIGN_CENTER);
+		mapList->SetAllColumnAlign(ALIGN_CENTER);
 
 
 		int mode = viewCombo->GetSelectedIndex();

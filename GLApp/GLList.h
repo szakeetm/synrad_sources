@@ -45,7 +45,7 @@ public:
 
   // Component methods
   void SetWorker(Worker *w);
-  void SetSize(int nbColumn,int nbRow,BOOL showProgress=FALSE);
+  void SetSize(int nbColumn, int nbRow, BOOL keepData = FALSE, BOOL showProgress = FALSE);
   void SetColumnLabels(char **names);
   void SetColumnLabel(int colId,char *name);
   void SetAutoColumnLabel(BOOL enable);
@@ -61,7 +61,7 @@ public:
   void AutoSizeColumn();
   void SetColumnAligns(int *aligns);
   void SetColumnAlign(int colId,int align);
-  void SetColumnAlign(int align);
+  void SetAllColumnAlign(int align);
   void SetColumnEditable(int *editables);
   BOOL GetSelectionBox(int *row,int *col,int *rowLength,int *colLength);
   void SetVScrollVisible(BOOL visible);
@@ -69,7 +69,7 @@ public:
   void SetSelectionMode(int mode);
   void GLList::SetSelectedCell(int column,int row);
   void SetCornerLabel(char *text);
-  void Clear(BOOL showProgress=FALSE);
+  void Clear(BOOL keepColumns = FALSE, BOOL showProgress = FALSE);
   void ResetValues();
   int  GetNbRow();
   int  GetNbColumn();
@@ -104,7 +104,8 @@ public:
   int GetValueInt(int row, int column);
   double GetValueDouble(int row, int column);
   void ReOrder();
-  void PasteClipboardText();
+  void PasteClipboardText(BOOL allowExpandRows, BOOL allowExpandColumns, int extraRowsAtEnd=0);
+  
 
   
   int   lastRowSel;

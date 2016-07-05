@@ -1845,7 +1845,7 @@ void Worker::RecalcRegion(int regionId) {
 void Worker::ClearRegions() {
 	//if ((int)regions.size()>0) regions.clear();
 	regions=std::vector<Region_full>();
-	geom->InitializeGeometry(); //recalculate bounding box
+	geom->InitializeGeometry(-1,TRUE); //recalculate bounding box
 	nbTrajPoints=0;
 	Reload();
 }

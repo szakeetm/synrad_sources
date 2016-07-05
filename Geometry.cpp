@@ -423,9 +423,11 @@ void Geometry::InitializeGeometry(int facet_number, BOOL BBOnly) {
 			// Detect orientation
 			f->DetectOrientation();
 
-			// Hit address
-			f->sh.hitOffset = fOffset;
-			fOffset += f->GetHitsSize();
+			if (facet_number == -1) {
+				// Hit address
+				f->sh.hitOffset = fOffset;
+				fOffset += f->GetHitsSize();
+			}
 
 			/*// Texture ratio //Caused U/V side flip
 			f->tRatio = f->sh.texWidthD / uD;*/

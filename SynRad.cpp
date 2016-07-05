@@ -1943,9 +1943,18 @@ void SynRad::UpdateFacetHits(BOOL all) {
 		// Facet list
 		if (geom->IsLoaded()) {
 
+
 			int sR, eR;
-			facetList->GetVisibleRows(&sR, &eR);
-			if (all) { sR = 0; eR = geom->GetNbFacet() - 1; }
+			if (all)
+			{
+				sR = 0;
+				eR = facetList->GetNbRow() - 1;
+			}
+			else
+			{
+				facetList->GetVisibleRows(&sR, &eR);
+			}
+
 			for (int i = sR; i <= eR; i++) {
 				int facetId = facetList->GetValueInt(i, 0) - 1;
 				if (facetId == -2) facetId = i;
@@ -2490,7 +2499,7 @@ void SynRad::LoadFile(char *fName) {
 		ClearFormula();
 		ClearAllSelections();
 		ClearAllViews();
-		ClearTraj();
+		ClearRegions();
 		worker.LoadGeometry(fullName);
 
 		Geometry *geom = worker.GetGeometry();
@@ -2638,15 +2647,16 @@ void SynRad::UpdateModelParams() {
 	Geometry *geom = worker.GetGeometry();
 	char tmp[256];
 	double sumArea = 0;
-	facetList->SetSize(5, geom->GetNbFacet(), TRUE);
+	facetList->SetSize(5, geom->GetNbFacet(), FALSE,TRUE);
 	facetList->SetColumnWidths((int*)cWidth);
 	facetList->SetColumnLabels((char **)cName);
+
 	UpdateFacetHits(TRUE);
 	AABB bb = geom->GetBB();
 
 	for (int i = 0; i < geom->GetNbFacet(); i++) {
 		Facet *f = geom->GetFacet(i);
-		if (f->sh.area > 0) sumArea += f->sh.area;
+		if (f->sh.area>0) sumArea += f->sh.area*(f->sh.is2sided ? 2.0 : 1.0);
 	}
 
 	sprintf(tmp, "V:%d F:%d Dim:(%g,%g,%g) Area:%g", geom->GetNbVertex(), geom->GetNbFacet(),
@@ -2838,7 +2848,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		case MENU_REGIONS_CLEARALL:
 			if (GLMessageBox::Display("Remove all magnetic regions?", "Question", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONINFO) == GLDLG_OK) {
 				if (worker.running) worker.Stop_Public();
-				ClearTraj();
+				ClearRegions();
 			}
 			break;
 		case MENU_FILE_INSERTGEO:
@@ -3558,11 +3568,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			changedSinceSave = TRUE;
 			worker.generation_mode = modeCombo->GetSelectedIndex(); //fluxwise or powerwise
 			// Send to sub process
-			try { worker.Reload(); }
-			catch (Error &e) {
-				GLMessageBox::Display((char *)e.GetMsg(), "Error", GLDLG_OK, GLDLG_ICONERROR);
-				return;
-			}
+			worker.Reload();
 			UpdateFacetHits();
 		}
 		break;
@@ -3864,7 +3870,7 @@ void SynRad::BuildPipe(double ratio, int steps) {
 	ClearFormula();
 	ClearAllSelections();
 	ClearAllViews();
-	ClearTraj();
+	ClearRegions();
 	geom->BuildPipe(L, R, 0, step);
 	worker.nbDesorption = 0;
 	sprintf(tmp, "L|R %g", L / R);
@@ -4613,7 +4619,7 @@ void SynRad::LoadParam(char *fName, int position) {
 	}
 
 	std::vector<FILENAME> files;
-
+	if (!AskToReset()) return;
 	if (fName == NULL) {
 		if (position == -1)
 			files = GLFileBox::OpenMultipleFiles(fileParFilters, "Add magnetic region(s)");
@@ -4662,19 +4668,26 @@ void SynRad::LoadParam(char *fName, int position) {
 	progressDlg2->SetVisible(FALSE);
 	SAFE_DELETE(progressDlg2);
 	changedSinceSave = FALSE;
+	worker.GetGeometry()->InitializeGeometry(-1, TRUE); //recalculate bounding box
 	RebuildPARMenus();
 }
 
-void SynRad::ClearTraj(){
+void SynRad::ClearRegions(){
+	if (!AskToReset()) return;
 	worker.ClearRegions();
+	changedSinceSave = TRUE;
+	worker.Reload();
 	if (regionInfo) {
 		regionInfo->SetVisible(FALSE);
 		SAFE_DELETE(regionInfo);
 	}
+	worker.GetGeometry()->InitializeGeometry(-1, TRUE); //recalculate bounding box
 	RebuildPARMenus();
 }
 
 void SynRad::RemoveRegion(int index){
+	if (!AskToReset()) return;
+	
 	worker.nbTrajPoints -= (int)worker.regions[index].Points.size();
 	//Explicit removal as Region_full doesn't copy Points for some reason
 	for (size_t i = index; i < (worker.regions.size() - 1); i++) { //Copy next
@@ -4683,13 +4696,11 @@ void SynRad::RemoveRegion(int index){
 	}
 	worker.regions.erase(worker.regions.end() - 1); //delete last
 	//worker.regions.erase(worker.regions.begin() + index);
+	changedSinceSave = TRUE;
+	worker.Reload();
 	if (regionInfo) regionInfo->Update();
 	RebuildPARMenus();
-	worker.GetGeometry()->InitializeGeometry(); //recalculate bounding box
-	try { worker.Reload(); }
-	catch (Error &e) {
-		GLMessageBox::Display((char *)e.GetMsg(), "Error reloading worker", GLDLG_OK, GLDLG_ICONERROR);
-	}
+	worker.GetGeometry()->InitializeGeometry(-1,TRUE); //recalculate bounding box
 }
 
 

@@ -671,7 +671,22 @@ BOOL StartFromSource() {
 	//Trajectory_Point *source=&(sHandle->regions[regionId].Points[pointIdLocal]);
 	Region_mathonly *sourceRegion = &(sHandle->regions[regionId]);
 	if (!(sourceRegion->psimaxX > 0.0 && sourceRegion->psimaxY>0.0)) SetErrorSub("psiMaxX or psiMaxY not positive. No photon can be generated");
-	GenPhoton photon = GeneratePhoton(pointIdLocal, sourceRegion, sHandle->generation_mode, sHandle->psi_distr, sHandle->chi_distr, sHandle->tmpCount.nbDesorbed == 0);
+	
+	size_t retries = 0;BOOL validEnergy;GenPhoton photon;
+	do {
+		photon = GeneratePhoton(pointIdLocal, sourceRegion, sHandle->generation_mode, sHandle->psi_distr, sHandle->chi_distr, sHandle->tmpCount.nbDesorbed == 0);
+		validEnergy = (photon.energy >= sourceRegion->energy_low && photon.energy <= sourceRegion->energy_hi);
+		if (!validEnergy) {
+			retries++;
+			pointIdLocal = (int)(rnd()*sourceRegion->Points.size());
+		}
+	} while (!validEnergy && retries < 5);
+
+	if (!validEnergy) {
+		char tmp[128];
+		sprintf(tmp, "Can't generate a photon within region %d's energy limits.", regionId + 1);
+		SetErrorSub(tmp);
+	}
 
 	//sHandle->distTraveledCurrentParticle=0.0;
 	sHandle->dF = photon.SR_flux;
