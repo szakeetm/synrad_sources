@@ -482,21 +482,21 @@ VERTEX3D Geometry::GetCenter() {
 	}
 }
 
-int Geometry::AddRefVertex(VERTEX3D *p,VERTEX3D *refs,int *nbRef) {
+int Geometry::AddRefVertex(VERTEX3D *p,VERTEX3D *refs,int *nbRef,double vT) {
 
 	BOOL found = FALSE;
 	int i=0;
 	//VERTEX3D n;
-	double v2 = vThreshold*vThreshold;
+	double v2 = vT*vT;
 
 	while(i<*nbRef && !found) {
 		//Sub(&n,p,refs + i);
 		double dx=abs(p->x-(refs+i)->x);
-		if (dx<vThreshold) {
+		if (dx<vT) {
 			double dy=abs(p->y-(refs+i)->y);
-			if (dy<vThreshold) {
+			if (dy<vT) {
 				double dz=abs(p->z-(refs+i)->z);
-				if (dz<vThreshold) {
+				if (dz<vT) {
 					found= (dx*dx+dy*dy+dz*dz<v2);
 				}
 			}
@@ -514,7 +514,7 @@ int Geometry::AddRefVertex(VERTEX3D *p,VERTEX3D *refs,int *nbRef) {
 
 }
 
-void Geometry::CollapseVertex(GLProgress *prg,double totalWork) {
+void Geometry::CollapseVertex(GLProgress *prg,double totalWork,double vT) {
 	mApp->changedSinceSave=TRUE;
 	if(!isLoaded) return;
 	// Collapse neighbor vertices
@@ -528,7 +528,7 @@ void Geometry::CollapseVertex(GLProgress *prg,double totalWork) {
 	prg->SetMessage("Collapsing vertices...");
 	for(int i=0;i<sh.nbVertex;i++) {
 		prg->SetProgress(((double)i/(double)sh.nbVertex) /totalWork);
-		idx[i] = AddRefVertex(vertices3 + i,refs,&nbRef);
+		idx[i] = AddRefVertex(vertices3 + i,refs,&nbRef,vT);
 	}
 
 	// Create the new vertex array
@@ -913,14 +913,14 @@ void  Geometry::SelectIsolatedVertices() {
 	SAFE_FREE(check);
 }
 
-void Geometry::RemoveCollinear() {
+BOOL Geometry::RemoveCollinear() {
 
 	mApp->changedSinceSave=TRUE;
 	int nb = 0;
 	for(int i=0;i<sh.nbFacet;i++)
 		if(facets[i]->collinear) nb++;
 
-	if(nb==0) return;
+	if(nb==0) return FALSE;
 	/*
 	if(sh.nbFacet-nb==0) {
 	// Remove all
@@ -951,7 +951,7 @@ void Geometry::RemoveCollinear() {
 
 	BuildGLList();
 	mApp->UpdateModelParams();
-
+	return TRUE;
 }
 
 void Geometry::RemoveSelectedVertex() {
@@ -1166,15 +1166,15 @@ int Geometry::ExplodeSelected(BOOL toMap,int desType,double exponent,double *val
 
 }
 
-void Geometry::RemoveNullFacet() {
+BOOL Geometry::RemoveNullFacet() {
 
 	// Remove degenerated facet (area~0.0)
 	int nb = 0;
-	double areaMin = vThreshold*vThreshold;
+	double areaMin = 1E-10;
 	for(int i=0;i<sh.nbFacet;i++)
 		if(facets[i]->sh.area<areaMin) nb++;
 
-	if(nb==0) return;
+	if(nb==0) return FALSE;
 
 	Facet   **f = (Facet **)malloc((sh.nbFacet-nb) * sizeof(Facet *));
 
@@ -1198,7 +1198,7 @@ void Geometry::RemoveNullFacet() {
 	DeleteGLLists(TRUE,TRUE);
 
 	BuildGLList();
-
+	return TRUE;
 }
 
 void Geometry::AlignFacets(int* selection,int nbSelected,int Facet_source,int Facet_dest,int Anchor_source,int Anchor_dest,

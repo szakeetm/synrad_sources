@@ -1075,14 +1075,13 @@ void Geometry::Collapse(double vT, double fT, double lT, BOOL doSelectedOnly, GL
 	Facet *fi, *fj;
 	Facet *merged;
 
-	vThreshold = vT;
 	double totalWork = (1.0 + (double)(fT>0.0) + (double)(lT > 0.0)); //for progress indicator
 	// Collapse vertex
 	if (vT > 0.0) {
-		CollapseVertex(prg, totalWork);
-		RemoveCollinear();
-		RemoveNullFacet();
-		InitializeGeometry();
+		CollapseVertex(prg, totalWork,vT);
+		InitializeGeometry(); //Find collinear facets
+		if (RemoveCollinear() || RemoveNullFacet()) InitializeGeometry(); //If  facets were removed, update geom.
+		
 	}
 
 

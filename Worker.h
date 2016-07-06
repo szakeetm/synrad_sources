@@ -83,6 +83,7 @@ public:
   BYTE *GetHits(); // Access to dataport (HIT)
   void  ReleaseHits();
   void ClearRegions();
+  void RemoveRegion(int index);
   void AddRegion(const char *fileName,int position=-1); //load region (position==-1: add as new region)
   void RecalcRegion(int regionId);
   void SaveRegion(char *fileName,int position,BOOL overwrite=FALSE);

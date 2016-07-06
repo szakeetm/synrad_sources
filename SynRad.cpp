@@ -4688,19 +4688,12 @@ void SynRad::ClearRegions(){
 void SynRad::RemoveRegion(int index){
 	if (!AskToReset()) return;
 	
-	worker.nbTrajPoints -= (int)worker.regions[index].Points.size();
-	//Explicit removal as Region_full doesn't copy Points for some reason
-	for (size_t i = index; i < (worker.regions.size() - 1); i++) { //Copy next
-		worker.regions[i].Points = worker.regions[i + 1].Points; //Points
-		worker.regions[i] = worker.regions[i + 1]; //Everything else
-	}
-	worker.regions.erase(worker.regions.end() - 1); //delete last
-	//worker.regions.erase(worker.regions.begin() + index);
+	worker.RemoveRegion(index);
 	changedSinceSave = TRUE;
 	worker.Reload();
 	if (regionInfo) regionInfo->Update();
 	RebuildPARMenus();
-	worker.GetGeometry()->InitializeGeometry(-1,TRUE); //recalculate bounding box
+	
 }
 
 

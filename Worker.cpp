@@ -1850,6 +1850,17 @@ void Worker::ClearRegions() {
 	Reload();
 }
 
+void Worker::RemoveRegion(int index) {
+	nbTrajPoints -= (int)regions[index].Points.size();
+	//Explicit removal as Region_full doesn't copy Points for some reason
+	for (size_t i = index; i < (regions.size() - 1); i++) { //Copy next
+		regions[i].Points = regions[i + 1].Points; //Points
+		regions[i] = regions[i + 1]; //Everything else
+	}
+	regions.erase(regions.end() - 1); //delete last
+	geom->InitializeGeometry(-1, TRUE); //recalculate bounding box
+}
+
 void Worker::AddMaterial(std::string *fileName){
 	Material result;
 	char tmp[512];
