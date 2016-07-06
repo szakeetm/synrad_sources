@@ -113,7 +113,7 @@ public:
   void MoveSelectedVertex(double dX,double dY,double dZ,BOOL copy,Worker *worker);
   void ScaleSelectedVertices(VERTEX3D invariant,double factor,BOOL copy,Worker *worker);
   void ScaleSelectedFacets(VERTEX3D invariant,double factorX,double factorY,double factorZ,BOOL copy,Worker *worker);
-
+  void SplitSelectedFacets(VERTEX3D base, VERTEX3D normal, Worker *worker);
   void MoveSelectedFacets(double dX,double dY,double dZ,BOOL copy,Worker *worker);
   void MirrorSelectedFacets(VERTEX3D P0,VERTEX3D N,BOOL copy,Worker *worker);
   void RotateSelectedFacets(const VERTEX3D &AXIS_P0,const VERTEX3D &AXIS_DIR,double theta,BOOL copy,Worker *worker);
@@ -248,7 +248,8 @@ private:
   BOOL  autoNorme;      // Auto normalize (direction field)
   BOOL  centerNorme;    // Center vector (direction field)
 
-  void CalculateFacetParam(int facet); // Facet parameters
+  void CalculateFacetParam(int facetId); // Facet parameters
+  void CalculateFacetParam_geometry(Facet *f);
   void Merge(int nbV,int nbF,VERTEX3D *nV,Facet **nF); // Merge geometry
   void LoadTXTGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0);
   void InsertTXTGeom(FileReader *file,int *nbV,int *nbF,VERTEX3D **V,Facet ***F,int strIdx=0,BOOL newStruct=FALSE);
