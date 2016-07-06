@@ -33,8 +33,6 @@ GNU General Public License for more details.
 using namespace pugi;
 extern SynRad *mApp;
 
-// -----------------------------------------------------------
-
 Geometry::Geometry() {
 
 	facets = NULL;
@@ -65,13 +63,9 @@ Geometry::Geometry() {
 
 }
 
-// -----------------------------------------------------------
-
 Geometry::~Geometry() {
 	Clear();
 }
-
-// -----------------------------------------------------------
 
 void Geometry::Clear() {
 	viewStruct = -1; //otherwise a nonexistent structure could stay selected
@@ -210,11 +204,6 @@ void Geometry::CalculateFacetParam(int facet) {
 	f->err = max;
 
 }
-
-
-
-
-
 
 void Geometry::InitializeGeometry(int facet_number, BOOL BBOnly) {
 
@@ -454,12 +443,9 @@ void Geometry::InitializeGeometry(int facet_number, BOOL BBOnly) {
 	//SAFE_DELETE(initGeoPrg);
 }
 
-// -----------------------------------------------------------
 void Geometry::RebuildLists() {
 	BuildGLList();
 }
-
-// -----------------------------------------------------------
 
 size_t Geometry::GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials, std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr) {
 
@@ -502,8 +488,6 @@ size_t Geometry::GetGeometrySize(std::vector<Region_full> *regions, std::vector<
 
 	return memoryUsage;
 }
-
-// -----------------------------------------------------------
 
 void Geometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *regions, std::vector<Material> *materials,
 	std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr, int generation_mode, BOOL lowFluxMode, double lowFluxCutoff) {
@@ -669,7 +653,6 @@ void Geometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *region
 
 }
 
-// -----------------------------------------------------------
 
 void Geometry::SetAutoNorme(BOOL enable) {
 	autoNorme = enable;
@@ -695,8 +678,6 @@ float Geometry::GetNormeRatio() {
 	return normeRatio;
 }
 
-// -----------------------------------------------------------
-
 DWORD Geometry::GetHitsSize() {
 
 	// Compute number of bytes allocated
@@ -708,8 +689,6 @@ DWORD Geometry::GetHitsSize() {
 
 	return memoryUsage;
 }
-
-// -----------------------------------------------------------
 
 DWORD Geometry::GetMaxElemNumber() {
 
@@ -723,8 +702,6 @@ DWORD Geometry::GetMaxElemNumber() {
 
 }
 
-// -----------------------------------------------------------
-
 void Geometry::CopyElemBuffer(BYTE *buffer) {
 
 	int idx = 0;
@@ -736,8 +713,6 @@ void Geometry::CopyElemBuffer(BYTE *buffer) {
 	}
 
 }
-
-// -----------------------------------------------------------
 
 void Geometry::BuildShapeList() {
 
@@ -864,8 +839,6 @@ void Geometry::BuildShapeList() {
 
 }
 
-// -----------------------------------------------------------
-
 void Geometry::BuildSelectList() {
 
 	nbSelected = 0;
@@ -969,18 +942,12 @@ void Geometry::BuildSelectList() {
 
 }
 
-
-
-// -----------------------------------------------------------
-
 void Geometry::UpdateSelection() {
 
 	DeleteGLLists();
 	BuildSelectList();
 
 }
-
-// -----------------------------------------------------------
 
 void Geometry::BuildGLList() {
 
@@ -1003,197 +970,6 @@ void Geometry::BuildGLList() {
 	BuildSelectList();
 
 }
-
-
-// -----------------------------------------------------------
-// Collapse stuff
-// -----------------------------------------------------------
-
-
-// -----------------------------------------------------------
-
-Facet *Geometry::MergeFacet(Facet *f1, Facet *f2) {
-	mApp->changedSinceSave = TRUE;
-	// Merge 2 facets into 1 when possible and create a new facet
-	// otherwise return NULL.
-	int  c1;
-	int  c2;
-	int  l;
-	BOOL end = FALSE;
-	Facet *nF = NULL;
-
-	if (GetCommonEdges(f1, f2, &c1, &c2, &l)) {
-		int commonNo = f1->sh.nbIndex + f2->sh.nbIndex - 2 * l;
-		if (commonNo == 0) { //two identical facets, so return a copy of f1
-			nF = new Facet(f1->sh.nbIndex);
-			nF->Copy(f1);
-			for (int i = 0; i < f1->sh.nbIndex; i++)
-				nF->indices[i] = f1->GetIndex(i);
-			return nF;
-		}
-
-		int nbI = 0;
-		nF = new Facet(commonNo);
-		// Copy params from f1
-		//nF->Copy(f1);
-		nF->Copy(f1);
-
-		if (l == f1->sh.nbIndex) {
-
-			// f1 absorbed, copy indices from f2
-			for (int i = 0; i < f2->sh.nbIndex - l; i++)
-				nF->indices[nbI++] = f2->GetIndex(c2 + 2 + i);
-
-		}
-		else if (l == f2->sh.nbIndex) {
-
-			// f2 absorbed, copy indices from f1
-			for (int i = 0; i < f1->sh.nbIndex - l; i++)
-				nF->indices[nbI++] = f1->GetIndex(c1 + l + i);
-
-		}
-		else {
-
-			// Copy indices from f1
-			for (int i = 0; i < f1->sh.nbIndex - (l - 1); i++)
-				nF->indices[nbI++] = f1->GetIndex(c1 + l + i);
-			// Copy indices from f2
-			for (int i = 0; i<f2->sh.nbIndex - (l + 1); i++)
-				nF->indices[nbI++] = f2->GetIndex(c2 + 2 + i);
-
-		}
-
-	}
-
-	return nF;
-
-}
-
-// -----------------------------------------------------------
-void Geometry::Collapse(double vT, double fT, double lT, BOOL doSelectedOnly, GLProgress *prg) {
-	mApp->changedSinceSave = TRUE;
-	Facet *fi, *fj;
-	Facet *merged;
-
-	double totalWork = (1.0 + (double)(fT>0.0) + (double)(lT > 0.0)); //for progress indicator
-	// Collapse vertex
-	if (vT > 0.0) {
-		CollapseVertex(prg, totalWork,vT);
-		InitializeGeometry(); //Find collinear facets
-		if (RemoveCollinear() || RemoveNullFacet()) InitializeGeometry(); //If  facets were removed, update geom.
-		
-	}
-
-
-	if (fT > 0.0) {
-
-		// Collapse facets
-		int i = 0;
-		prg->SetMessage("Collapsing facets...");
-		while (i < sh.nbFacet) {
-			prg->SetProgress((1.0 + ((double)i / (double)sh.nbFacet)) / totalWork);
-			fi = facets[i];
-			// Search a coplanar facet
-			int j = i + 1;
-			while ((!doSelectedOnly || fi->selected) && j < sh.nbFacet) {
-				fj = facets[j];
-				merged = NULL;
-				if ((!doSelectedOnly || fj->selected) && fi->IsCoplanar(fj, fT)) {
-					// Collapse
-					merged = MergeFacet(fi, fj);
-					if (merged) {
-						// Replace the old 2 facets by the new one
-						SAFE_DELETE(fi);
-						SAFE_DELETE(fj);
-						for (int k = j; k < sh.nbFacet - 1; k++)
-							facets[k] = facets[k + 1];
-						sh.nbFacet--;
-						facets[i] = merged;
-						//InitializeGeometry(i);
-						//SetFacetTexture(i,facets[i]->tRatio,facets[i]->hasMesh);  //rebuild mesh
-						fi = facets[i];
-						mApp->RenumberSelections(j);
-						mApp->RenumberFormulas(j);
-						j = i + 1;
-
-					}
-				}
-				if (!merged) j++;
-			}
-			i++;
-		}
-	}
-	//Collapse collinear sides. Takes some time, so only if threshold>0
-	prg->SetMessage("Collapsing collinear sides...");
-	if (lT > 0.0) {
-		for (int i = 0; i<sh.nbFacet; i++) {
-			prg->SetProgress((1.0 + (double)(fT>0.0) + ((double)i / (double)sh.nbFacet)) / totalWork);
-			if (!doSelectedOnly || facets[i]->selected)
-				MergecollinearSides(facets[i], lT);
-		}
-	}
-	prg->SetMessage("Rebuilding geometry...");
-	for (int i = 0; i < sh.nbFacet; i++) {
-
-		Facet *f = facets[i];
-
-		// Revert orientation if normal has been swapped
-		// This happens when the second vertex is no longer convex
-		VERTEX3D n, v1, v2;
-		double   d;
-		int i0 = facets[i]->indices[0];
-		int i1 = facets[i]->indices[1];
-		int i2 = facets[i]->indices[2];
-
-		Sub(&v1, vertices3 + i1, vertices3 + i0); // v1 = P0P1
-		Sub(&v2, vertices3 + i2, vertices3 + i1); // v2 = P1P2
-		Cross(&n, &v1, &v2);                      // Cross product
-		d = Dot(&n, &(f->sh.N));
-		if (d < 0.0) f->SwapNormal();
-
-	}
-
-
-
-	// Delete old resources
-	for (int i = 0; i < sh.nbSuper; i++)
-		DeleteGLLists(TRUE, TRUE);
-
-	// Reinitialise geom
-	InitializeGeometry();
-
-}
-
-void Geometry::MergecollinearSides(Facet *f, double lT) {
-	mApp->changedSinceSave = TRUE;
-	BOOL collinear;
-	double linTreshold = cos(lT*PI / 180);
-	// Merge collinear sides
-	for (int k = 0; (k < f->sh.nbIndex&&f->sh.nbIndex>3); k++){
-		k = k;
-		do {
-			//collinear=FALSE;
-			int p0 = f->indices[k];
-			int p1 = f->indices[(k + 1) % f->sh.nbIndex];
-			int p2 = f->indices[(k + 2) % f->sh.nbIndex]; //to compare last side with first too
-			VERTEX3D p0p1;
-			VERTEX3D p0p2;
-			Sub(&p0p1, &vertices3[p1], &vertices3[p0]);
-			Sub(&p0p2, &vertices3[p2], &vertices3[p1]);
-			Normalize(&p0p1);
-			Normalize(&p0p2);
-			collinear = (Dot(&p0p1, &p0p2) >= linTreshold);
-			if (collinear&&f->sh.nbIndex > 3) { //collinear
-				for (int l = (k + 1) % f->sh.nbIndex; l < f->sh.nbIndex - 1; l++){
-					f->indices[l] = f->indices[l + 1];
-				}
-				f->sh.nbIndex--;
-			}
-		} while (collinear&&f->sh.nbIndex > 3);
-	}
-}
-
-// -----------------------------------------------------------
 
 void Geometry::Rebuild() {
 
@@ -1238,8 +1014,6 @@ int Geometry::RestoreDeviceObjects() {
 
 }
 
-// -----------------------------------------------------------
-
 void Geometry::BuildFacetList(Facet *f) {
 
 	// Rebuild OpenGL geomtetry with texture
@@ -1268,8 +1042,6 @@ void Geometry::BuildFacetList(Facet *f) {
 
 }
 
-// -----------------------------------------------------------
-
 void Geometry::SetFacetTexture(int facet, double ratio, BOOL mesh) {
 
 	Facet *f = facets[facet];
@@ -1286,9 +1058,6 @@ void Geometry::SetFacetTexture(int facet, double ratio, BOOL mesh) {
 
 }
 
-// -----------------------------------------------------------
-// Testing purpose function, construct a PIPE
-// -----------------------------------------------------------
 void  Geometry::BuildPipe(double L, double R, double s, int step) {
 	Clear();
 
@@ -1397,10 +1166,6 @@ void  Geometry::BuildPipe(double L, double R, double s, int step) {
 
 }
 
-// -----------------------------------------------------------
-// File handling
-// -----------------------------------------------------------
-
 void Geometry::UpdateName(FileReader *file) {
 	UpdateName(file->GetName());
 }
@@ -1425,8 +1190,6 @@ void Geometry::AdjustProfile() {
 	}
 
 }
-
-
 
 void Geometry::LoadASE(FileReader *file, GLProgress *prg) {
 
@@ -1475,8 +1238,6 @@ void Geometry::LoadASE(FileReader *file, GLProgress *prg) {
 	isLoaded = TRUE;
 
 }
-
-
 
 void Geometry::LoadSTR(FileReader *file, GLProgress *prg) {
 
@@ -1635,6 +1396,7 @@ void Geometry::LoadSTL(FileReader *file, GLProgress *prg, double scaleFactor) {
 	isLoaded = TRUE;
 
 }
+
 void Geometry::LoadTXT(FileReader *file, GLProgress *prg) {
 
 	//mApp->ClearAllSelections();
@@ -1651,8 +1413,6 @@ void Geometry::LoadTXT(FileReader *file, GLProgress *prg) {
 	AdjustProfile();
 	isLoaded = TRUE;
 }
-
-
 
 void Geometry::InsertTXT(FileReader *file, GLProgress *prg, BOOL newStr) {
 
@@ -1690,8 +1450,6 @@ void Geometry::InsertSTL(FileReader *file, GLProgress *prg, double scaleFactor, 
 
 }
 
-
-
 void Geometry::InsertGEO(FileReader *file, GLProgress *prg, BOOL newStr) {
 
 	//Clear();
@@ -1721,8 +1479,6 @@ std::vector<std::string> Geometry::InsertSYN(FileReader *file, GLProgress *prg, 
 	//AdjustProfile();
 	return result;
 }
-
-
 
 void Geometry::LoadTXTGeom(FileReader *file, int *nbV, int *nbF, VERTEX3D **V, Facet ***F, int strIdx) {
 
@@ -1774,9 +1530,6 @@ void Geometry::LoadTXTGeom(FileReader *file, int *nbV, int *nbF, VERTEX3D **V, F
 	*F = f;
 
 }
-
-// -----------------------------------------------------------
-// -----------------------------------------------------------
 
 void Geometry::InsertTXTGeom(FileReader *file, int *nbVertex, int *nbFacet, VERTEX3D **vertices3, Facet ***facets, int strIdx, BOOL newStruct) {
 
@@ -1838,7 +1591,6 @@ void Geometry::InsertTXTGeom(FileReader *file, int *nbVertex, int *nbFacet, VERT
 	if (newStruct) AddStruct("Inserted TXT file");
 
 }
-
 
 void Geometry::InsertGEOGeom(FileReader *file, int *nbVertex, int *nbFacet, VERTEX3D **vertices3, Facet ***facets, int strIdx, BOOL newStruct) {
 
@@ -2395,7 +2147,6 @@ void Geometry::InsertSTLGeom(FileReader *file, int *nbVertex, int *nbFacet, VERT
 	if (newStruct) AddStruct("Inserted STL file");
 }
 
-
 void Geometry::SaveProfileTXT(FileWriter *file, int super, BOOL saveSelected) {
 	// Profiles
 	for (int j = 0; j < PROFILE_SIZE; j++)
@@ -2685,7 +2436,6 @@ void Geometry::LoadGEO(FileReader *file, GLProgress *prg, LEAK *pleak, int *nble
 	}*/
 }
 
-// -----------------------------------------------------------
 bool Geometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *dpHit, int version) {
 
 	if (file->SeekFor("{textures}")) {
@@ -3014,7 +2764,6 @@ void Geometry::SaveTXT(FileWriter *file, Dataport *dpHit, BOOL saveSelected) {
 
 }
 
-// -----------------------------------------------------------------------
 void Geometry::ExportTextures(FILE *file, int grouping, int mode, double no_scans, Dataport *dpHit, BOOL saveSelected) {
 
 	//if(!IsLoaded()) throw Error("Nothing to save !");
@@ -3188,8 +2937,6 @@ void Geometry::SaveDesorption(FILE *file, Dataport *dpHit, BOOL selectedOnly, in
 
 }
 
-
-
 void Geometry::SaveSTR(Dataport *dpHit, BOOL saveSelected) {
 
 	if (!IsLoaded()) throw Error("Nothing to save !");
@@ -3202,9 +2949,6 @@ void Geometry::SaveSTR(Dataport *dpHit, BOOL saveSelected) {
 	ReleaseDataport(dpHit);
 
 }
-
-
-
 
 void Geometry::SaveSuper(Dataport *dpHit, int s) {
 
@@ -3554,7 +3298,6 @@ void Geometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit, BOOL 
 	if (!crashSave && !saveSelected) ReleaseDataport(dpHit);
 
 }
-
 
 std::vector<std::string> Geometry::LoadSYN(FileReader *file, GLProgress *prg, LEAK *pleak, int *nbleak, HIT *pHits, int *nbHHit, int *version) {
 

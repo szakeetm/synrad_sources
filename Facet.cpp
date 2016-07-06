@@ -1515,7 +1515,7 @@ void Facet::InitVisibleEdge() {
 
 // -----------------------------------------------------------
 
-BOOL Facet::IsCoplanar(Facet *f, double threshold) {
+BOOL Facet::IsCoplanarAndEqual(Facet *f, double threshold) {
 
 	// Detect if 2 facets are in the same plane (orientation preserving)
 	// and have same parameters (used by collapse)

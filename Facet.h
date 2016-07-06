@@ -91,7 +91,8 @@ public:
   //void  SaveGEO(FileWriter *file,int idx);
   void  LoadSYN(FileReader *file, const std::vector<Material> &materials, int version, int nbVertex);
   void  SaveSYN(FileWriter *file, const std::vector<Material> &materials, int idx,BOOL crashSave=FALSE);
-  void  LoadXML(pugi::xml_node f, int nbVertex, BOOL isMolflowFile, int vertexOffset);BOOL  IsCoplanar(Facet *f,double threshold);
+  void  LoadXML(pugi::xml_node f, int nbVertex, BOOL isMolflowFile, int vertexOffset);
+  BOOL  IsCoplanarAndEqual(Facet *f,double threshold);
   int   GetIndex(int idx);
   void  Copy(Facet *f,BOOL copyMesh=FALSE);
   void  SwapNormal();

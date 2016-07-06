@@ -268,7 +268,6 @@ private:
   // Collapsing stuff
   int  AddRefVertex(VERTEX3D *p,VERTEX3D *refs,int *nbRef,double vT);
   BOOL RemoveNullFacet();
-  BOOL IsCoplanar(int i1,int i2);
   Facet *MergeFacet(Facet *f1,Facet *f2);
   BOOL GetCommonEdges(Facet *f1,Facet *f2,int *c1,int *c2,int *chainLength);
   void CollapseVertex(GLProgress *prg,double totalWork,double vT);
