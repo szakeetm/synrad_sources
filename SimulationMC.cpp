@@ -404,11 +404,11 @@ BOOL SimulationMCStep(int nbStep) {
 				sHandle->tmpCount.nbHit++;
 				collidedFacet->sh.counter.nbHit++;
 			}
-			else {
+
+			if (collidedFacet->sh.teleportDest) {
 				PerformTeleport(collidedFacet);
 			}
-
-			if (collidedFacet->sh.superDest) {	// Handle super structure link facet
+			else if (collidedFacet->sh.superDest) {	// Handle super structure link facet
 				sHandle->curStruct = collidedFacet->sh.superDest - 1;
 				// Count this hit as a transparent pass
 				RecordHit(HIT_TRANS, sHandle->dF, sHandle->dP);
