@@ -115,6 +115,8 @@ public:
 	float    lastSaveTime;
 	float    lastSaveTimeSimu;
 	std::string autosaveFilename; //only delete files that this instance saved
+	BOOL     autoFrameMove; //Refresh scene every 1 second
+	BOOL     frameMoveRequested; //Force frame move
 
 	HANDLE compressProcessHandle;
 
@@ -262,6 +264,8 @@ public:
     GLLabel       *facetTLabel;
     GLLabel       *facetRLabel;
     GLLabel       *facetReLabel;
+	GLToggle      *autoFrameMoveToggle;
+	GLButton      *forceFrameMoveButton;
 
     GLMenu        *structMenu;
     GLMenu        *viewsMenu;

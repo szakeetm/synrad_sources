@@ -270,7 +270,9 @@ BOOL GLWindow::IsAltDown() {
   return GLWindowManager::IsAltDown();
 }
 
-// ---------------------------------------------------------------
+BOOL GLWindow::IsSpaceDown() {
+  return GLWindowManager::IsSpaceDown();
+}
 
 BOOL GLWindow::IsCapsLockOn() {
   return GLWindowManager::IsCapsLockOn();
@@ -535,7 +537,7 @@ BOOL GLWindow::IsVisible() {
 // ---------------------------------------------------------------
 
 void GLWindow::DoModal() {
-	SynRad *mApp = (SynRad *)theApp;
+
   GLWindowManager::FullRepaint();
   SetVisible(TRUE);
   int nbRegistered = GLWindowManager::GetNbWindow();

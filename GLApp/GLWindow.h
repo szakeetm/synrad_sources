@@ -43,6 +43,7 @@ public:
   BOOL IsCtrlDown();
   BOOL IsShiftDown();
   BOOL IsAltDown();
+  BOOL IsSpaceDown();
   BOOL IsCapsLockOn();
   int  GetX(GLComponent *src,SDL_Event *evt);
   int  GetY(GLComponent *src,SDL_Event *evt);
@@ -88,6 +89,8 @@ public:
   virtual void PaintMenu();
   virtual void SetBounds(int x,int y,int w,int h);
   virtual void CancelDrag(SDL_Event *evt);
+
+
 
 protected:
 

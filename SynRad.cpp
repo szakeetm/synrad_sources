@@ -37,7 +37,7 @@ GNU General Public License for more details.
 #define APP_NAME "SynRad+ development version (Compiled "__DATE__" "__TIME__") DEBUG MODE"
 #else
 //#define APP_NAME "SynRad+ development version ("__DATE__")"
-#define APP_NAME "Synrad+ 1.4.1 ("__DATE__")"
+#define APP_NAME "Synrad+ 1.4.2 ("__DATE__")"
 #endif
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
@@ -248,6 +248,7 @@ SynRad::SynRad()
 	autoSaveSimuOnly = FALSE;
 	autosaveFilename = "";
 	compressProcessHandle = NULL;
+	autoFrameMove = TRUE;
 
 	lastSaveTime = 0.0f;
 	lastSaveTimeSimu = 0.0f;
@@ -575,6 +576,14 @@ int SynRad::OneTimeSceneInit()
 
 	modeLabel = new GLLabel("Mode");
 	simuPanel->Add(modeLabel);
+
+	autoFrameMoveToggle = new GLToggle(0, "Auto update scene");
+	autoFrameMoveToggle->SetState(autoFrameMove);
+	simuPanel->Add(autoFrameMoveToggle);
+
+	forceFrameMoveButton = new GLButton(0, "Update");
+	forceFrameMoveButton->SetEnabled(!autoFrameMove);
+	simuPanel->Add(forceFrameMoveButton);
 
 	modeCombo = new GLCombo(0);
 	modeCombo->SetEditable(TRUE);
@@ -915,22 +924,31 @@ void SynRad::PlaceComponents() {
 	sy += (facetPanel->GetHeight() + 5);
 
 	// Simulation ---------------------------------------------
-	simuPanel->SetBounds(sx, sy, 202, 194);
-
-	simuPanel->SetCompBounds(startSimu, 5, 20, 92, 19);
-	simuPanel->SetCompBounds(resetSimu, 102, 20, 93, 19);
-	simuPanel->SetCompBounds(modeLabel, 5, 45, 30, 18);
-	simuPanel->SetCompBounds(modeCombo, 40, 45, 85, 18);
-	simuPanel->SetCompBounds(hitLabel, 5, 70, 30, 18);
-	simuPanel->SetCompBounds(hitNumber, 40, 70, 155, 18);
-	simuPanel->SetCompBounds(desLabel, 5, 95, 30, 18);
-	simuPanel->SetCompBounds(desNumber, 40, 95, 155, 18);
-	simuPanel->SetCompBounds(leakLabel, 5, 120, 30, 18);
-	simuPanel->SetCompBounds(leakNumber, 40, 120, 155, 18);
-	simuPanel->SetCompBounds(doseLabel, 5, 145, 30, 18);
-	simuPanel->SetCompBounds(doseNumber, 40, 145, 155, 18);
-	simuPanel->SetCompBounds(sTimeLabel, 5, 170, 30, 18);
-	simuPanel->SetCompBounds(sTime, 40, 170, 155, 18);
+	simuPanel->SetBounds(sx, sy, 202, 219);
+	int height = 20;
+	simuPanel->SetCompBounds(startSimu, 5, height, 92, 19);
+	simuPanel->SetCompBounds(resetSimu, 102, height, 93, 19);
+	height += 25;
+	simuPanel->SetCompBounds(autoFrameMoveToggle, 5, height, 65, 19);
+	simuPanel->SetCompBounds(forceFrameMoveButton, 128, height, 66, 19);
+	height += 25;
+	simuPanel->SetCompBounds(modeLabel, 5, height, 30, 18);
+	simuPanel->SetCompBounds(modeCombo, 40, height, 85, 18);
+	height += 25;
+	simuPanel->SetCompBounds(hitLabel, 5, height, 30, 18);
+	simuPanel->SetCompBounds(hitNumber, 40, height, 155, 18);
+	height += 25;
+	simuPanel->SetCompBounds(desLabel, 5, height, 30, 18);
+	simuPanel->SetCompBounds(desNumber, 40, height, 155, 18);
+	height += 25;
+	simuPanel->SetCompBounds(leakLabel, 5, height, 30, 18);
+	simuPanel->SetCompBounds(leakNumber, 40, height, 155, 18);
+	height += 25;
+	simuPanel->SetCompBounds(doseLabel, 5, height, 30, 18);
+	simuPanel->SetCompBounds(doseNumber, 40, height, 155, 18);
+	height += 25;
+	simuPanel->SetCompBounds(sTimeLabel, 5, height, 30, 18);
+	simuPanel->SetCompBounds(sTime, 40, height, 155, 18);
 
 	sy += (simuPanel->GetHeight() + 5);
 
@@ -1820,18 +1838,33 @@ int SynRad::FrameMove()
 		}
 	}
 
-	// Simulation monitoring
-	if (globalSettings) globalSettings->SMPUpdate(m_fTime);
-	if (profilePlotter) profilePlotter->Update(m_fTime);
-	if (spectrumPlotter) spectrumPlotter->Update(m_fTime);
-	if (texturePlotter) texturePlotter->Update(m_fTime);
+	
 	if (worker.running) {
-		if (m_fTime - lastUpdate >= 1.0f) {
+		if (frameMoveRequested || autoFrameMove && (m_fTime - lastUpdate >= 1.0f)) {
+			forceFrameMoveButton->SetEnabled(FALSE);
+			forceFrameMoveButton->SetText("Updating...");
+			//forceFrameMoveButton->Paint();
+			GLWindowManager::Repaint();
+			frameMoveRequested = FALSE;
 
 			// Update hits
-			worker.Update(m_fTime);
+			try {
+				worker.Update(m_fTime);
+			}
+			catch (Error &e) {
+				GLMessageBox::Display((char *)e.GetMsg(), "Error (Stop)", GLDLG_OK, GLDLG_ICONERROR);
+			}
+			// Simulation monitoring
+			if (globalSettings) globalSettings->SMPUpdate(m_fTime);
+			if (profilePlotter) profilePlotter->Update(m_fTime);
+			if (spectrumPlotter) spectrumPlotter->Update(m_fTime);
+			if (texturePlotter) texturePlotter->Update(m_fTime);
 			if (textureSettings) textureSettings->Update();
-			lastUpdate = m_fTime;
+
+			// Formulas
+			if (autoUpdateFormulas) UpdateFormula();
+			
+			lastUpdate = GetTick(); //changed from m_fTime: include update duration
 
 			// Update timing measurements
 			if (worker.nbHit != lastNbHit || worker.nbDesorption != lastNbDes) {
@@ -1852,6 +1885,9 @@ int SynRad::FrameMove()
 		}
 		sprintf(tmp, "Running: %s", FormatTime(worker.simuTime + (m_fTime - worker.startTime)));
 		sTime->SetText(tmp);
+
+		forceFrameMoveButton->SetEnabled(!autoFrameMove);
+		forceFrameMoveButton->SetText("Update");
 	}
 	else {
 		if (worker.simuTime > 0.0) {
@@ -1917,9 +1953,6 @@ int SynRad::FrameMove()
 	}
 
 	UpdateFacetHits();
-
-	// Formulas
-	if (autoUpdateFormulas) UpdateFormula();
 
 	// Sleep a bit to avoid unwanted CPU load
 	if (viewer[0]->IsDragging() ||
@@ -3584,6 +3617,10 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		}
 		else if (src == facetSpectrumToggle)
 			facetApplyBtn->SetEnabled(TRUE);
+		else if (src == autoFrameMoveToggle) {
+			autoFrameMove = autoFrameMoveToggle->GetState();
+			forceFrameMoveButton->SetEnabled(!autoFrameMove);
+		}
 		else UpdateViewerFlags(); //Viewer flags clicked
 		break;
 
@@ -3656,6 +3693,10 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			if (!viewer3DSettings) viewer3DSettings = new Viewer3DSettings();
 			viewer3DSettings->Display(geom, viewer[curViewer]);
 			UpdateViewerParams();
+		}
+		else if (src == forceFrameMoveButton) {
+			frameMoveRequested = TRUE;
+			FrameMove();
 		}
 		else {
 			ProcessFormulaButtons(src);

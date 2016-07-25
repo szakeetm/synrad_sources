@@ -15,6 +15,7 @@
 */
 
 #include "GLWindowManager.h"
+#include "GLMessageBox.h"
 #include "GLApp.h"
 #include "GLToolkit.h"
 #include "GLApp.h"
@@ -152,8 +153,7 @@ void GLWindowManager::DrawStats() {
     GLToolkit::GetDialogFont()->DrawTextFast(7,h-83,polys);
     GLToolkit::GetDialogFont()->DrawTextFast(7,h-65,theApp->m_strEventStats);
     GLToolkit::GetDialogFont()->DrawTextFast(7,h-48,theApp->m_strFrameStats);
-	SynRad *mApp = (SynRad *)theApp;
-	sprintf(polys,"m_fTime:%4.2f lastSaveTime:%4.2f lastSaveTimeSimu:%4.2g",m_fTime,mApp->lastSaveTime,mApp->lastSaveTimeSimu);
+	sprintf(polys,"m_fTime:%4.2f",m_fTime);
 	GLToolkit::GetDialogFont()->DrawTextFast(150,h-48,polys);
   }
   
@@ -419,8 +419,12 @@ void GLWindowManager::Resize() {
 
   for(int i=1;i<nbWindow;i++) 
     allWin[i]->UpdateOnResize();
-	SynRad *mApp = (SynRad *)theApp;
-  mApp->worker.Update(0.0f);
+  SynRad *mApp = (SynRad *)theApp;
+  try {
+		  mApp->worker.Update(0.0f);
+  } catch(Error &e) {
+	  GLMessageBox::Display((char *)e.GetMsg(),"Error (Worker::Update)",GLDLG_OK,GLDLG_ICONERROR);
+  }
 }
 
 // ---------------------------------------------------------------
@@ -484,6 +488,7 @@ void GLWindowManager::RepaintRange(int w0,int w1) {
   double t0 = theApp->GetTick();
 #endif
 
+   if (!(w0<64 && w1<64)) throw Error("Buffer overrun: GLWindowManager::RepaintRange, array allWin");
   SetDefault();
   for(int i=w0;i<w1;i++) allWin[i]->Paint();  
   for(int i=w0;i<w1;i++) allWin[i]->PaintMenu();
@@ -527,10 +532,13 @@ BOOL GLWindowManager::IsAltDown() {
   return (modState & ALT_MODIFIER)!=0;
 }
 
+BOOL GLWindowManager::IsSpaceDown() {
+  return (modState & SPACE_MODIFIER)!=0;
+}
 // ---------------------------------------------------------------
 
 BOOL GLWindowManager::IsCapsLockOn() {
-  return (modState & CAPSLOCK_MODIFIER)!=0;
+ return (modState & CAPSLOCK_MODIFIER)!=0;
 }
 
 // ---------------------------------------------------------------
@@ -557,6 +565,8 @@ BOOL GLWindowManager::ProcessKey(SDL_Event *evt,BOOL processAcc) {
 	if( unicode == SDLK_CAPSLOCK)
       modState |= CAPSLOCK_MODIFIER;
 
+	if( unicode == SDLK_SPACE)
+      modState |= SPACE_MODIFIER;
   }
 
   if( evt->type == SDL_KEYUP )
@@ -565,6 +575,7 @@ BOOL GLWindowManager::ProcessKey(SDL_Event *evt,BOOL processAcc) {
     int ctrlMask  = CTRL_MODIFIER; ctrlMask  = ~ctrlMask;
     int shiftMask = SHIFT_MODIFIER;shiftMask = ~shiftMask;
 	int capsLockMask = CAPSLOCK_MODIFIER;capsLockMask = ~capsLockMask;
+	int spaceMask = SPACE_MODIFIER;spaceMask = ~spaceMask;
 
     if( unicode == SDLK_LCTRL ||  unicode == SDLK_RCTRL )
       modState &= ctrlMask;
@@ -577,6 +588,9 @@ BOOL GLWindowManager::ProcessKey(SDL_Event *evt,BOOL processAcc) {
 
 	if( unicode == SDLK_CAPSLOCK )
       modState &= capsLockMask;
+  
+	if (unicode == SDLK_SPACE)
+		modState &= spaceMask;
   }
 
   // Process
