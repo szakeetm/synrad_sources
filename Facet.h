@@ -127,4 +127,9 @@ public:
 
 };
 
+struct DeletedFacet {
+	Facet *f;
+	size_t ori_pos;
+};
+
 #endif /* FACETH */

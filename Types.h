@@ -20,12 +20,7 @@
 #define TYPESH
 
 // 64 bit integer declaration
-
-#ifdef WIN
-  typedef unsigned __int64 llong;
-#else
-  typedef long long llong;
-#endif
+typedef long long llong;
 
 // AC matrix floating type
 
@@ -66,27 +61,55 @@ typedef float ACFLOAT;
 #define LASTHIT 6
 
 // Geometry structure definitions
-typedef struct {
+class VERTEX3D {
+public:
+
 
   double x;
   double y;
   double z;
   int selected;
+};
 
-} VERTEX3D;
+struct VERTEX2D {
 
-/*typedef struct {
-	VERTEX3D v1;
-	VERTEX3D v2;
-	VERTEX3D v3;
-} MATRIX;*/
 
-typedef struct {
+	double u;
+	double v;
 
-  double u;
-  double v;
 
-} VERTEX2D;
+
+
+
+
+
+
+  VERTEX2D operator+(const VERTEX2D& toAdd) const {
+	  VERTEX2D result;
+	  result.u = this->u + toAdd.u;
+	  result.v = this->v + toAdd.v;
+	  return result;
+  }
+  VERTEX2D operator-(const VERTEX2D& toSub) const {
+	  
+	  VERTEX2D result;
+	  result.u = this->u - toSub.u;
+	  result.v = this->v - toSub.v;
+	  return result;
+  }
+	  double operator*(const VERTEX2D& mult) const  {
+		  return this->u*mult.u + this->v*mult.v;
+	  }
+	  VERTEX2D operator*(const double& mult) const {
+
+
+
+		  VERTEX2D result;
+		  result.u = this->u * mult;
+		  result.v = this->v * mult;
+		  return result;
+	  }
+};
 
 typedef struct {
 
@@ -128,6 +151,10 @@ typedef struct {
   llong count;
 } VHIT;
 
+struct ProjectedPoint {
+	VERTEX2D vertex2d;
+	size_t globalId;
+};
 #define IS_ZERO(x) (fabs((x))<1e-10)
 
 #define DOT2(x1,y1,x2,y2) ((x1)*(x2) + (y1)*(y2))

@@ -140,21 +140,28 @@ SynRad *mApp;
 #define MENU_FACET_ROTATE	   333
 #define MENU_FACET_ALIGN       334
 //#define MENU_FACET_OUTGASSINGMAP 338
-#define MENU_FACET_CREATE_DIFFERENCE 335
-#define MENU_FACET_EXTRUDE 336
+#define MENU_FACET_CREATE_DIFFERENCE 3360
+#define MENU_FACET_CREATE_UNION 3361
+#define MENU_FACET_CREATE_INTERSECTION 3362
+#define MENU_FACET_CREATE_XOR 3363
+#define MENU_FACET_EXTRUDE 337
+#define MENU_FACET_SPLIT   338
+#define MENU_FACET_LOFT          339
+#define MENU_FACET_INTERSECT     340
 
-#define MENU_SELECTION_ADDNEW             337
-#define MENU_SELECTION_CLEARALL           338
+#define MENU_SELECTION_ADDNEW             3380
+#define MENU_SELECTION_CLEARALL           3390
 
 #define MENU_SELECTION_MEMORIZESELECTIONS   3300
 #define MENU_SELECTION_SELECTIONS           3400
 #define MENU_SELECTION_CLEARSELECTIONS      3500
 
 #define MENU_SELECTION_SELECTFACETNUMBER 360
+#define MENU_SELECTION_ISOLATED_VERTEX 361
 
 #define MENU_VERTEX_SELECTALL   701
 #define MENU_VERTEX_UNSELECTALL 702
-#define MENU_VERTEX_SELECT_ISOLATED 703
+#define MENU_VERTEX_CLEAR_ISOLATED 703
 #define MENU_VERTEX_CREATE_POLY_CONVEX   7040
 #define MENU_VERTEX_CREATE_POLY_ORDER    7041
 #define MENU_VERTEX_SELECT_COPLANAR   705
@@ -290,6 +297,7 @@ SynRad::SynRad()
 	extrudeFacet = NULL;
 	exportDesorption = NULL;
 	mirrorFacet = NULL;
+	splitFacet = NULL;
 	rotateFacet = NULL;
 	alignFacet = NULL;
 	addVertex = NULL;
@@ -421,9 +429,8 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("Selection")->Add(NULL); // Separator
 	menu->GetSubMenu("Selection")->Add("Select all vertex", MENU_VERTEX_SELECTALL);
 	menu->GetSubMenu("Selection")->Add("Unselect all vertex", MENU_VERTEX_UNSELECTALL);
-	menu->GetSubMenu("Selection")->Add("Select Isolated vertex", MENU_VERTEX_SELECT_ISOLATED);
 	menu->GetSubMenu("Selection")->Add("Select Coplanar vertex (visible on screen)", MENU_VERTEX_SELECT_COPLANAR);
-
+	menu->GetSubMenu("Selection")->Add("Select isolated vertex", MENU_SELECTION_ISOLATED_VERTEX);
 
 	menu->Add("Tools");
 	menu->GetSubMenu("Tools")->Add("Add formula ...", MENU_EDIT_ADDFORMULA);
@@ -454,9 +461,16 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("Facet")->Add("Rotate ...", MENU_FACET_ROTATE);
 	menu->GetSubMenu("Facet")->Add("Align ...", MENU_FACET_ALIGN);
 	menu->GetSubMenu("Facet")->Add("Extrude ...", MENU_FACET_EXTRUDE);
+	menu->GetSubMenu("Facet")->Add("Split ...", MENU_FACET_SPLIT);
 	menu->GetSubMenu("Facet")->Add("Remove selected", MENU_FACET_REMOVESEL, SDLK_DELETE, CTRL_MODIFIER);
+	menu->GetSubMenu("Facet")->Add("Create two facets' ...");
+	menu->GetSubMenu("Facet")->GetSubMenu("Create two facets' ...")->Add("Difference", MENU_FACET_CREATE_DIFFERENCE);
+	menu->GetSubMenu("Facet")->GetSubMenu("Create two facets' ...")->Add("Union", MENU_FACET_CREATE_UNION);
+	menu->GetSubMenu("Facet")->GetSubMenu("Create two facets' ...")->Add("Intersection", MENU_FACET_CREATE_INTERSECTION);
+	menu->GetSubMenu("Facet")->GetSubMenu("Create two facets' ...")->Add("XOR", MENU_FACET_CREATE_XOR);
+	menu->GetSubMenu("Facet")->Add("Transition between 2", MENU_FACET_LOFT);
+	menu->GetSubMenu("Facet")->Add("Build intersection", MENU_FACET_INTERSECT);
 	menu->GetSubMenu("Facet")->Add("Explode selected", MENU_FACET_EXPLODE);
-	menu->GetSubMenu("Facet")->Add("Create difference of 2", MENU_FACET_CREATE_DIFFERENCE);
 	menu->GetSubMenu("Facet")->Add(NULL); // Separator
 
 	menu->GetSubMenu("Facet")->Add("Facet Details ...", MENU_FACET_DETAILS);
@@ -478,6 +492,7 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("Vertex")->Add("Create Facet from Selected");
 	menu->GetSubMenu("Vertex")->GetSubMenu("Create Facet from Selected")->Add("Convex Hull", MENU_VERTEX_CREATE_POLY_CONVEX, SDLK_v, ALT_MODIFIER);
 	menu->GetSubMenu("Vertex")->GetSubMenu("Create Facet from Selected")->Add("Keep selection order", MENU_VERTEX_CREATE_POLY_ORDER);
+	menu->GetSubMenu("Vertex")->Add("Clear isolated", MENU_VERTEX_CLEAR_ISOLATED);
 	menu->GetSubMenu("Vertex")->Add("Remove selected", MENU_VERTEX_REMOVE);
 	menu->GetSubMenu("Vertex")->Add("Vertex coordinates...", MENU_VERTEX_COORDINATES);
 	menu->GetSubMenu("Vertex")->Add("Move selected...", MENU_VERTEX_MOVE);
@@ -1551,6 +1566,7 @@ void SynRad::UpdateFormula() {
 	for (int i = 0; i < nbFormula; i++) {
 
 		GLParser *f = formulas[i].parser;
+		f->Parse();
 
 		// Variables
 		int nbVar = f->GetNbVariable();
@@ -1838,6 +1854,7 @@ int SynRad::FrameMove()
 		}
 	}
 
+	if (globalSettings) globalSettings->SMPUpdate(m_fTime);
 	
 	if (worker.running) {
 		if (frameMoveRequested || autoFrameMove && (m_fTime - lastUpdate >= 1.0f)) {
@@ -1855,7 +1872,6 @@ int SynRad::FrameMove()
 				GLMessageBox::Display((char *)e.GetMsg(), "Error (Stop)", GLDLG_OK, GLDLG_ICONERROR);
 			}
 			// Simulation monitoring
-			if (globalSettings) globalSettings->SMPUpdate(m_fTime);
 			if (profilePlotter) profilePlotter->Update(m_fTime);
 			if (spectrumPlotter) spectrumPlotter->Update(m_fTime);
 			if (texturePlotter) texturePlotter->Update(m_fTime);
@@ -2149,6 +2165,7 @@ int SynRad::RestoreDeviceObjects()
 	RVALIDATE_DLG(extrudeFacet);
 	RVALIDATE_DLG(exportDesorption);
 	RVALIDATE_DLG(mirrorFacet);
+	RVALIDATE_DLG(splitFacet);
 	RVALIDATE_DLG(rotateFacet);
 	RVALIDATE_DLG(alignFacet);
 	RVALIDATE_DLG(addVertex);
@@ -2192,6 +2209,7 @@ int SynRad::InvalidateDeviceObjects()
 	IVALIDATE_DLG(extrudeFacet);
 	IVALIDATE_DLG(exportDesorption);
 	IVALIDATE_DLG(mirrorFacet);
+	IVALIDATE_DLG(splitFacet);
 	IVALIDATE_DLG(rotateFacet);
 	IVALIDATE_DLG(alignFacet);
 	IVALIDATE_DLG(addVertex);
@@ -2806,6 +2824,7 @@ void SynRad::StartStopSimulation() {
 	if (profilePlotter) profilePlotter->Update(m_fTime, TRUE);
 	if (spectrumPlotter) spectrumPlotter->Update(m_fTime, TRUE);
 	if (texturePlotter) texturePlotter->Update(m_fTime, TRUE);
+	if (autoUpdateFormulas) UpdateFormula();
 
 	// Frame rate measurement
 	lastMeasTime = m_fTime;
@@ -3042,6 +3061,13 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		case MENU_FACET_MIRROR:
 			if (!mirrorFacet) mirrorFacet = new MirrorFacet(geom, &worker);
 			mirrorFacet->SetVisible(TRUE);
+			break;
+		case MENU_FACET_SPLIT:			
+			if (!splitFacet || !splitFacet->IsVisible()) {
+				SAFE_DELETE(splitFacet);
+				splitFacet = new SplitFacet(geom, &worker);
+				splitFacet->SetVisible(TRUE);
+			}
 			break;
 		case MENU_FACET_ROTATE:
 			if (!rotateFacet) rotateFacet = new RotateFacet(geom, &worker);
@@ -3280,8 +3306,13 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		case MENU_VERTEX_SELECTALL:
 			geom->SelectAllVertex();
 			break;
-		case MENU_VERTEX_SELECT_ISOLATED:
+		case MENU_SELECTION_ISOLATED_VERTEX:
 			geom->SelectIsolatedVertices();
+			break;
+		case MENU_VERTEX_CLEAR_ISOLATED:
+			geom->SelectIsolatedVertices();
+			geom->RemoveSelectedVertex();
+			UpdateModelParams();
 			break;
 		case MENU_VERTEX_CREATE_POLY_CONVEX:
 			if (AskToReset()) {
@@ -3318,25 +3349,45 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 				}
 			}
 			break;
-		case MENU_FACET_CREATE_DIFFERENCE:
-			if (geom->IsLoaded()){
-				try {
-					if (AskToReset()) {
-						geom->CreateDifference();
-					}
-				}
-				catch (Error &e) {
-					GLMessageBox::Display((char *)e.GetMsg(), "Error creating polygon", GLDLG_OK, GLDLG_ICONERROR);
-				}
-				//UpdateModelParams();
-				try { worker.Reload(); }
-				catch (Error &e) {
-					GLMessageBox::Display((char *)e.GetMsg(), "Error reloading worker", GLDLG_OK, GLDLG_ICONERROR);
-				}
-			}
-			else GLMessageBox::Display("No geometry loaded.", "No geometry", GLDLG_OK, GLDLG_ICONERROR);
+case MENU_FACET_CREATE_DIFFERENCE:
+			CreateOfTwoFacets(ClipperLib::ctDifference);
 			break;
-
+		case MENU_FACET_CREATE_UNION:
+			CreateOfTwoFacets(ClipperLib::ctUnion);
+			break;
+		case MENU_FACET_CREATE_INTERSECTION:
+			CreateOfTwoFacets(ClipperLib::ctIntersection);
+			break;
+		case MENU_FACET_CREATE_XOR:
+			CreateOfTwoFacets(ClipperLib::ctXor);
+			break;
+		case MENU_FACET_LOFT:
+			if (geom->GetNbSelected() != 2) {
+				GLMessageBox::Display("Select exactly 2 facets", "Can't create loft", GLDLG_OK, GLDLG_ICONERROR);
+				return;
+			}
+			if (AskToReset()) {
+				geom->CreateLoft();
+			}
+			worker.Reload();
+			mApp->UpdateModelParams();
+			mApp->UpdateFacetlistSelected();
+			mApp->UpdateViewers();
+			break;
+		case MENU_FACET_INTERSECT:
+			if (geom->GetNbSelected() < 2) {
+				GLMessageBox::Display("Select at least 2 facets", "Can't create intersection", GLDLG_OK, GLDLG_ICONERROR);
+				return;
+			}
+			if (AskToReset()) {
+				geom->ConstructIntersection();
+			}
+			worker.Reload();
+			mApp->UpdateModelParams();
+			mApp->UpdateFacetlistSelected();
+			mApp->UpdateViewers();
+			break;
+			
 		case MENU_VERTEX_SELECT_COPLANAR:
 			char *input;
 			char tmp[128];
@@ -4832,4 +4883,25 @@ void SynRad::UpdateRecentMenu(){
 	m->Clear();
 	for (int i = nbRecent - 1; i >= 0; i--)
 		m->Add(recents[i], MENU_FILE_LOADRECENT + i);
+}
+
+void SynRad::CreateOfTwoFacets(ClipperLib::ClipType type) {
+	Geometry *geom = worker.GetGeometry();
+	if (geom->IsLoaded()) {
+		try {
+			if (AskToReset()) {
+				//geom->CreateDifference();
+				geom->ClipSelectedPolygons(type);
+			}
+		}
+		catch (Error &e) {
+			GLMessageBox::Display((char *)e.GetMsg(), "Error creating polygon", GLDLG_OK, GLDLG_ICONERROR);
+		}
+		//UpdateModelParams();
+		try { worker.Reload(); }
+		catch (Error &e) {
+			GLMessageBox::Display((char *)e.GetMsg(), "Error reloading worker", GLDLG_OK, GLDLG_ICONERROR);
+		}
+	}
+	else GLMessageBox::Display("No geometry loaded.", "No geometry", GLDLG_OK, GLDLG_ICONERROR);
 }

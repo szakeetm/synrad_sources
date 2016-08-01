@@ -32,14 +32,16 @@ public:
 
 class Distribution2D {
 public:
+	Distribution2D();
 	Distribution2D(int size);
 	Distribution2D::Distribution2D(const Distribution2D &copy_src); //copy constructor
 	Distribution2D& operator= (const Distribution2D & other); //assignment op
 	~Distribution2D();
+	void Resize(size_t N);
 	double InterpolateY(const double &x); //interpolates the Y value corresponding to X (allows extrapolation)
 	double InterpolateX(const double &y); //(no extrapolation, first/last X values are the output limits)
 	double *valuesX, *valuesY;
-	int findXindex(const double &x);
+	//int findXindex(const double &x);
 	int size;
 	//double sum_energy,sum_photons;
 };

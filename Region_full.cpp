@@ -20,10 +20,10 @@ void Region_full::CalculateTrajectory(int max_steps){
 	//extern Distribution2D polarization_distribution,integral_N_photons,integral_SR_power,g1h2_distribution;
 
 	//initial position and speed
-	current_point.position=this->startPoint;
-	current_point.direction=this->startDir;
+	current_point.position=this->params.startPoint;
+	current_point.direction=this->params.startDir;
 	//current_point.rho=Vector(0.0,0.0,1e30); //big enough so no rotation
-	AABBmin=AABBmax=this->startPoint;
+	AABBmin=AABBmax=this->params.startPoint;
 
 	//Calculate trajectory
 	Points.push_back(current_point); //beam starting position
@@ -49,8 +49,8 @@ Trajectory_Point Region_full::OneStep(int pointId) {
 	Vector rotation_axis = Crossproduct(p0->direction, p0->rho);
 	//Calculate new point
 	Trajectory_Point p;
-	p.direction = p0->direction.Rotate(rotation_axis, dL / p0->rho.Norme());
-	p.position = Add(p0->position, ScalarMult(p.direction, dL / p.direction.Norme()));
+	p.direction = p0->direction.Rotate(rotation_axis, params.dL / p0->rho.Norme());
+	p.position = Add(p0->position, ScalarMult(p.direction, params.dL / p.direction.Norme()));
 
 	return p;
 }
@@ -66,49 +66,49 @@ void Region_full::CalcPointProperties(int pointId) {
 		double B_parallel = DotProduct(p->direction, p->B);
 		double B_orthogonal = sqrt(Sqr(p->B.Norme()) - Sqr(B_parallel));
 		Vector lorentz_force_direction = Crossproduct(p->direction, p->B).Normalize();
-		if (particleMass<0.0) lorentz_force_direction = ScalarMult(lorentz_force_direction, -1.0);
+		if (params.particleMass<0.0) lorentz_force_direction = ScalarMult(lorentz_force_direction, -1.0);
 		double radius;
 		if (B_orthogonal>VERY_SMALL)
-			radius = E / 0.00299792458 / B_orthogonal;
+			radius = params.E / 0.00299792458 / B_orthogonal;
 		else radius = 1.0E30;
 		p->rho = ScalarMult(lorentz_force_direction, radius);
 	}
 
-	p->critical_energy = p->Critical_Energy(gamma);
+	p->critical_energy = p->Critical_Energy(params.gamma);
 
 	//Calculate local base vectors
 	p->Z_local = p->direction.Normalize(); //Z' base vector
 	p->Y_local = Vector(0.0, 1.0, 0.0); //same as absolute Y - assuming that machine's orbit is in the XZ plane
 	p->X_local = Crossproduct(p->Z_local, p->Y_local);
 
-	if (emittance > 0.0) { //if beam is not ideal
+	if (params.emittance > 0.0) { //if beam is not ideal
 		//calculate non-ideal beam's offset (the four sigmas)
-		if (betax < 0.0) { //negative betax value: load BXY file
+		if (params.betax < 0.0) { //negative betax value: load BXY file
 			double coordinate; //interpolation X value (first column of BXY file)
-			if (beta_kind == 0) coordinate = pointId*dL;
-			else if (beta_kind == 1) coordinate = p->position.x;
-			else if (beta_kind == 2) coordinate = p->position.y;
-			else if (beta_kind == 3) coordinate = p->position.z;
+			if (params.beta_kind == 0) coordinate = pointId*params.dL;
+			else if (params.beta_kind == 1) coordinate = p->position.x;
+			else if (params.beta_kind == 2) coordinate = p->position.y;
+			else if (params.beta_kind == 3) coordinate = p->position.z;
 
-			p->beta_X = beta_x_distr->InterpolateY(coordinate);
-			p->beta_Y = beta_y_distr->InterpolateY(coordinate);
-			p->eta = eta_distr->InterpolateY(coordinate);
-			p->eta_prime = etaprime_distr->InterpolateY(coordinate);
-			p->energy_spread = e_spread_distr->InterpolateY(coordinate);
+			p->beta_X = beta_x_distr.InterpolateY(coordinate);
+			p->beta_Y = beta_y_distr.InterpolateY(coordinate);
+			p->eta = eta_distr.InterpolateY(coordinate);
+			p->eta_prime = etaprime_distr.InterpolateY(coordinate);
+			p->energy_spread = e_spread_distr.InterpolateY(coordinate);
 			//the five above distributions are the ones that are read from the BXY file
 			//interpolateY finds the Y value corresponding to X input
 
 		}
 		else { //if no BXY file, use average values
-			p->beta_X = betax;
-			p->beta_Y = betay;
-			p->eta = eta;
-			p->eta_prime = etaprime;
-			p->energy_spread = energy_spread;
+			p->beta_X = params.betax;
+			p->beta_Y = params.betay;
+			p->eta = params.eta;
+			p->eta_prime = params.etaprime;
+			p->energy_spread = params.energy_spread;
 		}
 
-		p->emittance_X = emittance / (1.0 + coupling*0.01);
-		p->emittance_Y = p->emittance_X*coupling*0.01;
+		p->emittance_X = params.emittance / (1.0 + params.coupling*0.01);
+		p->emittance_Y = p->emittance_X*params.coupling*0.01;
 
 		p->sigma_x_prime = sqrt(p->emittance_X / p->beta_X + Sqr(p->eta_prime*p->energy_spread*0.01));
 		//{ hor lattice-dependent divergence, radians }
@@ -127,27 +127,27 @@ void Region_full::CalcPointProperties(int pointId) {
 }
 
 bool Region_full::isOutsideBoundaries(Vector a,BOOL recalcDirs){
-	static double xDir=(limits.x>startPoint.x)?1.0:-1.0;
-	static double yDir=(limits.y>startPoint.y)?1.0:-1.0;
-	static double zDir=(limits.z>startPoint.z)?1.0:-1.0;
+	static double xDir=(params.limits.x>params.startPoint.x)?1.0:-1.0;
+	static double yDir=(params.limits.y>params.startPoint.y)?1.0:-1.0;
+	static double zDir=(params.limits.z>params.startPoint.z)?1.0:-1.0;
 	if (recalcDirs) {
-		xDir=(limits.x>startPoint.x)?1.0:-1.0;
-		yDir=(limits.y>startPoint.y)?1.0:-1.0;
-		zDir=(limits.z>startPoint.z)?1.0:-1.0;
+		xDir=(params.limits.x>params.startPoint.x)?1.0:-1.0;
+		yDir=(params.limits.y>params.startPoint.y)?1.0:-1.0;
+		zDir=(params.limits.z>params.startPoint.z)?1.0:-1.0;
 	}
-	return ((a.x-limits.x)*xDir>0.0)||((a.y-limits.y)*yDir>0.0)||((a.z-limits.z)*zDir>0.0);
+	return ((a.x- params.limits.x)*xDir>0.0)||((a.y- params.limits.y)*yDir>0.0)||((a.z- params.limits.z)*zDir>0.0);
 }
 
 void Region_full::LoadPAR(FileReader *file){
 
 	//Creating references to X,Y,Z components (to avoid writing code 3 times)
 	//double* result_ptr[3]={&result.x,&result.y,&result.z};
-	double* Bconst_ptr[3]={&B_const.x,&B_const.y,&B_const.z};
-	Vector* Bdir_ptr[3]={&Bx_dir,&By_dir,&Bz_dir};
-	int* Bmode_ptr[3]={&Bx_mode,&By_mode,&Bz_mode};
-	double* Bperiod_ptr[3]={&Bx_period,&By_period,&Bz_period};
-	double* Bphase_ptr[3]={&Bx_phase,&By_phase,&Bz_phase};
-	Distribution2D* distr_ptr[3]={Bx_distr,By_distr,Bz_distr};
+	double* Bconst_ptr[3]={&params.B_const.x,&params.B_const.y,&params.B_const.z};
+	Vector* Bdir_ptr[3]={&params.Bx_dir,&params.By_dir,&params.Bz_dir};
+	int* Bmode_ptr[3]={&params.Bx_mode,&params.By_mode,&params.Bz_mode};
+	double* Bperiod_ptr[3]={&params.Bx_period,&params.By_period,&params.Bz_period};
+	double* Bphase_ptr[3]={&params.Bx_phase,&params.By_phase,&params.Bz_phase};
+	Distribution2D* distr_ptr[3]={&Bx_distr,&By_distr,&Bz_distr};
 	std::string* MagFileNamePtr[3]={&MAGXfileName,&MAGYfileName,&MAGZfileName};
 
 	//prg->SetMessage("Reading parameter file...");
@@ -156,36 +156,36 @@ void Region_full::LoadPAR(FileReader *file){
 	file->ReadInt(); //unused (generation mode)
 	file->JumpComment();
 
-	particleMass=file->ReadDouble();
-	E=file->ReadDouble();current=1;
-	energy_low=file->ReadDouble();
-	energy_hi=file->ReadDouble();
+	params.particleMass=file->ReadDouble();
+	params.E=file->ReadDouble();params.current=1;
+	params.energy_low=file->ReadDouble();
+	params.energy_hi=file->ReadDouble();
 	file->JumpComment();
 
-	gamma=abs(E/particleMass);
+	params.gamma=abs(params.E/ params.particleMass);
 
-	dL=file->ReadDouble();
+	params.dL=file->ReadDouble();
 	double x0=file->ReadDouble();
 	double y0=file->ReadDouble();
 	double z0=file->ReadDouble();
-	startPoint=Vector(x0,y0,z0);
+	params.startPoint=Vector(x0,y0,z0);
 
 	double teta0=file->ReadDouble();
 	double alfa0=file->ReadDouble();
-	startDir=Vector(-cos(alfa0)*sin(teta0),-sin(alfa0),cos(alfa0)*cos(teta0));
+	params.startDir=Vector(-cos(alfa0)*sin(teta0),-sin(alfa0),cos(alfa0)*cos(teta0));
 	file->JumpComment();
 
 	double xmax=file->ReadDouble();
 	double ymax=file->ReadDouble();
 	double zmax=file->ReadDouble();
-	limits=Vector(xmax,ymax,zmax);
+	params.limits=Vector(xmax,ymax,zmax);
 	file->JumpComment();
 
 	int i_struct1=file->ReadInt(); //thrown away
 	file->JumpComment();
 
-	enable_par_polarization=(file->ReadInt()==1);
-	enable_ort_polarization=(file->ReadInt()==1);
+	params.enable_par_polarization=(file->ReadInt()==1);
+	params.enable_ort_polarization=(file->ReadInt()==1);
 	file->JumpComment();
 
 	for (int i=0;i<3;i++) {
@@ -216,35 +216,35 @@ void Region_full::LoadPAR(FileReader *file){
 		}
 	}
 
-	emittance=eta=etaprime=energy_spread=betax=betay=0.0; //default values
-	coupling=100.0;
-	nbDistr_BXY=0;
+	params.emittance= params.eta= params.etaprime= params.energy_spread= params.betax= params.betay=0.0; //default values
+	params.coupling=100.0;
+	params.nbDistr_BXY=0;
 
-	emittance=file->ReadDouble();
-	betax=file->ReadDouble();
-	if (!(betax<0.0)) {
+	params.emittance=file->ReadDouble();
+	params.betax=file->ReadDouble();
+	if (!(params.betax<0.0)) {
 		file->wasLineEnd=false;
-		betay=file->ReadDouble();
+		params.betay=file->ReadDouble();
 		double value=file->ReadDouble();
 		if (!file->wasLineEnd) {
-			eta=value;
-			etaprime=file->ReadDouble();
+			params.eta=value;
+			params.etaprime=file->ReadDouble();
 			value=file->ReadDouble();
 			if (!file->wasLineEnd) {
-				coupling=value;
-				energy_spread=file->ReadDouble();
+				params.coupling=value;
+				params.energy_spread=file->ReadDouble();
 				value=file->ReadDouble();
 			}
 		}
-		psimaxX=value*0.001;
+		params.psimaxX=value*0.001;
 		file->wasLineEnd=false;
-	} else psimaxX=file->ReadDouble()*0.001;
-	psimaxY=file->ReadDouble()*0.001;
+	} else params.psimaxX=file->ReadDouble()*0.001;
+	params.psimaxY=file->ReadDouble()*0.001;
 	file->JumpComment();
 
-	beta_kind=0;
-	if (betax<0.0) { //read BXY file
-		double fileDouble=-1.0*betax;
+	params.beta_kind=0;
+	if (params.betax<0.0) { //read BXY file
+		double fileDouble=-1.0*params.betax;
 		char fileName[256];
 		strcpy(fileName,file->GetName());
 		char *filebegin= strrchr(fileName,'\\');
@@ -260,7 +260,7 @@ void Region_full::LoadPAR(FileReader *file){
 			}
 			FileReader BXYfile(fileName);
 			BXYfileName.assign(fileName);
-			nbDistr_BXY=LoadBXY(&BXYfile,beta_x_distr,beta_y_distr,eta_distr,etaprime_distr,e_spread_distr);
+			params.nbDistr_BXY=LoadBXY(&BXYfile);
 		
 	}
 
@@ -277,26 +277,26 @@ Distribution2D Region_full::LoadMAGFile(FileReader *file,Vector *dir,double *per
 		double quadrY=file->ReadDouble();
 		double quadrZ=file->ReadDouble();
 		file->JumpComment();
-		quad.center=Vector(quadrX,quadrY,quadrZ);
+		params.quad.center=Vector(quadrX,quadrY,quadrZ);
 
-		quad.alfa_q=file->ReadDouble();
-		quad.beta_q=file->ReadDouble();
-		quad.rot_q=file->ReadDouble();
+		params.quad.alfa_q=file->ReadDouble();
+		params.quad.beta_q=file->ReadDouble();
+		params.quad.rot_q=file->ReadDouble();
 		file->JumpComment();
 
-		quad.K_q=file->ReadDouble()/100.0; //T/m->T/cm conversion
-		quad.L_q=file->ReadDouble();
+		params.quad.K_q=file->ReadDouble()/100.0; //T/m->T/cm conversion
+		params.quad.L_q=file->ReadDouble();
 
-		quad.cosalfa_q=cos(quad.alfa_q);
-		quad.sinalfa_q=sin(quad.alfa_q);
-		quad.cosbeta_q=cos(quad.beta_q);
-		quad.sinbeta_q=sin(quad.beta_q);
-		quad.cosrot_q=cos(quad.rot_q);
-		quad.sinrot_q=sin(quad.rot_q);
+		params.quad.cosalfa_q=cos(params.quad.alfa_q);
+		params.quad.sinalfa_q=sin(params.quad.alfa_q);
+		params.quad.cosbeta_q=cos(params.quad.beta_q);
+		params.quad.sinbeta_q=sin(params.quad.beta_q);
+		params.quad.cosrot_q=cos(params.quad.rot_q);
+		params.quad.sinrot_q=sin(params.quad.rot_q);
 
-		quad.direction=Vector(-quad.cosalfa_q*quad.sinbeta_q,
-			-quad.sinalfa_q,
-			quad.cosalfa_q*quad.cosbeta_q);
+		params.quad.direction=Vector(-params.quad.cosalfa_q*params.quad.sinbeta_q,
+			-params.quad.sinalfa_q,
+			params.quad.cosalfa_q*params.quad.cosbeta_q);
 
 	} else {
 		*period=file->ReadDouble();
@@ -367,6 +367,7 @@ Region_full::~Region_full(){
 	for (int i=0;i<8;i++)
 		SAFE_DELETE(distr_ptr[i]);
 	Points=std::vector<Trajectory_Point>();*/
+	//Already called by region_mathonly's destructor
 }
 
 void Region_full::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLength){
@@ -445,7 +446,7 @@ void Region_full::Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLen
 		char B_label[128];
 		char Rho_label[128];
 		char dir_label[128];
-		sprintf(point_label,"point #%d (%g,%g,%g) L=%g",selectedPoint+1,O.x,O.y,O.z,selectedPoint*dL);
+		sprintf(point_label,"point #%d (%g,%g,%g) L=%g",selectedPoint+1,O.x,O.y,O.z,selectedPoint*params.dL);
 		sprintf(B_label,"B (%g Tesla)",B_local.Norme());
 		sprintf(Rho_label,"Rho (%g cm)",Rho_local.Norme());
 		sprintf(dir_label,"Direction");
@@ -507,80 +508,80 @@ void Region_full::SelectTrajPoint(int x,int y,int regionId) {
 	
 	if (mApp->regionInfo) mApp->regionInfo->Update();
 }
-
+/*
 Region_full::Region_full(const Region_full &src) {
 	//alfa0=src.alfa0;
-	betax=src.betax;
-	betay=src.betay;
+	betax=src.params.betax;
+	betay=src.params.betay;
 
-	Bx_dir=Vector(src.Bx_dir.x,src.Bx_dir.y,src.Bx_dir.z);
-	Bx_distr=new Distribution2D((int)src.nbDistr_MAG.x);
+	Bx_dir=Vector(src.params.Bx_dir.x,src.params.Bx_dir.y,src.params.Bx_dir.z);
+	Bx_distr=new Distribution2D((int)src.params.nbDistr_MAG.x);
 	*Bx_distr=*(src.Bx_distr);
-	this->Bx_mode=src.Bx_mode;
-	this->Bx_period=src.Bx_period;
-	this->Bx_phase=src.Bx_phase;
+	this->Bx_mode=src.params.Bx_mode;
+	this->Bx_period=src.params.Bx_period;
+	this->Bx_phase=src.params.Bx_phase;
 
-	By_dir=Vector(src.By_dir.x,src.By_dir.y,src.By_dir.z);
-	By_distr=new Distribution2D((int)src.nbDistr_MAG.y);
+	By_dir=Vector(src.params.By_dir.x,src.params.By_dir.y,src.params.By_dir.z);
+	By_distr=new Distribution2D((int)src.params.nbDistr_MAG.y);
 	*By_distr=*(src.By_distr);
-	this->By_mode=src.By_mode;
-	this->By_period=src.By_period;
-	this->By_phase=src.By_phase;
+	this->By_mode=src.params.By_mode;
+	this->By_period=src.params.By_period;
+	this->By_phase=src.params.By_phase;
 
-	Bz_dir=Vector(src.Bz_dir.x,src.Bz_dir.y,src.Bz_dir.z);
-	Bz_distr=new Distribution2D((int)src.nbDistr_MAG.z);
+	Bz_dir=Vector(src.params.Bz_dir.x,src.params.Bz_dir.y,src.params.Bz_dir.z);
+	Bz_distr=new Distribution2D((int)src.params.nbDistr_MAG.z);
 	*Bz_distr=*(src.Bz_distr);
-	this->Bz_mode=src.Bz_mode;
-	this->Bz_period=src.Bz_period;
-	this->Bz_phase=src.Bz_phase;
+	this->Bz_mode=src.params.Bz_mode;
+	this->Bz_period=src.params.Bz_period;
+	this->Bz_phase=src.params.Bz_phase;
 
-	this->nbDistr_BXY=src.nbDistr_BXY;
-	beta_x_distr=new Distribution2D(src.nbDistr_BXY);
+	this->nbDistr_BXY=src.params.nbDistr_BXY;
+	beta_x_distr=new Distribution2D(src.params.nbDistr_BXY);
 	*beta_x_distr=*(src.beta_x_distr);
-	beta_y_distr=new Distribution2D(src.nbDistr_BXY);
+	beta_y_distr=new Distribution2D(src.params.nbDistr_BXY);
 	*beta_y_distr=*(src.beta_y_distr);
-	eta_distr=new Distribution2D(src.nbDistr_BXY);
-	*eta_distr=*(src.eta_distr);
-	etaprime_distr=new Distribution2D(src.nbDistr_BXY);
-	*etaprime_distr=*(src.etaprime_distr);
-	e_spread_distr=new Distribution2D(src.nbDistr_BXY);
+	eta_distr=new Distribution2D(src.params.nbDistr_BXY);
+	*eta_distr=*(src.params.eta_distr);
+	etaprime_distr=new Distribution2D(src.params.nbDistr_BXY);
+	*etaprime_distr=*(src.params.etaprime_distr);
+	e_spread_distr=new Distribution2D(src.params.nbDistr_BXY);
 	*e_spread_distr=*(src.e_spread_distr);
 
-	this->B_const=Vector(src.B_const.x,src.B_const.y,src.B_const.z);
+	this->B_const=Vector(src.params.B_const.x,src.params.B_const.y,src.params.B_const.z);
 	this->dL=src.dL;
 	this->E=src.E;
-	this->current=src.current;
-	this->emittance=src.emittance;
-	this->coupling=src.coupling;
-	this->energy_spread=src.energy_spread;
-	this->enable_ort_polarization=src.enable_ort_polarization;
-	this->enable_par_polarization=src.enable_par_polarization;
-	this->energy_hi=src.energy_hi;
-	this->energy_low=src.energy_low;
-	this->eta=src.eta;
-	this->etaprime=src.etaprime;
-	this->gamma=src.gamma;
+	this->current=src.params.current;
+	this->emittance=src.params.emittance;
+	this->coupling=src.params.coupling;
+	this->energy_spread=src.params.energy_spread;
+	this->enable_ort_polarization=src.params.enable_ort_polarization;
+	this->enable_par_polarization=src.params.enable_par_polarization;
+	this->energy_hi=src.params.energy_hi;
+	this->energy_low=src.params.energy_low;
+	this->eta=src.params.eta;
+	this->etaprime=src.params.etaprime;
+	this->gamma=src.params.gamma;
 	//this->generation_mode=src.generation_mode;
 	this->isLoaded=src.isLoaded;
 	//this->i_struct1=src.i_struct1;
-	this->limits=Vector(src.limits.x,src.limits.y,src.limits.z);
+	this->limits=Vector(src.params.limits.x,src.params.limits.y,src.params.limits.z);
 	//this->no_scans=src.no_scans;
 	//this->nregions=src.nregions;
-	this->particleMass=src.particleMass;
+	this->particleMass=src.params.particleMass;
 	this->Points=src.Points; //does it work like that?
-	this->psimaxX=src.psimaxX;
-	this->psimaxY=src.psimaxY;
-	this->quad=src.quad; //write assignment operator...
+	this->psimaxX=src.params.psimaxX;
+	this->psimaxY=src.params.psimaxY;
+	this->quad=src.params.quad; //write assignment operator...
 	this->selectedPoint=src.selectedPoint;
-	this->startDir=Vector(src.startDir.x,src.startDir.y,src.startDir.z);
-	this->startPoint=Vector(src.startPoint.x,src.startPoint.y,src.startPoint.z);
+	this->startDir=Vector(src.params.startDir.x,src.params.startDir.y,src.params.startDir.z);
+	this->startPoint=Vector(src.params.startPoint.x,src.params.startPoint.y,src.params.startPoint.z);
 	//this->teta0=src.teta0;
 	//this->x0=src.x0;
 	//this->y0=src.y0;
 	//this->z0=src.z0;
-	this->nbPointsToCopy=(int)src.nbPointsToCopy;
-	this->nbDistr_MAG=Vector(src.nbDistr_MAG.x,src.nbDistr_MAG.y,src.nbDistr_MAG.z);
-	this->beta_kind=src.beta_kind;
+	this->nbPointsToCopy=(int)src.params.nbPointsToCopy;
+	this->nbDistr_MAG=Vector(src.params.nbDistr_MAG.x,src.params.nbDistr_MAG.y,src.params.nbDistr_MAG.z);
+	this->beta_kind=src.params.beta_kind;
 	this->AABBmin=Vector(src.AABBmin.x,src.AABBmin.y,src.AABBmin.z);
 	this->AABBmax=Vector(src.AABBmax.x,src.AABBmax.y,src.AABBmax.z);
 	this->fileName.assign(src.fileName);
@@ -588,81 +589,81 @@ Region_full::Region_full(const Region_full &src) {
 	this->MAGYfileName.assign(src.MAGYfileName);
 	this->MAGZfileName.assign(src.MAGZfileName);
 	this->BXYfileName.assign(src.BXYfileName);
-}
-
+}*/
+/*
 Region_full& Region_full::operator=(const Region_full &src) {
 	//alfa0=src.alfa0;
-	betax=src.betax;
-	betay=src.betay;
+	betax=src.params.betax;
+	betay=src.params.betay;
 
-	Bx_dir=Vector(src.Bx_dir.x,src.Bx_dir.y,src.Bx_dir.z);
-	Bx_distr=new Distribution2D((int)src.nbDistr_MAG.x);
+	Bx_dir=Vector(src.params.Bx_dir.x,src.params.Bx_dir.y,src.params.Bx_dir.z);
+	Bx_distr=new Distribution2D((int)src.params.nbDistr_MAG.x);
 	*Bx_distr=*(src.Bx_distr);
-	this->Bx_mode=src.Bx_mode;
-	this->Bx_period=src.Bx_period;
-	this->Bx_phase=src.Bx_phase;
+	this->Bx_mode=src.params.Bx_mode;
+	this->Bx_period=src.params.Bx_period;
+	this->Bx_phase=src.params.Bx_phase;
 
-	By_dir=Vector(src.By_dir.x,src.By_dir.y,src.By_dir.z);
-	By_distr=new Distribution2D((int)src.nbDistr_MAG.y);
+	By_dir=Vector(src.params.By_dir.x,src.params.By_dir.y,src.params.By_dir.z);
+	By_distr=new Distribution2D((int)src.params.nbDistr_MAG.y);
 	*By_distr=*(src.By_distr);
-	this->By_mode=src.By_mode;
-	this->By_period=src.By_period;
-	this->By_phase=src.By_phase;
+	this->By_mode=src.params.By_mode;
+	this->By_period=src.params.By_period;
+	this->By_phase=src.params.By_phase;
 
-	Bz_dir=Vector(src.Bz_dir.x,src.Bz_dir.y,src.Bz_dir.z);
-	Bz_distr=new Distribution2D((int)src.nbDistr_MAG.z);
+	Bz_dir=Vector(src.params.Bz_dir.x,src.params.Bz_dir.y,src.params.Bz_dir.z);
+	Bz_distr=new Distribution2D((int)src.params.nbDistr_MAG.z);
 	*Bz_distr=*(src.Bz_distr);
-	this->Bz_mode=src.Bz_mode;
-	this->Bz_period=src.Bz_period;
-	this->Bz_phase=src.Bz_phase;
+	this->Bz_mode=src.params.Bz_mode;
+	this->Bz_period=src.params.Bz_period;
+	this->Bz_phase=src.params.Bz_phase;
 
-	this->nbDistr_BXY=src.nbDistr_BXY;
-	beta_x_distr=new Distribution2D(src.nbDistr_BXY);
+	this->nbDistr_BXY=src.params.nbDistr_BXY;
+	beta_x_distr=new Distribution2D(src.params.nbDistr_BXY);
 	*beta_x_distr=*(src.beta_x_distr);
-	beta_y_distr=new Distribution2D(src.nbDistr_BXY);
+	beta_y_distr=new Distribution2D(src.params.nbDistr_BXY);
 	*beta_y_distr=*(src.beta_y_distr);
-	eta_distr=new Distribution2D(src.nbDistr_BXY);
-	*eta_distr=*(src.eta_distr);
-	etaprime_distr=new Distribution2D(src.nbDistr_BXY);
-	*etaprime_distr=*(src.etaprime_distr);
-	e_spread_distr=new Distribution2D(src.nbDistr_BXY);
+	eta_distr=new Distribution2D(src.params.nbDistr_BXY);
+	*eta_distr=*(src.params.eta_distr);
+	etaprime_distr=new Distribution2D(src.params.nbDistr_BXY);
+	*etaprime_distr=*(src.params.etaprime_distr);
+	e_spread_distr=new Distribution2D(src.params.nbDistr_BXY);
 	*e_spread_distr=*(src.e_spread_distr);
 
-	this->B_const=Vector(src.B_const.x,src.B_const.y,src.B_const.z);
+	this->B_const=Vector(src.params.B_const.x,src.params.B_const.y,src.params.B_const.z);
 	this->dL=src.dL;
 	this->E=src.E;
-	this->current=src.current;
-	this->emittance=src.emittance;
-	this->coupling=src.coupling;
-	this->energy_spread=src.energy_spread;
-	this->enable_ort_polarization=src.enable_ort_polarization;
-	this->enable_par_polarization=src.enable_par_polarization;
-	this->energy_hi=src.energy_hi;
-	this->energy_low=src.energy_low;
-	this->eta=src.eta;
-	this->etaprime=src.etaprime;
-	this->gamma=src.gamma;
+	this->current=src.params.current;
+	this->emittance=src.params.emittance;
+	this->coupling=src.params.coupling;
+	this->energy_spread=src.params.energy_spread;
+	this->enable_ort_polarization=src.params.enable_ort_polarization;
+	this->enable_par_polarization=src.params.enable_par_polarization;
+	this->energy_hi=src.params.energy_hi;
+	this->energy_low=src.params.energy_low;
+	this->eta=src.params.eta;
+	this->etaprime=src.params.etaprime;
+	this->gamma=src.params.gamma;
 	//this->generation_mode=src.generation_mode;
 	this->isLoaded=src.isLoaded;
 	//this->i_struct1=src.i_struct1;
-	this->limits=Vector(src.limits.x,src.limits.y,src.limits.z);
+	this->limits=Vector(src.params.limits.x,src.params.limits.y,src.params.limits.z);
 	//this->no_scans=src.no_scans;
 	//this->nregions=src.nregions;
-	this->particleMass=src.particleMass;
+	this->particleMass=src.params.particleMass;
 	//this->Points=src.Points; //trajectory points will be copied in the next step
-	this->psimaxX=src.psimaxX;
-	this->psimaxY=src.psimaxY;
-	this->quad=src.quad; //write assignment operator...
+	this->psimaxX=src.params.psimaxX;
+	this->psimaxY=src.params.psimaxY;
+	this->quad=src.params.quad; //write assignment operator...
 	this->selectedPoint=src.selectedPoint;
-	this->startDir=Vector(src.startDir.x,src.startDir.y,src.startDir.z);
-	this->startPoint=Vector(src.startPoint.x,src.startPoint.y,src.startPoint.z);
+	this->startDir=Vector(src.params.startDir.x,src.params.startDir.y,src.params.startDir.z);
+	this->startPoint=Vector(src.params.startPoint.x,src.params.startPoint.y,src.params.startPoint.z);
 	//this->teta0=src.teta0;
 	//this->x0=src.x0;
 	//this->y0=src.y0;
 	//this->z0=src.z0;
-	this->nbPointsToCopy=(int)src.nbPointsToCopy;
-	this->nbDistr_MAG=Vector(src.nbDistr_MAG.x,src.nbDistr_MAG.y,src.nbDistr_MAG.z);
-	this->beta_kind=src.beta_kind;
+	this->nbPointsToCopy=(int)src.params.nbPointsToCopy;
+	this->nbDistr_MAG=Vector(src.params.nbDistr_MAG.x,src.params.nbDistr_MAG.y,src.params.nbDistr_MAG.z);
+	this->beta_kind=src.params.beta_kind;
 	this->AABBmin=Vector(src.AABBmin.x,src.AABBmin.y,src.AABBmin.z);
 	this->AABBmax=Vector(src.AABBmax.x,src.AABBmax.y,src.AABBmax.z);
 	this->fileName.assign(src.fileName);
@@ -671,31 +672,29 @@ Region_full& Region_full::operator=(const Region_full &src) {
 	this->MAGZfileName.assign(src.MAGZfileName);
 	this->BXYfileName.assign(src.BXYfileName);
 	return *this;
-}
+}*/
 
-int Region_full::LoadBXY(FileReader *file,Distribution2D *beta_x_distr,Distribution2D *beta_y_distr,
-					Distribution2D *eta_distr,Distribution2D *etaprime_distr,
-					Distribution2D *e_spread_distr)
+int Region_full::LoadBXY(FileReader *file)
 {
 	//file->wasLineEnd=false;
 	int nbDistr_BXY=file->ReadInt();
-	beta_kind=file->ReadInt();
+	params.beta_kind=file->ReadInt();
 
-	*beta_x_distr=   Distribution2D(nbDistr_BXY);
-	*beta_y_distr=   Distribution2D(nbDistr_BXY);
-	*eta_distr=      Distribution2D(nbDistr_BXY);
-	*etaprime_distr= Distribution2D(nbDistr_BXY);
-	*e_spread_distr= Distribution2D(nbDistr_BXY);
+	beta_x_distr.Resize(nbDistr_BXY);
+	beta_y_distr.Resize(nbDistr_BXY);
+	eta_distr.Resize(nbDistr_BXY);
+	etaprime_distr.Resize(nbDistr_BXY);
+	e_spread_distr.Resize(nbDistr_BXY);
 
 	for (int i=0;i<nbDistr_BXY;i++)
 	{
-		beta_x_distr->valuesX[i]=beta_y_distr->valuesX[i]=eta_distr->valuesX[i]=etaprime_distr->valuesX[i]=
-			e_spread_distr->valuesX[i]=file->ReadDouble();
-		beta_x_distr->valuesY[i]=file->ReadDouble();
-		beta_y_distr->valuesY[i]=file->ReadDouble();
-		eta_distr->valuesY[i]=file->ReadDouble();
-		etaprime_distr->valuesY[i]=file->ReadDouble();
-		e_spread_distr->valuesY[i]=file->ReadDouble();
+		beta_x_distr.valuesX[i]=beta_y_distr.valuesX[i]=eta_distr.valuesX[i]=etaprime_distr.valuesX[i]=
+			e_spread_distr.valuesX[i]=file->ReadDouble();
+		beta_x_distr.valuesY[i]=file->ReadDouble();
+		beta_y_distr.valuesY[i]=file->ReadDouble();
+		eta_distr.valuesY[i]=file->ReadDouble();
+		etaprime_distr.valuesY[i]=file->ReadDouble();
+		e_spread_distr.valuesY[i]=file->ReadDouble();
 	}
 	return nbDistr_BXY;
 }
@@ -1018,47 +1017,47 @@ void Region_full::ExportPoints(FileWriter *file,GLProgress *prg,int frequency,BO
 
 void Region_full::SaveParam(FileWriter *file) {
 	file->Write("param_file_version:");file->WriteInt(PARAMVERSION,"\n");
-	file->Write("startPos_cm:");file->WriteDouble(startPoint.x);file->WriteDouble(startPoint.y);file->WriteDouble(startPoint.z,"\n");
-	file->Write("startDir_cm:");file->WriteDouble(startDir.x);file->WriteDouble(startDir.y);file->WriteDouble(startDir.z,"\n");
-	file->Write("dL_cm:");file->WriteDouble(dL,"\n");
-	file->Write("boundaries_cm:");file->WriteDouble(limits.x);file->WriteDouble(limits.y);file->WriteDouble(limits.z,"\n");
-	file->Write("particleMass_GeV:");file->WriteDouble(particleMass,"\n");
-	file->Write("beamEnergy_GeV:");file->WriteDouble(E,"\n");
-	file->Write("beamCurrent_mA:");file->WriteDouble(current,"\n");
-	file->Write("emittance:");file->WriteDouble(emittance,"\n");
-	file->Write("coupling:");file->WriteDouble(coupling,"\n");
-	if (emittance!=0.0) { //non-ideal beam
-		file->Write("beta_x:");file->WriteDouble(betax,"\n");
-		if (betax<0.0) {//use BXY file
+	file->Write("startPos_cm:");file->WriteDouble(params.startPoint.x);file->WriteDouble(params.startPoint.y);file->WriteDouble(params.startPoint.z,"\n");
+	file->Write("startDir_cm:");file->WriteDouble(params.startDir.x);file->WriteDouble(params.startDir.y);file->WriteDouble(params.startDir.z,"\n");
+	file->Write("dL_cm:");file->WriteDouble(params.dL,"\n");
+	file->Write("boundaries_cm:");file->WriteDouble(params.limits.x);file->WriteDouble(params.limits.y);file->WriteDouble(params.limits.z,"\n");
+	file->Write("particleMass_GeV:");file->WriteDouble(params.particleMass,"\n");
+	file->Write("beamEnergy_GeV:");file->WriteDouble(params.E,"\n");
+	file->Write("beamCurrent_mA:");file->WriteDouble(params.current,"\n");
+	file->Write("emittance:");file->WriteDouble(params.emittance,"\n");
+	file->Write("coupling:");file->WriteDouble(params.coupling,"\n");
+	if (params.emittance!=0.0) { //non-ideal beam
+		file->Write("beta_x:");file->WriteDouble(params.betax,"\n");
+		if (params.betax<0.0) {//use BXY file
 			file->Write("BXYfileName:\"");file->Write(FileUtils::GetFilename(BXYfileName).c_str());file->Write("\"\n"); //truncate path
 		} else {//constants
-			file->Write("beta_y:");file->WriteDouble(betay,"\n");
-			file->Write("eta:");file->WriteDouble(eta,"\n");
-			file->Write("eta_prime:");file->WriteDouble(etaprime,"\n");
-			file->Write("energy_spread:");file->WriteDouble(energy_spread,"\n");
+			file->Write("beta_y:");file->WriteDouble(params.betay,"\n");
+			file->Write("eta:");file->WriteDouble(params.eta,"\n");
+			file->Write("eta_prime:");file->WriteDouble(params.etaprime,"\n");
+			file->Write("energy_spread:");file->WriteDouble(params.energy_spread,"\n");
 		}
 	}
-	file->Write("E_min_eV:");file->WriteDouble(energy_low,"\n");
-	file->Write("E_max_eV:");file->WriteDouble(energy_hi,"\n");
-	file->Write("enable_par_polarization:");file->WriteInt(enable_par_polarization,"\n");
-	file->Write("enable_ort_polarization:");file->WriteInt(enable_ort_polarization,"\n");
-	file->Write("psiMax_rad:");file->WriteDouble(psimaxX);file->WriteDouble(psimaxY,"\n");
+	file->Write("E_min_eV:");file->WriteDouble(params.energy_low,"\n");
+	file->Write("E_max_eV:");file->WriteDouble(params.energy_hi,"\n");
+	file->Write("enable_par_polarization:");file->WriteInt(params.enable_par_polarization,"\n");
+	file->Write("enable_ort_polarization:");file->WriteInt(params.enable_ort_polarization,"\n");
+	file->Write("psiMax_rad:");file->WriteDouble(params.psimaxX);file->WriteDouble(params.psimaxY,"\n");
 	
-	file->Write("Bx_mode:");file->WriteInt(Bx_mode,"\n");
-	if (Bx_mode==B_MODE_CONSTANT) {
-		file->Write("Bx_const_Tesla:");file->WriteDouble(B_const.x,"\n");
+	file->Write("Bx_mode:");file->WriteInt(params.Bx_mode,"\n");
+	if (params.Bx_mode==B_MODE_CONSTANT) {
+		file->Write("Bx_const_Tesla:");file->WriteDouble(params.B_const.x,"\n");
 	} else {
 		file->Write("Bx_fileName:\"");file->Write(FileUtils::GetFilename(MAGXfileName).c_str());file->Write("\"\n"); //truncate path
 	}
-	file->Write("By_mode:");file->WriteInt(By_mode,"\n");
-	if (By_mode==B_MODE_CONSTANT) {
-		file->Write("By_const_Tesla:");file->WriteDouble(B_const.y,"\n");
+	file->Write("By_mode:");file->WriteInt(params.By_mode,"\n");
+	if (params.By_mode==B_MODE_CONSTANT) {
+		file->Write("By_const_Tesla:");file->WriteDouble(params.B_const.y,"\n");
 	} else {
 		file->Write("By_fileName:\""); file->Write(FileUtils::GetFilename(MAGYfileName).c_str()); file->Write("\"\n"); //truncate path
 	}
-	file->Write("Bz_mode:");file->WriteInt(Bz_mode,"\n");
-	if (Bz_mode==B_MODE_CONSTANT) {
-		file->Write("Bz_const_Tesla:");file->WriteDouble(B_const.z,"\n");
+	file->Write("Bz_mode:");file->WriteInt(params.Bz_mode,"\n");
+	if (params.Bz_mode==B_MODE_CONSTANT) {
+		file->Write("Bz_const_Tesla:");file->WriteDouble(params.B_const.z,"\n");
 	} else {
 		file->Write("Bz_fileName:\""); file->Write(FileUtils::GetFilename(MAGZfileName).c_str()); file->Write("\"\n"); //truncate path
 	}
@@ -1067,12 +1066,12 @@ void Region_full::SaveParam(FileWriter *file) {
 void Region_full::LoadParam(FileReader *file){
 
 	//Creating references to X,Y,Z components (to avoid writing code 3 times)
-	double* Bconst_ptr[3]={&B_const.x,&B_const.y,&B_const.z};
-	Vector* Bdir_ptr[3]={&Bx_dir,&By_dir,&Bz_dir};
-	int* Bmode_ptr[3]={&Bx_mode,&By_mode,&Bz_mode};
-	double* Bperiod_ptr[3]={&Bx_period,&By_period,&Bz_period};
-	double* Bphase_ptr[3]={&Bx_phase,&By_phase,&Bz_phase};
-	Distribution2D* distr_ptr[3]={Bx_distr,By_distr,Bz_distr};
+	double* Bconst_ptr[3]={&params.B_const.x,&params.B_const.y,&params.B_const.z};
+	Vector* Bdir_ptr[3]={&params.Bx_dir,&params.By_dir,&params.Bz_dir};
+	int* Bmode_ptr[3]={&params.Bx_mode,&params.By_mode,&params.Bz_mode};
+	double* Bperiod_ptr[3]={&params.Bx_period,&params.By_period,&params.Bz_period};
+	double* Bphase_ptr[3]={&params.Bx_phase,&params.By_phase,&params.Bz_phase};
+	Distribution2D* distr_ptr[3]={&Bx_distr,&By_distr,&Bz_distr};
 	std::string* MagFileNamePtr[3]={&MAGXfileName,&MAGYfileName,&MAGZfileName};
 	std::string Bmode_str[3]={"Bx_mode","By_mode","Bz_mode"};
 	std::string Bconst_str[3]={"Bx_const_Tesla","By_const_Tesla","Bz_const_Tesla"};
@@ -1089,27 +1088,27 @@ void Region_full::LoadParam(FileReader *file){
 	}
 	
 	file->ReadKeyword("startPos_cm");file->ReadKeyword(":");
-	double x=file->ReadDouble();double y=file->ReadDouble();double z=file->ReadDouble(); startPoint=Vector(x,y,z);
+	double x=file->ReadDouble();double y=file->ReadDouble();double z=file->ReadDouble(); params.startPoint=Vector(x,y,z);
 	file->ReadKeyword("startDir_cm");file->ReadKeyword(":");
-	x=file->ReadDouble(); y=file->ReadDouble(); z=file->ReadDouble(); startDir=Vector(x,y,z);
-	file->ReadKeyword("dL_cm");file->ReadKeyword(":");dL=file->ReadDouble();
+	x=file->ReadDouble(); y=file->ReadDouble(); z=file->ReadDouble(); params.startDir=Vector(x,y,z);
+	file->ReadKeyword("dL_cm");file->ReadKeyword(":");params.dL=file->ReadDouble();
 	file->ReadKeyword("boundaries_cm");file->ReadKeyword(":");
-	x=file->ReadDouble(); y=file->ReadDouble(); z=file->ReadDouble(); limits=Vector(x,y,z);
-	file->ReadKeyword("particleMass_GeV");file->ReadKeyword(":");particleMass=file->ReadDouble();
-	file->ReadKeyword("beamEnergy_GeV");file->ReadKeyword(":");E=file->ReadDouble();
-	if (paramVersion>=2) {file->ReadKeyword("beamCurrent_mA");file->ReadKeyword(":");current=file->ReadDouble();}
-	else current=1;
+	x=file->ReadDouble(); y=file->ReadDouble(); z=file->ReadDouble(); params.limits=Vector(x,y,z);
+	file->ReadKeyword("particleMass_GeV");file->ReadKeyword(":");params.particleMass=file->ReadDouble();
+	file->ReadKeyword("beamEnergy_GeV");file->ReadKeyword(":");params.E=file->ReadDouble();
+	if (paramVersion>=2) {file->ReadKeyword("beamCurrent_mA");file->ReadKeyword(":");params.current=file->ReadDouble();}
+	else params.current=1;
 
-	emittance=eta=etaprime=energy_spread=betax=betay=0.0; //default values
-	coupling=100.0;
-	nbDistr_BXY=0;
+	params.emittance= params.eta= params.etaprime= params.energy_spread= params.betax= params.betay=0.0; //default values
+	params.coupling=100.0;
+	params.nbDistr_BXY=0;
 
-	file->ReadKeyword("emittance");file->ReadKeyword(":");emittance=file->ReadDouble();
-	if (paramVersion>=2) {file->ReadKeyword("coupling");file->ReadKeyword(":");coupling=file->ReadDouble();}
-	if (emittance!=0.0) { //non-ideal beam
-		file->ReadKeyword("beta_x");file->ReadKeyword(":");betax=file->ReadDouble();
-		beta_kind=0;
-		if (betax<0.0) {//use BXY file
+	file->ReadKeyword("emittance");file->ReadKeyword(":");params.emittance=file->ReadDouble();
+	if (paramVersion>=2) {file->ReadKeyword("coupling");file->ReadKeyword(":");params.coupling=file->ReadDouble();}
+	if (params.emittance!=0.0) { //non-ideal beam
+		file->ReadKeyword("beta_x");file->ReadKeyword(":");params.betax=file->ReadDouble();
+		params.beta_kind=0;
+		if (params.betax<0.0) {//use BXY file
 			file->ReadKeyword("BXYfileName");file->ReadKeyword(":");
 			
 				char tmp[512];
@@ -1132,7 +1131,7 @@ void Region_full::LoadParam(FileReader *file){
 				}
 				FileReader BXYfile((char*)BXYfileName.c_str());
 				try {
-					nbDistr_BXY = LoadBXY(&BXYfile, beta_x_distr, beta_y_distr, eta_distr, etaprime_distr, e_spread_distr);
+					params.nbDistr_BXY = LoadBXY(&BXYfile);
 				} catch(Error &e) {
 					//geom->Clear();
 					sprintf(tmp, "Error loading BXY file (%s): %s", BXYfileName.c_str(), e.GetMsg());
@@ -1140,18 +1139,18 @@ void Region_full::LoadParam(FileReader *file){
 				}
 			 
 		} else { //constants
-			file->ReadKeyword("beta_y");file->ReadKeyword(":");betay=file->ReadDouble();
-			file->ReadKeyword("eta");file->ReadKeyword(":");eta=file->ReadDouble();
-			file->ReadKeyword("eta_prime");file->ReadKeyword(":");etaprime=file->ReadDouble();
-			if (paramVersion==1) {file->ReadKeyword("coupling");file->ReadKeyword(":");coupling=file->ReadDouble();}
-			file->ReadKeyword("energy_spread");file->ReadKeyword(":");energy_spread=file->ReadDouble();
+			file->ReadKeyword("beta_y");file->ReadKeyword(":");params.betay=file->ReadDouble();
+			file->ReadKeyword("eta");file->ReadKeyword(":");params.eta=file->ReadDouble();
+			file->ReadKeyword("eta_prime");file->ReadKeyword(":");params.etaprime=file->ReadDouble();
+			if (paramVersion==1) {file->ReadKeyword("coupling");file->ReadKeyword(":");params.coupling=file->ReadDouble();}
+			file->ReadKeyword("energy_spread");file->ReadKeyword(":");params.energy_spread=file->ReadDouble();
 		}
 	}
-	file->ReadKeyword("E_min_eV");file->ReadKeyword(":");energy_low=file->ReadDouble();
-	file->ReadKeyword("E_max_eV");file->ReadKeyword(":");energy_hi=file->ReadDouble();
-	file->ReadKeyword("enable_par_polarization");file->ReadKeyword(":");enable_par_polarization=file->ReadInt();
-	file->ReadKeyword("enable_ort_polarization");file->ReadKeyword(":");enable_ort_polarization=file->ReadInt();
-	file->ReadKeyword("psiMax_rad");file->ReadKeyword(":");psimaxX=file->ReadDouble();psimaxY=file->ReadDouble();
+	file->ReadKeyword("E_min_eV");file->ReadKeyword(":");params.energy_low=file->ReadDouble();
+	file->ReadKeyword("E_max_eV");file->ReadKeyword(":");params.energy_hi=file->ReadDouble();
+	file->ReadKeyword("enable_par_polarization");file->ReadKeyword(":");params.enable_par_polarization=file->ReadInt();
+	file->ReadKeyword("enable_ort_polarization");file->ReadKeyword(":");params.enable_ort_polarization=file->ReadInt();
+	file->ReadKeyword("psiMax_rad");file->ReadKeyword(":");params.psimaxX=file->ReadDouble();params.psimaxY=file->ReadDouble();
 
 	for (int i=0;i<3;i++) {
 		file->ReadKeyword((char*)Bmode_str[i].c_str());file->ReadKeyword(":");*Bmode_ptr[i]=file->ReadInt();
@@ -1184,7 +1183,7 @@ void Region_full::LoadParam(FileReader *file){
 			
 		}
 	}
-	gamma=abs(E/particleMass);
+	params.gamma=abs(params.E/ params.particleMass);
 
 	//prg->SetMessage("Calculating trajectory...");
 	CalculateTrajectory(1000000); //max 1 million points

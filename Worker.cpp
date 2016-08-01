@@ -1594,7 +1594,7 @@ BOOL Worker::Wait(int waitState,int timeout,GLProgress *prg) {
 		sprintf(tmp,"Total workers : %d\n"
 			"%d are ready, %d reported errors\n"
 			"Do you want to wait a bit more?\n"
-			"(Loading continues while this dialog is visible)\n",nbProcess,nbReady,nbError,nbProcess);
+			"(Loading continues while this dialog is visible)\n",nbProcess,nbReady,nbError);
 		int waitmore = GLMessageBox::Display(tmp,"Info",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONINFO)==GLDLG_OK;
 		if (waitmore) {
 			t=0;
@@ -1815,7 +1815,7 @@ void Worker::AddRegion(const char *fileName,int position) {
 			else {
 				nbTrajPoints-=(int)regions[position].Points.size();
 				regions[position]=newtraj;
-				regions[position].Points=newtraj.Points; //need to force because of operator=
+				//regions[position].Points=newtraj.Points; //need to force because of operator=
 			}
 			geom->InitializeGeometry(-1,TRUE); //recalculate bounding box
 			nbTrajPoints+=(int)newtraj.Points.size();

@@ -197,14 +197,14 @@ int ExportDesorption::LoadConvFile(char *fileName) {
 			nbPoints++;
 		}
 		if (!(nbPoints>0)) throw Error("Invalid number of entries in file");
-		conversionDistr=new Distribution2D(nbPoints);
+		//conversionDistr=new Distribution2D(nbPoints);
 		
 		f->SeekStart(); //restart from the beginning
 		
-		for (int i=0;i<nbPoints;i++) {
+		/*for (int i=0;i<nbPoints;i++) {
 			conversionDistr->valuesX[i]=f->ReadDouble();
 			conversionDistr->valuesY[i]=f->ReadDouble();
-		}
+		}*/
 		SAFE_DELETE(f);
 	}  catch (Error &e) {
 		SAFE_DELETE(f);

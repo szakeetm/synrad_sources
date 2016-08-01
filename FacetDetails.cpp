@@ -267,7 +267,7 @@ char *FacetDetails::FormatCell(int idx,Facet *f,int mode) {
 		sprintf(ret,"%g",f->sh.area);
 		break;
 	case 10:
-		sprintf(ret,"%g x %g",Norme(&f->sh.U),Norme(&f->sh.V));
+		sprintf(ret,"%g x %g",Norme(f->sh.U),Norme(f->sh.V));
 		break;
 	case 11:
 		if( f->sh.isTextured ) {

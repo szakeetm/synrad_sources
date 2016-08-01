@@ -208,7 +208,7 @@ char *TrajectoryDetails::FormatCell(int idx, int mode, GenPhoton* photon) {
 		sprintf(ret, "%d", idx + 1);
 		break;
 	case 1: //L
-		sprintf(ret, "%g", (double)idx*reg->dL);
+		sprintf(ret, "%g", (double)idx*reg->params.dL);
 		break;
 	case 2: //Orbit_posX
 		sprintf(ret, "%g", p->position.x);
@@ -332,7 +332,7 @@ char *TrajectoryDetails::FormatCell(int idx, int mode, GenPhoton* photon) {
 		sprintf(ret, "%g", photon->energy / photon->critical_energy);
 		break;
 	case 40: //Photon_G1H2
-		sprintf(ret, "%g", "g1h2 obsolete");
+		sprintf(ret, "%s", "g1h2 obsolete");
 		break;
 	case 41: //Photon_B_factor
 		sprintf(ret, "%g", photon->B_factor);

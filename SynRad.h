@@ -40,6 +40,7 @@
 #include "ExtrudeFacet.h"
 #include "ExportDesorption.h"
 #include "MirrorFacet.h"
+#include "SplitFacet.h"
 #include "RotateFacet.h"
 #include "AlignFacet.h"
 #include "AddVertex.h"
@@ -146,7 +147,6 @@ public:
 	void UpdateViewerFlags();
     void StartStopSimulation();
     void ResetSimulation(BOOL askConfirm=TRUE);
-    void EditFacet();
     void SaveConfig();
     void LoadConfig();
     void UpdateStructMenu();
@@ -158,6 +158,7 @@ public:
     void Place3DViewer();
 
 	void QuickPipe();
+	void CreateOfTwoFacets(ClipperLib::ClipType type);
 	void UpdateFacetlistSelected();
 	BOOL AskToSave();
 	BOOL AskToReset(Worker *work=NULL);
@@ -330,6 +331,7 @@ public:
 	MoveFacet		 *moveFacet;
 	ExportDesorption *exportDesorption;
 	MirrorFacet	     *mirrorFacet;
+	SplitFacet       *splitFacet;
 	RotateFacet      *rotateFacet;
 	AlignFacet       *alignFacet;
 	AddVertex		 *addVertex;

@@ -1,7 +1,7 @@
 /*
 File:        MoveFacet.cpp
 Description: Move facet by offset dialog
-Program:     SynRad
+Program:     MolFlow
 
 
 This program is free software; you can redistribute it and/or modify
@@ -317,12 +317,12 @@ void ExtrudeFacet::ProcessMessage(GLComponent *src, int message) {
 	double x0, y0, z0, dX, dY, dZ, dist, radiusLength, totalAngle;
 	int noSteps;
 
-	switch (message) {
+	switch(message) {
 	case MSG_BUTTON:
 
-		if (src == extrudeButton) {
-			if (geom->GetNbSelected() == 0) {
-				GLMessageBox::Display("No facets selected", "Nothing to move", GLDLG_OK, GLDLG_ICONINFO);
+		if (src==extrudeButton) {
+			if (geom->GetNbSelected()==0) {
+				GLMessageBox::Display("No facets selected","Nothing to move",GLDLG_OK,GLDLG_ICONINFO);
 				return;
 			}
 			else if (geom->GetNbSelected() > 1) {
@@ -334,19 +334,19 @@ void ExtrudeFacet::ProcessMessage(GLComponent *src, int message) {
 				}
 			}
 
-			if (offsetCheckbox->GetState() == 1 && !dxText->GetNumber(&dX)) {
-				GLMessageBox::Display("Invalid direction vector dX value", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			if( offsetCheckbox->GetState()==1 && !dxText->GetNumber(&dX) ) {
+				GLMessageBox::Display("Invalid direction vector dX value","Error",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 			}
 			if (offsetCheckbox->GetState() == 1 && !dyText->GetNumber(&dY)) {
-				GLMessageBox::Display("Invalid direction vector dY value", "Error", GLDLG_OK, GLDLG_ICONERROR);
+				GLMessageBox::Display("Invalid direction vector dY value","Error",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 			}
 			if (offsetCheckbox->GetState() == 1 && !dzText->GetNumber(&dZ)) {
-				GLMessageBox::Display("Invalid direction vector dZ value", "Error", GLDLG_OK, GLDLG_ICONERROR);
+				GLMessageBox::Display("Invalid direction vector dZ value","Error",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 			}
-			if ((towardsNormalCheckbox->GetState() == 1 || againstNormalCheckbox->GetState() == 1)
+			if ( (towardsNormalCheckbox->GetState() == 1 || againstNormalCheckbox->GetState()==1) 
 				&& !distanceTextbox->GetNumber(&dist)) {
 				GLMessageBox::Display("Invalid extrusion length value", "Error", GLDLG_OK, GLDLG_ICONERROR);
 				return;
@@ -397,14 +397,14 @@ void ExtrudeFacet::ProcessMessage(GLComponent *src, int message) {
 				return;
 			}
 			int mode;
-			if (towardsNormalCheckbox->GetState() || againstNormalCheckbox->GetState()) mode = 1; //By distance
-			else if (offsetCheckbox->GetState()) mode = 2; // By offset vector
-			else mode = 3; //Along curve
-
-			if ((mode != 1) && dX*dX + dY*dY + dZ*dZ < 1E-8) {
+				if (towardsNormalCheckbox->GetState() || againstNormalCheckbox->GetState()) mode = 1; //By distance
+				else if (offsetCheckbox->GetState()) mode = 2; // By offset vector
+				else mode = 3; //Along curve
+			
+				if ((mode!=1) && dX*dX + dY*dY + dZ*dZ < 1E-8) {
 				GLMessageBox::Display("Direction is a null-vector", "Error", GLDLG_OK, GLDLG_ICONERROR);
 				return;
-			} if (mode == 3 && abs(radiusLength)<1E-8) {
+			} if (mode==3 && abs(radiusLength)<1E-8) {
 				GLMessageBox::Display("Radius length can't be 0", "Error", GLDLG_OK, GLDLG_ICONERROR);
 				return;
 			} if (mode == 1 && abs(dist)<1E-8) {
@@ -412,7 +412,7 @@ void ExtrudeFacet::ProcessMessage(GLComponent *src, int message) {
 				return;
 			} if (mode == 3 && (totalAngle<-360 || totalAngle>360)) {
 				int rep = GLMessageBox::Display("Total angle outside -360..+360 degree. Are you sure?", "Warning", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONWARNING);
-				if (rep != GLDLG_OK) return;
+				if (rep!=GLDLG_OK) return;
 			} if (mode == 3 && (abs(totalAngle)<1E-8 || totalAngle>360)) {
 				GLMessageBox::Display("Total angle can't be 0", "Error", GLDLG_OK, GLDLG_ICONERROR);
 				return;
@@ -427,8 +427,8 @@ void ExtrudeFacet::ProcessMessage(GLComponent *src, int message) {
 			}
 
 
-			if (mApp->AskToReset()) {
-
+			if (mApp->AskToReset()){
+				
 				VERTEX3D radiusBase, offsetORradiusdir;
 				radiusBase.x = x0;
 				radiusBase.y = y0;
@@ -440,26 +440,26 @@ void ExtrudeFacet::ProcessMessage(GLComponent *src, int message) {
 				if (mode == 1) distanceORradius = dist;
 				else if (mode == 3) distanceORradius = radiusLength;
 
-				geom->Extrude(mode, radiusBase, offsetORradiusdir,
-					againstNormalCheckbox->GetState() || curveAgainstNormalCheckbox->GetState(),
-					(mode == 1) ? dist : radiusLength,
+				geom->Extrude(mode, radiusBase, offsetORradiusdir, 
+					againstNormalCheckbox->GetState() || curveAgainstNormalCheckbox->GetState(), 
+					(mode==1)?dist:radiusLength,
 					totalAngle, noSteps);
 
-				work->Reload();
+				work->Reload(); 
 				mApp->changedSinceSave = TRUE;
-				mApp->UpdateFacetlistSelected();
+				mApp->UpdateFacetlistSelected();	
 				mApp->UpdateViewers();
 			}
 		}
 		else if (src == getBaseButton) {
 			int foundId = AssertOneVertexSelected();
-			if (foundId >= 0) {
+			if (foundId>=0) {
 				ClearToggles(offsetCheckbox);
 				EnableDisableControls();
 
 				baseId = foundId;
 				char tmp[32];
-				sprintf(tmp, "Vertex %d", baseId + 1);
+				sprintf(tmp, "Vertex %d",baseId+1);
 				baseLabel->SetText(tmp);
 				if (dirId>0 && dirId < geom->GetNbVertex()) {
 					dxText->SetText(geom->GetVertex(dirId)->x - geom->GetVertex(baseId)->x);
@@ -470,7 +470,7 @@ void ExtrudeFacet::ProcessMessage(GLComponent *src, int message) {
 		}
 		else if (src == getDirButton) {
 			int foundId = AssertOneVertexSelected();
-			if (foundId >= 0) {
+			if (foundId>=0) {
 
 				ClearToggles(offsetCheckbox);
 				EnableDisableControls();
@@ -485,8 +485,7 @@ void ExtrudeFacet::ProcessMessage(GLComponent *src, int message) {
 					dzText->SetText(geom->GetVertex(dirId)->z - geom->GetVertex(baseId)->z);
 				}
 			}
-		}
-		else if (src == curveFacetCenterButton) {
+		} else if (src==curveFacetCenterButton) {
 			int foundId = AssertOneFacetSelected();
 			if (foundId >= 0) {
 				char tmp[32];
@@ -502,7 +501,7 @@ void ExtrudeFacet::ProcessMessage(GLComponent *src, int message) {
 			if (foundId >= 0) {
 				int vertexId = geom->GetFacet(foundId)->indices[0];
 				char tmp[32];
-				sprintf(tmp, "Facet %d index1: Vertex %d", foundId + 1, vertexId + 1);
+				sprintf(tmp, "Facet %d index1: Vertex %d", foundId + 1, vertexId+1);
 				curveBaseLabel->SetText(tmp);
 				curveX0Text->SetText(geom->GetVertex(vertexId)->x);
 				curveY0Text->SetText(geom->GetVertex(vertexId)->y);
@@ -550,10 +549,10 @@ void ExtrudeFacet::ProcessMessage(GLComponent *src, int message) {
 					char tmp[32];
 					sprintf(tmp, "Vertex %d", foundId + 1);
 					curveDirLabel->SetText(tmp);
-					curvedXText->SetText(geom->GetVertex(foundId)->x - x0);
-					curvedYText->SetText(geom->GetVertex(foundId)->y - y0);
-					curvedZText->SetText(geom->GetVertex(foundId)->z - z0);
-				}
+					curvedXText->SetText(geom->GetVertex(foundId)->x-x0);
+					curvedYText->SetText(geom->GetVertex(foundId)->y-y0);
+					curvedZText->SetText(geom->GetVertex(foundId)->z-z0);
+				}				
 			}
 		}
 		else if (src == facetNXbutton) {
@@ -598,10 +597,9 @@ void ExtrudeFacet::ProcessMessage(GLComponent *src, int message) {
 		if (src == curveTotalAngleDegText) {
 			double deg;
 			if (curveTotalAngleDegText->GetNumber(&deg)) {
-				curveTotalAngleRadText->SetText(deg / 180.0*PI);
+				curveTotalAngleRadText->SetText(deg/180.0*PI);
 			}
-		}
-		else if (src == curveTotalAngleRadText) {
+		} else if (src == curveTotalAngleRadText) {
 			double rad;
 			if (curveTotalAngleRadText->GetNumber(&rad)) {
 				curveTotalAngleDegText->SetText(rad / PI*180.0);
@@ -609,13 +607,13 @@ void ExtrudeFacet::ProcessMessage(GLComponent *src, int message) {
 		}
 	}
 
-	GLWindow::ProcessMessage(src, message);
+	GLWindow::ProcessMessage(src,message);
 }
 
 void ExtrudeFacet::ClearToggles(GLToggle* leaveChecked) {
 	std::vector<GLToggle*> toggles = { towardsNormalCheckbox,againstNormalCheckbox,offsetCheckbox,curveTowardsNormalCheckbox,curveAgainstNormalCheckbox };
-	for (auto toggle : toggles)
-		toggle->SetState(toggle == leaveChecked);
+	for (auto toggle : toggles) 
+		toggle->SetState(toggle==leaveChecked);
 }
 
 void ExtrudeFacet::EnableDisableControls() {

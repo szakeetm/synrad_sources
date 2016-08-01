@@ -33,6 +33,8 @@
 #include "PugiXML/pugixml.hpp"
 #include <vector>
 #include <sstream>
+#include <list>
+#include "Clipper\clipper.hpp"
 
 #define SEL_HISTORY  100
 #define MAX_SUPERSTR 128
@@ -105,15 +107,20 @@ public:
   void SwapNormal();
   void Extrude(int mode, VERTEX3D radiusBase, VERTEX3D offsetORradiusdir, BOOL againstNormal, double distanceORradius, double totalAngle, int steps);
   void RemoveSelected();
+  void RemoveFacets(const std::vector<size_t> &facetIdList, BOOL doNotDestroy = FALSE);
+  void RestoreFacets(std::vector<DeletedFacet> deletedFacetList, BOOL toEnd);
   void RemoveSelectedVertex();
   void RemoveFromStruct(int numToDel);
+  void CreateLoft();
   BOOL RemoveCollinear();
   int  ExplodeSelected(BOOL toMap=FALSE,int desType=1,double exponent=0.0,double *values=NULL);
   void SelectCoplanar(int width,int height,double tolerance);
   void MoveSelectedVertex(double dX,double dY,double dZ,BOOL copy,Worker *worker);
   void ScaleSelectedVertices(VERTEX3D invariant,double factor,BOOL copy,Worker *worker);
   void ScaleSelectedFacets(VERTEX3D invariant,double factorX,double factorY,double factorZ,BOOL copy,Worker *worker);
-  void SplitSelectedFacets(VERTEX3D base, VERTEX3D normal, Worker *worker);
+  std::vector<DeletedFacet> SplitSelectedFacets(const VERTEX3D &base, const VERTEX3D &normal, size_t *nbCreated,/*Worker *worker,*/GLProgress *prg = NULL);
+  std::vector<size_t> ConstructIntersection();
+  BOOL IntersectingPlaneWithLine(const VERTEX3D &P0, const VERTEX3D &u, const VERTEX3D &V0, const VERTEX3D &n, VERTEX3D *intersectPoint, BOOL withinSection = FALSE);
   void MoveSelectedFacets(double dX,double dY,double dZ,BOOL copy,Worker *worker);
   void MirrorSelectedFacets(VERTEX3D P0,VERTEX3D N,BOOL copy,Worker *worker);
   void RotateSelectedFacets(const VERTEX3D &AXIS_P0,const VERTEX3D &AXIS_DIR,double theta,BOOL copy,Worker *worker);
@@ -131,6 +138,10 @@ public:
   void CreatePolyFromVertices_Convex(); //create convex facet from selected vertices
   void CreatePolyFromVertices_Order(); //create facet from selected vertices following selection order
   void CreateDifference(); //creates the difference from 2 selected facets
+  void ClipSelectedPolygons(ClipperLib::ClipType type);
+  void ClipPolygon(size_t id1, size_t id2, ClipperLib::ClipType type);
+  void ClipPolygon(size_t id1, std::vector<std::vector<size_t>> clippingPaths, ClipperLib::ClipType type);
+  void RegisterVertex(Facet *f, const VERTEX2D &vert, size_t id1, const std::vector<ProjectedPoint> &projectedPoints, std::vector<VERTEX3D> &newVertices, size_t registerLocation);
   void SelectVertex(int x1,int y1,int x2,int y2,BOOL shiftDown,BOOL ctrlDown,BOOL circularSelection);
   void SelectVertex(int x,int y,BOOL shiftDown,BOOL ctrlDown);
   void SelectVertex(int facet);
@@ -321,5 +332,22 @@ private:
   void DrawEar(Facet *f,POLYGON *p,int ear,BOOL addTextureCoord);
 
 };
+
+class ClippingVertex {
+public:
+
+	ClippingVertex();
+	VERTEX2D vertex; //Storing the actual vertex
+	BOOL visited;
+	BOOL inside;
+	BOOL onClippingLine;
+	BOOL isLink;
+	double distance;
+	std::list<ClippingVertex>::iterator link;
+	size_t globalId;
+};
+
+BOOL operator<(const std::list<ClippingVertex>::iterator& a, const std::list<ClippingVertex>::iterator& b);
+
 
 #endif /* _GEOMETRYH_ */

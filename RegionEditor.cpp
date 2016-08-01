@@ -952,41 +952,41 @@ void RegionEditor::EnableDisableControls() {
 
 void RegionEditor::FillValues() {
 	char tmp[512];
-	sprintf(tmp,"%.9g",cr->startPoint.x);startPointXtext->SetText(tmp);
-	sprintf(tmp,"%.9g",cr->startPoint.y);startPointYtext->SetText(tmp);
-	sprintf(tmp,"%.9g",cr->startPoint.z);startPointZtext->SetText(tmp);
+	sprintf(tmp,"%.9g",cr->params.startPoint.x);startPointXtext->SetText(tmp);
+	sprintf(tmp,"%.9g",cr->params.startPoint.y);startPointYtext->SetText(tmp);
+	sprintf(tmp,"%.9g",cr->params.startPoint.z);startPointZtext->SetText(tmp);
 
 	double t0;
-	if (cr->startDir.z == 0) {
-		if (cr->startDir.x >= 0) t0 = -PI / 2;
+	if (cr->params.startDir.z == 0) {
+		if (cr->params.startDir.x >= 0) t0 = -PI / 2;
 		else t0 = PI / 2;
 	}
 	else {
-		t0 = -atan(cr->startDir.x / cr->startDir.z); //Good for -PI/2...PI/2
-		if (cr->startDir.z <= 0) //atan out of period
-			if (cr->startDir.x < 0) t0 += PI;
+		t0 = -atan(cr->params.startDir.x / cr->params.startDir.z); //Good for -PI/2...PI/2
+		if (cr->params.startDir.z <= 0) //atan out of period
+			if (cr->params.startDir.x < 0) t0 += PI;
 			else t0 -= PI;
 	}
 	theta0text->SetText(t0);
-	alpha0text->SetText(-asin(cr->startDir.Normalize().y));
-	sprintf(tmp,"%g",cr->startDir.x);startDirXtext->SetText(tmp);
-	sprintf(tmp,"%g",cr->startDir.y);startDirYtext->SetText(tmp);
-	sprintf(tmp,"%g",cr->startDir.z);startDirZtext->SetText(tmp);
+	alpha0text->SetText(-asin(cr->params.startDir.Normalize().y));
+	sprintf(tmp,"%g",cr->params.startDir.x);startDirXtext->SetText(tmp);
+	sprintf(tmp,"%g",cr->params.startDir.y);startDirYtext->SetText(tmp);
+	sprintf(tmp,"%g",cr->params.startDir.z);startDirZtext->SetText(tmp);
 
-	sprintf(tmp,"%g",cr->dL);dLtext->SetText(tmp);
+	sprintf(tmp,"%g",cr->params.dL);dLtext->SetText(tmp);
 
-	sprintf(tmp,"%g",cr->limits.x);limitsXtext->SetText(tmp);
-	sprintf(tmp,"%g",cr->limits.y);limitsYtext->SetText(tmp);
-	sprintf(tmp,"%g",cr->limits.z);limitsZtext->SetText(tmp);
+	sprintf(tmp,"%g",cr->params.limits.x);limitsXtext->SetText(tmp);
+	sprintf(tmp,"%g",cr->params.limits.y);limitsYtext->SetText(tmp);
+	sprintf(tmp,"%g",cr->params.limits.z);limitsZtext->SetText(tmp);
 
-	sprintf(tmp,"%g",abs(cr->particleMass));particleMassText->SetText(tmp);
-	particleChargeCombo->SetSelectedIndex(cr->particleMass<0);
+	sprintf(tmp,"%g",abs(cr->params.particleMass));particleMassText->SetText(tmp);
+	particleChargeCombo->SetSelectedIndex(cr->params.particleMass<0);
 
-	sprintf(tmp,"%g",cr->E);beamEnergyText->SetText(tmp);
-	sprintf(tmp,"%g",cr->current);beamCurrentText->SetText(tmp);
-	idealBeamToggle->SetState(cr->emittance==0.0);
+	sprintf(tmp,"%g",cr->params.E);beamEnergyText->SetText(tmp);
+	sprintf(tmp,"%g",cr->params.current);beamCurrentText->SetText(tmp);
+	idealBeamToggle->SetState(cr->params.emittance==0.0);
 
-	if (cr->emittance==0.0) { //ideal beam
+	if (cr->params.emittance==0.0) { //ideal beam
 		betaOrBXYCombo->SetSelectedIndex(0);
 		BXYfileNameText->SetText("");
 		emittanceText->SetText("0");
@@ -998,45 +998,45 @@ void RegionEditor::FillValues() {
 		energySpreadText->SetText("0");
 	}
 	
-	sprintf(tmp,"%g",cr->emittance);emittanceText->SetText(tmp);
-	sprintf(tmp,"%g",cr->coupling);couplingText->SetText(tmp);
+	sprintf(tmp,"%g",cr->params.emittance);emittanceText->SetText(tmp);
+	sprintf(tmp,"%g",cr->params.coupling);couplingText->SetText(tmp);
 
-	if (cr->betax>=0.0) { //don't use BXY file
+	if (cr->params.betax>=0.0) { //don't use BXY file
 		betaOrBXYCombo->SetSelectedIndex(0);
 		BXYfileNameText->SetText("");
-		sprintf(tmp,"%g",cr->betax);betaXtext->SetText(tmp);
-		sprintf(tmp,"%g",cr->betay);betaYtext->SetText(tmp);
-		sprintf(tmp,"%g",cr->eta);etaText->SetText(tmp);
-		sprintf(tmp,"%g",cr->etaprime);etaPrimeText->SetText(tmp);
-		sprintf(tmp,"%g",cr->energy_spread);energySpreadText->SetText(tmp);
+		sprintf(tmp,"%g",cr->params.betax);betaXtext->SetText(tmp);
+		sprintf(tmp,"%g",cr->params.betay);betaYtext->SetText(tmp);
+		sprintf(tmp,"%g",cr->params.eta);etaText->SetText(tmp);
+		sprintf(tmp,"%g",cr->params.etaprime);etaPrimeText->SetText(tmp);
+		sprintf(tmp,"%g",cr->params.energy_spread);energySpreadText->SetText(tmp);
 	} else {
 		betaOrBXYCombo->SetSelectedIndex(1);
 		BXYfileNameText->SetText((char*)cr->BXYfileName.c_str());
 	}
 
-	sprintf(tmp,"%g",cr->energy_low);EminText->SetText(tmp);
-	sprintf(tmp,"%g",cr->energy_hi);EmaxText->SetText(tmp);
-	enableOrtPolarizationToggle->SetState(cr->enable_ort_polarization);
-	enableParPolarizationToggle->SetState(cr->enable_par_polarization);
-	limitAngleToggle->SetState(cr->psimaxX<3.14159 || cr->psimaxY<3.14159);
-	sprintf(tmp,"%g",cr->psimaxX);psiMaxXtext->SetText(tmp);
-	sprintf(tmp,"%g",cr->psimaxY);psiMaxYtext->SetText(tmp);
+	sprintf(tmp,"%g",cr->params.energy_low);EminText->SetText(tmp);
+	sprintf(tmp,"%g",cr->params.energy_hi);EmaxText->SetText(tmp);
+	enableOrtPolarizationToggle->SetState(cr->params.enable_ort_polarization);
+	enableParPolarizationToggle->SetState(cr->params.enable_par_polarization);
+	limitAngleToggle->SetState(cr->params.psimaxX<3.14159 || cr->params.psimaxY<3.14159);
+	sprintf(tmp,"%g",cr->params.psimaxX);psiMaxXtext->SetText(tmp);
+	sprintf(tmp,"%g",cr->params.psimaxY);psiMaxYtext->SetText(tmp);
 
-	BxtypeCombo->SetSelectedIndex(cr->Bx_mode-1);
-	if (cr->Bx_mode==B_MODE_CONSTANT) {
-		sprintf(tmp,"%g",cr->B_const.x);constBXtext->SetText(tmp);
+	BxtypeCombo->SetSelectedIndex(cr->params.Bx_mode-1);
+	if (cr->params.Bx_mode==B_MODE_CONSTANT) {
+		sprintf(tmp,"%g",cr->params.B_const.x);constBXtext->SetText(tmp);
 	} else {
 		MAGfileXtext->SetText((char*)cr->MAGXfileName.c_str());
 	}
-	BytypeCombo->SetSelectedIndex(cr->By_mode-1);
-	if (cr->By_mode==B_MODE_CONSTANT) {
-		sprintf(tmp,"%g",cr->B_const.y);constBYtext->SetText(tmp);
+	BytypeCombo->SetSelectedIndex(cr->params.By_mode-1);
+	if (cr->params.By_mode==B_MODE_CONSTANT) {
+		sprintf(tmp,"%g",cr->params.B_const.y);constBYtext->SetText(tmp);
 	} else {
 		MAGfileYtext->SetText((char*)cr->MAGYfileName.c_str());
 	}
-	BztypeCombo->SetSelectedIndex(cr->Bz_mode-1);
-	if (cr->Bz_mode==B_MODE_CONSTANT) {
-		sprintf(tmp,"%g",cr->B_const.z);constBZtext->SetText(tmp);
+	BztypeCombo->SetSelectedIndex(cr->params.Bz_mode-1);
+	if (cr->params.Bz_mode==B_MODE_CONSTANT) {
+		sprintf(tmp,"%g",cr->params.B_const.z);constBZtext->SetText(tmp);
 	} else {
 		MAGfileZtext->SetText((char*)cr->MAGZfileName.c_str());
 	}
@@ -1134,48 +1134,47 @@ void RegionEditor::ApplyChanges() {
 	//Deselect point, if has selected
 	cr->selectedPoint=-1;
 
-	startPointXtext->GetNumber(&cr->startPoint.x);
-	startPointYtext->GetNumber(&cr->startPoint.y);
-	startPointZtext->GetNumber(&cr->startPoint.z);
+	startPointXtext->GetNumber(&cr->params.startPoint.x);
+	startPointYtext->GetNumber(&cr->params.startPoint.y);
+	startPointZtext->GetNumber(&cr->params.startPoint.z);
 
 	if (startDirDefinitionCombo->GetSelectedIndex()==0) { //define by angle
 		double a0,t0;
 		alpha0text->GetNumber(&a0);
 		theta0text->GetNumber(&t0);
-		cr->startDir=Vector(sin(-t0)*cos(a0),sin(-a0),cos(a0)*cos(t0));  //left-handed coordinate system
+		cr->params.startDir=Vector(sin(-t0)*cos(a0),sin(-a0),cos(a0)*cos(t0));  //left-handed coordinate system
 	} else { // define by vector
-		startDirXtext->GetNumber(&cr->startDir.x);
-		startDirYtext->GetNumber(&cr->startDir.y);
-		startDirZtext->GetNumber(&cr->startDir.z);
+		startDirXtext->GetNumber(&cr->params.startDir.x);
+		startDirYtext->GetNumber(&cr->params.startDir.y);
+		startDirZtext->GetNumber(&cr->params.startDir.z);
 	}
-	dLtext->GetNumber(&cr->dL);
-	limitsXtext->GetNumber(&cr->limits.x);
-	limitsYtext->GetNumber(&cr->limits.y);
-	limitsZtext->GetNumber(&cr->limits.z);
-	particleMassText->GetNumber(&cr->particleMass);
+	dLtext->GetNumber(&cr->params.dL);
+	limitsXtext->GetNumber(&cr->params.limits.x);
+	limitsYtext->GetNumber(&cr->params.limits.y);
+	limitsZtext->GetNumber(&cr->params.limits.z);
+	particleMassText->GetNumber(&cr->params.particleMass);
 	if (particleChargeCombo->GetSelectedIndex()==1) //negative charge
-		cr->particleMass*=-1;
-	beamEnergyText->GetNumber(&cr->E);
-	beamCurrentText->GetNumber(&cr->current);
-	cr->gamma=abs(cr->E/cr->particleMass);
-	if (idealBeamToggle->GetState()) cr->emittance=0.0;
+		cr->params.particleMass*=-1;
+	beamEnergyText->GetNumber(&cr->params.E);
+	beamCurrentText->GetNumber(&cr->params.current);
+	cr->params.gamma=abs(cr->params.E/cr->params.particleMass);
+	if (idealBeamToggle->GetState()) cr->params.emittance=0.0;
 	else {
-		emittanceText->GetNumber(&cr->emittance);
-		couplingText->GetNumber(&cr->coupling);
+		emittanceText->GetNumber(&cr->params.emittance);
+		couplingText->GetNumber(&cr->params.coupling);
 		if (betaOrBXYCombo->GetSelectedIndex()==0) { //constant values
-			betaXtext->GetNumber(&cr->betax);
-			betaYtext->GetNumber(&cr->betay);
-			etaText->GetNumber(&cr->eta);
-			etaPrimeText->GetNumber(&cr->etaprime);	
-			energySpreadText->GetNumber(&cr->energy_spread);
+			betaXtext->GetNumber(&cr->params.betax);
+			betaYtext->GetNumber(&cr->params.betay);
+			etaText->GetNumber(&cr->params.eta);
+			etaPrimeText->GetNumber(&cr->params.etaprime);	
+			energySpreadText->GetNumber(&cr->params.energy_spread);
 		} else { //load BXY file
-			cr->betax=-1.0; //negative value: use BXY file
+			cr->params.betax=-1.0; //negative value: use BXY file
 			cr->BXYfileName.assign(BXYfileNameText->GetText());
 			//loadbxy
 			try {
 				FileReader BXYfile(BXYfileNameText->GetText());
-				cr->nbDistr_BXY=cr->LoadBXY(&BXYfile,cr->beta_x_distr,cr->beta_y_distr,
-					cr->eta_distr,cr->etaprime_distr,cr->e_spread_distr);
+				cr->params.nbDistr_BXY=cr->LoadBXY(&BXYfile);
 			} catch(Error &e) {
 				char tmp[256];
 				sprintf(tmp,"Couldn't load BXY file. Error message:\n%s",e.GetMsg());
@@ -1185,27 +1184,27 @@ void RegionEditor::ApplyChanges() {
 		}
 	}
 
-	EminText->GetNumber(&cr->energy_low);
-	EmaxText->GetNumber(&cr->energy_hi);
-	cr->enable_ort_polarization=enableOrtPolarizationToggle->GetState();
-	cr->enable_par_polarization=enableParPolarizationToggle->GetState();
+	EminText->GetNumber(&cr->params.energy_low);
+	EmaxText->GetNumber(&cr->params.energy_hi);
+	cr->params.enable_ort_polarization=enableOrtPolarizationToggle->GetState();
+	cr->params.enable_par_polarization=enableParPolarizationToggle->GetState();
 	if (limitAngleToggle->GetState()) { //limit angle
-		psiMaxXtext->GetNumber(&cr->psimaxX);
-		psiMaxYtext->GetNumber(&cr->psimaxY);
+		psiMaxXtext->GetNumber(&cr->params.psimaxX);
+		psiMaxYtext->GetNumber(&cr->params.psimaxY);
 	} else { 
-		cr->psimaxX=PI;
-		cr->psimaxY=PI;
+		cr->params.psimaxX=PI;
+		cr->params.psimaxY=PI;
 	}
 
 	//X comp.
-	cr->Bx_mode=BxtypeCombo->GetSelectedIndex()+1;
-	if (cr->Bx_mode==B_MODE_CONSTANT) { //constant B field
-		constBXtext->GetNumber(&cr->B_const.x);
+	cr->params.Bx_mode=BxtypeCombo->GetSelectedIndex()+1;
+	if (cr->params.Bx_mode==B_MODE_CONSTANT) { //constant B field
+		constBXtext->GetNumber(&cr->params.B_const.x);
 	} else { //use MAG file
 		cr->MAGXfileName.assign(MAGfileXtext->GetText());
 		try {
 			FileReader MAGfile(MAGfileXtext->GetText());
-			*(cr->Bx_distr)=cr->LoadMAGFile(&MAGfile,&cr->Bx_dir,&cr->Bx_period,&cr->Bx_phase,cr->Bx_mode);
+			cr->Bx_distr=cr->LoadMAGFile(&MAGfile,&cr->params.Bx_dir,&cr->params.Bx_period,&cr->params.Bx_phase,cr->params.Bx_mode);
 		} catch(Error &e) {
 			char tmp[256];
 			sprintf(tmp, "Couldn't load MAG file. Error message:\n%s", e.GetMsg());
@@ -1215,14 +1214,14 @@ void RegionEditor::ApplyChanges() {
 	}
 
 	//Y comp.
-	cr->By_mode=BytypeCombo->GetSelectedIndex()+1;
-	if (cr->By_mode==B_MODE_CONSTANT) { //constant B field
-		constBYtext->GetNumber(&cr->B_const.y);
+	cr->params.By_mode=BytypeCombo->GetSelectedIndex()+1;
+	if (cr->params.By_mode==B_MODE_CONSTANT) { //constant B field
+		constBYtext->GetNumber(&cr->params.B_const.y);
 	} else { //use MAG file
 		cr->MAGYfileName.assign(MAGfileYtext->GetText());
 		try {
 			FileReader MAGfile(MAGfileYtext->GetText());
-			*(cr->By_distr)=cr->LoadMAGFile(&MAGfile,&cr->By_dir,&cr->By_period,&cr->By_phase,cr->By_mode);
+			cr->By_distr=cr->LoadMAGFile(&MAGfile,&cr->params.By_dir,&cr->params.By_period,&cr->params.By_phase,cr->params.By_mode);
 		} catch(Error &e) {
 			char tmp[256];
 			sprintf(tmp, "Couldn't load MAG file. Error message:\n%s", e.GetMsg());
@@ -1232,14 +1231,14 @@ void RegionEditor::ApplyChanges() {
 	}
 
 	//Z comp.
-	cr->Bz_mode=BztypeCombo->GetSelectedIndex()+1;
-	if (cr->Bz_mode==B_MODE_CONSTANT) { //constant B field
-		constBZtext->GetNumber(&cr->B_const.z);
+	cr->params.Bz_mode=BztypeCombo->GetSelectedIndex()+1;
+	if (cr->params.Bz_mode==B_MODE_CONSTANT) { //constant B field
+		constBZtext->GetNumber(&cr->params.B_const.z);
 	} else { //use MAG file
 		cr->MAGZfileName.assign(MAGfileZtext->GetText());
 		try {
 			FileReader MAGfile(MAGfileZtext->GetText());
-			*(cr->Bz_distr)=cr->LoadMAGFile(&MAGfile,&cr->Bz_dir,&cr->Bz_period,&cr->Bz_phase,cr->Bz_mode);
+			cr->Bz_distr=cr->LoadMAGFile(&MAGfile,&cr->params.Bz_dir,&cr->params.Bz_period,&cr->params.Bz_phase,cr->params.Bz_mode);
 		} catch(Error &e) {
 			char tmp[256];
 			sprintf(tmp, "Couldn't load MAG file. Error message:\n%s", e.GetMsg());

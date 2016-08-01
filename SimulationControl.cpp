@@ -88,8 +88,8 @@ void ClearSimulation() {
 	// Free old stuff
 	/*for (i=0;i<(int)sHandle->regions.size();i++)
 	delete &(sHandle->regions[i]);*/
-	//sHandle->regions.clear();
-	sHandle->regions=std::vector<Region_mathonly>();
+	sHandle->regions.clear();
+	//sHandle->regions=std::vector<Region_mathonly>();
 	SAFE_FREE(sHandle->vertices3);
 	for(j=0;j<sHandle->nbSuper;j++) {
 		for(i=0;i<sHandle->str[j].nbFacet;i++) {
@@ -177,8 +177,13 @@ BOOL LoadSimulation(Dataport *loader) {
 	t0 = GetTick();
 
 	sHandle->loadOK = FALSE;
-	ClearSimulation();
-
+	try {
+		ClearSimulation();
+	}
+	catch (...) {
+		SetErrorSub("Error clearing geometry");
+		return FALSE;
+	}
 	// Connect the dataport
 	if( !AccessDataportTimed(loader,40000) ) {
 		SetErrorSub("Failed to connect to DP");
@@ -211,23 +216,28 @@ BOOL LoadSimulation(Dataport *loader) {
 	sHandle->generation_mode = shGeom->generation_mode;
 	buffer+=sizeof(SHGEOM);
 	sHandle->nbTrajPoints=0;
+	
 	//Regions
+	try{
 	for (size_t r = 0; r<sHandle->nbRegion; r++) {
-		Region_mathonly *reg = (Region_mathonly *) buffer;
-		Region_mathonly newreg=*reg;
-		buffer += sizeof(Region_mathonly);
-
-		newreg.Points=std::vector<Trajectory_Point>();
+		RegionParams *regparam = (RegionParams *) buffer;
+		Region_mathonly newreg;
+		newreg.params = *regparam;//memcpy(&newreg.params, regparam, sizeof(RegionParams));
+		buffer += sizeof(RegionParams);
 		sHandle->regions.push_back(newreg);
 	}
 	//copy trajectory points	
 	for (size_t r = 0; r<sHandle->nbRegion; r++) {
-		sHandle->regions[r].Points.reserve(sHandle->regions[r].nbPointsToCopy);
-		for (int k=0;k<sHandle->regions[r].nbPointsToCopy;k++) {
+		/*sHandle->regions[r].Points.reserve(sHandle->regions[r].params.nbPointsToCopy);
+		for (int k=0;k<sHandle->regions[r].params.nbPointsToCopy;k++) {
 			sHandle->regions[r].Points.push_back(*(Trajectory_Point*)(buffer));
 			buffer+=sizeof(Trajectory_Point);
-		}
-		sHandle->nbTrajPoints+=sHandle->regions[r].nbPointsToCopy;
+		}*/
+
+		sHandle->regions[r].Points.resize(sHandle->regions[r].params.nbPointsToCopy);
+		memcpy(&sHandle->regions[r].Points[0], buffer, sizeof(Trajectory_Point)*sHandle->regions[r].params.nbPointsToCopy);
+		buffer += sizeof(Trajectory_Point)*sHandle->regions[r].params.nbPointsToCopy;
+		sHandle->nbTrajPoints+=sHandle->regions[r].params.nbPointsToCopy;
 	}
 
 	//copy distribution points
@@ -235,40 +245,55 @@ BOOL LoadSimulation(Dataport *loader) {
 	sHandle->nbDistrPoints_BXY=0;
 	for (size_t r = 0; r<sHandle->nbRegion; r++) {
 
-		for (size_t j = 0; j<sHandle->regions[r].nbDistr_MAG.x; j++) {
-			sHandle->regions[r].Bx_distr->valuesX[j]=READBUFFER(double);
-			sHandle->regions[r].Bx_distr->valuesY[j]=READBUFFER(double);
+		sHandle->regions[r].Bx_distr.Resize(sHandle->regions[r].params.nbDistr_MAG.x);
+		for (size_t j = 0; j<sHandle->regions[r].params.nbDistr_MAG.x; j++) {
+			sHandle->regions[r].Bx_distr.valuesX[j]=READBUFFER(double);
+			sHandle->regions[r].Bx_distr.valuesY[j]=READBUFFER(double);
 		}
 
-		for (size_t j = 0; j<sHandle->regions[r].nbDistr_MAG.y; j++) {
-			sHandle->regions[r].By_distr->valuesX[j] = READBUFFER(double);
-			sHandle->regions[r].By_distr->valuesY[j] = READBUFFER(double);
+		sHandle->regions[r].By_distr.Resize(sHandle->regions[r].params.nbDistr_MAG.y);
+		for (size_t j = 0; j<sHandle->regions[r].params.nbDistr_MAG.y; j++) {
+			sHandle->regions[r].By_distr.valuesX[j] = READBUFFER(double);
+			sHandle->regions[r].By_distr.valuesY[j] = READBUFFER(double);
 		}
 
-		for (size_t j = 0; j<sHandle->regions[r].nbDistr_MAG.z; j++) {
-			sHandle->regions[r].Bz_distr->valuesX[j] = READBUFFER(double);
-			sHandle->regions[r].Bz_distr->valuesY[j] = READBUFFER(double);
+		sHandle->regions[r].Bz_distr.Resize(sHandle->regions[r].params.nbDistr_MAG.z);
+		for (size_t j = 0; j<sHandle->regions[r].params.nbDistr_MAG.z; j++) {
+			sHandle->regions[r].Bz_distr.valuesX[j] = READBUFFER(double);
+			sHandle->regions[r].Bz_distr.valuesY[j] = READBUFFER(double);
 		}
 
-		for (size_t j = 0; j<sHandle->regions[r].nbDistr_BXY; j++) {
-			sHandle->regions[r].beta_x_distr->valuesX[j]=
-				sHandle->regions[r].beta_y_distr->valuesX[j]=
-				sHandle->regions[r].eta_distr->valuesX[j]=
-				sHandle->regions[r].etaprime_distr->valuesX[j]=
-				sHandle->regions[r].e_spread_distr->valuesX[j]=
+		sHandle->regions[r].beta_x_distr.Resize(sHandle->regions[r].params.nbDistr_BXY);
+		sHandle->regions[r].beta_y_distr.Resize(sHandle->regions[r].params.nbDistr_BXY);
+		sHandle->regions[r].eta_distr.Resize(sHandle->regions[r].params.nbDistr_BXY);
+		sHandle->regions[r].etaprime_distr.Resize(sHandle->regions[r].params.nbDistr_BXY);
+		sHandle->regions[r].e_spread_distr.Resize(sHandle->regions[r].params.nbDistr_BXY);
+
+		for (size_t j = 0; j<sHandle->regions[r].params.nbDistr_BXY; j++) {
+			sHandle->regions[r].beta_x_distr.valuesX[j]=
+				sHandle->regions[r].beta_y_distr.valuesX[j]=
+				sHandle->regions[r].eta_distr.valuesX[j]=
+				sHandle->regions[r].etaprime_distr.valuesX[j]=
+				sHandle->regions[r].e_spread_distr.valuesX[j]=
 				READBUFFER(double);
-			sHandle->regions[r].beta_x_distr->valuesY[j] = READBUFFER(double);
-			sHandle->regions[r].beta_y_distr->valuesY[j] = READBUFFER(double);
-			sHandle->regions[r].eta_distr->valuesY[j] = READBUFFER(double);
-			sHandle->regions[r].etaprime_distr->valuesY[j] = READBUFFER(double);
-			sHandle->regions[r].e_spread_distr->valuesY[j] = READBUFFER(double);
+			sHandle->regions[r].beta_x_distr.valuesY[j] = READBUFFER(double);
+			sHandle->regions[r].beta_y_distr.valuesY[j] = READBUFFER(double);
+			sHandle->regions[r].eta_distr.valuesY[j] = READBUFFER(double);
+			sHandle->regions[r].etaprime_distr.valuesY[j] = READBUFFER(double);
+			sHandle->regions[r].e_spread_distr.valuesY[j] = READBUFFER(double);
 		}
 
-		sHandle->nbDistrPoints_MAG += (size_t)(sHandle->regions[r].nbDistr_MAG.x + sHandle->regions[r].nbDistr_MAG.y + sHandle->regions[r].nbDistr_MAG.z);
-		sHandle->nbDistrPoints_BXY+=sHandle->regions[r].nbDistr_BXY;
+		sHandle->nbDistrPoints_MAG += (size_t)(sHandle->regions[r].params.nbDistr_MAG.x + sHandle->regions[r].params.nbDistr_MAG.y + sHandle->regions[r].params.nbDistr_MAG.z);
+		sHandle->nbDistrPoints_BXY+=sHandle->regions[r].params.nbDistr_BXY;
+	}
+	}
+	catch (...) {
+		SetErrorSub("Error loading regions");
+		return FALSE;
 	}
 
 	//Load materials
+	try{
 	sHandle->nbMaterials = READBUFFER(size_t); //copying number of materials
 	for (size_t i = 0; i<sHandle->nbMaterials; i++) { //going through all materials
 		Material newMaterial;
@@ -306,33 +331,44 @@ BOOL LoadSimulation(Dataport *loader) {
 		}
 		sHandle->materials.push_back(newMaterial);
 	}
-
-	//Load psi_distr
-	size_t psi_size = READBUFFER(size_t);
-	sHandle->psi_distr.reserve(psi_size);
-	for (size_t j = 0; j < psi_size; j++) {
-		std::vector<double> row;
-		size_t row_size = READBUFFER(size_t);
-		sHandle->psi_distr.reserve(row_size);
-		for (size_t k = 0; k < row_size; k++) {
-			row.push_back(*((double*)buffer)); //cum. distr
-			buffer += sizeof(double);
-		}
-		sHandle->psi_distr.push_back(row);
+	}
+	catch (...) {
+		SetErrorSub("Error loading materials");
+		return FALSE;
 	}
 
-	//Load chi_distr
-	size_t chi_size = READBUFFER(size_t);
-	sHandle->chi_distr.reserve(chi_size);
-	for (size_t j = 0; j < chi_size; j++) {
-		std::vector<double> row;
-		int row_size = READBUFFER(size_t);
-		sHandle->chi_distr.reserve(row_size);
-		for (size_t k = 0; k < row_size; k++) {
-			row.push_back(*((double*)buffer)); //cum. distr
-			buffer += sizeof(double);
+	try {
+		//Load psi_distr
+		size_t psi_size = READBUFFER(size_t);
+		sHandle->psi_distr.reserve(psi_size);
+		for (size_t j = 0; j < psi_size; j++) {
+			std::vector<double> row;
+			size_t row_size = READBUFFER(size_t);
+			sHandle->psi_distr.reserve(row_size);
+			for (size_t k = 0; k < row_size; k++) {
+				row.push_back(*((double*)buffer)); //cum. distr
+				buffer += sizeof(double);
+			}
+			sHandle->psi_distr.push_back(row);
 		}
-		sHandle->chi_distr.push_back(row);
+
+		//Load chi_distr
+		size_t chi_size = READBUFFER(size_t);
+		sHandle->chi_distr.reserve(chi_size);
+		for (size_t j = 0; j < chi_size; j++) {
+			std::vector<double> row;
+			int row_size = READBUFFER(size_t);
+			sHandle->chi_distr.reserve(row_size);
+			for (size_t k = 0; k < row_size; k++) {
+				row.push_back(*((double*)buffer)); //cum. distr
+				buffer += sizeof(double);
+			}
+			sHandle->chi_distr.push_back(row);
+		}
+	} 
+	catch (...) {
+		SetErrorSub("Error loading distributions");
+		return FALSE;
 	}
 
 	bufferAfterMaterials=buffer;
@@ -452,7 +488,7 @@ BOOL LoadSimulation(Dataport *loader) {
 				if ((f->inc[j]>0.0)&&(f->inc[j]<f->fullSizeInc)) f->fullSizeInc = f-> inc[j];
 			}
 			for(j=0;j<nbE;j++) { //second pass, filter out very small cells
-				f->largeEnough[j]=(f->inc[j]<((5.0f)*f->fullSizeInc));
+				f->largeEnough[j]=(f->inc[j]<((5.0)*f->fullSizeInc));
 			}
 			sHandle->textTotalSize += f->textureSize;
 			areaBuff += nbE*sizeof(double);
@@ -485,8 +521,8 @@ BOOL LoadSimulation(Dataport *loader) {
 			f->spectrumSize = 2*sizeof(double)*SPECTRUM_SIZE;
 			double min_energy,max_energy;
 			if (sHandle->nbRegion>0) {
-				min_energy=sHandle->regions[0].energy_low;
-				max_energy=sHandle->regions[0].energy_hi;
+				min_energy=sHandle->regions[0].params.energy_low;
+				max_energy=sHandle->regions[0].params.energy_hi;
 			} else {
 				min_energy=10.0;
 				max_energy=1000000.0;
@@ -512,16 +548,17 @@ BOOL LoadSimulation(Dataport *loader) {
 	t1 = GetTick();
 	printf("  Load %s successful\n",sHandle->name);
 	printf("  Geometry: %d vertex %d facets\n",sHandle->nbVertex,sHandle->totalFacet);
-	printf("  Region: %d regions\n",sHandle->nbRegion);
+	printf("  Region: %zd regions\n",sHandle->nbRegion);
+	printf("  Trajectory points: %zd points\n", sHandle->nbTrajPoints);
 	printf("  Geom size: %d bytes\n",(int)(buffer-bufferStart));
 	printf("  Number of stucture: %d\n",sHandle->nbSuper);
 	printf("  Global Hit: %d bytes\n",sizeof(SHGHITS));
 	printf("  Facet Hit : %d bytes\n",sHandle->totalFacet*(int)sizeof(SHHITS));
-	printf("  Texture   : %d bytes\n",sHandle->textTotalSize);
-	printf("  Profile   : %d bytes\n",sHandle->profTotalSize);
-	printf("  Direction : %d bytes\n",sHandle->dirTotalSize);
-	printf("  Spectrum  : %d bytes\n",sHandle->spectrumTotalSize);
-	printf("  Total     : %d bytes\n",GetHitsSize());
+	printf("  Texture   : %zd bytes\n",sHandle->textTotalSize);
+	printf("  Profile   : %zd bytes\n",sHandle->profTotalSize);
+	printf("  Direction : %zd bytes\n",sHandle->dirTotalSize);
+	printf("  Spectrum  : %zd bytes\n",sHandle->spectrumTotalSize);
+	printf("  Total     : %zd bytes\n",GetHitsSize());
 	printf("  Seed: %u\n",seed);
 	printf("  Loading time: %.3f ms\n",(t1-t0)*1000.0);
 	return TRUE;

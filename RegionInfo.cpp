@@ -164,7 +164,7 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
 		if( freqField->GetNumberInt(&exportFrequency) ) {
 			char tmp[256];
 			sprintf(tmp,"%d points will be exported with an interval of %g cm.",
-				(int)((double)selectedRegion->Points.size()/(double)exportFrequency),selectedRegion->dL*(double)exportFrequency);
+				(int)((double)selectedRegion->Points.size()/(double)exportFrequency),selectedRegion->params.dL*(double)exportFrequency);
 			freqLabel->SetText(tmp);
 			integrateToggle->SetState(exportFrequency==1);
 		}

@@ -1231,7 +1231,7 @@ void GeometryViewer::AutoScale(BOOL reUpdateMouseCursor) {
 	v.x = xMax - org.x;
 	v.y = yMax - org.y;
 	v.z = zFar - org.z;
-	camDistInc = Norme(&v) / 100.0;
+	camDistInc = Norme(v) / 100.0;
 	view.camOffset.x = 0.0;
 	view.camOffset.y = 0.0;
 	view.camOffset.z = 0.0;
@@ -1824,8 +1824,8 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 
 	if( evt->type == SDL_MOUSEMOTION ) {
 
-		double diffX = (mX - mXOrg);
-		double diffY = (mY - mYOrg);
+		int diffX = (mX - mXOrg);
+		int diffY = (mY - mYOrg);
 		mXOrg = mX;
 		mYOrg = mY;
 

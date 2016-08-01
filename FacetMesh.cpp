@@ -263,8 +263,8 @@ void FacetMesh::EditFacet(Worker *w) {
 
 		Facet *f = geom->GetFacet(i);
 		if( f->selected ) {
-			double nU = Norme(&(f->sh.U));
-			double nV = Norme(&(f->sh.V));
+			double nU = Norme(f->sh.U);
+			double nV = Norme(f->sh.V);
 			maxU = MAX(maxU,nU);
 			maxV = MAX(maxV,nV);
 			minU = MIN(minU,nU);

@@ -20,6 +20,14 @@ Distribution2D integral_SR_power = Generate_Integral(LOWER_LIMIT, UPPER_LIMIT, I
 //Distribution2D polarization_distribution=Generate_Polarization_Distribution(true,true);
 //Distribution2D g1h2_distribution=Generate_G1_H2_Distribution();
 
+Distribution2D::Distribution2D() {
+	valuesX = (double*)malloc(1 * sizeof(double));
+	valuesY = (double*)malloc(1 * sizeof(double));
+	valuesX[0] = 0;
+	valuesY[0] = 0;
+	size = 1;
+}
+
 Distribution2D::Distribution2D(int N){
 	if (!(N > 0) && (N < 10000000)) N = 1; //don't create 0 size distributions
 	valuesX = (double*)malloc(N*sizeof(double));
@@ -28,14 +36,21 @@ Distribution2D::Distribution2D(int N){
 	//sum_energy=sum_photons= 0.0;
 }
 
+void Distribution2D::Resize(size_t N) {
+	if (!(N > 0) && (N < 10000000)) N = 1; //don't create 0 size distributions
+	SAFE_DELETE(valuesX);
+	SAFE_DELETE(valuesY);
+	valuesX = (double*)malloc(N * sizeof(double));
+	valuesY = (double*)malloc(N * sizeof(double));
+	size = N;
+}
+
 Distribution2D::Distribution2D(const Distribution2D &copy_src){ //copy constructor to avoid shallow copy
 	valuesX = (double*)malloc(copy_src.size*sizeof(double));
 	valuesY = (double*)malloc(copy_src.size*sizeof(double));
 	memcpy(valuesX, copy_src.valuesX, copy_src.size*sizeof(double));
 	memcpy(valuesY, copy_src.valuesY, copy_src.size*sizeof(double));
 	size = copy_src.size;
-	//sum_energy = copy_src.sum_energy;
-	//sum_photons = copy_src.sum_photons;
 }
 
 Distribution2D::~Distribution2D(){
@@ -46,7 +61,6 @@ Distribution2D::~Distribution2D(){
 Distribution2D& Distribution2D::operator= (const Distribution2D &copy_src) {
 	if (this != &copy_src) // protect against invalid self-assignment
 	{
-		//*this=Distribution2D_tiny(copy_src.size);
 		valuesX = (double*)malloc(copy_src.size*sizeof(double));
 		valuesY = (double*)malloc(copy_src.size*sizeof(double));
 		memcpy(valuesX, copy_src.valuesX, copy_src.size*sizeof(double));
@@ -395,8 +409,8 @@ F_orthogonal=VERY_SMALL;
 delta = 10.0*f_times_g1h2 / NUMBER_OF_DISTRO_VALUES / gamma_square;
 
 //{ delta:=pi/100.0/gamma_square;}
-//{ delta gives the angular range (for traj.gamma*Psi) where the vertical }
-//{ angle of emission, Psi, should be contained (actually, traj.gamma*Psi...) }
+//{ delta gives the angular range (for traj.params.gamma*Psi) where the vertical }
+//{ angle of emission, Psi, should be contained (actually, traj.params.gamma*Psi...) }
 
 
 double cos_psi=cos(psi);

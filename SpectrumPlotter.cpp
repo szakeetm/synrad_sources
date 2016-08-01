@@ -148,9 +148,9 @@ void SpectrumPlotter::SetScale() {
 	if ((int)worker->regions.size()>0) {
 		Region_full *traj=&(worker->regions[0]); //scale axis X
 		if (traj->isLoaded) {
-			chart->GetXAxis()->SetMinimum(traj->energy_low);
-			chart->GetXAxis()->SetMaximum(traj->energy_hi);
-			delta=(log(traj->energy_hi)-log(traj->energy_low))/SPECTRUM_SIZE;
+			chart->GetXAxis()->SetMinimum(traj->params.energy_low);
+			chart->GetXAxis()->SetMaximum(traj->params.energy_hi);
+			delta=(log(traj->params.energy_hi)-log(traj->params.energy_low))/SPECTRUM_SIZE;
 		}
 	}
 	}

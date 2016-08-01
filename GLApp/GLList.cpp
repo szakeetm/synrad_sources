@@ -23,7 +23,7 @@ GNU General Public License for more details.
 #include <algorithm>
 #include "..\Geometry.h"
 #include "GLWindowManager.h"
-#include "..\SynRad.h"
+#include "..\MolFlow.h"
 
 #define ISBOLD(x) ((x)[0]==':' && (x)[1]=='B' && (x)[2]==':')
 
@@ -33,7 +33,7 @@ GNU General Public License for more details.
 template<class T> int cmp_column(const void *lhs_, const void *rhs_);
 int clickedCol;
 BOOL sortDescending;
-extern SynRad *mApp;
+extern MolFlow *mApp;
 
 // ---------------------------------------------------------------
 
@@ -49,6 +49,7 @@ GLList::GLList(int compId):GLComponent(compId) {
 	cWidths = NULL;
 	cEdits = NULL;
 	cAligns = NULL;
+	cColors = NULL;
 	cNames = NULL;
 	rNames = NULL;
 	values = NULL;
@@ -59,6 +60,7 @@ GLList::GLList(int compId):GLComponent(compId) {
 	gridVisible = FALSE;
 	SetBorder(BORDER_BEVEL_IN);
 	SetBackgroundColor(240,240,240);
+	SetFontColor(0, 0, 0);
 	sbH = new GLScrollBar(compId);
 	sbH->SetRange(10,10,1);
 	sbH->SetOrientation(SB_HORIZONTAL);
@@ -102,11 +104,11 @@ GLList::~GLList() {
 
 // ---------------------------------------------------------------
 
-void GLList::Clear(BOOL keepColumns, BOOL showProgress) {
-	GLProgress *prgList = NULL;
-	double all = (double)nbCol*nbRow;
+void GLList::Clear(BOOL keepColumns,BOOL showProgress) {
+	GLProgress *prgList=NULL;
+	double all=(double)nbCol*nbRow;
 	if (showProgress) {
-		prgList = new GLProgress("Clearing facet hits list...", "Please wait");
+		prgList = new GLProgress("Clearing facet hits list...","Please wait");
 		prgList->SetProgress(0.0);
 		prgList->SetVisible(TRUE);
 	}
@@ -114,10 +116,10 @@ void GLList::Clear(BOOL keepColumns, BOOL showProgress) {
 		for (int i = 0;i < nbCol;i++)
 			SAFE_FREE(cNames[i]);
 	}
-	for (int i = 0;i<nbRow;i++)
+	for(int i=0;i<nbRow;i++)
 		SAFE_FREE(rNames[i]);
-	for (int i = 0;i<nbCol*nbRow;i++) {
-		if (showProgress) prgList->SetProgress((double)i / all);
+	for(int i=0;i<nbCol*nbRow;i++) {
+		if (showProgress) prgList->SetProgress((double)i/all);
 		SAFE_FREE(values[i]);
 	}
 
@@ -125,7 +127,7 @@ void GLList::Clear(BOOL keepColumns, BOOL showProgress) {
 		SAFE_FREE(cNames);
 		SAFE_FREE(cWidths);
 		SAFE_FREE(cAligns);
-		//SAFE_FREE(cColors);
+		SAFE_FREE(cColors);
 		SAFE_FREE(cEdits);
 		nbCol = 0;
 		selectedCol = -1;
@@ -139,7 +141,7 @@ void GLList::Clear(BOOL keepColumns, BOOL showProgress) {
 	SAFE_FREE(selectedRows);
 
 
-
+	
 	nbRow = 0;
 	labWidth = 0; //Row labels
 	nbSelectedRow = 0;
@@ -289,6 +291,7 @@ void GLList::SetMotionSelection(BOOL enable) {
 // ---------------------------------------------------------------
 
 int GLList::GetUserValueAt(int col,int row) {
+	_ASSERTE(col<nbCol);_ASSERTE(row<nbRow);
 	if(uValues)
 		return uValues[row*nbCol+col];
 	else
@@ -298,6 +301,7 @@ int GLList::GetUserValueAt(int col,int row) {
 // ---------------------------------------------------------------
 
 char *GLList::GetValueAt(int col,int row) {
+	_ASSERTE(!values || col<nbCol);_ASSERTE(!values || row<nbRow);
 	if(values)
 		return values[row*nbCol+col];
 	else
@@ -320,19 +324,19 @@ void GLList::SetBounds(int x,int y,int width,int height) {
 
 // ---------------------------------------------------------------
 
-void GLList::SetSize(int nbColumn, int nbR, BOOL keepData, BOOL showProgress) {
+void GLList::SetSize(int nbColumn,int nbR, BOOL keepData,BOOL showProgress) {
 
-	if (nbColumn == nbCol && nbR == this->nbRow)
+	if( nbColumn==nbCol && nbR==this->nbRow )
 		// Already the good size
 		return;
 
 
-
-	if (nbColumn == 0) return;
+	
+	if( nbColumn==0 ) return;
 
 	if (!keepData) {
 		//Clear & reallocate
-		Clear(FALSE, showProgress);
+		Clear(FALSE,showProgress);
 		nbCol = nbColumn;
 		this->nbRow = nbR;
 		cEdits = (int *)malloc(nbCol * sizeof(int));
@@ -341,8 +345,8 @@ void GLList::SetSize(int nbColumn, int nbR, BOOL keepData, BOOL showProgress) {
 		for (int i = 0;i < nbCol;i++) cWidths[i] = 50;
 		cAligns = (int *)malloc(nbCol * sizeof(int));
 		memset(cAligns, 0, nbCol * sizeof(int));
-		//cColors = (int *)malloc(nbCol * sizeof(int));
-		//memset(cColors, 0, nbCol * sizeof(int));
+		cColors = (int *)malloc(nbCol * sizeof(int));
+		memset(cColors, 0, nbCol * sizeof(int));
 		cNames = (char **)malloc(nbCol * sizeof(char *));
 		memset(cNames, 0, nbCol * sizeof(char *));
 
@@ -350,19 +354,19 @@ void GLList::SetSize(int nbColumn, int nbR, BOOL keepData, BOOL showProgress) {
 	else { //reallocate, keeping data
 		if (nbCol != nbColumn) {
 			cEdits = (int *)realloc(cEdits, nbColumn * sizeof(int));
-			if (nbColumn > nbCol) memset(cEdits + nbCol, 0, (nbColumn - nbCol) * sizeof(int)); //Init new area
+			if (nbColumn > nbCol) memset(cEdits+nbCol, 0, (nbColumn - nbCol) * sizeof(int)); //Init new area
 			cWidths = (int *)realloc(cWidths, nbColumn * sizeof(int));
 			for (int i = nbCol;i < nbColumn;i++) cWidths[i] = 50; //Init new area
 			cAligns = (int *)realloc(cAligns, nbCol * sizeof(int));
-			if (nbColumn > nbCol) memset(cAligns + nbCol, 0, (nbColumn - nbCol) * sizeof(int));
-			//cColors = (int *)realloc(cColors, nbCol * sizeof(int));
-			//if (nbColumn > nbCol) memset(cColors + nbCol, 0, (nbColumn - nbCol) * sizeof(int));
+			if (nbColumn > nbCol) memset(cAligns+nbCol, 0, (nbColumn - nbCol) * sizeof(int));
+			cColors = (int *)realloc(cColors, nbCol * sizeof(int));
+			if (nbColumn > nbCol) memset(cColors + nbCol, 0, (nbColumn - nbCol) * sizeof(int));
 			cNames = (char **)realloc(cNames, nbCol * sizeof(char*));
 			if (nbColumn > nbCol) memset(cNames + nbCol, 0, (nbColumn - nbCol) * sizeof(char*));
 			nbCol = nbColumn;
 		}
 	}
-	if (nbR) {
+	if		(nbR) {
 		if (!keepData) {
 			this->nbRow = nbR;
 			rNames = (char **)malloc(nbR * sizeof(char *));
@@ -373,16 +377,15 @@ void GLList::SetSize(int nbColumn, int nbR, BOOL keepData, BOOL showProgress) {
 			memset(uValues, 0, nbCol*nbR * sizeof(int));
 		}
 		else {
-			rNames = (char **)realloc(rNames, nbR * sizeof(char *));
-			if (nbR>this->nbRow) memset(rNames + this->nbRow, 0, (nbR - this->nbRow) * sizeof(char *));
-			values = (char **)realloc(values, nbCol*nbR * sizeof(char *));
-			if (nbR>this->nbRow) memset(values + nbCol*this->nbRow, 0, nbCol*(nbR - this->nbRow) * sizeof(char *));
-			uValues = (int *)realloc(uValues, nbCol*nbR * sizeof(int));
+			rNames = (char **)realloc(rNames,nbR * sizeof(char *));
+			if (nbR>this->nbRow) memset(rNames+this->nbRow, 0, (nbR-this->nbRow) * sizeof(char *));
+			values = (char **)realloc(values,nbCol*nbR * sizeof(char *));
+			if (nbR>this->nbRow) memset(values+nbCol*this->nbRow, 0, nbCol*(nbR-this->nbRow) * sizeof(char *));
+			uValues = (int *)realloc(uValues,nbCol*nbR * sizeof(int));
 			if (nbR>this->nbRow) memset(uValues + nbCol*this->nbRow, 0, nbCol*(nbR - this->nbRow) * sizeof(int));
 			this->nbRow = nbR;
 		}
-	}
-	else {
+	}	else {
 		values = NULL;
 		uValues = NULL;
 		rNames = NULL;
@@ -486,9 +489,15 @@ void GLList::SetColumnWidths(int *widths) {
 	UpdateSBRange();
 }
 
-void GLList::AutoSizeColumn() {
-    int w=0;
 
+void GLList::SetColumnWidthForAll(int width) {
+	if(cWidths)
+		for(int i=0;i<nbCol;i++) cWidths[i] = width;
+	UpdateSBRange();
+}
+
+void GLList::AutoSizeColumn() {
+	int w=0;
 	if( cWidths ) {
 		GLFont2D *fnt = GLToolkit::GetDialogFont();
 		for(int i=0;i<nbCol;i++) {
@@ -499,8 +508,8 @@ void GLList::AutoSizeColumn() {
 				if( w>maxWidth ) maxWidth = w;
 			}
 			if (cNames && cNames[i] && (w=fnt->GetTextWidth(cNames[i]))>maxWidth)
-					maxWidth=w;
-				cWidths[i] = maxWidth+10;
+				maxWidth=w;
+			cWidths[i] = maxWidth+10;
 		}
 		UpdateSBRange();
 	}
@@ -515,6 +524,16 @@ void GLList::SetColumnAligns(int *aligns) {
 void GLList::SetAllColumnAlign(int align) {
 	if(cAligns)
 		for(int i=0;i<nbCol;i++) cAligns[i] = align;
+}
+
+void GLList::SetColumnColors(int *colors) {
+	if (cColors)
+		for (int i = 0;i<nbCol;i++) cColors[i] = colors[i];
+}
+
+void GLList::SetAllColumnColors(int color) {
+	if (cColors)
+		for (int i = 0;i<nbCol;i++) cColors[i] = color;
 }
 
 // ---------------------------------------------------------------
@@ -539,7 +558,7 @@ void GLList::SetRowLabel(int rowId,char *name) {
 	}
 }
 
-// ---------------------------------------------------------------
+
 
 void GLList::SetColumnWidth(int colId,int width) {
 	if(cWidths && colId<nbCol ) {
@@ -548,7 +567,7 @@ void GLList::SetColumnWidth(int colId,int width) {
 	UpdateSBRange();
 }
 
-// ---------------------------------------------------------------
+
 
 void GLList::SetColumnAlign(int colId,int align) {
 	if(cAligns && colId<nbCol ) {
@@ -556,16 +575,22 @@ void GLList::SetColumnAlign(int colId,int align) {
 	}
 }
 
-// ---------------------------------------------------------------
+
+void GLList::SetColumnColor(int colId,int color) {
+	if(cColors && colId<nbCol ) {
+		cColors[colId] = color;
+	}
+}
 
 void GLList::SetRow(int row,char **vals) {
 	for(int i=0;i<nbCol;i++) 
 		SetValueAt(i,row,vals[i]);
 }
 
-// ---------------------------------------------------------------
+
 
 void GLList::SetValueAt(int col,int row,const char *value,int userData,BOOL searchIndex) {
+	_ASSERTE(col<nbCol);_ASSERTE(row<nbRow);
 	if(this->values) {
 		if(col>=0 && col<this->nbCol && row>=0 && row<this->nbRow) {
 			int rowIndex=row;
@@ -693,6 +718,7 @@ void GLList::ClearSelection() {
 // ---------------------------------------------------------------
 
 void GLList::SetSelectedRow(int row,BOOL searchIndex) {
+	_ASSERTE(row<nbRow);
 
 	if(row<0) {
 		ClearSelection();
@@ -829,6 +855,7 @@ void GLList::Paint() {
 	if(!parent) return;
 	GLComponent::Paint();
 
+	
 	if( nbRow==0 || nbCol==0 ) return;
 
 	// Viewport dimension,origin
@@ -918,6 +945,7 @@ void GLList::Paint() {
 
 	}
 
+	
 	// Paint selected cells
 	switch(selectionMode) {
 
@@ -964,6 +992,7 @@ void GLList::Paint() {
 		break;
 	}
 
+	
 	// Paint rows
 	int hc = _height-labHeight+(sbHeight?1:0);
 	sx = 1 - sX;
@@ -989,31 +1018,52 @@ void GLList::Paint() {
 					char *value = GetValueAt(i,j);
 					if( value ) {
 						int px = 1;int wT;
+						int offset;
+						GLFont2D* font;
 						if(ISBOLD(value)) {
-							switch(cAligns[i]) {
-							case ALIGN_CENTER:
-								wT = GLToolkit::GetDialogFontBold()->GetTextWidth(value);
-								px = (cWidths[i]-wT)/2;
-								break;
-							case ALIGN_RIGHT:
-								wT = GLToolkit::GetDialogFontBold()->GetTextWidth(value);
-								px = cWidths[i]-wT-2;
-								break;
-							}
-							GLToolkit::GetDialogFontBold()->DrawText(px+dx,j*cHeight-sY+(showCLabel?1:2),value+3,FALSE);
+
+
+							font = GLToolkit::GetDialogFontBold();
+
+
+
+
+
+
+
+
+							offset = 3;
 						} else {
-							switch(cAligns[i]) {
-							case ALIGN_CENTER:
-								wT = GLToolkit::GetDialogFont()->GetTextWidth(value);
-								px = (cWidths[i]-wT)/2;
-								break;
-							case ALIGN_RIGHT:
-								wT = GLToolkit::GetDialogFont()->GetTextWidth(value);
-								px = cWidths[i]-wT-2;
-								break;
-							}
-							GLToolkit::GetDialogFont()->DrawText(px+dx,j*cHeight-sY+(showCLabel?1:2),value,FALSE);
+							font = GLToolkit::GetDialogFont();
+							offset = 0;
 						}
+						switch (cAligns[i]) {
+						case ALIGN_CENTER:
+							wT = font->GetTextWidth(value);
+							px = (cWidths[i] - wT) / 2;
+							break;
+						case ALIGN_RIGHT:
+							wT = font->GetTextWidth(value);
+							px = cWidths[i] - wT - 2;
+							break;
+
+
+						}
+						switch (cColors[i]) {
+						case COLOR_RED:
+							font->SetTextColor(1.0f, 0.0f, 0.0f);
+							break;
+						case COLOR_GREEN:
+							font->SetTextColor(0.0f, 1.0f, 0.0f);
+							break;
+						case COLOR_BLUE:
+							font->SetTextColor(0.0f, 0.0f, 1.0f);
+							break;
+						default:
+							font->SetTextColor(0.0f, 0.0f, 0.0f);
+							break;
+						}
+						font->DrawText(px+dx,j*cHeight-sY+(showCLabel?1:2),value+offset,FALSE);
 					}
 				} // End if row visible
 			} // End row loop
@@ -1022,6 +1072,7 @@ void GLList::Paint() {
 		sx += cWidths[i];
 	}// End row loop
 
+	
 	// Paint the grid
 	if( gridVisible ) {
 
@@ -1076,6 +1127,7 @@ void GLList::Paint() {
 		}
 	}
 
+	
 	// Restore clip
 	GetWindow()->ClipToWindow();
 
@@ -1113,17 +1165,17 @@ int GLList::GetValueInt(int row, int column) {
 		}
 }
 
-double GLList::GetValueDouble(int row, int column) {
-	try {float cmp;
-	if (!(this->values[row*nbCol+column])) return -1;
-	sscanf((this->values[row*nbCol+column]),"%g",&cmp);
-	return (double)cmp;
-	} catch (Error &e) {
-			char errMsg[512];
-			sprintf(errMsg,"%s\nWhile finding:%d",e.GetMsg(),row);
-			GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
-		}
-}
+
+
+
+
+
+
+
+
+
+
+
 
 // ---------------------------------------------------------------
 int  GLList::FindIndex(int index,int inColumn) {
@@ -1132,7 +1184,7 @@ int  GLList::FindIndex(int index,int inColumn) {
 	}
 	char errmsg[512];
 	sprintf(errmsg,"Facetlist FindIndex(facet %d in column %d)\nFacet not found in list!",index+1,inColumn+1);
-	GLMessageBox::Display(errmsg,"Synrad Bug",GLDLG_OK,GLDLG_ICONERROR);
+	GLMessageBox::Display(errmsg,"Molflow Bug",GLDLG_OK,GLDLG_ICONERROR);
 	return -1;
 }
 
@@ -1603,6 +1655,42 @@ void GLList::CopyToClipboard(int row,int col,int rowLght,int colLgth) {
 
 }
 
+/*
+// --------------------------------------------------------------
+void GLList::UpdateAllRows() {//Fetch non-visible values too
+	
+	if (this==mApp->facetList) {
+	if (worker) {
+		char tmp[256];
+		Geometry *geom=worker->GetGeometry();
+
+
+		for(int i=0;i<nbRow;i++) {
+			int index=GetValueInt(i,0)-1;
+			if (index==-2) index=i;
+			Facet *f =NULL;
+			try {
+				 f = geom->GetFacet(index);
+			} catch (...) {
+#ifdef _DEBUG
+				__debugbreak();
+#endif
+				return;
+			}
+			sprintf(tmp,"%d",index+1);
+			SetValueAt(0,i,tmp);
+			sprintf(tmp,"%I64d",f->sh.counter[worker->displayedMoment].hit.nbHit);
+			SetValueAt(1,i,tmp);
+			sprintf(tmp,"%I64d",f->sh.counter[worker->displayedMoment].hit.nbDesorbed);
+			SetValueAt(2,i,tmp);
+			sprintf(tmp,"%I64d",f->sh.counter[worker->displayedMoment].hit.nbAbsorbed);
+			SetValueAt(3,i,tmp);
+		}
+		//geom=geom;
+	}
+	}
+}
+*/
 
 // ---------------------------------------------------------------
 
@@ -1844,7 +1932,7 @@ void GLList::ManageEvent(SDL_Event *evt) {
 
 		if(mx>=labW && mx<=width-sbWidth && my>=0 && my<labHeight) {
 
-				if( Sortable && evt->type == SDL_MOUSEBUTTONDOWN && evt->button.button == SDL_BUTTON_LEFT &&  nbRow>1  && !(GetColumnEdge(mx-labW,my)>=0)) {
+			if( Sortable && evt->type == SDL_MOUSEBUTTONDOWN && evt->button.button == SDL_BUTTON_LEFT &&  nbRow>1  && !(GetColumnEdge(mx-labW,my)>=0)) {
 				GLToolkit::SetCursor(CURSOR_BUSY);
 				menu->Clear();
 				int sCol = GetColForLocation(mx,my);
@@ -1856,30 +1944,34 @@ void GLList::ManageEvent(SDL_Event *evt) {
 						clickedCol = clickedColTmp;
 						if (this == mApp->facetList) mApp->UpdateFacetHits(TRUE);
 						// Step 1) Allocate the rows
-						double **table = new double*[nbRow];
+						int **table = new int*[nbRow];
 
 						// Step 2) Allocate the columns
 						for (int i = 0; i < nbRow; i++)
-							table[i] = new double[nbCol];
+							table[i] = new int[nbCol];
 
 						// Step 3) Use the table
 						for (int i = 0; i < nbRow; i++) {
 							for (int j = 0; j < nbCol; j++)
-								table[i][j] = GetValueDouble(i,j);
+								table[i][j] = GetValueInt(i,j);
 						}
+
+
 
 						int *selFacets=new int[nbSelectedRow];
 						for (int i=0;i<nbSelectedRow;i++)
 							selFacets[i] = GetValueInt(selectedRows[i],0)-1;
 
-						std::qsort(table, nbRow,sizeof(double*), cmp_column<double>);
+						std::qsort(table, nbRow,sizeof(int*), cmp_column<int>);
+
 
 						lastRowSel=-1;
+
 
 						char tmp[256];
 						for (int i = 0; i < nbRow; i++) {
 							//for (int j = 0; j < nbCol; j++) { //enough to set facet index
-							sprintf(tmp,"%d",(int)table[i][0]);
+							sprintf(tmp,"%d",table[i][0]);
 							SetValueAt(0,i,tmp);
 							//}
 						}
@@ -1917,7 +2009,7 @@ void GLList::ManageEvent(SDL_Event *evt) {
 						// Select column
 						selectedCol = sCol;
 						lastColSel = sCol;
-						SetSelectedRow( 0 );
+						SetSelectedRow(0);
 						lastRowSel = nbRow - 1;
 					}
 					parent->ProcessMessage(this,MSG_LIST);
@@ -2088,7 +2180,7 @@ void GLList::ManageEvent(SDL_Event *evt) {
 					if( menuId==0 ) {
 						CopyAllToClipboard();
 					} else if (menuId==1) {
-					
+
 						if( selectionMode == SINGLE_CELL )
 							CopyToClipboard(selectedRows[0],selectedCol,1,1);
 						else
@@ -2279,86 +2371,91 @@ void GLList::PasteClipboardText(BOOL allowExpandRows, BOOL allowExpandColumns, i
 
 #ifdef WIN
 
-	if (OpenClipboard(NULL)) {
-		HGLOBAL hMem;
-		if (hMem = GetClipboardData(CF_TEXT)) {
-			LPVOID ds = GlobalLock(hMem);
-			if (ds) {
-				char *content = (char *)ds;
+  if( OpenClipboard(NULL) ) {
+    HGLOBAL hMem;
+    if(hMem = GetClipboardData(CF_TEXT)) {
+      LPVOID ds = GlobalLock(hMem);
+      if (ds) {
+        char *content=(char *)ds;
 
-				//Get selection and initialize variables
-				int row = 0;
-				int col = 0;
-				int colBegin = 0;
-				int u, v, wu, wv;
-				if (GetSelectionBox(&v, &u, &wv, &wu)) {
-					row = v;
-					col = colBegin = u;
-				}
-
-
-				//Count clipboard table size
-				int clipboardRows = 0;
-				int clipboardCols = 1;
-
-				if (allowExpandRows || allowExpandColumns) {
-					for (size_t m = 0; content[m] != 0 && content[m] != '\r' && content[m] != '\n'; m++) {
-						if (content[m] == '\t') {
-							clipboardCols++;
-						}
-					}
-
-					for (size_t m = 0; content[m] != 0; m++) {
-						if (content[m] == '\r') {
-							clipboardRows++;
-						}
-					}
-					BOOL needsMoreRows = allowExpandRows && (row + clipboardRows + extraRowsAtEnd > nbRow);
-					BOOL needsMoreCols = allowExpandColumns && (col + clipboardCols > nbCol);
-					BOOL ok = TRUE;
-					if (MAX(needsMoreRows * (row + clipboardRows - nbRow), needsMoreCols*(col + clipboardCols - nbCol)) >= 20)
-						ok = GLMessageBox::Display("Increase list size by more than 20 rows/columns?", "Question", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONINFO) == GLDLG_OK;
-					if (ok && (needsMoreRows || needsMoreCols)) this->SetSize(allowExpandColumns ? MAX(nbCol, col + clipboardCols) : nbCol, allowExpandRows ? MAX(nbRow, row + clipboardRows + extraRowsAtEnd) : nbRow, TRUE, FALSE);
-				}
-
-
-
-
-				size_t cursor = 0;
-
-				size_t length = strlen(content);
-
-				char tmp[MAX_TEXT_SIZE];
-				tmp[0] = NULL;
-				while (cursor<length) {
-					char c = content[cursor];
-					if (c == '\t') {
-						if (col<nbCol && row< nbRow) SetValueAt(col, row, tmp);
-						col++;
-						tmp[0] = NULL;
-					}
-					else if (c == '\r') {
-						cursor++; //Anticipating \n after \r
-						if (col<nbCol && row< nbRow) SetValueAt(col, row, tmp);
-						row++;
-						tmp[0] = NULL;
-						col = colBegin;
-					}
-					else if (strlen(tmp)<(MAX_TEXT_SIZE - 1)) {
-						size_t len = strlen(tmp);
-						tmp[len] = c;
-						tmp[len + 1] = '\0';
-					}
-					cursor++;
-				}
-
-
-				GlobalUnlock(hMem);
-			}
+		//Get selection and initialize variables
+		int row=0;
+		int col=0;
+		int colBegin=0;
+		int u,v,wu,wv;
+        if( GetSelectionBox(&v,&u,&wv,&wu) ) {
+			row=v;
+			col=colBegin=u;
 		}
-		CloseClipboard();
-	}
+
+
+		//Count clipboard table size
+		int clipboardRows = 0;
+		int clipboardCols = 1;
+
+		if (allowExpandRows || allowExpandColumns) {
+			for (size_t m = 0; content[m] != 0 && content[m] != '\r' && content[m] != '\n'; m++) {
+				if (content[m] == '\t') {
+					clipboardCols++;
+				}
+			}
+
+			for (size_t m = 0; content[m] != 0; m++) {
+				if (content[m] == '\r') {
+					clipboardRows++;
+				}
+			}
+			BOOL needsMoreRows = allowExpandRows && (row + clipboardRows + extraRowsAtEnd > nbRow);
+			BOOL needsMoreCols = allowExpandColumns && (col + clipboardCols > nbCol);
+			BOOL ok = TRUE;
+			if (MAX(needsMoreRows * (row + clipboardRows  - nbRow), needsMoreCols*(col + clipboardCols - nbCol)) >= 20)
+				ok = GLMessageBox::Display("Increase list size by more than 20 rows/columns?", "Question", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONINFO) == GLDLG_OK;
+			if (ok && (needsMoreRows || needsMoreCols)) this->SetSize(allowExpandColumns?MAX(nbCol, col + clipboardCols):nbCol, allowExpandRows?MAX(nbRow, row + clipboardRows + extraRowsAtEnd):nbRow,TRUE,FALSE);
+		}
+		
+
+
+
+		size_t cursor = 0;
+		
+		size_t length=strlen(content);
+
+		char tmp[MAX_TEXT_SIZE];
+		tmp[0]=NULL;
+		while (cursor<length) {
+			char c=content[cursor];
+			if (c=='\t') {
+				if (col<nbCol && row< nbRow) SetValueAt(col,row,tmp);
+				col++;
+				tmp[0]=NULL;
+			}
+			else if (c=='\r') {
+				cursor++; //Anticipating \n after \r
+				if (col<nbCol && row< nbRow) SetValueAt(col,row,tmp);
+				row++;
+				tmp[0]=NULL;
+				col=colBegin;
+			} else if (strlen(tmp)<(MAX_TEXT_SIZE-1)) {
+				        size_t len = strlen(tmp);
+						tmp[len] = c;
+						tmp[len+1] = '\0';
+			}
+			cursor++;
+		}
+
+
+        GlobalUnlock(hMem);
+      }
+    }
+    CloseClipboard();
+  }
 
 #endif
 
+}
+
+void GLList::SetFontColor(int r, int g, int b) {
+	FontColorR = r;
+	FontColorG = g;
+	FontColorB = b;
 }

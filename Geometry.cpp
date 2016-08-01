@@ -84,6 +84,9 @@ void Geometry::Clear() {
 	memset(strFileName, 0, MAX_SUPERSTR * sizeof(char *));
 	DeleteGLLists(TRUE, TRUE);
 
+	if (mApp && mApp->splitFacet) mApp->splitFacet->ClearUndoFacets();
+
+
 	// Init default
 	facets = NULL;         // Facets array
 	vertices3 = NULL;      // Facets vertices in (x,y,z) space
@@ -220,126 +223,6 @@ void Geometry::InitializeGeometry(int facet_number, BOOL BBOnly) {
 			// Current facet
 			Facet *f = facets[i];
 
-			/*
-			// Search longest edge
-			double dMax = 0.0;
-			int    i1Max,i2Max;
-			for(int j=0;j<f->sh.nbIndex;j++) {
-			int j1 = IDX(j+1,f->sh.nbIndex);
-			int i1 = f->indices[j];
-			int i2 = f->indices[j1];
-			double xl = (vertices3[i1].x - vertices3[i2].x);
-			double yl = (vertices3[i1].y - vertices3[i2].y);
-			double zl = (vertices3[i1].z - vertices3[i2].z);
-			double l = DOT3( xl,yl,zl,xl,yl,zl ); //distance of vertices at i1 and i2
-			if( l>dMax + 1e-8 ) { //disregard differences below double precision
-			dMax = l;
-			i1Max = i1;
-			i2Max = i2;
-			}
-			}
-
-			// First vertex
-			int i0 = f->indices[0];
-			VERTEX3D p0 = vertices3[i0];
-			*/
-
-			VERTEX3D p0 = vertices3[f->indices[0]];
-			VERTEX3D p1 = vertices3[f->indices[1]];
-
-			VERTEX3D U, V;
-
-			/* OLD fashion (no longueur used)
-			// Intersection line (directed by U and including p0)
-			U.x = f->c;
-			U.y = 0.0;
-			U.z = -f->a;
-			double nU = Norme(&U);
-
-			if( IS_ZERO(nU) ) {
-			// Plane parallel to (O,x,z)
-			U.x = 1.0;
-			U.y = 0.0;
-			U.z = 0.0;
-			} else {
-			ScalarMult(&U,1.0/nU); // Normalize U
-			}
-			*/
-			/*
-			U.x = vertices3[i2Max].x - vertices3[i1Max].x;
-			U.y = vertices3[i2Max].y - vertices3[i1Max].y;
-			U.z = vertices3[i2Max].z - vertices3[i1Max].z;
-			*/
-
-			U.x = p1.x - p0.x;
-			U.y = p1.y - p0.y;
-			U.z = p1.z - p0.z;
-
-			double nU = Norme(&U);
-			ScalarMult(&U, 1.0 / nU); // Normalize U
-
-			// Construct a normal vector V
-			Cross(&V, &(f->sh.N), &U); // |U|=1 and |N|=1 => |V|=1
-
-			// u,v vertices (we start with p0 at 0,0)
-			f->vertices2[0].u = 0.0;
-			f->vertices2[0].v = 0.0;
-			VERTEX2D min; min.u = 0.0; min.v = 0.0;
-			VERTEX2D max; max.u = 0.0; max.v = 0.0;
-
-			for (int j = 1; j<f->sh.nbIndex; j++) {
-
-				VERTEX3D p = vertices3[f->indices[j]];
-				VERTEX3D v;
-				Sub(&v, &p, &p0); // v = p0p
-				f->vertices2[j].u = Dot(&U, &v);  // Project p on U along the V direction
-				f->vertices2[j].v = Dot(&V, &v);  // Project p on V along the U direction
-
-				// Bounds
-				if (f->vertices2[j].u > max.u) max.u = f->vertices2[j].u;
-				if (f->vertices2[j].v > max.v) max.v = f->vertices2[j].v;
-				if (f->vertices2[j].u < min.u) min.u = f->vertices2[j].u;
-				if (f->vertices2[j].v < min.v) min.v = f->vertices2[j].v;
-
-			}
-
-			// Calculate facet area (Meister/Gauss formula)
-			double A = 0.0;
-			for (int j = 0; j < f->sh.nbIndex; j++) {
-				int j1 = IDX(j + 1, f->sh.nbIndex);
-				A += f->vertices2[j].u*f->vertices2[j1].v - f->vertices2[j1].u*f->vertices2[j].v;
-			}
-			f->sh.area = fabs(0.5 * A);
-
-			// Compute the 2D basis (O,U,V)
-			double uD = (max.u - min.u);
-			double vD = (max.v - min.v);
-
-			// Origin
-			f->sh.O.x = min.u * U.x + min.v * V.x + p0.x;
-			f->sh.O.y = min.u * U.y + min.v * V.y + p0.y;
-			f->sh.O.z = min.u * U.z + min.v * V.z + p0.z;
-
-			// Rescale U and V vector
-			f->sh.nU = U;
-			ScalarMult(&U, uD);
-			f->sh.U = U;
-
-			f->sh.nV = V;
-			ScalarMult(&V, vD);
-			f->sh.V = V;
-
-			Cross(&(f->sh.Nuv), &U, &V);
-
-			// Rescale u,v coordinates
-			for (int j = 0; j < f->sh.nbIndex; j++) {
-
-				VERTEX2D p = f->vertices2[j];
-				f->vertices2[j].u = (p.u - min.u) / uD;
-				f->vertices2[j].v = (p.v - min.v) / vD;
-
-			}
-
 			// Detect non visible edge
 			f->InitVisibleEdge();
 
@@ -351,21 +234,8 @@ void Geometry::InitializeGeometry(int facet_number, BOOL BBOnly) {
 				f->sh.hitOffset = fOffset;
 				fOffset += f->GetHitsSize();
 			}
-
-			/*// Texture ratio //Caused U/V side flip
-			f->tRatio = f->sh.texWidthD / uD;*/
 		}
 	}
-
-
-	/*//Update mesh on all facets
-	if (facet_number==-1){
-	for(int i=0;i<sh.nbFacet;i++) {
-	if(facets[i]->hasMesh) {
-	SetFacetTexture(i,facets[i]->tRatio,TRUE);
-	}
-	}
-	}*/
 
 	isLoaded = TRUE;
 	if (facet_number == -1) {
@@ -375,6 +245,7 @@ void Geometry::InitializeGeometry(int facet_number, BOOL BBOnly) {
 	}
 	//initGeoPrg->SetVisible(FALSE);
 	//SAFE_DELETE(initGeoPrg);
+	_ASSERTE(_CrtCheckMemory());
 }
 
 void Geometry::RebuildLists() {
@@ -388,13 +259,13 @@ size_t Geometry::GetGeometrySize(std::vector<Region_full> *regions, std::vector<
 	memoryUsage += sizeof(SHGEOM);
 	
 	//Regions
-	memoryUsage += (*regions).size()*sizeof(Region_mathonly);
+	memoryUsage += (*regions).size()*sizeof(RegionParams);
 	for (int i = 0; i < (int)(*regions).size(); i++) {
 		memoryUsage += sizeof(Trajectory_Point)*(*regions)[i].Points.size();
-		memoryUsage += 2 * sizeof(double)*(*regions)[i].Bx_distr->size;
-		memoryUsage += 2 * sizeof(double)*(*regions)[i].By_distr->size;
-		memoryUsage += 2 * sizeof(double)*(*regions)[i].Bz_distr->size;
-		memoryUsage += 6 * sizeof(double)*(*regions)[i].nbDistr_BXY; //Coord, BetaX, BetaY, EtaX, EtaX' , E_spread
+		memoryUsage += 2 * sizeof(double)*(*regions)[i].Bx_distr.size;
+		memoryUsage += 2 * sizeof(double)*(*regions)[i].By_distr.size;
+		memoryUsage += 2 * sizeof(double)*(*regions)[i].Bz_distr.size;
+		memoryUsage += 6 * sizeof(double)*(*regions)[i].beta_x_distr.size; //Coord, BetaX, BetaY, EtaX, EtaX' , E_spread
 	}
 	//Material library
 	memoryUsage += sizeof(size_t); //number of (*materials)
@@ -438,42 +309,47 @@ void Geometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *region
 
 	// Build shared buffer for trajectory (see Shared.h)
 	for (size_t i = 0; i < sh.nbRegion; i++) {
-		Region_mathonly *reg = (Region_mathonly *)buffer;
-		(*regions)[i].nbDistr_MAG = Vector((*regions)[i].Bx_distr->size, (*regions)[i].By_distr->size, (*regions)[i].Bz_distr->size);
-		(*regions)[i].nbPointsToCopy = (*regions)[i].Points.size();
-		*reg = (*regions)[i];
-		buffer += sizeof(Region_mathonly);
+		RegionParams* regparam = (RegionParams*)buffer;
+		(*regions)[i].params.nbDistr_MAG = Vector((*regions)[i].Bx_distr.size, (*regions)[i].By_distr.size, (*regions)[i].Bz_distr.size);
+		(*regions)[i].params.nbPointsToCopy = (*regions)[i].Points.size();
+		memcpy(regparam, &((*regions)[i].params),sizeof(RegionParams));
+		//reg = regions[i];
+		buffer += sizeof(RegionParams);
 	}
 	//copy trajectory points
-	for (size_t i = 0; i < sh.nbRegion; i++)
-		for (size_t j = 0; j < (*regions)[i].nbPointsToCopy; j++){
+	for (size_t i = 0; i < sh.nbRegion; i++) {
+		/*for (size_t j = 0; j < (*regions)[i].params.nbPointsToCopy; j++){
 			WRITEBUFFER((*regions)[i].Points[j], Trajectory_Point);
-		}
+		}*/
+		
+		memcpy(buffer, &(*regions)[i].Points[0], (*regions)[i].Points.size()  * sizeof(Trajectory_Point));
+		buffer += (*regions)[i].Points.size()  * sizeof(Trajectory_Point);
+	}
 
 	//copy distribution points
 	for (size_t i = 0; i < sh.nbRegion; i++) {
-		for (size_t j = 0; j < (size_t)(*regions)[i].nbDistr_MAG.x; j++) {
-			WRITEBUFFER((*regions)[i].Bx_distr->valuesX[j], double);
-			WRITEBUFFER((*regions)[i].Bx_distr->valuesY[j], double);
+		for (size_t j = 0; j < (size_t)(*regions)[i].params.nbDistr_MAG.x; j++) {
+			WRITEBUFFER((*regions)[i].Bx_distr.valuesX[j], double);
+			WRITEBUFFER((*regions)[i].Bx_distr.valuesY[j], double);
 		}
 
-		for (size_t j = 0; j < (size_t)(*regions)[i].nbDistr_MAG.y; j++) {
-			WRITEBUFFER((*regions)[i].By_distr->valuesX[j], double);
-			WRITEBUFFER((*regions)[i].By_distr->valuesY[j], double);
+		for (size_t j = 0; j < (size_t)(*regions)[i].params.nbDistr_MAG.y; j++) {
+			WRITEBUFFER((*regions)[i].By_distr.valuesX[j], double);
+			WRITEBUFFER((*regions)[i].By_distr.valuesY[j], double);
 		}
 
-		for (size_t j = 0; j < (size_t)(*regions)[i].nbDistr_MAG.z; j++) {
-			WRITEBUFFER((*regions)[i].Bz_distr->valuesX[j], double);
-			WRITEBUFFER((*regions)[i].Bz_distr->valuesY[j], double);
+		for (size_t j = 0; j < (size_t)(*regions)[i].params.nbDistr_MAG.z; j++) {
+			WRITEBUFFER((*regions)[i].Bz_distr.valuesX[j], double);
+			WRITEBUFFER((*regions)[i].Bz_distr.valuesY[j], double);
 		}
 
-		for (size_t j = 0; j < (*regions)[i].nbDistr_BXY; j++) {
-			WRITEBUFFER((*regions)[i].beta_x_distr->valuesX[j], double);
-			WRITEBUFFER((*regions)[i].beta_x_distr->valuesY[j], double);
-			WRITEBUFFER((*regions)[i].beta_y_distr->valuesY[j], double);
-			WRITEBUFFER((*regions)[i].eta_distr->valuesY[j], double);
-			WRITEBUFFER((*regions)[i].etaprime_distr->valuesY[j], double);
-			WRITEBUFFER((*regions)[i].e_spread_distr->valuesY[j], double);
+		for (size_t j = 0; j < (*regions)[i].params.nbDistr_BXY; j++) {
+			WRITEBUFFER((*regions)[i].beta_x_distr.valuesX[j], double);
+			WRITEBUFFER((*regions)[i].beta_x_distr.valuesY[j], double);
+			WRITEBUFFER((*regions)[i].beta_y_distr.valuesY[j], double);
+			WRITEBUFFER((*regions)[i].eta_distr.valuesY[j], double);
+			WRITEBUFFER((*regions)[i].etaprime_distr.valuesY[j], double);
+			WRITEBUFFER((*regions)[i].e_spread_distr.valuesY[j], double);
 		}
 	}
 
@@ -566,8 +442,8 @@ void Geometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *region
 			}
 			else {
 
-				double rw = Norme(&(f->sh.U)) / (double)(f->sh.texWidthD);
-				double rh = Norme(&(f->sh.V)) / (double)(f->sh.texHeightD);
+				double rw = Norme(f->sh.U) / (double)(f->sh.texWidthD);
+				double rh = Norme(f->sh.V) / (double)(f->sh.texHeightD);
 				float area = (float)(rw*rh);
 
 				for (int j = 0; j < f->sh.texHeight; j++) {
@@ -979,8 +855,8 @@ void Geometry::BuildFacetList(Facet *f) {
 void Geometry::SetFacetTexture(int facet, double ratio, BOOL mesh) {
 
 	Facet *f = facets[facet];
-	double nU = Norme(&(f->sh.U));
-	double nV = Norme(&(f->sh.V));
+	double nU = Norme(f->sh.U);
+	double nV = Norme(f->sh.V);
 
 	if (!f->SetTexture(nU*ratio, nV*ratio, mesh)) {
 		char errMsg[512];
@@ -1116,8 +992,8 @@ void Geometry::AdjustProfile() {
 		if (f->sh.profileType == REC_PRESSUREU) {
 			VERTEX3D v0;
 			Sub(&v0, vertices3 + (f->indices[1]), vertices3 + (f->indices[0])); // v0 = P0P1
-			double n0 = Norme(&v0);
-			double nU = Norme(&(f->sh.U));
+			double n0 = Norme(v0);
+			double nU = Norme(f->sh.U);
 			if (IS_ZERO(n0 - nU)) f->sh.profileType = REC_PRESSUREU; // Select U
 			else               f->sh.profileType = REC_PRESSUREV; // Select V
 		}
@@ -3427,7 +3303,7 @@ std::vector<std::string> Geometry::LoadSYN(FileReader *file, GLProgress *prg, LE
 			throw Error(errMsg);
 		}
 		BuildFacetList(f);
-		double nU = Norme(&(f->sh.U));
+		double nU = Norme(f->sh.U);
 		f->tRatio = f->sh.texWidthD / nU;
 	}
 	return result;
@@ -3697,7 +3573,7 @@ void Geometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *pr
 			throw Error(errMsg);
 		}
 		BuildFacetList(f);
-		double nU = Norme(&(f->sh.U));
+		double nU = Norme(f->sh.U);
 		f->tRatio = f->sh.texWidthD / nU;
 	}
 }
