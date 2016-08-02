@@ -1829,14 +1829,15 @@ void Worker::AddRegion(const char *fileName,int position) {
 void Worker::RecalcRegion(int regionId) {
 	needsReload=TRUE;
 	try {
-			Region_full newtraj;
-			newtraj=regions[regionId]; //copy all except the points
-			newtraj.CalculateTrajectory(1000000); //points calculated
-				nbTrajPoints-=(int)regions[regionId].Points.size();
-				regions[regionId]=newtraj;
-				regions[regionId].Points=newtraj.Points; //need to force because of operator=
+			//Region_full newtraj;
+			//newtraj=regions[regionId]; //copy all except the points
+			nbTrajPoints-=(int)regions[regionId].Points.size();
+			regions[regionId].Points = std::vector<Trajectory_Point>(); //clear points
+			regions[regionId].CalculateTrajectory(1000000); //points calculated
+			nbTrajPoints+=(int)regions[regionId].Points.size();
+			//regions[regionId]=newtraj;
+			//regions[regionId].Points=newtraj.Points; //need to force because of operator=
 			geom->InitializeGeometry(-1,TRUE); //recalculate bounding box
-			nbTrajPoints+=(int)newtraj.Points.size();
 		} catch(Error &e) {
 			throw e;
 		}
@@ -1852,12 +1853,15 @@ void Worker::ClearRegions() {
 
 void Worker::RemoveRegion(int index) {
 	nbTrajPoints -= (int)regions[index].Points.size();
+	/*
 	//Explicit removal as Region_full doesn't copy Points for some reason
 	for (size_t i = index; i < (regions.size() - 1); i++) { //Copy next
 		regions[i].Points = regions[i + 1].Points; //Points
 		regions[i] = regions[i + 1]; //Everything else
 	}
 	regions.erase(regions.end() - 1); //delete last
+	*/
+	regions.erase(regions.begin() + index);
 	geom->InitializeGeometry(-1, TRUE); //recalculate bounding box
 }
 

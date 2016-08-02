@@ -23,7 +23,7 @@ GNU General Public License for more details.
 #include <algorithm>
 #include "..\Geometry.h"
 #include "GLWindowManager.h"
-#include "..\MolFlow.h"
+#include "..\SynRad.h"
 
 #define ISBOLD(x) ((x)[0]==':' && (x)[1]=='B' && (x)[2]==':')
 
@@ -33,7 +33,7 @@ GNU General Public License for more details.
 template<class T> int cmp_column(const void *lhs_, const void *rhs_);
 int clickedCol;
 BOOL sortDescending;
-extern MolFlow *mApp;
+extern SynRad *mApp;
 
 // ---------------------------------------------------------------
 

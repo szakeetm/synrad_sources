@@ -1668,8 +1668,8 @@ void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, in
 		sh.sticking = file->ReadDouble();
 		if (version >= 4) {
 			file->ReadKeyword("roughness"); file->ReadKeyword(":");
-			sh.autoCorrLength = 100.0E-9; //We need a number here
-			sh.rmsRoughness = file->ReadDouble()*sh.autoCorrLength;
+			sh.autoCorrLength = 10000.0E-9; //We need a number here. Will take 10 microns so specular reflection probability is low
+			sh.rmsRoughness = file->ReadDouble()*sh.autoCorrLength; // 1/Tau approximately corresponds to roughness ratio in Synrad 1.3-
 		}
 		file->ReadKeyword("opacity"); file->ReadKeyword(":");
 		sh.opacity = file->ReadDouble();
