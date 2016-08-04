@@ -21,7 +21,7 @@
 
 // 64 bit integer declaration
 typedef long long llong;
-
+#include <vector>
 // AC matrix floating type
 
 typedef float ACFLOAT;
@@ -78,12 +78,6 @@ struct VERTEX2D {
 	double v;
 
 
-
-
-
-
-
-
   VERTEX2D operator+(const VERTEX2D& toAdd) const {
 	  VERTEX2D result;
 	  result.u = this->u + toAdd.u;
@@ -134,11 +128,13 @@ typedef struct {
 } LEAK;
 
 typedef struct {
-
-  size_t nbPts;
-  VERTEX2D *pts;
-
-} MESH;
+  std::vector<VERTEX2D> points;
+  float   area;     // Area of element
+  float   uCenter;  // Center coordinates
+  float   vCenter;  // Center coordinates
+  //int     elemId;   // Element index (MESH array)
+  //int full;
+} CELLPROPERTIES;
 
 // Density/Hit field stuff
 #define HITMAX_INT64 18446744073709551615

@@ -50,7 +50,7 @@ typedef struct {
   double   *inc;        // reciprocial of element area
   BOOL     *largeEnough; //cells that are NOT too small for autoscaling
   VHIT     *direction; // Direction field recording (average)
-  char     *fullElem;  // Direction field recording (only on full element) (WHY???)
+  //char     *fullElem;  // Direction field recording (only on full element) (WHY???)
   llong    *profile_hits;   // MC hits
   double   *profile_flux;   // SR Flux
   double   *profile_power;  // SR power

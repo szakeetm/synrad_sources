@@ -418,19 +418,19 @@ void Geometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *region
 		DWORD add = 0;
 		if (f->sh.isTextured) {
 
-			if (f->mesh) {
+			if (f->cellPropertiesIds) {
 
 				for (int j = 0; j < f->sh.texHeight; j++) {
 					for (int i = 0; i < f->sh.texWidth; i++) {
-						float area = f->mesh[add].area;
+						float area = f->GetMeshArea(add);
 						if (area > 0.0f) {
 							// Use the sign bit to store isFull flag
-							if (f->mesh[add].full) {
+							/*if (f->mesh[add].full) {
 								WRITEBUFFER(-1.0 / area, double);
 							}
-							else {
+							else {*/
 								WRITEBUFFER(1.0 / area, double);
-							}
+							/*}*/
 						}
 						else {
 							WRITEBUFFER(0.0, double);
@@ -500,7 +500,7 @@ DWORD Geometry::GetHitsSize() {
 	return memoryUsage;
 }
 
-DWORD Geometry::GetMaxElemNumber() {
+/*DWORD Geometry::GetMaxElemNumber() {
 
 	int nbElem = 0;
 	for (int i = 0; i < sh.nbFacet; i++) {
@@ -510,9 +510,9 @@ DWORD Geometry::GetMaxElemNumber() {
 	}
 	return nbElem;
 
-}
+}*/
 
-void Geometry::CopyElemBuffer(BYTE *buffer) {
+/*void Geometry::CopyElemBuffer(BYTE *buffer) {
 
 	int idx = 0;
 	for (int i = 0; i < sh.nbFacet; i++) {
@@ -522,7 +522,7 @@ void Geometry::CopyElemBuffer(BYTE *buffer) {
 		idx += sz;
 	}
 
-}
+}*/
 
 void Geometry::BuildShapeList() {
 
@@ -2325,9 +2325,9 @@ bool Geometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *dpHit, 
 						*(hits_power + index) = file->ReadDouble();
 
 						//Normalize by area
-						if (f->mesh[index].area>0.0) {
-							*(hits_flux + index) /= f->mesh[index].area;
-							*(hits_power + index) /= f->mesh[index].area;
+						if (f->GetMeshArea(index)>0.0) {
+							*(hits_flux + index) /= f->GetMeshArea(index);
+							*(hits_power + index) /= f->GetMeshArea(index);
 						}
 					}
 					for (int ie = 0; ie < texWidth_file - f->sh.texWidth; ie++) {//Executed if file texture is bigger than expected texture
@@ -2596,8 +2596,8 @@ void Geometry::ExportTextures(FILE *file, int grouping, int mode, double no_scan
 
 		if (f->selected) {
 			if (grouping == 0) fprintf(file, "FACET%d\n", i + 1); //mode 10: special ANSYS export
-			SHELEM *mesh = f->mesh;
-			if (mesh) {
+			//SHELEM *mesh = f->mesh;
+			if (f->cellPropertiesIds) {
 				char tmp[256];
 				char out[256];
 				float dCoef = 1.0f;
@@ -2620,7 +2620,7 @@ void Geometry::ExportTextures(FILE *file, int grouping, int mode, double no_scan
 						switch (mode) {
 
 						case 0: // Element area
-							sprintf(tmp, "%g", f->mesh[index].area);
+							sprintf(tmp, "%g", f->GetMeshArea(index));
 							break;
 
 						case 1: // MC_hits
@@ -2628,11 +2628,11 @@ void Geometry::ExportTextures(FILE *file, int grouping, int mode, double no_scan
 							break;
 
 						case 2: // Flux
-							if (!grouping || hits_flux[index]) sprintf(tmp, "%g", hits_flux[index] * f->mesh[i + j*w].area*norm);
+							if (!grouping || hits_flux[index]) sprintf(tmp, "%g", hits_flux[index] * f->GetMeshArea(i+j*w)*norm);
 							break;
 
 						case 3: // Power
-							if (!grouping || hits_power[index]) sprintf(tmp, "%g", hits_power[index] * f->mesh[i + j*w].area*norm);
+							if (!grouping || hits_power[index]) sprintf(tmp, "%g", hits_power[index] * f->GetMeshArea(i+j*w)*norm);
 							break;
 
 						case 4: // Flux/area
@@ -2644,12 +2644,14 @@ void Geometry::ExportTextures(FILE *file, int grouping, int mode, double no_scan
 							break;
 						}
 
-						if (grouping == 1 && tmp && tmp[0])
+						if (grouping == 1 && tmp && tmp[0]) {
+							VERTEX2D center = f->GetMeshCenter(index);
 							sprintf(out, "%g\t%g\t%g\t%s\t\n",
-							f->sh.O.x + f->mesh[index].uCenter*f->sh.U.x + f->mesh[index].vCenter*f->sh.V.x,
-							f->sh.O.y + f->mesh[index].uCenter*f->sh.U.y + f->mesh[index].vCenter*f->sh.V.y,
-							f->sh.O.z + f->mesh[index].uCenter*f->sh.U.z + f->mesh[index].vCenter*f->sh.V.z,
-							tmp);
+								f->sh.O.x + center.u*f->sh.U.x + center.v*f->sh.V.x,
+								f->sh.O.y + center.u*f->sh.U.y + center.v*f->sh.V.y,
+								f->sh.O.z + center.u*f->sh.U.z + center.v*f->sh.V.z,
+								tmp);
+						}
 						else sprintf(out, "%s", tmp);
 
 						if (out) fprintf(file, "%s", out);
@@ -2693,8 +2695,8 @@ void Geometry::SaveDesorption(FILE *file, Dataport *dpHit, BOOL selectedOnly, in
 
 		if (f->selected || !selectedOnly) {
 
-			SHELEM *mesh = f->mesh;
-			if (mesh) {
+			//SHELEM *mesh = f->mesh;
+			if (f->cellPropertiesIds) {
 				fprintf(file, "facet %d {\n", i + 1);
 				char tmp[256];
 				fprintf(file, "cell_size_cm: %g\n", 1.0 / f->tRatio);
@@ -2713,7 +2715,7 @@ void Geometry::SaveDesorption(FILE *file, Dataport *dpHit, BOOL selectedOnly, in
 
 				for (int i = 0; i < w; i++) {
 					for (int j = 0; j < h; j++) {
-						double dose = hits_flux[i + j*w] * f->mesh[i + j*w].area / worker->no_scans;
+						double dose = hits_flux[i + j*w] * f->GetMeshArea(i+j*w) / worker->no_scans;
 						double val;
 						if (mode == 1) { //no conversion
 							val = dose;
@@ -3065,9 +3067,9 @@ void Geometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit, BOOL 
 				for (ix = 0; ix < (f->sh.texWidth); ix++) {
 					int index = iy*(f->sh.texWidth) + ix;
 					file->WriteLLong((!crashSave && !saveSelected) ? *(hits_MC + index) : 0, "\t");
-					file->WriteDouble(f->mesh[index].area, "\t");
-					file->WriteDouble((!crashSave && !saveSelected) ? *(hits_flux + index)*f->mesh[index].area : 0, "\t");
-					file->WriteDouble((!crashSave && !saveSelected) ? *(hits_power + index)*f->mesh[index].area : 0, "\t");
+					file->WriteDouble(f->GetMeshArea(index), "\t");
+					file->WriteDouble((!crashSave && !saveSelected) ? *(hits_flux + index)*f->GetMeshArea(index) : 0, "\t");
+					file->WriteDouble((!crashSave && !saveSelected) ? *(hits_power + index)*f->GetMeshArea(index) : 0, "\t");
 				}
 				file->Write("\n");
 			}

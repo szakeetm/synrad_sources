@@ -271,7 +271,7 @@ void FacetMesh::EditFacet(Worker *w) {
 			minV = MIN(minV,nV);
 			sel = i;
 			allEnabled = allEnabled && f->sh.isTextured;
-			allBound = allBound && (f->mesh!=NULL);
+			allBound = allBound && (f->cellPropertiesIds!=NULL);
 			allCountAbs = allCountAbs && f->sh.countAbs;
 			allCountRefl = allCountRefl && f->sh.countRefl;
 			allCountTrans = allCountTrans && f->sh.countTrans;

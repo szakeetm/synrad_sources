@@ -109,7 +109,7 @@ void ClearSimulation() {
 				delete f->spectrum_fluxwise;
 				delete f->spectrum_powerwise;
 				SAFE_FREE(f->direction);
-				SAFE_FREE(f->fullElem);
+				//SAFE_FREE(f->fullElem);
 			}
 			SAFE_FREE(f);
 		}
@@ -470,21 +470,21 @@ BOOL LoadSimulation(Dataport *loader) {
 
 			f->inc = (double*)malloc(f->textureSize);
 			f->largeEnough = (BOOL *)malloc(sizeof(BOOL)*nbE);
-			f->fullElem = (char *)malloc(nbE);
-			if (!(f->inc && f->largeEnough && f->fullElem)) {
+			//f->fullElem = (char *)malloc(nbE);
+			if (!(f->inc && f->largeEnough/* && f->fullElem*/)) {
 				SetErrorSub("Not enough memory to load");
 				return FALSE;
 			}
 			f->fullSizeInc=(float)1E30;
 			for(j=0;j<nbE;j++) {
 				double incVal = ((double *)areaBuff)[j];
-				if( incVal<0 ) {
+				/*if( incVal<0 ) {
 					f->fullElem[j] = 1;
 					f->inc[j] = -incVal;
 				} else {
-					f->fullElem[j] = 0;
+					f->fullElem[j] = 0;*/
 					f->inc[j] = incVal;
-				}
+				/*}*/
 				if ((f->inc[j]>0.0)&&(f->inc[j]<f->fullSizeInc)) f->fullSizeInc = f-> inc[j];
 			}
 			for(j=0;j<nbE;j++) { //second pass, filter out very small cells

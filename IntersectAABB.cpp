@@ -437,7 +437,7 @@ BOOL Intersect(VERTEX3D *rPos, VERTEX3D *rDir,  // Source ray (rayDir vector mus
 						for (x = 0; x < f->sh.texWidth; x++) {
 							for (y = 0; y < f->sh.texHeight; y++) {
 								int add = x + y*f->sh.texWidth;
-								if (f->fullElem[add]) {
+								if (TRUE /*isFull*/) {
 
 									double uC = ((double)x + 0.5) * f->iw;
 									double vC = ((double)y + 0.5) * f->ih;

@@ -53,8 +53,9 @@ public:
 
   int      *indices;      // Indices (Reference to geometry vertex)
   VERTEX2D *vertices2;    // Vertices (2D plane space, UV coordinates)
-  MESH     *meshPts;      // Mesh poly
-  size_t       nbElem;       // Number of mesh elem
+  int     *cellPropertiesIds;      // -1 if regular, otherwise index in mesh
+  std::vector<CELLPROPERTIES> meshvector;
+  //size_t       nbElem;       // Number of mesh elem
 
   // Normalized plane equation (ax + by + cz + d = 0)
   double a;
@@ -68,7 +69,7 @@ public:
   BOOL	textureVisible; //Draw the texture?
   BOOL  collinear;      //All vertices are on a line (non-simple)
   BOOL	volumeVisible;	//Draw volume?
-  SHELEM *mesh;        // Element mesh
+ // SHELEM *mesh;        // Element mesh
   BOOL    hasMesh;     // Has texture
   VHIT   *dirCache;    // Direction field cache
   BOOL textureError;   // Disable rendering if the texture has an error
@@ -124,7 +125,10 @@ public:
   void  RenderSelectedElem();
   void  SelectElem(int u,int v,int width,int height);
   void  UnselectElem();
-
+  float GetMeshArea(int index);
+  size_t GetMeshNbPoint(int index);
+  VERTEX2D GetMeshPoint(int index,int pointId);
+  VERTEX2D GetMeshCenter(int index);
 };
 
 struct DeletedFacet {

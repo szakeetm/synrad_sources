@@ -178,14 +178,6 @@ typedef struct {
 //
 //  SHELEM
 
-typedef struct {
 
-  float   area;     // Area of element
-  float   uCenter;  // Center coordinates
-  float   vCenter;  // Center coordinates
-  int     elemId;   // Element index (MESH array)
-  BOOL    full;     // Element is full
-
-} SHELEM;
 
 #endif /* SHAREDH */

@@ -914,7 +914,7 @@ void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int 
       
 	  Facet *f = facets[i];
       //if( f->selected && f->mesh ) glCallList(f->glElem);
-	  if( f->mesh && f->textureVisible ) {
+	  if( f->cellPropertiesIds && f->textureVisible ) {
 		    glEnable(GL_POLYGON_OFFSET_LINE);
 			glPolygonOffset(1.0f,2.0f);
 			glCallList(f->glElem);
@@ -940,7 +940,7 @@ void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int 
         for(int x=0;x<f->sh.texWidth;x++) {
           for(int y=0;y<f->sh.texHeight;y++) {           
              int add = x + y*f->sh.texWidth;
-             if( f->mesh[add].area > 0.0 ) {
+             if( f->GetMeshArea(add) > 0.0 ) {
                double uC = ((double)x + 0.5) * iw;
                double vC = ((double)y + 0.5) * ih;
                float xc = (float)( f->sh.O.x + f->sh.U.x*uC + f->sh.V.x*vC );

@@ -80,10 +80,11 @@ Facet::Facet(int nbIndex) {
 	texDimH = 0;
 	tRatio = 0.0;
 
-	mesh = NULL;
-	meshPts = NULL;
+	//mesh = NULL;
+	//meshPts = NULL;
+	cellPropertiesIds = NULL;
 	hasMesh = FALSE;
-	nbElem = 0;
+	//nbElem = 0;
 	selectedElem.u = 0;
 	selectedElem.v = 0;
 	selectedElem.width = 0;
@@ -131,16 +132,16 @@ Facet::Facet(int nbIndex) {
 Facet::~Facet() {
 	SAFE_FREE(indices);
 	SAFE_FREE(vertices2);
-	SAFE_FREE(mesh);
+	SAFE_FREE(cellPropertiesIds);
 	SAFE_FREE(dirCache);
 	DELETE_TEX(glTex);
 	DELETE_LIST(glList);
 	DELETE_LIST(glElem);
 	DELETE_LIST(glSelElem);
 	SAFE_FREE(visible);
-	for (size_t i = 0; i < nbElem; i++)
-		SAFE_FREE(meshPts[i].pts);
-	SAFE_FREE(meshPts);
+	/*for (size_t i = 0; i < nbElem; i++)
+		SAFE_FREE(meshPts[i].pts);*/
+	//SAFE_FREE(meshPts);
 }
 
 // -----------------------------------------------------------
@@ -572,17 +573,19 @@ BOOL Facet::SetTexture(double width, double height, BOOL useMesh) {
 	texDimW = 0;
 	texDimH = 0;
 	hasMesh = FALSE;
-	SAFE_FREE(mesh);
+	//SAFE_FREE(mesh);
+	meshvector = std::vector<CELLPROPERTIES>();
 	SAFE_FREE(dirCache);
 	DELETE_TEX(glTex);
 	DELETE_LIST(glList);
 	DELETE_LIST(glElem);
-	if (meshPts) {
+	/*if (meshPts) {
 		for (size_t i = 0; i < nbElem; i++)
 			SAFE_FREE(meshPts[i].pts);
-	}
-	SAFE_FREE(meshPts);
-	nbElem = 0;
+	}*/
+	//SAFE_FREE(meshPts);
+	SAFE_FREE(cellPropertiesIds);
+	//nbElem = 0;
 	UnselectElem();
 
 	if (dimOK) {
@@ -622,8 +625,8 @@ void Facet::glVertex2u(double u, double v) {
 // -----------------------------------------------------------
 
 BOOL Facet::BuildMesh() {
-
-	mesh = (SHELEM *)malloc(sh.texWidth * sh.texHeight * sizeof(SHELEM));
+	
+	/*mesh = (SHELEM *)malloc(sh.texWidth * sh.texHeight * sizeof(SHELEM));
 	if (!mesh) {
 		//Couldn't allocate memory
 		return FALSE;
@@ -632,15 +635,20 @@ BOOL Facet::BuildMesh() {
 	meshPts = (MESH *)malloc(sh.texWidth * sh.texHeight * sizeof(MESH));
 	if (!meshPts) {
 		return FALSE;
-
-
+	}*/
+	cellPropertiesIds = (int *)malloc(sh.texWidth * sh.texHeight * sizeof(int));
+	if (!cellPropertiesIds) {
+		//Couldn't allocate memory
+		return FALSE;
+		//throw Error("malloc failed on Facet::BuildMesh()");
 	}
 	hasMesh = TRUE;
-	memset(mesh, 0, sh.texWidth * sh.texHeight * sizeof(SHELEM));
-	memset(meshPts, 0, sh.texWidth * sh.texHeight * sizeof(MESH));
+	//memset(mesh, 0, sh.texWidth * sh.texHeight * sizeof(SHELEM));
+	//memset(meshPts, 0, sh.texWidth * sh.texHeight * sizeof(MESH));
+	memset(cellPropertiesIds, 0, sh.texWidth * sh.texHeight * sizeof(int));
 
 	POLYGON P1, P2;
-	double sx, sy, A, tA;
+	double sx, sy, A/*,tA*/;
 	double iw = 1.0 / (double)sh.texWidthD;
 	double ih = 1.0 / (double)sh.texHeightD;
 	double rw = Norme(sh.U) * iw;
@@ -658,8 +666,8 @@ BOOL Facet::BuildMesh() {
 	P2.nbPts = sh.nbIndex;
 	P2.pts = vertices2;
 	P2.sign = -sh.sign;
-	tA = 0.0;
-	nbElem = 0;
+	//tA = 0.0;
+	//nbElem = 0;
 
 	for (int j = 0; j < sh.texHeight; j++) {
 		sy = (double)j;
@@ -672,7 +680,7 @@ BOOL Facet::BuildMesh() {
 			double u1 = (sx + 1.0) * iw;
 			double v1 = (sy + 1.0) * ih;
 			float  uC, vC;
-			mesh[i + j*sh.texWidth].elemId = -1;
+			//mesh[i + j*sh.texWidth].elemId = -1;
 
 			if (sh.nbIndex <= 4) {
 
@@ -685,6 +693,7 @@ BOOL Facet::BuildMesh() {
 			}
 
 			if (!allInside) {
+				CELLPROPERTIES cellprop;
 
 				// Intersect element with the facet (facet boundaries)
 				P1.pts[0].u = u0;
@@ -697,48 +706,58 @@ BOOL Facet::BuildMesh() {
 				P1.pts[3].v = v1;
 				A = GetInterArea(&P1, &P2, visible, &uC, &vC, &nbv, &vList);
 				if (!IS_ZERO(A)) {
-
 					if (A > (fA + 1e-10)) {
-
 						// Polyon intersection error !
 						// Switch back to brute force
 						A = GetInterAreaBF(&P2, u0, v0, u1, v1, &uC, &vC);
-						mesh[i + j*sh.texWidth].area = (float)(A*(rw*rh) / (iw*ih));
-						mesh[i + j*sh.texWidth].uCenter = uC;
-						mesh[i + j*sh.texWidth].vCenter = vC;
-						mesh[i + j*sh.texWidth].full = IS_ZERO(fA - A);
+						BOOL fullElem=IS_ZERO(fA - A);
+						if (!fullElem) {
+							cellprop.area = (float)(A*(rw*rh) / (iw*ih));
+							cellprop.uCenter = uC;
+							cellprop.vCenter = vC;
+							cellPropertiesIds[i + j*sh.texWidth] = meshvector.size();
+							meshvector.push_back(cellprop);
+						}
+						else {
+							cellPropertiesIds[i + j*sh.texWidth] = -1;
+						}
+						//cellprop.full = IS_ZERO(fA - A);
 
 					}
 					else {
+						BOOL fullElem=IS_ZERO(fA - A);
+						if (!fullElem) {
+							// !! P1 and P2 are in u,v coordinates !!
+							cellprop.area = (float)(A*(rw*rh) / (iw*ih));
+							cellprop.uCenter = uC;
+							cellprop.vCenter = vC;
+							//cellprop.full = IS_ZERO(fA - A);
+							//cellprop.elemId = nbElem;
 
-						// !! P1 and P2 are in u,v coordinates !!
-						mesh[i + j*sh.texWidth].area = (float)(A*(rw*rh) / (iw*ih));
-						mesh[i + j*sh.texWidth].uCenter = uC;
-						mesh[i + j*sh.texWidth].vCenter = vC;
-						mesh[i + j*sh.texWidth].full = IS_ZERO(fA - A);
-						mesh[i + j*sh.texWidth].elemId = nbElem;
-
-						// Mesh coordinates
-						meshPts[nbElem].nbPts = nbv;
-						meshPts[nbElem].pts = (VERTEX2D *)malloc(nbv * sizeof(VERTEX2D));
-						if (!meshPts[nbElem].pts) {
-							throw Error("Couldn't allocate memory for texture mesh points.");
+							// Mesh coordinates
+							for (int n = 0; n < nbv; n++) {
+								VERTEX2D newPoint;
+								newPoint.u = vList[2 * n];
+								newPoint.v = vList[2 * n + 1];
+								cellprop.points.push_back(newPoint);
+							}
+							cellPropertiesIds[i + j*sh.texWidth] = meshvector.size();
+							meshvector.push_back(cellprop);
+							//nbElem++;
 						}
-						for (int n = 0; n < nbv; n++) {
-							meshPts[nbElem].pts[n].u = vList[2 * n];
-							meshPts[nbElem].pts[n].v = vList[2 * n + 1];
+						else {
+							cellPropertiesIds[i + j*sh.texWidth] = -1;
 						}
-						nbElem++;
-
 					}
-
 				}
+				else cellPropertiesIds[i + j*sh.texWidth] = -2; //zero element
 				SAFE_FREE(vList);
-
+				
 			}
-			else {
+			else {  //All indide and triangle or quad
+				cellPropertiesIds[i + j*sh.texWidth] = -1;
 
-				mesh[i + j*sh.texWidth].area = (float)(rw*rh);
+				/*mesh[i + j*sh.texWidth].area = (float)(rw*rh);
 				mesh[i + j*sh.texWidth].uCenter = (float)(u0 + u1) / 2.0f;
 				mesh[i + j*sh.texWidth].vCenter = (float)(v0 + v1) / 2.0f;
 				mesh[i + j*sh.texWidth].full = TRUE;
@@ -758,11 +777,11 @@ BOOL Facet::BuildMesh() {
 				meshPts[nbElem].pts[2].v = v1;
 				meshPts[nbElem].pts[3].u = u0;
 				meshPts[nbElem].pts[3].v = v1;
-				nbElem++;
+				nbElem++;*/
 
 			}
 
-			tA += mesh[i + j*sh.texWidth].area;
+			//tA += mesh[i + j*sh.texWidth].area;
 
 		}
 	}
@@ -785,7 +804,7 @@ BOOL Facet::BuildMesh() {
 
 void Facet::BuildMeshList() {
 
-	if (!meshPts)
+	if (!cellPropertiesIds)
 		return;
 
 	DELETE_LIST(glElem);
@@ -796,14 +815,18 @@ void Facet::BuildMeshList() {
 
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	for (size_t i = 0; i < nbElem; i++) {
-		glBegin(GL_POLYGON);
-		for (size_t n = 0; n < meshPts[i].nbPts; n++) {
-			glEdgeFlag(TRUE);
-			glVertex2u(meshPts[i].pts[n].u, meshPts[i].pts[n].v);
+	size_t nb = sh.texWidth*sh.texHeight;
+	for (size_t i = 0; i < nb; i++) {
+		if (cellPropertiesIds[i] != -2) {
+			glBegin(GL_POLYGON);
+			size_t nbPts = GetMeshNbPoint(i);
+			for (size_t n = 0; n < nbPts; n++) {
+				glEdgeFlag(TRUE);
+				VERTEX2D pt = GetMeshPoint(i, n);
+				glVertex2u(pt.u, pt.v);
+			}
+			glEnd();
 		}
-		glEnd();
-
 	}
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -818,7 +841,7 @@ void Facet::BuildSelElemList() {
 	DELETE_LIST(glSelElem);
 	int nbSel = 0;
 
-	if (mesh && selectedElem.width != 0 && selectedElem.height != 0) {
+	if (cellPropertiesIds && selectedElem.width != 0 && selectedElem.height != 0) {
 
 		glSelElem = glGenLists(1);
 		glNewList(glSelElem, GL_COMPILE);
@@ -832,12 +855,18 @@ void Facet::BuildSelElemList() {
 			for (int j = 0; j < selectedElem.height; j++) {
 
 				int add = (selectedElem.u + i) + (selectedElem.v + j)*sh.texWidth;
-				int elId = mesh[add].elemId;
-				if (elId >= 0) {
+				//int elId = mesh[add].elemId;
+				//if (cellPropertiesIds[add]!=-1 && meshvector[cellPropertiesIds[add]].elemId>=0) {
+				if (cellPropertiesIds[add] != -2) {
 					glBegin(GL_POLYGON);
-					for (int n = 0; n < meshPts[elId].nbPts; n++) {
+					/*for (int n = 0; n < meshPts[elId].nbPts; n++) {
 						glEdgeFlag(TRUE);
 						glVertex2u(meshPts[elId].pts[n].u, meshPts[elId].pts[n].v);
+					}*/
+					for (size_t p = 0;p < GetMeshNbPoint(add);p++) {
+						VERTEX2D point = GetMeshPoint(add, p);
+						glEdgeFlag(TRUE);
+						glVertex2u(point.u, point.v);
 					}
 					glEnd();
 					nbSel++;
@@ -875,7 +904,7 @@ void Facet::SelectElem(int u, int v, int width, int height) {
 
 	UnselectElem();
 
-	if (mesh && u >= 0 && u < sh.texWidth && v >= 0 && v < sh.texHeight) {
+	if (cellPropertiesIds && u >= 0 && u < sh.texWidth && v >= 0 && v < sh.texHeight) {
 
 		int maxW = sh.texWidth - u;
 		int maxH = sh.texHeight - v;
@@ -898,25 +927,34 @@ void Facet::RenderSelectedElem() {
 // -----------------------------------------------------------
 
 void Facet::Explode(FACETGROUP *group) {
+	size_t nonZeroElems = 0,nb=0;
+	for (size_t i = 0;i < sh.texHeight*sh.texWidth;i++) {
+		if (cellPropertiesIds[i] != -2) {
+			nonZeroElems++;
+		}
+	}
+		
 
-	int nb = 0;
-	if (!(group->facets = (Facet **)malloc(nbElem*sizeof(Facet *))))
+	
+	if (!(group->facets = (Facet **)malloc(nonZeroElems *sizeof(Facet *))))
 		throw Error("Not enough memory to create new facets");
-	for (size_t i = 0; i < nbElem; i++) {
-		try {
-			Facet *f = new Facet(meshPts[i].nbPts);
-			f->Copy(this);
-			group->facets[i] = f;
+	for (size_t i = 0;i < sh.texHeight*sh.texWidth;i++) {
+		if (cellPropertiesIds[i] != -2) {
+			try {
+				Facet *f = new Facet(GetMeshNbPoint(i));
+				f->Copy(this);
+				group->facets[i] = f;
+			}
+			catch (...) {
+				for (size_t d = 0; d < i; d++)
+					SAFE_DELETE(group->facets[d]);
+				throw Error("Cannot reserve memory for new facet(s)");
+			}
+			nb += GetMeshNbPoint(i);
 		}
-		catch (...) {
-			for (size_t d = 0; d < i; d++)
-				SAFE_DELETE(group->facets[d]);
-			throw Error("Cannot reserve memory for new facet(s)");
-		}
-		nb += meshPts[i].nbPts;
 	}
 
-	group->nbF = nbElem;
+	group->nbF = nonZeroElems;
 	group->nbV = nb;
 
 }
@@ -926,12 +964,15 @@ void Facet::Explode(FACETGROUP *group) {
 void Facet::FillVertexArray(VERTEX3D *v) {
 
 	int nb = 0;
-	for (size_t i = 0; i < nbElem; i++) {
-		for (size_t j = 0; j < meshPts[i].nbPts; j++) {
-			v[nb].x = sh.O.x + sh.U.x*meshPts[i].pts[j].u + sh.V.x*meshPts[i].pts[j].v;
-			v[nb].y = sh.O.y + sh.U.y*meshPts[i].pts[j].u + sh.V.y*meshPts[i].pts[j].v;
-			v[nb].z = sh.O.z + sh.U.z*meshPts[i].pts[j].u + sh.V.z*meshPts[i].pts[j].v;
-			nb++;
+	for (size_t i = 0;i < sh.texHeight*sh.texWidth;i++) {
+		if (cellPropertiesIds[i] != -2) {
+			for (size_t j = 0; j < GetMeshNbPoint(i); j++) {
+				VERTEX2D p = GetMeshPoint(i, j);
+				v[nb].x = sh.O.x + sh.U.x*p.u + p.v;
+				v[nb].y = sh.O.y + sh.U.y*p.u + p.v;
+				v[nb].z = sh.O.z + sh.U.z*p.u + p.v;
+				nb++;
+			}
 		}
 	}
 
@@ -1065,8 +1106,8 @@ DWORD Facet::GetTexRamSizeForRatio(double ratio, BOOL useMesh, BOOL countDir) {
 #define SUM_NEIGHBOR(i,j,we)                      \
 	if( (i)>=0 && (i)<=w && (j)>=0 && (j)<=h ) {    \
 	add = (i)+(j)*sh.texWidth;                    \
-	if( mesh[add].area>0.0 ) {                   \
-	sum += we*(texBuffer[add]/mesh[add].area*scaleF);          \
+	if( GetMeshArea(add)>0.0 ) {                   \
+	sum += we*(texBuffer[add]/GetMeshArea(add)*scaleF);          \
 	W=W+we;                                     \
 		}                                             \
 		}
@@ -1172,12 +1213,12 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 			}
 		}
 		// Perform edge smoothing (only with mesh)
-		if (mesh) {
+		if (cellPropertiesIds) {
 			for (int j = -1; j <= sh.texHeight; j++) {
 				for (int i = -1; i <= sh.texWidth; i++) {
 					BOOL doSmooth = (i < 0) || (i >= sh.texWidth) ||
 						(j < 0) || (j >= sh.texHeight) ||
-						mesh[i + j*sh.texWidth].area == 0.0f;
+						GetMeshArea(i + j*sh.texWidth) == 0.0f;
 					if (doSmooth) {
 						if (doLog) {
 							val = (int)((LOG10(GetSmooth(i, j, texBuffer, 1.0f)) - LOG10(min))*scaleFactor + 0.5f);
@@ -1249,12 +1290,12 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 			}
 		}
 		// Perform edge smoothing (only with mesh)
-		if (mesh) {
+		if (cellPropertiesIds) {
 			for (int j = -1; j <= sh.texHeight; j++) {
 				for (int i = -1; i <= sh.texWidth; i++) {
 					BOOL doSmooth = (i < 0) || (i >= sh.texWidth) ||
 						(j < 0) || (j >= sh.texHeight) ||
-						mesh[i + j*sh.texWidth].area == 0.0;
+						GetMeshArea(i + j*sh.texWidth) == 0.0f;
 					if (doSmooth) {
 						if (doLog) {
 							val = (int)((LOG10(GetSmooth(i, j, texBuffer, 1.0f)) - LOG10(min))*scaleFactor + 0.5f);
@@ -1335,12 +1376,12 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 			}
 		}
 		// Perform edge smoothing (only with mesh)
-		if (mesh) {
+		if (cellPropertiesIds) {
 			for (int j = -1; j <= sh.texHeight; j++) {
 				for (int i = -1; i <= sh.texWidth; i++) {
 					BOOL doSmooth = (i < 0) || (i >= sh.texWidth) ||
 						(j < 0) || (j >= sh.texHeight) ||
-						mesh[i + j*sh.texWidth].area == 0.0f;
+						GetMeshArea(i + j*sh.texWidth) == 0.0f;
 					if (doSmooth) {
 						if (doLog) {
 							val = (int)((LOG10(GetSmooth(i, j, texBuffer, 1.0f)) - LOG10(min))*scaleFactor + 0.5f);
@@ -1412,12 +1453,12 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 			}
 		}
 		// Perform edge smoothing (only with mesh)
-		if (mesh) {
+		if (cellPropertiesIds) {
 			for (int j = -1; j <= sh.texHeight; j++) {
 				for (int i = -1; i <= sh.texWidth; i++) {
 					BOOL doSmooth = (i < 0) || (i >= sh.texWidth) ||
 						(j < 0) || (j >= sh.texHeight) ||
-						mesh[i + j*sh.texWidth].area == 0.0;
+						GetMeshArea(i + j*sh.texWidth) == 0.0;
 					if (doSmooth) {
 						if (doLog) {
 							val = (int)((LOG10(GetSmooth(i, j, (double*)texBuffer, 1.0f)) - LOG10(min))*scaleFactor + 0.5f);
@@ -1612,7 +1653,7 @@ void Facet::SaveSYN(FileWriter *file, const std::vector<Material> &materials, in
 	file->Write("  superDest:"); file->WriteInt(sh.superDest, "\n");
 	file->Write("  superIdx:"); file->WriteInt(sh.superIdx, "\n");
 	file->Write("  is2sided:"); file->WriteInt(sh.is2sided, "\n");
-	file->Write("  mesh:"); file->WriteInt((mesh != NULL), "\n");
+	file->Write("  mesh:"); file->WriteInt((cellPropertiesIds != NULL), "\n");
 	file->Write("  texDimX:"); file->WriteDouble(sh.texWidthD, "\n");
 	file->Write("  texDimY:"); file->WriteDouble(sh.texHeightD, "\n");
 	file->Write("  countAbs:"); file->WriteInt(sh.countAbs, "\n");
@@ -1741,4 +1782,125 @@ void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, in
 
 }
 
+float Facet::GetMeshArea(int index) {
+	if (!cellPropertiesIds) return -1.0f;
+	if (cellPropertiesIds[index] == -1) {
+		return 1.0f / (tRatio*tRatio);
+	}
+	else if (cellPropertiesIds[index] == -2) {
+		return 0.0f;
+	}
+	else {
+		return meshvector[cellPropertiesIds[index]].area;
+	}
+}
 
+size_t Facet::GetMeshNbPoint(int index)
+{
+	size_t nbPts;
+	if (cellPropertiesIds[index] == -1) nbPts = 4;
+	else if (cellPropertiesIds[index] == -2) nbPts = 0;
+	else nbPts = meshvector[cellPropertiesIds[index]].points.size();
+	return nbPts;
+}
+
+VERTEX2D Facet::GetMeshPoint(int index, int pointId)
+{
+	VERTEX2D result;
+	if (!cellPropertiesIds) {
+		result.u = 0.0;
+		result.v = 0.0;
+		return result;
+	}
+	else {
+		int id = cellPropertiesIds[index];
+		if (id == -2) {
+			result.u = 0.0;
+			result.v = 0.0;
+			return result;
+		}
+		else if (id != -1) {
+			if (pointId<meshvector[id].points.size())
+				return meshvector[id].points[pointId];
+			else {
+				result.u = 0.0;
+				result.v = 0.0;
+				return result;
+			}
+		}
+		else { //full elem
+			double iw = 1.0 / (double)sh.texWidthD;
+			double ih = 1.0 / (double)sh.texHeightD;
+			double sx = (double)(index%sh.texWidth);
+			double sy = (double)(index / sh.texWidth);
+			if (pointId == 0) {
+				double u0 = sx * iw;
+				double v0 = sy * ih;
+				result.u = u0;
+				result.v = v0;
+				return result;
+			}
+			else if (pointId == 1) {
+				double u1 = (sx + 1.0) * iw;
+				double v0 = sy * ih;
+				result.u = u1;
+				result.v = v0;
+				return result;
+			}
+			else if (pointId == 2) {
+				double u1 = (sx + 1.0) * iw;
+				double v1 = (sy + 1.0) * ih;
+				result.u = u1;
+				result.v = v1;
+				return result;
+			}
+			else if (pointId == 3) {
+				double u0 = sx * iw;
+				double v1 = (sy + 1.0) * ih;
+				result.u = u0;
+				result.v = v1;
+				return result;
+			}
+			else {
+				result.u = 0.0;
+				result.v = 0.0;
+				return result;
+			}
+		}
+	}
+}
+
+VERTEX2D Facet::GetMeshCenter(int index)
+{
+	VERTEX2D result;
+	if (!cellPropertiesIds) {
+		result.u = 0.0;
+		result.v = 0.0;
+		return result;
+	}
+	if (cellPropertiesIds[index] != -1) {
+		if (cellPropertiesIds[index] == -2) {
+			result.u = 0.0;
+			result.v = 0.0;
+			return result;
+		}
+		else {
+			result.u = meshvector[cellPropertiesIds[index]].uCenter;
+			result.v = meshvector[cellPropertiesIds[index]].vCenter;
+			return result;
+		}
+	}
+	else {
+		double iw = 1.0 / (double)sh.texWidthD;
+		double ih = 1.0 / (double)sh.texHeightD;
+		double sx = (double)(index%sh.texWidth);
+		double sy = (double)(index / sh.texWidth);
+		double u0 = sx * iw;
+		double v0 = sy * ih;
+		double u1 = (sx + 1.0) * iw;
+		double v1 = (sy + 1.0) * ih;
+		result.u=(float)(u0 + u1) / 2.0f;
+		result.v = (float)(v0 + v1) / 2.0f;
+		return result;
+	}
+}

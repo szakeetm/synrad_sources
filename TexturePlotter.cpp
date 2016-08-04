@@ -165,13 +165,13 @@ void TexturePlotter::UpdateTable() {
 
 	maxValue=0.0f;
 	GetSelected();
-	if( !selFacet || !selFacet->mesh) {
+	if( !selFacet || !selFacet->cellPropertiesIds) {
 		mapList->Clear();
 		return;
 	}
 
-	SHELEM *mesh = selFacet->mesh;
-	if( mesh ) {
+	//SHELEM *mesh = selFacet->mesh;
+	if(selFacet->cellPropertiesIds) {
 
 		char tmp[256];
 		int w = selFacet->sh.texWidth;
@@ -190,7 +190,7 @@ void TexturePlotter::UpdateTable() {
 		case 0: {// Cell area
 			for(int i=0;i<w;i++) {
 				for(int j=0;j<h;j++) {
-					float val=selFacet->mesh[i+j*w].area;
+					float val=selFacet->GetMeshArea(i+j*w);
 					sprintf(tmp,"%g",val);
 					if (val>maxValue) {
 						maxValue=val;
@@ -211,9 +211,6 @@ void TexturePlotter::UpdateTable() {
 					SHGHITS *shGHit = (SHGHITS *)buffer;
 					int profSize = (selFacet->sh.isProfile)?profile_memory:0;
 					double *hits_flux = (double *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(SHHITS) + profSize + textureSize_llong));
-
-
-
 
 					for(int i=0;i<w;i++) {
 						for(int j=0;j<h;j++) {
