@@ -738,7 +738,11 @@ void Geometry::BuildTexture(BYTE *hits) {
   if( shGHit->total.nbDesorbed ) 
     iDesorbed = 1.0 / (double)shGHit->total.nbDesorbed;
 
+  GLProgress *prg = new GLProgress("Building texture", "Frame update");
+  prg->SetBounds(5, 28, 300, 90);
+  prg->SetVisible(TRUE);
   for(int i=0;i<sh.nbFacet;i++) {
+	  prg->SetProgress((double)i / (double)sh.nbFacet);
 	  Facet *f = facets[i];
 	  GLint max_t;
 	  glGetIntegerv(GL_MAX_TEXTURE_SIZE,&max_t);
@@ -791,7 +795,8 @@ void Geometry::BuildTexture(BYTE *hits) {
     }
 
   }
-
+  prg->SetVisible(FALSE);
+  SAFE_DELETE(prg);
 }
 
 

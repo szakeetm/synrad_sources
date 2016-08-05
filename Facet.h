@@ -53,8 +53,9 @@ public:
 
   int      *indices;      // Indices (Reference to geometry vertex)
   VERTEX2D *vertices2;    // Vertices (2D plane space, UV coordinates)
-  int     *cellPropertiesIds;      // -1 if regular, otherwise index in mesh
-  std::vector<CELLPROPERTIES> meshvector;
+  int     *cellPropertiesIds;      // -1 if full element, -2 if outside polygon, otherwise index in meshvector
+  CELLPROPERTIES* meshvector;
+  size_t meshvectorsize;
   //size_t       nbElem;       // Number of mesh elem
 
   // Normalized plane equation (ax + by + cz + d = 0)

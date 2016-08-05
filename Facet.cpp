@@ -83,6 +83,8 @@ Facet::Facet(int nbIndex) {
 	//mesh = NULL;
 	//meshPts = NULL;
 	cellPropertiesIds = NULL;
+	meshvector = NULL;
+	meshvectorsize = 0;
 	hasMesh = FALSE;
 	//nbElem = 0;
 	selectedElem.u = 0;
@@ -139,9 +141,9 @@ Facet::~Facet() {
 	DELETE_LIST(glElem);
 	DELETE_LIST(glSelElem);
 	SAFE_FREE(visible);
-	/*for (size_t i = 0; i < nbElem; i++)
-		SAFE_FREE(meshPts[i].pts);*/
-	//SAFE_FREE(meshPts);
+	for (size_t i = 0; i < meshvectorsize; i++)
+		SAFE_FREE(meshvector[i].points);
+	SAFE_FREE(meshvector);
 }
 
 // -----------------------------------------------------------
@@ -574,7 +576,9 @@ BOOL Facet::SetTexture(double width, double height, BOOL useMesh) {
 	texDimH = 0;
 	hasMesh = FALSE;
 	//SAFE_FREE(mesh);
-	meshvector = std::vector<CELLPROPERTIES>();
+	for (size_t i = 0; i < meshvectorsize; i++)
+		SAFE_FREE(meshvector[i].points);
+	SAFE_FREE(meshvector);
 	SAFE_FREE(dirCache);
 	DELETE_TEX(glTex);
 	DELETE_LIST(glList);
@@ -642,10 +646,18 @@ BOOL Facet::BuildMesh() {
 		return FALSE;
 		//throw Error("malloc failed on Facet::BuildMesh()");
 	}
+	meshvector = (CELLPROPERTIES *)malloc(sh.texWidth * sh.texHeight * sizeof(CELLPROPERTIES)); //will shrink at the end
+	if (!meshvector) {
+		//Couldn't allocate memory
+		return FALSE;
+		//throw Error("malloc failed on Facet::BuildMesh()");
+	}
+	meshvectorsize = 0;
 	hasMesh = TRUE;
 	//memset(mesh, 0, sh.texWidth * sh.texHeight * sizeof(SHELEM));
 	//memset(meshPts, 0, sh.texWidth * sh.texHeight * sizeof(MESH));
 	memset(cellPropertiesIds, 0, sh.texWidth * sh.texHeight * sizeof(int));
+	memset(meshvector, 0, sh.texWidth * sh.texHeight * sizeof(CELLPROPERTIES));
 
 	POLYGON P1, P2;
 	double sx, sy, A/*,tA*/;
@@ -715,8 +727,8 @@ BOOL Facet::BuildMesh() {
 							cellprop.area = (float)(A*(rw*rh) / (iw*ih));
 							cellprop.uCenter = uC;
 							cellprop.vCenter = vC;
-							cellPropertiesIds[i + j*sh.texWidth] = meshvector.size();
-							meshvector.push_back(cellprop);
+							cellPropertiesIds[i + j*sh.texWidth] = meshvectorsize;
+							meshvector[meshvectorsize++]=cellprop;
 						}
 						else {
 							cellPropertiesIds[i + j*sh.texWidth] = -1;
@@ -735,14 +747,16 @@ BOOL Facet::BuildMesh() {
 							//cellprop.elemId = nbElem;
 
 							// Mesh coordinates
+							cellprop.points = (VERTEX2D*)malloc(nbv * sizeof(VERTEX2D));
+							cellprop.nbPoints = nbv;
 							for (int n = 0; n < nbv; n++) {
 								VERTEX2D newPoint;
 								newPoint.u = vList[2 * n];
 								newPoint.v = vList[2 * n + 1];
-								cellprop.points.push_back(newPoint);
+								cellprop.points[n]=(newPoint);
 							}
-							cellPropertiesIds[i + j*sh.texWidth] = meshvector.size();
-							meshvector.push_back(cellprop);
+							cellPropertiesIds[i + j*sh.texWidth] = meshvectorsize;
+							meshvector[meshvectorsize++]=cellprop;
 							//nbElem++;
 						}
 						else {
@@ -818,7 +832,7 @@ void Facet::BuildMeshList() {
 	size_t nb = sh.texWidth*sh.texHeight;
 	for (size_t i = 0; i < nb; i++) {
 		if (cellPropertiesIds[i] != -2) {
-			glBegin(GL_POLYGON);
+			glBegin(GL_POLYGON);			
 			size_t nbPts = GetMeshNbPoint(i);
 			for (size_t n = 0; n < nbPts; n++) {
 				glEdgeFlag(TRUE);
@@ -1009,7 +1023,7 @@ DWORD Facet::GetHitsSize() {
 DWORD Facet::GetTexSwapSize(BOOL useColormap) {
 
 	DWORD tSize = texDimW*texDimH;
-	if (useColormap) tSize = tSize*(sizeof(llong) + 2 * sizeof(double));
+	tSize = tSize*((useColormap?8:1)*2 + sizeof(llong) + 2 * sizeof(double));
 	return tSize;
 
 }
@@ -1033,7 +1047,7 @@ DWORD Facet::GetTexSwapSizeForRatio(double ratio, BOOL useColor) {
 		int tDim = GetPower2(m);
 		if (tDim < 16) tDim = 16;
 		DWORD tSize = tDim*tDim;
-		if (useColor) tSize = tSize*(sizeof(llong) + 2 * sizeof(double));
+		tSize = tSize*((useColor ? 4 : 1)*2 + sizeof(llong) + 2 * sizeof(double));
 		return tSize;
 
 	}
@@ -1248,6 +1262,18 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 			buff32               // Data
 			);
 
+		/*glTexImage2D(
+			GL_TEXTURE_2D,       // Type
+			0,                   // No Mipmap
+			GL_RGBA,             // Format RGBA
+			1,             // Width
+			1,             // Height
+			0,                   // Border
+			GL_RGBA,             // Format RGBA
+			GL_UNSIGNED_BYTE,    // 8 Bit/pixel
+			0               // Data
+		);*/
+
 		GLToolkit::CheckGLErrors("Facet::BuildTexture()");
 
 		free(buff32);
@@ -1402,7 +1428,7 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 		glTexImage2D(
 			GL_TEXTURE_2D,       // Type
 			0,                   // No Mipmap
-			GL_RGBA,             // Format RGBA
+			GL_COMPRESSED_RGBA,             // Format RGBA
 			texDimW,             // Width
 			texDimH,             // Height
 			0,                   // Border
@@ -1800,7 +1826,7 @@ size_t Facet::GetMeshNbPoint(int index)
 	size_t nbPts;
 	if (cellPropertiesIds[index] == -1) nbPts = 4;
 	else if (cellPropertiesIds[index] == -2) nbPts = 0;
-	else nbPts = meshvector[cellPropertiesIds[index]].points.size();
+	else nbPts = meshvector[cellPropertiesIds[index]].nbPoints;
 	return nbPts;
 }
 
@@ -1820,7 +1846,7 @@ VERTEX2D Facet::GetMeshPoint(int index, int pointId)
 			return result;
 		}
 		else if (id != -1) {
-			if (pointId<meshvector[id].points.size())
+			if (pointId<meshvector[id].nbPoints)
 				return meshvector[id].points[pointId];
 			else {
 				result.u = 0.0;

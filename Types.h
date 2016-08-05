@@ -128,7 +128,8 @@ typedef struct {
 } LEAK;
 
 typedef struct {
-  std::vector<VERTEX2D> points;
+  VERTEX2D* points;
+  size_t nbPoints;
   float   area;     // Area of element
   float   uCenter;  // Center coordinates
   float   vCenter;  // Center coordinates
