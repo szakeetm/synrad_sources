@@ -1023,7 +1023,7 @@ DWORD Facet::GetHitsSize() {
 DWORD Facet::GetTexSwapSize(BOOL useColormap) {
 
 	DWORD tSize = texDimW*texDimH;
-	tSize = tSize*((useColormap?8:1)*2 + sizeof(llong) + 2 * sizeof(double));
+	if (useColormap) tSize *= 4;
 	return tSize;
 
 }
@@ -1047,7 +1047,7 @@ DWORD Facet::GetTexSwapSizeForRatio(double ratio, BOOL useColor) {
 		int tDim = GetPower2(m);
 		if (tDim < 16) tDim = 16;
 		DWORD tSize = tDim*tDim;
-		tSize = tSize*((useColor ? 4 : 1)*2 + sizeof(llong) + 2 * sizeof(double));
+		if (useColor) tSize *= 4;
 		return tSize;
 
 	}
@@ -1246,33 +1246,39 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 				}
 			}
 		}
-
-
-
-
-		glTexImage2D(
-			GL_TEXTURE_2D,       // Type
-			0,                   // No Mipmap
-			GL_RGBA,             // Format RGBA
-			texDimW,             // Width
-			texDimH,             // Height
-			0,                   // Border
-			GL_RGBA,             // Format RGBA
-			GL_UNSIGNED_BYTE,    // 8 Bit/pixel
-			buff32               // Data
+		
+		GLint width,height,format;
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
+		if (format == GL_RGBA && width == texDimW && height == texDimH) {
+			//Update texture
+			glTexSubImage2D(
+				GL_TEXTURE_2D,       // Type
+				0,                   // No Mipmap
+				0,					// X offset
+				0,					// Y offset
+				texDimW,             // Width
+				texDimH,             // Height
+				GL_RGBA,             // Format RGBA
+				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
+				buff32              // Data
 			);
-
-		/*glTexImage2D(
-			GL_TEXTURE_2D,       // Type
-			0,                   // No Mipmap
-			GL_RGBA,             // Format RGBA
-			1,             // Width
-			1,             // Height
-			0,                   // Border
-			GL_RGBA,             // Format RGBA
-			GL_UNSIGNED_BYTE,    // 8 Bit/pixel
-			0               // Data
-		);*/
+		}
+		else {
+			//Rebuild texture
+			glTexImage2D(
+				GL_TEXTURE_2D,       // Type
+				0,                   // No Mipmap
+				GL_RGBA,             // Format RGBA
+				texDimW,             // Width
+				texDimH,             // Height
+				0,                   // Border
+				GL_RGBA,             // Format RGBA
+				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
+				buff32              // Data
+			);
+		}
 
 		GLToolkit::CheckGLErrors("Facet::BuildTexture()");
 
@@ -1335,17 +1341,39 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 				}
 			}
 		}
-		glTexImage2D(
-			GL_TEXTURE_2D,       // Type
-			0,                   // No Mipmap
-			GL_LUMINANCE,        // Format luminance
-			texDimW,             // Width
-			texDimH,             // Height
-			0,                   // Border
-			GL_LUMINANCE,        // Format luminance
-			GL_UNSIGNED_BYTE,    // 8 Bit/pixel
-			buff8                // Data
+		
+		GLint width, height, format;
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
+		if (format == GL_LUMINANCE && width == texDimW && height == texDimH) {
+			//Update texture
+			glTexSubImage2D(
+				GL_TEXTURE_2D,       // Type
+				0,                   // No Mipmap
+				0,					// X offset
+				0,					// Y offset
+				texDimW,             // Width
+				texDimH,             // Height
+				GL_LUMINANCE,         // Format RGBA
+				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
+				buff8                // Data
 			);
+		}
+		else {
+			//Rebuild texture
+			glTexImage2D(
+				GL_TEXTURE_2D,       // Type
+				0,                   // No Mipmap
+				GL_LUMINANCE,         // Format RGBA
+				texDimW,             // Width
+				texDimH,             // Height
+				0,                   // Border
+				GL_LUMINANCE,         // Format RGBA
+				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
+				buff8                // Data
+			);
+		}
 
 		free(buff8);
 
@@ -1425,17 +1453,38 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 
 
 
-		glTexImage2D(
-			GL_TEXTURE_2D,       // Type
-			0,                   // No Mipmap
-			GL_COMPRESSED_RGBA,             // Format RGBA
-			texDimW,             // Width
-			texDimH,             // Height
-			0,                   // Border
-			GL_RGBA,             // Format RGBA
-			GL_UNSIGNED_BYTE,    // 8 Bit/pixel
-			buff32               // Data
+		GLint width, height, format;
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
+		if (format == GL_RGBA && width == texDimW && height == texDimH) {
+			//Update texture
+			glTexSubImage2D(
+				GL_TEXTURE_2D,       // Type
+				0,                   // No Mipmap
+				0,					// X offset
+				0,					// Y offset
+				texDimW,             // Width
+				texDimH,             // Height
+				GL_RGBA,             // Format RGBA
+				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
+				buff32              // Data
 			);
+		}
+		else {
+			//Rebuild texture
+			glTexImage2D(
+				GL_TEXTURE_2D,       // Type
+				0,                   // No Mipmap
+				GL_RGBA,             // Format RGBA
+				texDimW,             // Width
+				texDimH,             // Height
+				0,                   // Border
+				GL_RGBA,             // Format RGBA
+				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
+				buff32              // Data
+			);
+		}
 
 		GLToolkit::CheckGLErrors("Facet::BuildTexture()");
 
@@ -1498,17 +1547,38 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 				}
 			}
 		}
-		glTexImage2D(
-			GL_TEXTURE_2D,       // Type
-			0,                   // No Mipmap
-			GL_LUMINANCE,        // Format luminance
-			texDimW,             // Width
-			texDimH,             // Height
-			0,                   // Border
-			GL_LUMINANCE,        // Format luminance
-			GL_UNSIGNED_BYTE,    // 8 Bit/pixel
-			buff8                // Data
+		GLint width, height, format;
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
+		if (format == GL_LUMINANCE && width == texDimW && height == texDimH) {
+			//Update texture
+			glTexSubImage2D(
+				GL_TEXTURE_2D,       // Type
+				0,                   // No Mipmap
+				0,					// X offset
+				0,					// Y offset
+				texDimW,             // Width
+				texDimH,             // Height
+				GL_LUMINANCE,         // Format RGBA
+				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
+				buff8                // Data
 			);
+		}
+		else {
+			//Rebuild texture
+			glTexImage2D(
+				GL_TEXTURE_2D,       // Type
+				0,                   // No Mipmap
+				GL_LUMINANCE,         // Format RGBA
+				texDimW,             // Width
+				texDimH,             // Height
+				0,                   // Border
+				GL_LUMINANCE,         // Format RGBA
+				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
+				buff8                // Data
+			);
+		}
 
 		free(buff8);
 

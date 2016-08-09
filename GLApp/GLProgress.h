@@ -14,7 +14,7 @@
   GNU General Public License for more details.
 */
 
-#include "..\..\molflow_project\lib\include\SDL\SDL_opengl.h"
+#include <SDL_opengl.h>
 #include "GLWindow.h"
 #include "GLLabel.h"
 #include <string>
