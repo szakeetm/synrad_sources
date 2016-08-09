@@ -243,6 +243,17 @@ void Viewer3DSettings::ProcessMessage(GLComponent *src,int message) {
       viewer->showHidden=hiddenEdge->GetState();
 	  viewer->showHiddenVertex=hiddenVertex->GetState();
       viewer->showMesh=showMesh->GetState();
+	  
+	  BOOL neededMesh = mApp->needsMesh;
+	  mApp->CheckNeedsTexture();
+	  BOOL needsMesh = mApp->needsMesh;
+
+	  if (!needsMesh && neededMesh) { //We just disabled mesh
+		  geom->ClearFacetMeshLists();
+	  }
+	  else if (needsMesh && !neededMesh) { //We just enabled mesh
+		  geom->BuildFacetMeshLists();
+	  }
 
 	  viewer->bigDots=bigDots->GetState();
       viewer->showDir=showDirection->GetState();

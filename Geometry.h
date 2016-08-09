@@ -156,6 +156,10 @@ public:
   void Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int showMode,BOOL filter,BOOL showHidden,BOOL showMesh,BOOL showDir);
   int  RestoreDeviceObjects();
   int  InvalidateDeviceObjects();
+  void ClearFacetMeshLists();
+  void BuildFacetMeshLists();
+  void BuildFacetTextures(BYTE *hits);
+  void ClearFacetTextures();
 
   // Geometry
 
@@ -176,7 +180,6 @@ public:
   AABB     GetBB();
   void     Rebuild();
   void	   MergecollinearSides(Facet *f,double fT);
-  void     BuildTexture(BYTE *hits);
   void     ShiftVertex();
   int      HasIsolatedVertices();
   void     DeleteIsolatedVertices(BOOL selectedOnly);

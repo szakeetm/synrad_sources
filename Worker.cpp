@@ -1303,7 +1303,7 @@ void Worker::Update(float appTime) {
 					memcpy(&(f->sh.counter),buffer+f->sh.hitOffset,sizeof(SHHITS));
 				}
 				try {
-					geom->BuildTexture(buffer);
+					geom->BuildFacetTextures(buffer);
 				}
 				catch (Error &e) {
 					GLMessageBox::Display((char *)e.GetMsg(), "Error building texture", GLDLG_OK, GLDLG_ICONERROR);
@@ -1915,7 +1915,7 @@ BOOL EndsWithPar(const char* s)
 void Worker::RebuildTextures() {
 	if (AccessDataport(dpHit)) {
 		BYTE *buffer = (BYTE *)dpHit->buff;
-		try{ geom->BuildTexture(buffer); }
+		if (mApp->needsTexture) try{ geom->BuildFacetTextures(buffer); }
 		catch (Error &e) {
 			ReleaseDataport(dpHit);
 			throw e;

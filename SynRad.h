@@ -198,6 +198,11 @@ public:
     void RemoveRecentPAR(char *fileName);
 	void UpdateRecentPARMenu();
 
+
+	BOOL needsMesh;    //At least one viewer displays mesh
+	BOOL needsTexture; //At least one viewer displays textures
+	void CheckNeedsTexture();
+
     // Components
     GLMenuBar     *menu;
     GeometryViewer *viewer[MAX_VIEWER];

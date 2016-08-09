@@ -712,7 +712,7 @@ void Geometry::SetCullMode(int mode) {
 
 
 
-void Geometry::BuildTexture(BYTE *hits) {
+void Geometry::BuildFacetTextures(BYTE *hits) {
 
   SHGHITS *shGHit = (SHGHITS *)hits;
   //float dCoef = 1.0f;
@@ -797,6 +797,20 @@ void Geometry::BuildTexture(BYTE *hits) {
   }
   prg->SetVisible(FALSE);
   SAFE_DELETE(prg);
+}
+
+void Geometry::ClearFacetTextures()
+{
+	GLProgress *prg = new GLProgress("Building texture", "Frame update");
+	prg->SetBounds(5, 28, 300, 90);
+	prg->SetVisible(TRUE);
+	for (int i = 0;i < sh.nbFacet;i++) {
+		prg->SetProgress((double)i / (double)sh.nbFacet);
+		DELETE_TEX(facets[i]->glTex);
+		glGenTextures(1, &facets[i]->glTex);
+	}
+	prg->SetVisible(FALSE);
+	SAFE_DELETE(prg);
 }
 
 
@@ -920,6 +934,7 @@ void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int 
 	  Facet *f = facets[i];
       //if( f->selected && f->mesh ) glCallList(f->glElem);
 	  if( f->cellPropertiesIds && f->textureVisible ) {
+		  if (!f->glElem) f->BuildMeshList();
 		    glEnable(GL_POLYGON_OFFSET_LINE);
 			glPolygonOffset(1.0f,2.0f);
 			glCallList(f->glElem);

@@ -16,6 +16,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 
+#include "SynRad.h"
 #include "Facet.h"
 #include "Utils.h"
 #include <malloc.h>
@@ -29,6 +30,7 @@ using namespace pugi;
 
 // Colormap stuff
 extern COLORREF rainbowCol[];
+extern SynRad *mApp;
 
 static int colorMap[65536];
 static BOOL colorInited = FALSE;
@@ -826,7 +828,7 @@ BOOL Facet::BuildMesh() {
 	*/
 
 	free(P1.pts);
-	BuildMeshList();
+	if (mApp->needsMesh) BuildMeshList();
 	return TRUE;
 
 }
@@ -1165,7 +1167,6 @@ DWORD Facet::GetTexRamSizeForRatio(double ratio, BOOL useMesh, BOOL countDir) {
 	if( (i)>=0 && (i)<=w && (j)>=0 && (j)<=h ) {    \
 	add = (i)+(j)*sh.texWidth;                    \
 	if( GetMeshArea(add)>0.0 ) {                   \
-
 	sum += we*(texBuffer[add]/GetMeshArea(add)*scaleF);          \
 	W=W+we;                                     \
 		}                                             \

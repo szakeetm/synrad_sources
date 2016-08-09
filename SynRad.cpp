@@ -774,9 +774,10 @@ int SynRad::OneTimeSceneInit()
 	int index;
 
 	ClearFacetParams();
-	UpdateViewerParams();
 	PlaceComponents();
 	LoadConfig();
+	UpdateViewerParams();
+	CheckNeedsTexture();
 	UpdateRecentMenu();
 	UpdateRecentPARMenu();
 
@@ -3692,6 +3693,7 @@ case MENU_FACET_CREATE_DIFFERENCE:
 
 		//GEOMVIEWER ------------------------------------------------------------------
 	case MSG_GEOMVIEWER_MAXIMISE:
+	{
 		if (src == viewer[0]) {
 			AnimateViewerChange(0);
 		}
@@ -3705,8 +3707,28 @@ case MENU_FACET_CREATE_DIFFERENCE:
 			AnimateViewerChange(3);
 		}
 		Place3DViewer();
-		break;
 
+		BOOL neededTexture = needsTexture;
+		BOOL neededMesh = needsMesh;
+		CheckNeedsTexture();
+
+		if (!needsTexture && neededTexture) { //We just disabled textures
+			worker.GetGeometry()->ClearFacetTextures();
+		}
+		else if (needsTexture && !neededTexture) { //We just enabled textures
+			BYTE *buffer = worker.GetHits();
+			if (buffer) worker.RebuildTextures();
+		}
+
+		if (!needsMesh && neededMesh) { //We just disabled mesh
+			geom->ClearFacetMeshLists();
+		}
+		else if (needsMesh && !neededMesh) { //We just enabled mesh
+			geom->BuildFacetMeshLists();
+		}
+
+		break;
+	}
 	case MSG_GEOMVIEWER_SELECT: {
 		SelectViewer(src->GetId());
 	}break;
@@ -4546,6 +4568,16 @@ void SynRad::UpdateViewerFlags() {
 	viewer[curViewer]->showLine = showLine->GetState();
 	viewer[curViewer]->showVolume = showVolume->GetState();
 	viewer[curViewer]->showTexture = showTexture->GetState();
+	BOOL neededTexture = needsTexture;
+	CheckNeedsTexture();
+
+	if (!needsTexture && neededTexture) { //We just disabled mesh
+		worker.GetGeometry()->ClearFacetTextures();
+	}
+	else if (needsTexture && !neededTexture) { //We just enabled mesh
+		BYTE *buffer = worker.GetHits();
+		if (buffer) worker.RebuildTextures();
+	}
 	viewer[curViewer]->showFilter = showFilter->GetState();
 	viewer[curViewer]->showVertex = showVertex->GetState();
 	viewer[curViewer]->showIndex = showIndex->GetState();
@@ -4875,6 +4907,15 @@ void SynRad::UpdateRecentPARMenu(){
 	m->Clear();
 	for (int i = nbRecentPAR - 1; i >= 0; i--)
 		m->Add(recentPARs[i], MENU_REGIONS_LOADRECENT + i);
+}
+
+void SynRad::CheckNeedsTexture()
+{  
+	needsMesh = needsTexture = FALSE;
+	for (int i = 0;i < MAX_VIEWER;i++) {
+		needsMesh = needsMesh || (viewer[i]->IsVisible() && viewer[i]->showMesh);
+		needsTexture = needsTexture || (viewer[i]->IsVisible() && viewer[i]->showTexture);
+	}
 }
 
 void SynRad::UpdateRecentMenu(){

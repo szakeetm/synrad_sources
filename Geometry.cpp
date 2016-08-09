@@ -808,6 +808,32 @@ int Geometry::InvalidateDeviceObjects() {
 
 }
 
+void Geometry::ClearFacetMeshLists()
+{
+	GLProgress *prg = new GLProgress("Please wait...", "Clearing facet meshes...");
+	prg->SetVisible(TRUE);
+	int nbFacet = mApp->worker.GetGeometry()->GetNbFacet();
+	for (int i = 0;i < nbFacet;i++) {
+		prg->SetProgress((double)i / (double)nbFacet);
+		DELETE_LIST(mApp->worker.GetGeometry()->GetFacet(i)->glElem);
+	}
+	prg->SetVisible(FALSE);
+	SAFE_DELETE(prg);
+}
+
+void Geometry::BuildFacetMeshLists()
+{
+	GLProgress *prg = new GLProgress("Please wait...", "Building facet meshes...");
+	prg->SetVisible(TRUE);
+	int nbFacet = mApp->worker.GetGeometry()->GetNbFacet();
+	for (int i = 0;i < nbFacet;i++) {
+		prg->SetProgress((double)i / (double)nbFacet);
+		mApp->worker.GetGeometry()->GetFacet(i)->BuildMeshList();
+	}
+	prg->SetVisible(FALSE);
+	SAFE_DELETE(prg);
+}
+
 int Geometry::RestoreDeviceObjects() {
 
 	if (!IsLoaded()) return GL_OK;
