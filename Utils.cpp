@@ -389,7 +389,33 @@ int IsInPoly(double u,double v,VERTEX2D *pts,int nbPts) {
 
 }
 
-// -----------------------------------------------------------
+int IsOnPolyEdge(const double & u, const double & v, VERTEX2D * pts, const int & nbPts, const double & tolerance)
+{
+	bool onEdge = false;
+	for (int i = 0;!onEdge && i < nbPts;i++) {
+		double x1 = pts[i].u;
+		double y1 = pts[i].v;
+		double x2 = pts[(i + 1) % nbPts].u;
+		double y2 = pts[(i + 1) % nbPts].v;
+		onEdge = IsOnSection(u, v, x1, y1, x2, y2, tolerance);
+	}
+	return onEdge;
+}
+
+int IsOnSection(const double & u, const double & v, const double & baseU, const double & baseV, const double & targetU, const double & targetV, const double & tolerance)
+{
+	//Notation from https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
+	//u=x0
+	//v=y0
+	//baseU=x1
+	//baseV=y1
+	//targetU=x2
+	//targetV=y2
+	double distU = targetU - baseU;
+	double distV = targetV - baseV;
+	double distance = abs(distV*u - distU*v + targetU*baseV - targetV*baseU) / sqrt(pow(distV, 2) + pow(distU, 2));
+	return distance < tolerance;
+}
 
 int Intersect2D(VERTEX2D *p1,VERTEX2D *p2,VERTEX2D *p3,VERTEX2D *p4,VERTEX2D *I) {
 

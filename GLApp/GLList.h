@@ -112,6 +112,7 @@ public:
   void CopySelectionToClipboard();
   int  FindIndex(int index,int inColumn);
   int GetValueInt(int row, int column);
+  double GetValueDouble(int row, int column);
   //void UpdateAllRows();
   void ReOrder();
   void PasteClipboardText(BOOL allowExpandRows, BOOL allowExpandColumns, int extraRowsAtEnd=0);

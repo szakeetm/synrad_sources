@@ -1165,17 +1165,19 @@ int GLList::GetValueInt(int row, int column) {
 		}
 }
 
-
-
-
-
-
-
-
-
-
-
-
+double GLList::GetValueDouble(int row, int column) {
+	try {
+		float cmp;
+		if (!(this->values[row*nbCol + column])) return -1;
+		sscanf((this->values[row*nbCol + column]), "%g", &cmp);
+		return (double)cmp;
+	}
+	catch (Error &e) {
+		char errMsg[512];
+		sprintf(errMsg, "%s\nWhile finding:%d", e.GetMsg(), row);
+		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+	}
+}
 
 // ---------------------------------------------------------------
 int  GLList::FindIndex(int index,int inColumn) {
@@ -1944,44 +1946,41 @@ void GLList::ManageEvent(SDL_Event *evt) {
 						clickedCol = clickedColTmp;
 						if (this == mApp->facetList) mApp->UpdateFacetHits(TRUE);
 						// Step 1) Allocate the rows
-						int **table = new int*[nbRow];
+						double **table = new double*[nbRow];
 
 						// Step 2) Allocate the columns
 						for (int i = 0; i < nbRow; i++)
-							table[i] = new int[nbCol];
+							table[i] = new double[nbCol];
 
 						// Step 3) Use the table
 						for (int i = 0; i < nbRow; i++) {
 							for (int j = 0; j < nbCol; j++)
-								table[i][j] = GetValueInt(i,j);
+								table[i][j] = GetValueDouble(i, j);
 						}
 
+						int *selFacets = new int[nbSelectedRow];
+						for (int i = 0;i<nbSelectedRow;i++)
+							selFacets[i] = GetValueInt(selectedRows[i], 0) - 1;
 
+						std::qsort(table, nbRow, sizeof(double*), cmp_column<double>);
 
-						int *selFacets=new int[nbSelectedRow];
-						for (int i=0;i<nbSelectedRow;i++)
-							selFacets[i] = GetValueInt(selectedRows[i],0)-1;
-
-						std::qsort(table, nbRow,sizeof(int*), cmp_column<int>);
-
-
-						lastRowSel=-1;
-
+						lastRowSel = -1;
 
 						char tmp[256];
 						for (int i = 0; i < nbRow; i++) {
 							//for (int j = 0; j < nbCol; j++) { //enough to set facet index
-							sprintf(tmp,"%d",table[i][0]);
-							SetValueAt(0,i,tmp);
+							sprintf(tmp, "%d", (int)table[i][0]);
+							SetValueAt(0, i, tmp);
 							//}
 						}
 
 						//if (nbSelectedRow<1000) SetSelectedRows(selFacets,nbSelectedRow,TRUE); //TOFIX
 						if (nbSelectedRow>1000) {
 							ReOrder();
-							SetSelectedRows(selFacets,nbSelectedRow,FALSE);
-						} else {
-							SetSelectedRows(selFacets,nbSelectedRow,TRUE);
+							SetSelectedRows(selFacets, nbSelectedRow, FALSE);
+						}
+						else {
+							SetSelectedRows(selFacets, nbSelectedRow, TRUE);
 						}
 						SAFE_DELETE(selFacets);
 						// Step 4) Release the memory

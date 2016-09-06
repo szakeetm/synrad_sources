@@ -37,7 +37,7 @@ GNU General Public License for more details.
 #define APP_NAME "SynRad+ development version (Compiled "__DATE__" "__TIME__") DEBUG MODE"
 #else
 //#define APP_NAME "SynRad+ development version ("__DATE__")"
-#define APP_NAME "Synrad+ 1.4.2 ("__DATE__")"
+#define APP_NAME "Synrad+ 1.4.3 ("__DATE__")"
 #endif
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
@@ -3716,8 +3716,9 @@ case MENU_FACET_CREATE_DIFFERENCE:
 			worker.GetGeometry()->ClearFacetTextures();
 		}
 		else if (needsTexture && !neededTexture) { //We just enabled textures
-			BYTE *buffer = worker.GetHits();
-			if (buffer) worker.RebuildTextures();
+			//BYTE *buffer = worker.GetHits();
+			/*if (buffer)*/ worker.RebuildTextures();
+			//worker.ReleaseHits();
 		}
 
 		if (!needsMesh && neededMesh) { //We just disabled mesh
@@ -4575,8 +4576,9 @@ void SynRad::UpdateViewerFlags() {
 		worker.GetGeometry()->ClearFacetTextures();
 	}
 	else if (needsTexture && !neededTexture) { //We just enabled mesh
-		BYTE *buffer = worker.GetHits();
-		if (buffer) worker.RebuildTextures();
+		//BYTE *buffer = worker.GetHits();
+		/*if (buffer)*/ worker.RebuildTextures();
+		//worker.ReleaseHits();
 	}
 	viewer[curViewer]->showFilter = showFilter->GetState();
 	viewer[curViewer]->showVertex = showVertex->GetState();

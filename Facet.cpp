@@ -277,6 +277,7 @@ void Facet::LoadTXT(FileReader *file) {
 	sh.counter.nbDesorbed = 0; file->ReadDouble();
 	sh.counter.nbHit = 0; file->ReadDouble();
 	sh.counter.nbAbsorbed = 0; file->ReadDouble();
+	file->ReadDouble(); //desorbtype, unused in Synrad
 	sh.counter.fluxAbs = 0.0; sh.counter.powerAbs = 0.0;
 
 	// Convert opacity

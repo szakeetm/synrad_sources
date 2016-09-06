@@ -1303,7 +1303,7 @@ void Worker::Update(float appTime) {
 					memcpy(&(f->sh.counter),buffer+f->sh.hitOffset,sizeof(SHHITS));
 				}
 				try {
-					geom->BuildFacetTextures(buffer);
+					if (mApp->needsTexture) geom->BuildFacetTextures(buffer);
 				}
 				catch (Error &e) {
 					GLMessageBox::Display((char *)e.GetMsg(), "Error building texture", GLDLG_OK, GLDLG_ICONERROR);

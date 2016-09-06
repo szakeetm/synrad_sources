@@ -108,6 +108,8 @@ int   IsConvex(POLYGON *p,int idx);
 int   ContainsConcave(POLYGON *p,int i1,int i2,int i3);
 int   EmptyTriangle(POLYGON *p,int i1,int i2,int i3,VERTEX2D *center);
 int   IsInPoly(double u,double v,VERTEX2D *pts,int nbPts);
+int IsOnPolyEdge(const double & u, const double & v, VERTEX2D * pts, const int & nbPts, const double & tolerance);
+int IsOnSection(const double & u, const double & v, const double & baseU, const double & baseV, const double & targetU, const double & targetV, const double & tolerance);
 int   IntersectPoly(POLYGON *p1,POLYGON *p2,int *visible2,POLYGON **result);
 double GetInterArea(POLYGON *inP1,POLYGON *inP2,int *edgeVisible,float *uC,float *vC,int *nbV,double **lList);
 double GetInterAreaBF(POLYGON *inP1,double u0,double v0,double u1,double v1,float *uC,float *vC);

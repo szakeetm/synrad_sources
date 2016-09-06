@@ -2008,14 +2008,18 @@ std::vector<size_t> Geometry::ConstructIntersection() {
 						if (IntersectingPlaneWithLine(base, side, f2->sh.O, f2->sh.N, &intersectionPoint, TRUE)) {
 							VERTEX2D projected;
 							ProjectVertex(&intersectionPoint, &projected, &f2->sh.U, &f2->sh.V, &f2->sh.O);
-							if (IsInPoly(projected.u, projected.v, f2->vertices2, f2->sh.nbIndex)) {
+							BOOL inPoly = IsInPoly(projected.u, projected.v, f2->vertices2, f2->sh.nbIndex);
+							BOOL onEdge = IsOnPolyEdge(projected.u, projected.v, f2->vertices2, f2->sh.nbIndex, 1E-6);
+							//onEdge = FALSE;
+							if (inPoly || onEdge) {
 								//Intersection found. First check if we already created this point
 								int foundId = -1;
 								for (size_t v = 0;foundId == -1 && v < newVertices.size();v++) {
 									if (IS_ZERO(Norme(newVertices[v] - intersectionPoint)))
 										foundId = v;
 								}
-								
+
+								size_t vertexGlobalId;
 								IntersectPoint newPoint, newPointOtherFacet;
 								if (foundId == -1) { //Register new intersection point
 									newPoint.vertexId = newPointOtherFacet.vertexId = sh.nbVertex + newVertices.size();
@@ -2030,7 +2034,7 @@ std::vector<size_t> Geometry::ConstructIntersection() {
 								selectedFacets[i].intersectionPointId[index].push_back(newPoint);
 
 								newPointOtherFacet.withFacetId = i; //With my edge
-								selectedFacets[j].intersectingPoints.push_back(newPointOtherFacet); //Other facet's plane intersected
+								if (!onEdge) selectedFacets[j].intersectingPoints.push_back(newPointOtherFacet); //Other facet's plane intersected
 							}
 						}
 					}
@@ -2775,6 +2779,7 @@ void Geometry::CreateLoft() {
 	struct loftIndex {
 		size_t index;
 		BOOL visited;
+		BOOL boundary;
 	};
 	//Find first two selected facets
 	int nbFound = 0;
@@ -2828,11 +2833,18 @@ void Geometry::CreateLoft() {
 		closestIndices1[i1].visited = closestIndices2[minPos].visited = TRUE;
 	}
 
+	//Find boundaries of regions on the first facet that are the closest to the same point on facet 2
+	for (int i = 0;i < closestIndices1.size();i++) {
+		int previousId = (i + closestIndices1.size() - 1) % closestIndices1.size();
+		int nextId = (i + 1) % closestIndices1.size();
+		closestIndices1[i].boundary = (closestIndices1[i].index != closestIndices1[nextId].index) || (closestIndices1[i].index != closestIndices1[previousId].index);
+	}
 
 	ProjectVertex(&f2->sh.center, &center2Pos, &f2->sh.U, &f2->sh.V, &f2->sh.O);
 
 	ProjectVertex(&f1->sh.center, &center1Pos, &f2->sh.U, &f2->sh.V, &f2->sh.O);
 	centerOffset = center2Pos - center1Pos;
+	
 	//Revisit those on f2 without a link
 	for (size_t i2 = 0;i2 < f2->sh.nbIndex;i2++) {
 		//Find closest point on other facet
@@ -2840,14 +2852,16 @@ void Geometry::CreateLoft() {
 			double min = 9E99;
 			size_t minPos;
 			for (size_t i1 = 0;i1 < f1->sh.nbIndex;i1++) {
-				VERTEX2D projection;
-				ProjectVertex(&vertices3[f1->indices[i1]], &projection, &f2->sh.U, &f2->sh.V, &f2->sh.O);
-				projection = projection + centerOffset;
-				double dist = pow(u2Length*(projection.u - f2->vertices2[i2].u), 2.0) + pow(v2Length*(projection.v - f2->vertices2[i2].v), 2.0); //We need the absolute distance
-				if (dist < min) {
-					min = dist;
-					minPos = i1;
-				}
+					VERTEX2D projection;
+					ProjectVertex(&vertices3[f1->indices[i1]], &projection, &f2->sh.U, &f2->sh.V, &f2->sh.O);
+					projection = projection + centerOffset;
+					double dist = pow(u2Length*(projection.u - f2->vertices2[i2].u), 2.0) + pow(v2Length*(projection.v - f2->vertices2[i2].v), 2.0); //We need the absolute distance
+					if (!closestIndices1[i1].boundary) dist += 1E6; //penalty -> try to connect with boundaries
+					if (dist < min) {
+						min = dist;
+						minPos = i1;
+
+					}
 			}
 			//Make pair
 			closestIndices2[i2].index = minPos;
@@ -2855,7 +2869,15 @@ void Geometry::CreateLoft() {
 			closestIndices2[i2].visited = TRUE;
 		}
 	}
-	//Link created
+	//Same for facet 2
+	for (int i = 0;i < closestIndices2.size();i++) {
+		int previousId = (i + closestIndices2.size() - 1) % closestIndices2.size();
+		int nextId = (i + 1) % closestIndices2.size();
+		closestIndices2[i].boundary = (closestIndices2[i].index != closestIndices2[nextId].index) || (closestIndices2[i].index != closestIndices2[previousId].index);
+		closestIndices2[i].visited = FALSE; //Reset this flag, will use to make sure we don't miss anything
+	}
+
+	//Links created
 	std::vector<Facet*> newFacets;
 	for (size_t i1 = 0;i1 < f1->sh.nbIndex;i1++) {
 		//Look for smaller points in increasing direction
@@ -2863,8 +2885,8 @@ void Geometry::CreateLoft() {
 			//Create triangle
 			Facet *newFacet = new Facet(3);
 			newFacet->indices[0] = f1->indices[i1];
-			newFacet->indices[1] = f2->indices[Remainder(i2 - 1, f2->sh.nbIndex)];
-			newFacet->indices[2] = f2->indices[i2];
+			newFacet->indices[1] = f2->indices[Remainder(i2 - 1, f2->sh.nbIndex)];closestIndices2[Remainder(i2 - 1, f2->sh.nbIndex)].visited = TRUE;
+			newFacet->indices[2] = f2->indices[i2];closestIndices2[i2].visited = TRUE;
 			newFacet->selected = TRUE;
 			newFacet->SwapNormal();
 			newFacets.push_back(newFacet);
@@ -2874,8 +2896,8 @@ void Geometry::CreateLoft() {
 			//Create triangle
 			Facet *newFacet = new Facet(3);
 			newFacet->indices[0] = f1->indices[i1];
-			newFacet->indices[1] = f2->indices[i2];
-			newFacet->indices[2] = f2->indices[(i2 + 1) % f2->sh.nbIndex];
+			newFacet->indices[1] = f2->indices[i2];closestIndices2[i2].visited = TRUE;
+			newFacet->indices[2] = f2->indices[(i2 + 1) % f2->sh.nbIndex];closestIndices2[(i2 + 1) % f2->sh.nbIndex].visited = TRUE;
 			newFacet->selected = TRUE;
 			newFacet->SwapNormal();
 			newFacets.push_back(newFacet);
@@ -2888,8 +2910,8 @@ void Geometry::CreateLoft() {
 		//Find last vertex on other facet that's closest to us
 		size_t increment;
 		for (increment = 0;closestIndices2[Remainder(closestIndices1[(i1 + 1) % f1->sh.nbIndex].index + increment + incrementDir, f2->sh.nbIndex)].index == ((i1 + 1) % f1->sh.nbIndex);increment += incrementDir);
-		newFacet->indices[2] = f2->indices[Remainder(closestIndices1[(i1 + 1) % f1->sh.nbIndex].index + increment, f2->sh.nbIndex)];
-		if (!triangle) newFacet->indices[3] = f2->indices[Remainder(closestIndices1[(i1 + 1) % f1->sh.nbIndex].index + incrementDir + increment, f2->sh.nbIndex)];
+		newFacet->indices[2] = f2->indices[Remainder(closestIndices1[(i1 + 1) % f1->sh.nbIndex].index + increment, f2->sh.nbIndex)];closestIndices2[Remainder(closestIndices1[(i1 + 1) % f1->sh.nbIndex].index + increment, f2->sh.nbIndex)].visited = TRUE;
+		if (!triangle) newFacet->indices[3] = f2->indices[Remainder(closestIndices1[(i1 + 1) % f1->sh.nbIndex].index + incrementDir + increment, f2->sh.nbIndex)];closestIndices2[Remainder(closestIndices1[(i1 + 1) % f1->sh.nbIndex].index + incrementDir + increment, f2->sh.nbIndex)].visited = TRUE;
 		if (incrementDir == -1) newFacet->SwapNormal();
 		CalculateFacetParam_geometry(newFacet);
 		if (abs(newFacet->err) > 1E-5) {
@@ -2915,6 +2937,31 @@ void Geometry::CreateLoft() {
 		newFacet->SwapNormal();
 		newFacet->selected = TRUE;
 		newFacets.push_back(newFacet);
+	}
+//Go through leftover vertices on facet 2
+	for (size_t i2 = 0;i2 < f2->sh.nbIndex;i2++) {
+		if (closestIndices2[i2].visited == FALSE) {
+			int targetIndex = closestIndices2[Remainder(i2 - 1, f2->sh.nbIndex)].index; //Previous node
+			
+			do  {
+				//Connect with previous
+				Facet *newFacet = new Facet(3);
+				newFacet->indices[0] = f1->indices[targetIndex];
+				newFacet->indices[1] = f2->indices[i2];closestIndices2[i2].visited = TRUE;
+				newFacet->indices[2] = f2->indices[Remainder(i2 - 1, f2->sh.nbIndex)];closestIndices2[Remainder(i2 - 1, f2->sh.nbIndex)].visited = TRUE;
+				newFacet->selected = TRUE;
+				newFacets.push_back(newFacet);
+				i2 = Remainder(i2 + 1,f2->sh.nbIndex);
+			} while (closestIndices2[i2].visited == FALSE);
+			//last
+				//Connect with next for the last unvisited
+				Facet *newFacet = new Facet(3);
+				newFacet->indices[0] = f1->indices[targetIndex];
+				newFacet->indices[1] = f2->indices[i2];closestIndices2[i2].visited = TRUE;
+				newFacet->indices[2] = f2->indices[Remainder(i2 - 1, f2->sh.nbIndex)];closestIndices2[Remainder(i2 - 1, f2->sh.nbIndex)].visited = TRUE;
+				newFacet->selected = TRUE;
+				newFacets.push_back(newFacet);
+		}
 	}
 	//Register new facets
 	if (newFacets.size() > 0) facets = (Facet**)realloc(facets, sizeof(Facet*)*(sh.nbFacet + newFacets.size()));
