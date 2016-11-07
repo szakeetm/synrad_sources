@@ -17,7 +17,6 @@
 */
 
 #define PI 3.14159265358979323846
-typedef int BOOL;
 #define MAX(x,y) (((x)<(y))?(y):(x))
 #define MIN(x,y) (((x)<(y))?(x):(y))
 
@@ -31,6 +30,7 @@ typedef int BOOL;
 #include <vector>
 #include "Tools.h"
 #include "Region_mathonly.h"
+#include "TruncatedGaussian\rtnorm.hpp"
 
 #ifndef _SIMULATIONH_
 #define _SIMULATIONH_
@@ -149,6 +149,8 @@ typedef struct {
   BOOL lastUpdateOK;  // Last hit update timeout
   BOOL hasVolatile;   // Contains volatile facet
   BOOL hasDirection;  // Contains direction field
+
+  gsl_rng *gen; //rnd gen stuff
 
   // Particle coordinates (MC)
   VERTEX3D pPos;    // Position

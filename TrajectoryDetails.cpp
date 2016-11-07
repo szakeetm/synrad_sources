@@ -406,7 +406,7 @@ void TrajectoryDetails::UpdateTable() {
 
 	int nbPoints = (int)worker->regions[displayedRegion].Points.size();
 
-	pointList->SetSize(nbCol, (int)((double)nbPoints / (double)freq));
+	pointList->SetSize(nbCol, (int)((double)nbPoints / (double)freq)+1);
 	pointList->SetColumnWidths(tmpWidth);
 	pointList->SetColumnLabels(tmpName);
 	pointList->SetColumnAligns(tmpAlign);

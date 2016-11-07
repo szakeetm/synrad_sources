@@ -52,7 +52,9 @@ Vector Region_mathonly::B(int pointId, const Vector &offset) {
 			*result_ptr[i]=distr_ptr[i]->InterpolateY(Ls_);
 			break;
 		case B_MODE_ALONGBEAM:
-			*result_ptr[i]=distr_ptr[i]->InterpolateY(pointId*this->params.dL); //distance along the beam path
+			Ls_=pointId*this->params.dL; //distance along the beam path
+			Ls_-=(int)(Ls_/(*Bperiod_ptr)[i])*(*Bperiod_ptr)[i]; //substract filled periods
+			*result_ptr[i]=distr_ptr[i]->InterpolateY(Ls_);
 			break;
 		case B_MODE_SINCOS:
 			*result_ptr[i]=0.0;

@@ -1913,6 +1913,7 @@ BOOL EndsWithPar(const char* s)
 }
 
 void Worker::RebuildTextures() {
+	if (!dpHit) return;
 	if (AccessDataport(dpHit)) {
 		BYTE *buffer = (BYTE *)dpHit->buff;
 		if (mApp->needsTexture) try{ geom->BuildFacetTextures(buffer); }

@@ -287,6 +287,10 @@ private:
   BOOL GetCommonEdges(Facet *f1,Facet *f2,int *c1,int *c2,int *chainLength);
   void CollapseVertex(GLProgress *prg,double totalWork,double vT);
 
+  //Geometry Editor stuff
+  size_t AnalyzeNeighbors(Worker *work, GLProgress *prg);
+  std::vector<size_t> GetConnectedFacets(size_t sourceFacetId, double maxAngleDiff);
+
   // Rendering/Selection stuff
   int selectHist[SEL_HISTORY];
   int nbSelectedHist;

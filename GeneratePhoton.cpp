@@ -1,6 +1,12 @@
-#include "Simulation.h"
+//#include "Simulation.h"
 #include "Random.h"
 #include "GeneratePhoton.h"
+
+#include "Distributions.h"
+//#include "Tools.h" //Already included by GeneratePhoton.h
+//#include "Region_mathonly.h" //Already included by GeneratePhoton.h
+#include <vector>
+
 extern Distribution2D /*polarization_distribution,*/integral_N_photons, integral_SR_power/*,g1h2_distribution*/;
 
 GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int generation_mode,

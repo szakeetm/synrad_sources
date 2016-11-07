@@ -2,7 +2,9 @@
 #define _TOOLS_
 
 #include "Distributions.h"
+//#include "TruncatedGaussian\rtnorm.hpp"
 typedef  unsigned __int64 LONGINT;
+typedef int BOOL;
 
 #define PI 3.14159265358979323846
 #define proton_charge 1.602E-19 //in Coulombs

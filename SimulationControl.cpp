@@ -16,6 +16,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 
+#pragma once
+
 #ifdef WIN
 #include <windows.h> // For GetTickCount()
 #include <Process.h> // For _getpid()
@@ -29,6 +31,7 @@ GNU General Public License for more details.
 #include <stdlib.h>
 #include "Simulation.h"
 #include "Random.h"
+#include "TruncatedGaussian\rtnorm.hpp"
 //#include "Tools.h"
 #include <vector>
 
@@ -544,6 +547,12 @@ BOOL LoadSimulation(Dataport *loader) {
 	ComputeSourceArea();
 	seed = GetSeed();
 	rseed( seed );
+
+	//--- GSL random init ---
+	gsl_rng_env_setup();                          // Read variable environnement
+	const gsl_rng_type* type = gsl_rng_default;   // Default algorithm 'twister'
+	sHandle->gen = gsl_rng_alloc(type);          // Rand generator allocation
+
 	sHandle->loadOK = TRUE;
 	t1 = GetTick();
 	printf("  Load %s successful\n",sHandle->name);

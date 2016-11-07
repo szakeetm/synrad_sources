@@ -741,6 +741,7 @@ BOOL StartFromSource() {
 // -------------------------------------------------------------
 // Compute bounce against a facet
 // -------------------------------------------------------------
+double TruncatedGaussian(gsl_rng *gen, const double &mean, const double &sigma, const double &lowerBound, const double &upperBound);
 
 void PerformBounce(FACET *iFacet, const double &inTheta, const double &inPhi, const int &reflType) {
 
@@ -764,8 +765,8 @@ void PerformBounce(FACET *iFacet, const double &inTheta, const double &inPhi, co
 			outPhi = rnd()*2.0*PI;
 			break;
 		case 3: //back scattering
-			outTheta = PI + inTheta;
-			outPhi = inPhi;
+			outTheta = PI - inTheta;
+			outPhi = PI + inPhi;
 			break;
 		} //end switch (transparent pass treated at the Intersect() routine
 	} //end material reflection
@@ -781,13 +782,25 @@ void PerformBounce(FACET *iFacet, const double &inTheta, const double &inPhi, co
 			//Smooth surface reflection performed, now let's perturbate the angles
 			//Using Gaussian approximated distributions of eq.14. of the above article
 			double onePerTau = iFacet->sh.rmsRoughness / iFacet->sh.autoCorrLength;
-
+			
+			/*
 			size_t nbTries = 0; double outThetaPerturbated;
 			do {
 				double dTheta = Gaussian(2.9264*onePerTau); //Grazing angle perturbation, depends only on roughness, must assure it doesn't go against the surface
 				outThetaPerturbated = outTheta + dTheta;
 				nbTries++;
 			} while (((outTheta < PI / 2) != (outThetaPerturbated < PI / 2)) && nbTries < 10);
+			*/
+
+			//New truncated Gaussian algorithm
+			double lowerBound = 0.0;
+			double upperBound = PI/2;
+			if (outTheta > (PI / 2)) { //Limits: PI/2 .. PI instead of 0..PI/2
+				lowerBound += PI / 2;
+				upperBound += PI / 2;
+			}
+			double outThetaPerturbated = TruncatedGaussian(sHandle->gen, outTheta, 2.9264*onePerTau, lowerBound, upperBound);
+
 			double dPhi = Gaussian((2.80657*pow(incidentAngle, -1.00238) - 1.00293*pow(incidentAngle, 1.22425))*onePerTau); //Out-of-plane angle perturbation, depends on roughness and incident angle
 			outTheta = outThetaPerturbated;
 			outPhi += dPhi;
@@ -928,6 +941,12 @@ double Gaussian(const double &sigma) {
 	} while (r >= 1.0);
 	fac = sqrt(-2.0*log(r) / r);
 	return v2*fac*sigma;
+}
+
+double TruncatedGaussian(gsl_rng *gen,const double &mean, const double &sigma, const double &lowerBound, const double &upperBound) {
+	std::pair<double, double> s;  // Output argument of rtnorm
+	s = rtnorm(gen, lowerBound, upperBound, mean, sigma);
+	return s.first;
 }
 
 int Stick(FACET* collidedFacet) {

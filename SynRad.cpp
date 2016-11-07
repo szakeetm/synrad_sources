@@ -37,7 +37,7 @@ GNU General Public License for more details.
 #define APP_NAME "SynRad+ development version (Compiled "__DATE__" "__TIME__") DEBUG MODE"
 #else
 //#define APP_NAME "SynRad+ development version ("__DATE__")"
-#define APP_NAME "Synrad+ 1.4.3 ("__DATE__")"
+#define APP_NAME "Synrad+ 1.4.4 ("__DATE__")"
 #endif
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
@@ -3311,8 +3311,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			geom->SelectIsolatedVertices();
 			break;
 		case MENU_VERTEX_CLEAR_ISOLATED:
-			geom->SelectIsolatedVertices();
-			geom->RemoveSelectedVertex();
+			geom->DeleteIsolatedVertices(FALSE);
 			UpdateModelParams();
 			break;
 		case MENU_VERTEX_CREATE_POLY_CONVEX:
