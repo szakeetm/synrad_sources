@@ -736,6 +736,8 @@ BOOL Facet::BuildMesh() {
 							cellprop.area = (float)(A*(rw*rh) / (iw*ih));
 							cellprop.uCenter = uC;
 							cellprop.vCenter = vC;
+							cellprop.nbPoints = 0;
+							cellprop.points = NULL;
 							cellPropertiesIds[i + j*sh.texWidth] = meshvectorsize;
 							meshvector[meshvectorsize++] = cellprop;
 						}

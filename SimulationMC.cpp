@@ -783,16 +783,18 @@ void PerformBounce(FACET *iFacet, const double &inTheta, const double &inPhi, co
 			//Using Gaussian approximated distributions of eq.14. of the above article
 			double onePerTau = iFacet->sh.rmsRoughness / iFacet->sh.autoCorrLength;
 			
+			//Old acceptance-rejection algorithm
 			/*
 			size_t nbTries = 0; double outThetaPerturbated;
 			do {
 				double dTheta = Gaussian(2.9264*onePerTau); //Grazing angle perturbation, depends only on roughness, must assure it doesn't go against the surface
 				outThetaPerturbated = outTheta + dTheta;
 				nbTries++;
-			} while (((outTheta < PI / 2) != (outThetaPerturbated < PI / 2)) && nbTries < 10);
-			*/
+			} while (((outTheta < PI / 2) != (outThetaPerturbated < PI / 2)) && nbTries < 10);*/
+			
 
-			//New truncated Gaussian algorithm
+			//New truncated Gaussian algorithm, see N. Chopin: Fast simulation of truncated Gaussian distributions, DOI: 10.1007/s11222-009-9168-1
+			
 			double lowerBound = 0.0;
 			double upperBound = PI/2;
 			if (outTheta > (PI / 2)) { //Limits: PI/2 .. PI instead of 0..PI/2
