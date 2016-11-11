@@ -1871,6 +1871,7 @@ void Worker::AddMaterial(std::string *fileName){
 	sprintf(tmp,"param\\Materials\\%s",fileName->c_str());
 	FileReader *f=new FileReader(tmp);
 	result.LoadMaterialCSV(f);
+	delete f;
 	int lastindex = fileName->find_last_of(".");
 	result.name = fileName->substr(0, lastindex);
 	materials.push_back(result);
