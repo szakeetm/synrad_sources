@@ -412,6 +412,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	for(i=0;i<sHandle->totalFacet;i++) {
 
 		SHFACET *shFacet = (SHFACET *)buffer;
+
 		FACET *f = (FACET *)malloc(sizeof(FACET));
 		if (!f) {
 			SetErrorSub("Not enough memory to load facets");
@@ -657,8 +658,19 @@ BOOL StartSimulation() {
 		return FALSE;
 	}
 	
-		if(!sHandle->lastHit) StartFromSource();
-		return true;
+	for (int s=0;s<sHandle->nbSuper;s++) {
+		for (int f = 0; f < sHandle->str[s].nbFacet; f++) {
+			if (sHandle->str[s].facets[f]->sh.reflectType == 9) {
+				char tmp[32];
+				sprintf(tmp, "Invalid material on Facet %d.", f + 1);
+				SetErrorSub(tmp);
+				return FALSE;
+			}
+		}
+	}
+
+	if(!sHandle->lastHit) StartFromSource();
+	return true;
 
 	SetErrorSub("Unknown simulation mode");
 	return FALSE;
