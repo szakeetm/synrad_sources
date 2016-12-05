@@ -658,6 +658,8 @@ BOOL StartSimulation() {
 		return FALSE;
 	}
 	
+	//Check for invalid material (ID==9) passed from the interface
+	//It is valid to load invalid materials (to extract textures, etc.) but not to launch the simulation
 	for (int s=0;s<sHandle->nbSuper;s++) {
 		for (int f = 0; f < sHandle->str[s].nbFacet; f++) {
 			if (sHandle->str[s].facets[f]->sh.reflectType == 9) {
@@ -671,10 +673,6 @@ BOOL StartSimulation() {
 
 	if(!sHandle->lastHit) StartFromSource();
 	return true;
-
-	SetErrorSub("Unknown simulation mode");
-	return FALSE;
-
 }
 
 // -------------------------------------------------------
