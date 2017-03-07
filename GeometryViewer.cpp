@@ -1420,8 +1420,9 @@ void GeometryViewer::Paint() {
 
 
 	geom->Render((GLfloat *)matView,showVolume,showTexture,showBack,showFilter,showHidden,showMesh,showDir);
-	for (size_t i = 0; i < work->regions.size(); i++)
-		work->regions[i].Render(dispNumTraj,&blueMaterial,vectorLength);
+	for (size_t i = 0; i < work->regions.size(); i++) {
+		work->regions[i].Render(dispNumTraj, &blueMaterial, vectorLength);
+	}
 
 
 
@@ -1824,8 +1825,8 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 
 	if( evt->type == SDL_MOUSEMOTION ) {
 
-		double diffX = (mX - mXOrg);
-		double diffY = (mY - mYOrg);
+		int diffX = (mX - mXOrg);
+		int diffY = (mY - mYOrg);
 		mXOrg = mX;
 		mYOrg = mY;
 
@@ -1848,8 +1849,16 @@ void GeometryViewer::ManageEvent(SDL_Event *evt)
 				draggMode=DRAGG_MOVE;
 			}
 			else{*/
+				if (GetWindow()->IsSpaceDown()) { //Move origin
+				selX1 += diffX;
+				selX2 += diffX;
+				selY1 += diffY;
+				selY2 += diffY;
+			}
+			else {
 				selX2 = mX;
 				selY2 = mY;
+			}
 			//}
 			break;
 

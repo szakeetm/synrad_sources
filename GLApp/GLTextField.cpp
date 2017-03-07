@@ -370,7 +370,7 @@ void  GLTextField::CopyClipboardText() {
  strcpy(tmp,&(m_Text[min]));
  tmp[max-min]=0;
 
-#ifdef WIN32
+#ifdef WIN
 
  if( !OpenClipboard(NULL) )
    return;
@@ -404,14 +404,21 @@ void  GLTextField::CopyClipboardText() {
 
 void GLTextField::PasteClipboardText() {
 
-#ifdef WIN32
+#ifdef WIN
 
   if( OpenClipboard(NULL) ) {
     HGLOBAL hMem;
     if(hMem = GetClipboardData(CF_TEXT)) {
       LPVOID ds = GlobalLock(hMem);
       if (ds) {
-        InsertString((char *)ds); 
+		  char* text = (char*)ds;
+		  //Cut trailing whitespace characters (Paste from Excel, for example)
+		  for (int cursorPos = strlen(text); cursorPos >= 0; cursorPos--) {
+			  if (text[cursorPos] == '\t' || text[cursorPos] == '\r' || text[cursorPos] == '\n') {
+				  text[cursorPos] = NULL;
+			  }
+		  }
+		  InsertString(text);
         GlobalUnlock(hMem);
       }
     }

@@ -26,6 +26,7 @@ GNU General Public License for more details.
 #include "GLApp/GLUnitDialog.h"
 #include "Synrad.h"
 #include <direct.h>
+#include "GLWindowManager.h"
 
 #include "ZipUtils/zip.h"
 #include "ZipUtils/unzip.h"
@@ -61,7 +62,7 @@ Worker::Worker() {
 	simuTime = 0.0f;
 	nbTrajPoints=0;
 	running = FALSE;
-
+	//exiting = FALSE;
 	strcpy(fullFileName,"");
 
 
@@ -308,7 +309,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 					if (!regions[i].BXYfileName.empty())
 						sprintf(tmp,"%s \"%s\"",tmp,regions[i].BXYfileName.c_str());
 				}
-				int procId = StartProc_background(tmp);
+				int procId = StartProc(tmp,STARTPROC_BACKGROUND);
 				mApp->compressProcessHandle=OpenProcess(PROCESS_ALL_ACCESS, TRUE, procId);
 				fileName=fileNameWithSyn7z;
 			} else {
@@ -593,13 +594,13 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 				sprintf(tmp,"This geometry refers to %d regions. Load them now?",regionsToLoad.size());
 				BOOL loadThem = ( GLMessageBox::Display(tmp,"File load",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONINFO)==GLDLG_OK );
 				if (loadThem) {
-					progressDlg->SetMessage("Loading regions");
+					GLProgress* prg = new GLProgress("", "Loading regions");
+					prg->SetVisible(TRUE);
 					int i = 0;
 					for (auto&& regionFileName:regionsToLoad) {
 						std::string toLoad;
 						if (ext=="syn7z") { //PAR file to load in tmp dir (just extracted)
 							toLoad=(std::string)CWD+"\\tmp\\";
-							toLoad += FileUtils::GetFilename(regionFileName);
 						} else { //PAR file in same dir as SYN file
 							/*char tmp[512];
 							filebegin= strrchr(fileName,'\\'); //throw out absolute path, keep only filename
@@ -608,13 +609,15 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 							memcpy(tmp,fileName,filebegin-fileName);
 							tmp[(int)(filebegin-fileName)]=NULL;
 							toLoad=tmp;*/
-							toLoad = FileUtils::GetPath(fileName)+"\\";
-							toLoad+=regionFileName;
+							toLoad = FileUtils::GetPath(fileName);
 						}
-						progressDlg->SetMessage("Adding "+regionFileName+"...");
-						progressDlg->SetProgress((double)i++ / (double)regionsToLoad.size());
+						toLoad+=regionFileName;
+						prg->SetMessage("Adding "+regionFileName+"...");
+						prg->SetProgress((double)i++ / (double)regionsToLoad.size());
 						AddRegion(toLoad.c_str(), -1);
 					}
+					prg->SetVisible(FALSE);
+					SAFE_DELETE(prg);
 				}
 			}
 			if (!insert) {
@@ -625,14 +628,14 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 				SHGHITS *gHits = (SHGHITS *)dpHit->buff;
 				SetLeak(pLeak, &nbLastLeaks, gHits);
 				SetHHit(pHits, &nbHHit, gHits);
-				progressDlg->SetMessage("Loading texture values...");
+				progressDlg->SetMessage("Loading textures...");
 				LoadTexturesSYN((ext=="syn7z") ? ((std::string)CWD+"\\tmp\\Geometry.syn").c_str() : fileName, version);
 				strcpy(fullFileName, fileName);
 			}
 		} catch(Error &e) {
 			geom->Clear();
 			SAFE_DELETE(f);
-			
+
 			progressDlg->SetVisible(FALSE);
 			SAFE_DELETE(progressDlg);
 			throw e;
@@ -1121,7 +1124,7 @@ void Worker::SetLeak(LEAK *buffer,int *nb,SHGHITS *gHits) { //When loading from 
 void Worker::LoadTexturesSYN(const char *fileName,int version) {
 
 	if (FileUtils::GetExtension(fileName) == "syn") {
-		GLProgress *progressDlg = new GLProgress("Loading texture values", "Please wait");
+		GLProgress *progressDlg = new GLProgress("Loading textures", "Please wait");
 		progressDlg->SetProgress(0.0);
 		FileReader *f = NULL;
 		try {
@@ -1303,7 +1306,7 @@ void Worker::Update(float appTime) {
 					memcpy(&(f->sh.counter),buffer+f->sh.hitOffset,sizeof(SHHITS));
 				}
 				try {
-					geom->BuildTexture(buffer);
+					if (mApp->needsTexture) geom->BuildFacetTextures(buffer); 
 				}
 				catch (Error &e) {
 					GLMessageBox::Display((char *)e.GetMsg(), "Error building texture", GLDLG_OK, GLDLG_ICONERROR);
@@ -1409,13 +1412,10 @@ void Worker::RealReload() { //Sharing geometry with workers
 
 	progressDlg->SetMessage("Creating dataport...");
 	// Create the temporary geometry shared structure
-	size_t loadSize = geom->GetGeometrySize(&regions, &materials, psi_distr, chi_distr);
+	int loadSize = geom->GetGeometrySize(&regions,&materials,psi_distr,chi_distr);
 	Dataport *loader = CreateDataport(loadDpName,loadSize);
-	if (!loader) {
-		progressDlg->SetVisible(FALSE);
-		SAFE_DELETE(progressDlg);
+	if( !loader )
 		throw Error("Failed to create 'loader' dataport.\nMost probably out of memory.\nReduce number of subprocesses or texture size.");
-	}
 	progressDlg->SetMessage("Accessing dataport...");
 	AccessDataportTimed(loader,3000+nbProcess*(int)((double)loadSize/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");
@@ -1448,7 +1448,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 
 	// Load geometry
 	progressDlg->SetMessage("Waiting for subprocesses to load geometry...");
-	if( !ExecuteAndWait(COMMAND_LOAD,PROCESS_READY,loadSize,progressDlg) ) {
+	if( !ExecuteAndWait(COMMAND_LOAD,PROCESS_READY,loadSize) ) {
 		CLOSEDP(loader);
 		char errMsg[1024];
 		sprintf(errMsg,"Failed to send geometry to sub process:\n%s",GetErrorDetails());
@@ -1530,8 +1530,6 @@ char *Worker::GetErrorDetails() {
 	return err;
 }
 
-// -------------------------------------------------------------
-
 void Worker::ClearHits() {
 	try {
 		if (needsReload) RealReload();
@@ -1550,69 +1548,45 @@ void Worker::ClearHits() {
 
 // -------------------------------------------------------------
 
-BOOL Worker::Wait(int waitState,int timeout,GLProgress *prg) {
-
-	BOOL ok = FALSE;
+BOOL Worker::Wait(int waitState,LoadStatus *statusWindow) {
+	
+	abortRequested = FALSE;
+	BOOL finished = FALSE;
 	BOOL error = FALSE;
-	int t = 0;
-	int nbReady = 0;
-	double initialProgress = 0.0;
-	if (prg) initialProgress = prg->GetProgress();
-	int nbError = 0;
+	int waitTime = 0;
 	allDone = TRUE;
 
 	// Wait for completion
-	while(!ok && t<timeout) {
+	while(!finished && !abortRequested) {
 
-		ok = TRUE;
+		finished = TRUE;
 		AccessDataport(dpControl);
 		SHMASTER *shMaster = (SHMASTER *)dpControl->buff;
-		nbReady=nbError=0;
 		for(int i=0;i<nbProcess;i++) {
-			if (shMaster->states[i]==waitState) nbReady++;
-			ok = ok & (shMaster->states[i]==waitState || shMaster->states[i]==PROCESS_ERROR || shMaster->states[i]==PROCESS_DONE);
+			finished = finished & (shMaster->states[i]==waitState || shMaster->states[i]==PROCESS_ERROR || shMaster->states[i]==PROCESS_DONE);
 			if( shMaster->states[i]==PROCESS_ERROR ) {
 				error = TRUE;
-				nbError++;
 			}
 			allDone = allDone & (shMaster->states[i]==PROCESS_DONE);
 		}
 		ReleaseDataport(dpControl);
 
-		if(!ok) {
-			if (prg) prg->SetProgress(double(nbReady)/(double)nbProcess);
-			Sleep(500);
-			t+=500;
-		}
-
-	}
-
-	if (t>=timeout) {
-		if ((prg) && ((double)nbReady/(double)nbProcess)>initialProgress) //progress advanced, wait more
-			return Wait(waitState,timeout,prg);
-		char tmp[512];
-		sprintf(tmp,"Total workers : %d\n"
-			"%d are ready, %d reported errors\n"
-			"Do you want to wait a bit more?\n"
-			"(Loading continues while this dialog is visible)\n",nbProcess,nbReady,nbError,nbProcess);
-		int waitmore = GLMessageBox::Display(tmp,"Info",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONINFO)==GLDLG_OK;
-		if (waitmore) {
-			t=0;
-			return Wait(waitState,timeout,prg);
+		if (!finished) {
+			if (statusWindow) {
+				if (waitTime >= 500) statusWindow->SetVisible(TRUE);
+				statusWindow->SMPUpdate();
+				mApp->DoEvents();
+			}
+			Sleep(250);
+			waitTime+=250;
 		}
 	}
-
-	return ok && !error;
+	if (statusWindow) statusWindow->SetVisible(FALSE);
+	return finished && !error;
 
 }
 
-BOOL Worker::ExecuteAndWait(int command,int waitState,int param,GLProgress *prg) {
-
-
-
-
-
-
+BOOL Worker::ExecuteAndWait(int command,int waitState,int param) {
 
 	if(!dpControl) return FALSE;
 
@@ -1626,7 +1600,11 @@ BOOL Worker::ExecuteAndWait(int command,int waitState,int param,GLProgress *prg)
 	ReleaseDataport(dpControl);
 
 	Sleep(100);
-	return Wait(waitState,3000 + nbProcess * 500,prg);
+	LoadStatus *statusWindow = NULL;
+	statusWindow = new LoadStatus(this);
+	BOOL result= Wait(waitState,statusWindow);
+	SAFE_DELETE(statusWindow);
+	return result;
 }
 
 void Worker::ResetWorkerStats() {
@@ -1713,11 +1691,13 @@ void Worker::KillAll() {
 // -------------------------------------------------------------
 
 void Worker::Exit() {
+	//exiting = TRUE;
 
-	if( dpControl && nbProcess>0 ) {
+	/*if( dpControl && nbProcess>0 ) {
 		KillAll();
 		CLOSEDP(dpControl);
-	}
+	}*/
+	//Subprocesses will commit suicide if host is missing
 
 }
 
@@ -1756,7 +1736,7 @@ void Worker::SetProcNumber(int n) {
 	// Launch n subprocess
 	for(int i=0;i<n;i++) {
 		sprintf(cmdLine,"synradSub.exe %d %d",pid,i);
-		pID[i] = StartProc(cmdLine);
+		pID[i] = StartProc(cmdLine,STARTPROC_NORMAL);
 		Sleep(25); // Wait a bit
 		if( pID[i]==0 ) {
 			nbProcess = 0;
@@ -1765,12 +1745,12 @@ void Worker::SetProcNumber(int n) {
 	}
 
 	nbProcess = n;
-
-	if( !Wait(PROCESS_READY,3000) )
+	LoadStatus *statusWindow = NULL;
+	statusWindow = new LoadStatus(this);
+	BOOL result = Wait(PROCESS_READY, statusWindow);
+	SAFE_DELETE(statusWindow);
+	if( !result )
 		ThrowSubProcError("Sub process(es) starting failure");
-
-
-
 
 }
 
@@ -1845,7 +1825,7 @@ void Worker::RecalcRegion(int regionId) {
 void Worker::ClearRegions() {
 	//if ((int)regions.size()>0) regions.clear();
 	regions=std::vector<Region_full>();
-	geom->InitializeGeometry(); //recalculate bounding box
+	geom->InitializeGeometry(-1,TRUE); //recalculate bounding box
 	nbTrajPoints=0;
 	Reload();
 }
@@ -1855,7 +1835,7 @@ void Worker::AddMaterial(std::string *fileName){
 	char tmp[512];
 	sprintf(tmp,"param\\Materials\\%s",fileName->c_str());
 	FileReader *f=new FileReader(tmp);
-	result.LoadMaterialCSV(f);
+	result.LoadCSV(f);
 	int lastindex = fileName->find_last_of(".");
 	result.name = fileName->substr(0, lastindex);
 	materials.push_back(result);
@@ -1900,7 +1880,7 @@ BOOL EndsWithPar(const char* s)
 void Worker::RebuildTextures() {
 	if (AccessDataport(dpHit)) {
 		BYTE *buffer = (BYTE *)dpHit->buff;
-		try{ geom->BuildTexture(buffer); }
+		if (mApp->needsTexture) try { geom->BuildFacetTextures(buffer); }
 		catch (Error &e) {
 			ReleaseDataport(dpHit);
 			throw e;

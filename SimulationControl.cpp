@@ -16,7 +16,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 
-#ifdef WIN32
+#ifdef WIN
 #include <windows.h> // For GetTickCount()
 #include <Process.h> // For _getpid()
 #else
@@ -31,8 +31,6 @@ GNU General Public License for more details.
 #include "Random.h"
 //#include "Tools.h"
 #include <vector>
-
-#define READBUFFER(_type) *(_type*)buffer;buffer+=sizeof(_type)
 
 extern void SetErrorSub(const char *message);
 
@@ -109,7 +107,7 @@ void ClearSimulation() {
 				delete f->spectrum_fluxwise;
 				delete f->spectrum_powerwise;
 				SAFE_FREE(f->direction);
-				SAFE_FREE(f->fullElem);
+				//SAFE_FREE(f->fullElem);
 			}
 			SAFE_FREE(f);
 		}
@@ -155,11 +153,11 @@ DWORD GetSeed() {
 }
 
 
-
+/*
 double Norme(VERTEX3D *v) {
 	return sqrt(v->x*v->x + v->y*v->y + v->z*v->z);
 }
-
+*/
 
 
 BOOL LoadSimulation(Dataport *loader) {
@@ -177,7 +175,14 @@ BOOL LoadSimulation(Dataport *loader) {
 	t0 = GetTick();
 
 	sHandle->loadOK = FALSE;
+
+	SetState(PROCESS_STARTING, "Clearing previous simulation");
+
 	ClearSimulation();
+	//Sleep(2000);
+
+	SetState(PROCESS_STARTING, "Connecting to dataport");
+	//Sleep(2000);
 
 	// Connect the dataport
 	if( !AccessDataportTimed(loader,40000) ) {
@@ -211,110 +216,170 @@ BOOL LoadSimulation(Dataport *loader) {
 	sHandle->generation_mode = shGeom->generation_mode;
 	buffer+=sizeof(SHGEOM);
 	sHandle->nbTrajPoints=0;
+	SetState(PROCESS_STARTING, "Loading regions");
+	//Sleep(2000);
 	//Regions
-	for (size_t r = 0; r<sHandle->nbRegion; r++) {
-		Region_mathonly *reg = (Region_mathonly *) buffer;
-		Region_mathonly newreg=*reg;
-		buffer += sizeof(Region_mathonly);
-
-		newreg.Points=std::vector<Trajectory_Point>();
+	for (int r=0;r<sHandle->nbRegion;r++) {
+		Region_mathonly newreg;
+		
+		SHREGIONPARAM *par = (SHREGIONPARAM *)buffer;
+		newreg.nbDistr_MAG = par->nbDistr_MAG;
+		newreg.nbPointsToCopy = par->nbPointsToCopy;
+		newreg.nbDistr_BXY = par->nbDistr_BXY;
+		newreg.energy_low = par->energy_low;
+		newreg.energy_hi = par->energy_hi;
+		newreg.dL = par->dL;
+		newreg.particleMass = par->particleMass;
+		newreg.E = par->E;
+		newreg.current = par->current;
+		newreg.emittance = par->emittance;
+		newreg.betax = par->betax;
+		newreg.betay = par->betay;
+		newreg.eta = par->eta;
+		newreg.etaprime = par->etaprime;
+		newreg.psimaxX = par->psimaxX;
+		newreg.psimaxY = par->psimaxY;
+		newreg.coupling = par->coupling;
+		newreg.energy_spread = par->energy_spread;
+		newreg.Bx_mode = par->Bx_mode;
+		newreg.By_mode = par->By_mode;
+		newreg.Bz_mode = par->Bz_mode;
+		newreg.beta_kind = par->beta_kind; //switches between constant or file-based magnetic fields
+		newreg.enable_ort_polarization = par->enable_ort_polarization;
+		newreg.enable_par_polarization = par->enable_par_polarization;
+		newreg.Bx_dir = par->Bx_dir;
+		newreg.By_dir = par->By_dir;
+		newreg.Bz_dir = par->Bz_dir; //direction in which MAG files are oriented (in their second line)
+		newreg.Bx_period = par->Bx_period;
+		newreg.By_period = par->By_period;
+		newreg.Bz_period = par->Bz_period; //first line of length files
+		newreg.Bx_phase = par->Bx_phase;
+		newreg.By_phase = par->By_phase;
+		newreg.Bz_phase = par->Bz_phase; //phase in case of helicoidal B file
+		newreg.nbPointsToCopy = par->nbPointsToCopy; //passes info about the number of points that needs to be read from the buffer on loading
+		newreg.startPoint = par->startPoint;
+		newreg.startDir = par->startDir;
+		newreg.B_const = par->B_const;
+		newreg.limits = par->limits;//AABBmin,AABBmax
+		newreg.quad = par->quad;
+		newreg.gamma = par->gamma;  //    =E/abs(particleMass)
+		buffer += sizeof(SHREGIONPARAM);
 		sHandle->regions.push_back(newreg);
 	}
+	SetState(PROCESS_STARTING, "Loading trajectory points");
 	//copy trajectory points	
-	for (size_t r = 0; r<sHandle->nbRegion; r++) {
-		sHandle->regions[r].Points.reserve(sHandle->regions[r].nbPointsToCopy);
-		for (int k=0;k<sHandle->regions[r].nbPointsToCopy;k++) {
-			sHandle->regions[r].Points.push_back(*(Trajectory_Point*)(buffer));
-			buffer+=sizeof(Trajectory_Point);
-		}
-		sHandle->nbTrajPoints+=sHandle->regions[r].nbPointsToCopy;
-	}
+	for (int r=0;r<sHandle->nbRegion;r++) {
+		/*sHandle->regions[r].Points.reserve(sHandle->regions[r].params.nbPointsToCopy);
+		for (int k=0;k<sHandle->regions[r].params.nbPointsToCopy;k++) {
+		sHandle->regions[r].Points.push_back(*(Trajectory_Point*)(buffer));
+		buffer+=sizeof(Trajectory_Point);
+		}*/
 
+		sHandle->regions[r].Points.resize(sHandle->regions[r].nbPointsToCopy);
+		memcpy(&sHandle->regions[r].Points[0], buffer, sizeof(Trajectory_Point)*sHandle->regions[r].nbPointsToCopy);
+		buffer += sizeof(Trajectory_Point)*sHandle->regions[r].nbPointsToCopy;
+		sHandle->nbTrajPoints += sHandle->regions[r].nbPointsToCopy;
+	}
+	SetState(PROCESS_STARTING, "Loading MAG, BXY distributions");
 	//copy distribution points
 	sHandle->nbDistrPoints_MAG=0;
 	sHandle->nbDistrPoints_BXY=0;
-	for (size_t r = 0; r<sHandle->nbRegion; r++) {
+	for (int r=0;r<sHandle->nbRegion;r++) {
 
-		for (size_t j = 0; j<sHandle->regions[r].nbDistr_MAG.x; j++) {
-			sHandle->regions[r].Bx_distr->valuesX[j]=READBUFFER(double);
-			sHandle->regions[r].Bx_distr->valuesY[j]=READBUFFER(double);
+		sHandle->regions[r].Bx_distr->Resize((size_t)sHandle->regions[r].nbDistr_MAG.x);
+		for (int j=0;j<sHandle->regions[r].nbDistr_MAG.x;j++) {
+			sHandle->regions[r].Bx_distr->valuesX[j]=*((double*)(buffer));
+			buffer+=sizeof(double);
+			sHandle->regions[r].Bx_distr->valuesY[j]=*((double*)(buffer));
+			buffer+=sizeof(double);
 		}
 
-		for (size_t j = 0; j<sHandle->regions[r].nbDistr_MAG.y; j++) {
-			sHandle->regions[r].By_distr->valuesX[j] = READBUFFER(double);
-			sHandle->regions[r].By_distr->valuesY[j] = READBUFFER(double);
+		sHandle->regions[r].By_distr->Resize((size_t)sHandle->regions[r].nbDistr_MAG.y);
+		for (int j=0;j<sHandle->regions[r].nbDistr_MAG.y;j++) {
+			sHandle->regions[r].By_distr->valuesX[j]=*((double*)(buffer));
+			buffer+=sizeof(double);
+			sHandle->regions[r].By_distr->valuesY[j]=*((double*)(buffer));
+			buffer+=sizeof(double);
 		}
 
-		for (size_t j = 0; j<sHandle->regions[r].nbDistr_MAG.z; j++) {
-			sHandle->regions[r].Bz_distr->valuesX[j] = READBUFFER(double);
-			sHandle->regions[r].Bz_distr->valuesY[j] = READBUFFER(double);
+		sHandle->regions[r].Bz_distr->Resize((size_t)sHandle->regions[r].nbDistr_MAG.z);
+		for (int j=0;j<sHandle->regions[r].nbDistr_MAG.z;j++) {
+			sHandle->regions[r].Bz_distr->valuesX[j]=*((double*)(buffer));
+			buffer+=sizeof(double);
+			sHandle->regions[r].Bz_distr->valuesY[j]=*((double*)(buffer));
+			buffer+=sizeof(double);
 		}
 
-		for (size_t j = 0; j<sHandle->regions[r].nbDistr_BXY; j++) {
+		sHandle->regions[r].beta_x_distr->Resize(sHandle->regions[r].nbDistr_BXY);
+		sHandle->regions[r].beta_y_distr->Resize(sHandle->regions[r].nbDistr_BXY);
+		sHandle->regions[r].eta_distr->Resize(sHandle->regions[r].nbDistr_BXY);
+		sHandle->regions[r].etaprime_distr->Resize(sHandle->regions[r].nbDistr_BXY);
+		sHandle->regions[r].e_spread_distr->Resize(sHandle->regions[r].nbDistr_BXY);
+
+		for (int j=0;j<sHandle->regions[r].nbDistr_BXY;j++) {
 			sHandle->regions[r].beta_x_distr->valuesX[j]=
 				sHandle->regions[r].beta_y_distr->valuesX[j]=
 				sHandle->regions[r].eta_distr->valuesX[j]=
 				sHandle->regions[r].etaprime_distr->valuesX[j]=
 				sHandle->regions[r].e_spread_distr->valuesX[j]=
-				READBUFFER(double);
-			sHandle->regions[r].beta_x_distr->valuesY[j] = READBUFFER(double);
-			sHandle->regions[r].beta_y_distr->valuesY[j] = READBUFFER(double);
-			sHandle->regions[r].eta_distr->valuesY[j] = READBUFFER(double);
-			sHandle->regions[r].etaprime_distr->valuesY[j] = READBUFFER(double);
-			sHandle->regions[r].e_spread_distr->valuesY[j] = READBUFFER(double);
+				*((double*)(buffer));
+			buffer+=sizeof(double);
+			sHandle->regions[r].beta_x_distr->valuesY[j]=*((double*)(buffer));
+			buffer+=sizeof(double);
+			sHandle->regions[r].beta_y_distr->valuesY[j]=*((double*)(buffer));
+			buffer+=sizeof(double);
+			sHandle->regions[r].eta_distr->valuesY[j]=*((double*)(buffer));
+			buffer+=sizeof(double);
+			sHandle->regions[r].etaprime_distr->valuesY[j]=*((double*)(buffer));
+			buffer+=sizeof(double);
+			sHandle->regions[r].e_spread_distr->valuesY[j]=*((double*)(buffer));
+			buffer+=sizeof(double);
 		}
 
-		sHandle->nbDistrPoints_MAG += (size_t)(sHandle->regions[r].nbDistr_MAG.x + sHandle->regions[r].nbDistr_MAG.y + sHandle->regions[r].nbDistr_MAG.z);
+		sHandle->nbDistrPoints_MAG+=(int)(sHandle->regions[r].nbDistr_MAG.x+sHandle->regions[r].nbDistr_MAG.y+sHandle->regions[r].nbDistr_MAG.z);
 		sHandle->nbDistrPoints_BXY+=sHandle->regions[r].nbDistr_BXY;
 	}
-
+	SetState(PROCESS_STARTING, "Loading materials");
 	//Load materials
-	sHandle->nbMaterials = READBUFFER(size_t); //copying number of materials
-	for (size_t i = 0; i<sHandle->nbMaterials; i++) { //going through all materials
+	sHandle->nbMaterials=*((int*)buffer); //copying number of materials
+	buffer+=sizeof(int);
+	for (int i=0;i<sHandle->nbMaterials;i++) { //going through all materials
 		Material newMaterial;
-		newMaterial.hasBackscattering = READBUFFER(BOOL);
-		size_t angleValsSize = READBUFFER(size_t); //copying number of angles (columns)
-		size_t energyValsSize = READBUFFER(size_t); //copying number of energies (rows)
+		int angleValsSize=*((int*)buffer); //copying number of angles (columns)
+		buffer+=sizeof(int);
+		int energyValsSize=*((int*)buffer); //copying number of energies (rows)
+		buffer+=sizeof(int);
 		newMaterial.angleVals.reserve(angleValsSize);
-		for (size_t j = 0; j<angleValsSize; j++) {
+		for (int j=0;j<angleValsSize;j++) {
 			newMaterial.angleVals.push_back(*((double*)buffer)); //copying angles (header)
 			buffer+=sizeof(double);
 		}
 		newMaterial.energyVals.reserve(energyValsSize);
-		for (size_t j = 0; j<energyValsSize; j++) {
+		for (int j=0;j<energyValsSize;j++) {
 			newMaterial.energyVals.push_back(*((double*)buffer)); //copying energies (column1)
 			buffer+=sizeof(double);
 		}
-		//copying reflectivity probabilities (cells)
-		for (size_t j = 0; j<newMaterial.energyVals.size(); j++) {
-			std::vector<std::vector<double>> currentEnergy;
-			for (size_t k = 0; k<newMaterial.angleVals.size(); k++) {
-				std::vector<double> reflProbability;
-				reflProbability.push_back(*((double*)buffer)); //forward scattering
+		for (int j=0;j<(int)newMaterial.energyVals.size();j++) {
+			std::vector<double> currentEnergy;
+			for (int k=0;k<(int)newMaterial.angleVals.size();k++) {
+				currentEnergy.push_back(*((double*)buffer)); //copying reflectivity probabilities (cells)
 				buffer+=sizeof(double);
-				if (newMaterial.hasBackscattering) {
-					reflProbability.push_back(*((double*)buffer)); //diffuse scattering
-					buffer += sizeof(double);
-					reflProbability.push_back(*((double*)buffer)); //backscattering
-					buffer += sizeof(double);
-					reflProbability.push_back(*((double*)buffer)); //transparent pass
-					buffer += sizeof(double);
-				}
-				currentEnergy.push_back(reflProbability);
 			}
 			newMaterial.reflVals.push_back(currentEnergy);
 		}
 		sHandle->materials.push_back(newMaterial);
 	}
-
+	SetState(PROCESS_STARTING, "Loading psi, chi distributions");
 	//Load psi_distr
-	size_t psi_size = READBUFFER(size_t);
+	int psi_size = *((int*)buffer);
+	buffer += sizeof(int);
 	sHandle->psi_distr.reserve(psi_size);
-	for (size_t j = 0; j < psi_size; j++) {
+	for (int j = 0; j < psi_size; j++) {
 		std::vector<double> row;
-		size_t row_size = READBUFFER(size_t);
+		int row_size = *((int*)buffer);
+		buffer += sizeof(int);
 		sHandle->psi_distr.reserve(row_size);
-		for (size_t k = 0; k < row_size; k++) {
+		for (int k = 0; k < row_size; k++) {
 			row.push_back(*((double*)buffer)); //cum. distr
 			buffer += sizeof(double);
 		}
@@ -322,13 +387,15 @@ BOOL LoadSimulation(Dataport *loader) {
 	}
 
 	//Load chi_distr
-	size_t chi_size = READBUFFER(size_t);
+	int chi_size = *((int*)buffer);
+	buffer += sizeof(int);
 	sHandle->chi_distr.reserve(chi_size);
-	for (size_t j = 0; j < chi_size; j++) {
+	for (int j = 0; j < chi_size; j++) {
 		std::vector<double> row;
-		int row_size = READBUFFER(size_t);
+		int row_size = *((int*)buffer);
+		buffer += sizeof(int);
 		sHandle->chi_distr.reserve(row_size);
-		for (size_t k = 0; k < row_size; k++) {
+		for (int k = 0; k < row_size; k++) {
 			row.push_back(*((double*)buffer)); //cum. distr
 			buffer += sizeof(double);
 		}
@@ -337,6 +404,7 @@ BOOL LoadSimulation(Dataport *loader) {
 
 	bufferAfterMaterials=buffer;
 
+	SetState(PROCESS_STARTING, "Loading superstructures");
 	// Prepare super structure
 	buffer +=  sizeof(VERTEX3D)*sHandle->nbVertex;
 	for(i=0;i<sHandle->totalFacet;i++) {
@@ -359,6 +427,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	// Name
 	memcpy(sHandle->name,shGeom->name,64);
 
+	SetState(PROCESS_STARTING, "Loading vertices");
 	// Vertex
 	sHandle->vertices3 = (VERTEX3D *)malloc(sHandle->nbVertex*sizeof(VERTEX3D));
 	//buffer+=sizeof(SHGEOM)+shGeom->nbRegion*sizeof(Region)
@@ -369,6 +438,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	memcpy(sHandle->vertices3,shVert,sHandle->nbVertex*sizeof(VERTEX3D));
 	buffer+=sizeof(VERTEX3D)*sHandle->nbVertex;
 
+	SetState(PROCESS_STARTING, "Loading facets");
 	// Facets
 	for(i=0;i<sHandle->totalFacet;i++) {
 
@@ -434,21 +504,21 @@ BOOL LoadSimulation(Dataport *loader) {
 
 			f->inc = (double*)malloc(f->textureSize);
 			f->largeEnough = (BOOL *)malloc(sizeof(BOOL)*nbE);
-			f->fullElem = (char *)malloc(nbE);
-			if (!(f->inc && f->largeEnough && f->fullElem)) {
+			//f->fullElem = (char *)malloc(nbE);
+			if (!(f->inc && f->largeEnough /*&& f->fullElem*/)) {
 				SetErrorSub("Not enough memory to load");
 				return FALSE;
 			}
 			f->fullSizeInc=(float)1E30;
 			for(j=0;j<nbE;j++) {
 				double incVal = ((double *)areaBuff)[j];
-				if( incVal<0 ) {
+				/*if( incVal<0 ) {
 					f->fullElem[j] = 1;
 					f->inc[j] = -incVal;
-				} else {
-					f->fullElem[j] = 0;
+				} else {*/
+					//f->fullElem[j] = 0;
 					f->inc[j] = incVal;
-				}
+				/*}*/
 				if ((f->inc[j]>0.0)&&(f->inc[j]<f->fullSizeInc)) f->fullSizeInc = f-> inc[j];
 			}
 			for(j=0;j<nbE;j++) { //second pass, filter out very small cells
@@ -458,8 +528,8 @@ BOOL LoadSimulation(Dataport *loader) {
 			areaBuff += nbE*sizeof(double);
 			f->iw = 1.0 / (double)f->sh.texWidthD;
 			f->ih = 1.0 / (double)f->sh.texHeightD;
-			f->rw = Norme(&(f->sh.U)) * f->iw;
-			f->rh = Norme(&(f->sh.V)) * f->ih;
+			f->rw = sqrt(f->sh.U.x*f->sh.U.x + f->sh.U.y*f->sh.U.y + f->sh.U.z*f->sh.U.z) * f->iw;
+			f->rh = sqrt(f->sh.V.x*f->sh.V.x + f->sh.V.y*f->sh.V.y + f->sh.V.z*f->sh.V.z) * f->ih;
 		}
 		if(f->sh.isProfile) {
 			f->profileSize = PROFILE_SIZE*(sizeof(llong)+2*sizeof(double));
@@ -499,7 +569,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	}
 
 	ReleaseDataport(loader);
-
+	SetState(PROCESS_STARTING, "Computing AABB trees, source area");
 	// Build all AABBTrees
 	for(i=0;i<sHandle->nbSuper;i++)
 		sHandle->str[i].aabbTree = BuildAABBTree(sHandle->str[i].facets,sHandle->str[i].nbFacet,0);
@@ -681,7 +751,7 @@ double GetTick() {
 
 	// Number of sec since the application startup
 
-#ifdef WIN32
+#ifdef WIN
 
 	if( usePerfCounter ) {
 

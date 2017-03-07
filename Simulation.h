@@ -30,7 +30,6 @@ typedef int BOOL;
 #include "smp/SMP.h"
 #include "Tools.h"
 #include <vector>
-#include "Tools.h"
 #include "Region_mathonly.h"
 
 #ifndef _SIMULATIONH_
@@ -51,7 +50,7 @@ typedef struct {
   double   *inc;        // reciprocial of element area
   BOOL     *largeEnough; //cells that are NOT too small for autoscaling
   VHIT     *direction; // Direction field recording (average)
-  char     *fullElem;  // Direction field recording (only on full element) (WHY???)
+  //char     *fullElem;  // Direction field recording (only on full element) (WHY???)
   llong    *profile_hits;   // MC hits
   double   *profile_flux;   // SR Flux
   double   *profile_power;  // SR power
@@ -124,14 +123,13 @@ typedef struct {
   int         totalFacet;       // Total number of facet
   VERTEX3D   *vertices3;        // Vertices
   int         nbSuper;          // Number of super structure
-  size_t         nbRegion;
-  size_t         nbMaterials;
-  size_t         nbTrajPoints;
+  int         nbRegion;
+  int         nbMaterials;
+  int         nbTrajPoints;
   double      sourceArea;       //number of trajectory points weighed by 1/dL
-  size_t         nbDistrPoints_MAG;
-  size_t         nbDistrPoints_BXY;
+  int         nbDistrPoints_MAG;
+  int         nbDistrPoints_BXY;
   int         curStruct;        // Current structure
-  int			teleportedFrom;
   SUPERSTRUCT str[MAX_STRUCT];
 
   std::vector<Region_mathonly> regions;// Regions
@@ -145,7 +143,7 @@ typedef struct {
   size_t textTotalSize;  // Texture total size
   size_t profTotalSize;  // Profile total size
   size_t dirTotalSize;   // Direction field total size
-  size_t spectrumTotalSize; //Spectrums total size
+  int spectrumTotalSize; //Spectrums total size
   BOOL loadOK;        // Load OK flag
   BOOL lastUpdateOK;  // Last hit update timeout
   BOOL hasVolatile;   // Contains volatile facet
@@ -180,22 +178,31 @@ extern SIMULATION *sHandle;
 void RecordHitOnTexture(FACET *f,double dF,double dP);
 void InitSimulation();
 void ClearSimulation();
+void SetState(int state, const char *status);
 BOOL LoadSimulation(Dataport *loader);
 BOOL StartSimulation();
 void ResetSimulation();
 BOOL SimulationRun();
 BOOL SimulationMCStep(int nbStep);
+void PerturbateSurface(double & sigmaRatio, FACET * collidedFacet, Vector & nU_rotated, Vector & nV_rotated, Vector & N_rotated);
+void GetDirComponents(Vector & nU_rotated, Vector & nV_rotated, Vector & N_rotated, double & u, double & v, double & n);
+BOOL DoReflection(BOOL lowFluxMode, FACET * collidedFacet, double stickingProbability, double theta = 0.0, double phi = 0.0,
+	Vector N_rotated = Vector(0, 0, 0), Vector nU_rotated = Vector(0, 0, 0), Vector nV_rotated = Vector(0, 0, 0));
+BOOL DoRegularReflection(FACET * collidedFacet, double stickingProbability, double theta = 0.0, double phi = 0.0,
+	Vector N_rotated = Vector(0, 0, 0), Vector nU_rotated = Vector(0, 0, 0), Vector nV_rotated = Vector(0, 0, 0));
+BOOL DoLowFluxReflection(FACET * collidedFacet, double stickingProbability, double theta = 0.0, double phi = 0.0,
+	Vector N_rotated = Vector(0, 0, 0), Vector nU_rotated = Vector(0, 0, 0), Vector nV_rotated = Vector(0, 0, 0));
 void RecordHit(const int &type,const double &dF,const double &dP);
 void RecordLeakPos();
 BOOL StartFromSource();
 void ComputeSourceArea();
-//int PerformBounce(FACET *iFacet,double sigmaRatio=0.0,double theta=0.0,double phi=0.0,
-//	Vector N_rotated=Vector(0,0,0),Vector nU_rotated=Vector(0,0,0),Vector nV_rotated=Vector(0,0,0),double thetaOffset=0.0,double phiOffset=0.0, double randomAngle=0.0, int reflType=1);
-void PerformBounce(FACET *iFacet, const double &theta, const double &phi, const int &reflType);
-int Stick(FACET *collidedFacet);
+int PerformBounce_old(FACET *iFacet,double theta=0.0,double phi=0.0,
+	Vector N_rotated=Vector(0,0,0),Vector nU_rotated=Vector(0,0,0),Vector nV_rotated=Vector(0,0,0));
+void Stick(FACET *collidedFacet);
 void PerformTeleport(FACET *iFacet);
-void PolarToCartesian(FACET *iFacet,double theta,double phi,BOOL reverse,double rotateUV=0.0);
-
+void PolarToCartesian(FACET *iFacet,double theta,double phi,BOOL reverse);
+int RoughReflection(FACET *iFacet,double theta,double phi,
+	Vector N_rotated,Vector nU_rotated,Vector nV_rotated);
 void CartesianToPolar(FACET *iFacet,double *theta,double *phi);
 void UpdateHits(Dataport *dpHit,int prIdx,DWORD timeout);
 void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout);

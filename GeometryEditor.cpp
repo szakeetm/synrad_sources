@@ -456,7 +456,18 @@ AABB Geometry::GetBB() {
 			}
 		}
 
-
+#ifdef SYNRAD
+		//Regions
+		Worker *worker = &(mApp->worker);
+		for (int i = 0; i<(int)worker->regions.size(); i++) {
+			if (worker->regions[i].AABBmin.x<sbb.min.x) sbb.min.x = worker->regions[i].AABBmin.x;
+			if (worker->regions[i].AABBmin.y<sbb.min.y) sbb.min.y = worker->regions[i].AABBmin.y;
+			if (worker->regions[i].AABBmin.z<sbb.min.z) sbb.min.z = worker->regions[i].AABBmin.z;
+			if (worker->regions[i].AABBmax.x>sbb.max.x) sbb.max.x = worker->regions[i].AABBmax.x;
+			if (worker->regions[i].AABBmax.y>sbb.max.y) sbb.max.y = worker->regions[i].AABBmax.y;
+			if (worker->regions[i].AABBmax.z>sbb.max.z) sbb.max.z = worker->regions[i].AABBmax.z;
+		}
+#endif
 
 		return sbb;
 	}
@@ -470,9 +481,10 @@ VERTEX3D Geometry::GetCenter() {
 		return center;
 
 	} else {
-
+		
 		VERTEX3D r;
 		AABB sbb = GetBB();
+		
 		r.x = (sbb.max.x + sbb.min.x)/2.0;
 		r.y = (sbb.max.y + sbb.min.y)/2.0;
 		r.z = (sbb.max.z + sbb.min.z)/2.0;

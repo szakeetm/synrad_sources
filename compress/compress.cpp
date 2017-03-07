@@ -44,7 +44,7 @@ int main(int argc,char* argv[]) {
 	memcpy(fileNameGeometry,fileName,sizeof(char)*(dir-fileName));
 	fileNameGeometry[dir-fileName]=NULL;
 	sprintf_s(fileNameGeometry,"%s\\%s",fileNameGeometry,argv[2]);*/
-	fileNameGeometry = GetPath(fileName) + "\\" + argv[2];
+	fileNameGeometry = GetPath(fileName) + argv[2];
 	//sprintf_s(command,"move \"%s\" \"%s\"",fileName,fileNameGeometry);
 	command = "move \"" + fileName + "\" \"" + fileNameGeometry + "\"";
 	result=exec(command);
@@ -127,6 +127,6 @@ BOOL Exist(const char *fileName) {
 std::string GetPath(const std::string& str)
 {
 	size_t found = str.find_last_of("/\\");
-	if (found == std::string::npos) return str; //not found
-	else return str.substr(0, found);
+	if (found == std::string::npos) return ""; //not found, return empty string
+	else return str.substr(0, found)+"\\";
 }

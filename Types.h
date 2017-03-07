@@ -21,7 +21,7 @@
 
 // 64 bit integer declaration
 
-#ifdef WIN32
+#ifdef WIN
   typedef unsigned __int64 llong;
 #else
   typedef long long llong;
@@ -111,11 +111,14 @@ typedef struct {
 } LEAK;
 
 typedef struct {
-
-  size_t nbPts;
-  VERTEX2D *pts;
-
-} MESH;
+   VERTEX2D* points;
+   size_t nbPoints;
+   float   area;     // Area of element
+   float   uCenter;  // Center coordinates
+   float   vCenter;  // Center coordinates
+   //int     elemId;   // Element index (MESH array)
+   //int full;
+ } CELLPROPERTIES;
 
 // Density/Hit field stuff
 #define HITMAX_INT64 18446744073709551615

@@ -51,6 +51,7 @@
 #include "Viewer3DSettings.h"
 #include "TextureSettings.h"
 #include "GlobalSettings.h"
+#include "LoadStatus.h"
 #include "ProfilePlotter.h"
 #include "SpectrumPlotter.h"
 
@@ -115,11 +116,15 @@ public:
 	float    lastSaveTime;
 	float    lastSaveTimeSimu;
 	std::string autosaveFilename; //only delete files that this instance saved
+	BOOL     autoFrameMove; //Refresh scene every 1 second
+	BOOL     frameMoveRequested; //Force frame move
 
 	HANDLE compressProcessHandle;
 
     // Util functions
 	//void SendHeartBeat(BOOL forced=FALSE);
+	void DoEvents();
+
     void SetParam(GLTextField *txt,double value);
     char *FormatInt(llong v,char *unit);
     char *FormatPS(double v,char *unit);
@@ -176,11 +181,12 @@ public:
 	FORMULA formulas[MAX_FORMULA];
 	void ProcessFormulaButtons(GLComponent *src);
     void UpdateFormula();
-	BOOL OffsetFormula(char* expression,int offset,int filter=0);
+	BOOL OffsetFormula(char* expression,int offset,int filter=-1);
 	void RenumberFormulas(int startId);
     void AddFormula(GLParser *f,BOOL doUpdate=TRUE);
 	void AddFormula(const char *fName, const char *formula);
 	void ClearFormula();	
+	
 
     // Recent files   
 	char *recents[MAX_RECENT];
@@ -188,6 +194,10 @@ public:
     void AddRecent(char *fileName);
     void RemoveRecent(char *fileName);
 	void UpdateRecentMenu();
+
+	BOOL needsMesh;    //At least one viewer displays mesh
+	BOOL needsTexture; //At least one viewer displays textures
+	void CheckNeedsTexture();
 	
 	char *recentPARs[MAX_RECENT];
     int  nbRecentPAR;
@@ -226,16 +236,13 @@ public:
     GLMenu        *facetMenu;
 	GLTextField   *facetTeleport;
     GLTextField   *facetSticking;
-	GLTextField   *facetRMSroughness;
-	GLTextField   *facetAutoCorrLength;
-	GLCombo       *facetReflType;
-	GLToggle      *facetDoScattering;
+	GLTextField   *facetRoughness;
     GLTextField   *facetSuperDest;
     GLTextField   *facetOpacity;
 	GLTextField   *facetArea;
 	GLCombo       *facetSideType;
+    GLCombo       *facetReflType;
     GLCombo       *facetRecType;
-	GLToggle      *facetSpectrumToggle;
     GLButton      *facetApplyBtn;
     GLButton      *facetMoreBtn;
     GLButton      *facetCoordBtn;
@@ -243,8 +250,12 @@ public:
     GLTitledPanel *facetPanel;
     GLList        *facetList;
     GLTitledPanel *togglePanel;
+
     GLLabel       *modeLabel;
 	GLLabel       *facetAreaLabel;
+
+
+
     GLButton      *singleACBtn;
     GLLabel       *hitLabel;
     GLLabel       *desLabel;
@@ -253,15 +264,23 @@ public:
     GLLabel       *sTimeLabel;
     GLTitledPanel *simuPanel;
 	GLLabel       *facetTPLabel;
-	GLLabel       *facetRMSroughnessLabel;
-	GLLabel       *facetAutoCorrLengthLabel;
+    GLLabel       *facetStickingLabel;
+	GLLabel       *facetRoughnessLabel;
+
 	GLLabel       *facetSideLabel;
     GLLabel       *facetLinkLabel;
     GLLabel       *facetStrLabel;
     GLTextField   *facetSILabel;
     GLLabel       *facetTLabel;
+
+
     GLLabel       *facetRLabel;
     GLLabel       *facetReLabel;
+	GLLabel       *facetSpectrumLabel;
+	GLCombo      *facetSpectrumCombo;
+	GLToggle      *autoFrameMoveToggle;
+	GLButton      *forceFrameMoveButton;
+
 
     GLMenu        *structMenu;
     GLMenu        *viewsMenu;
@@ -335,6 +354,7 @@ public:
     Viewer3DSettings  *viewer3DSettings;
     TextureSettings  *textureSettings;
 	GlobalSettings	 *globalSettings;
+	LoadStatus       *loadStatus;
     FacetCoordinates *facetCoordinates;
 	VertexCoordinates *vertexCoordinates;
     ProfilePlotter   *profilePlotter;

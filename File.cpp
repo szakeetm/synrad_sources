@@ -17,13 +17,14 @@
 */
 
 #include "File.h"
+#include "GLApp\GLTypes.h"
 #include <string.h>
 
-#ifdef WIN32
+#ifdef WIN
 #include <direct.h>
 #include <io.h>
 #include <iostream>
-#include "GLApp\GLMessageBox.h"
+//#include "GLApp\GLMessageBox.h"
 #endif
 
 #define MAX_WORD_LENGTH 65536 //expected length of the longest line
@@ -407,7 +408,7 @@ void FileWriter::WriteInt(const int &v,char *sep) {
 }
 
 void FileWriter::WriteLLong(const llong &v,char *sep) {
-#ifdef WIN32
+#ifdef WIN
   if( !fprintf(file,"%I64d",v) )
     throw Error("Error while writing to file");
 #else
@@ -423,10 +424,6 @@ void FileWriter::WriteDouble(const double &v,char *sep) {
   if( !fprintf(file,"%.14E",v) )
     throw Error("Error while writing to file");
   if(sep) fprintf(file,"%s",sep);
-}
-
-void FileWriter::Write(std::string str) {
-	Write(str.c_str()); 
 }
 
 void FileWriter::Write(const char *s) {
@@ -445,8 +442,8 @@ std::string FileUtils::GetFilename(const std::string& str)
 std::string FileUtils::GetPath(const std::string& str)
 {
 	size_t found = str.find_last_of("/\\");
-	if (found == std::string::npos) return str; //not found
-	else return str.substr(0, found);
+	if (found == std::string::npos) return ""; //not found, return empty string
+	else return str.substr(0, found)+"\\";
 }
 
 std::string FileUtils::GetExtension(const std::string& str) {

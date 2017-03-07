@@ -24,9 +24,9 @@ GNU General Public License for more details.
 
 extern SynRad *mApp;
 
-static const int   plWidth[] = {15,40,70,70,50,330};
-static const char *plName[] = {"#","PID","Mem Usage","Mem Peak","CPU","Status"};
-static const int   plAligns[] = { ALIGN_LEFT,ALIGN_CENTER,ALIGN_CENTER,ALIGN_CENTER,ALIGN_CENTER,ALIGN_LEFT };
+static const int   plWidth[] = {60,40,70,70,335};
+static const char *plName[] = {"#","PID","Mem Usage","Mem Peak",/*"CPU",*/"Status"};
+static const int   plAligns[] = { ALIGN_LEFT,ALIGN_LEFT,ALIGN_LEFT,ALIGN_LEFT,ALIGN_LEFT };
 
 
 //HANDLE synradHandle;
@@ -107,14 +107,14 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	chkNonIsothermal->SetBounds(315,125,100,19);
 	Add(chkNonIsothermal);*/
 
-	GLTitledPanel *panel3 = new GLTitledPanel("Subprocess control");
+	GLTitledPanel *panel3 = new GLTitledPanel("Process control");
 	panel3->SetBounds(5,180,wD-10,hD-225);
 	Add(panel3);
 
 
 	processList = new GLList(0);
 	processList->SetHScrollVisible(TRUE);
-	processList->SetSize(6,MAX_PROCESS);
+	processList->SetSize(5,MAX_PROCESS+1);
 	processList->SetColumnWidths((int*)plWidth);
 	processList->SetColumnLabels((char **)plName);
 	processList->SetColumnAligns((int *)plAligns);
@@ -163,10 +163,6 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	SetBounds(xD,yD,wD,hD);
 
 	RestoreDeviceObjects();
-
-	lastUpdate = 0.0f;
-	for(int i=0;i<MAX_PROCESS;i++) lastCPUTime[i]=-1.0f;
-	memset(lastCPULoad,0,MAX_PROCESS*sizeof(float));
 }
 
 
@@ -199,12 +195,12 @@ void GlobalSettings::Display(Worker *w) {
 
 // ----------------------------------------------------------------
 
-void GlobalSettings::SMPUpdate(float appTime) {
+void GlobalSettings::SMPUpdate(float appTime, BOOL forceUpdate) {
 
 	if(!IsVisible() || IsIconic()) return;  
 	int nb = worker->GetProcNumber();
 
-	if( appTime-lastUpdate>1.0 && nb>0 ) {
+	//if( forceUpdate || appTime-lastUpdate>1.0 && nb>0 ) {
 
 		char tmp[512];
 		PROCESS_INFO pInfo;
@@ -215,21 +211,39 @@ void GlobalSettings::SMPUpdate(float appTime) {
 		worker->GetProcStatus(states,(char **)statusStr);
 
 		processList->ResetValues();
+
+		//Interface
+		DWORD currpid = GetCurrentProcessId();
+		GetProcInfo(currpid, &pInfo);
+		processList->SetValueAt(0, 0, "Interface");
+		sprintf(tmp, "%d", currpid);
+		processList->SetValueAt(1, 0, tmp, currpid);
+		sprintf(tmp, "%.0f MB", (double)pInfo.mem_use / (1024.0*1024.0));
+		processList->SetValueAt(2, 0, tmp);
+		sprintf(tmp, "%.0f MB", (double)pInfo.mem_peak / (1024.0*1024.0));
+		processList->SetValueAt(3, 0, tmp);
+		//sprintf(tmp, "%d %%", (int)pInfo.cpu_time);
+		//processList->SetValueAt(4, 0, tmp);
+
 		for(int i=0;i<nb;i++) {
 			DWORD pid = worker->GetPID(i);
-			sprintf(tmp,"%d",i+1);
-			processList->SetValueAt(0,i,tmp);
+			sprintf(tmp,"Subproc.%d",i+1);
+			processList->SetValueAt(0,i+1,tmp);
 			sprintf(tmp,"%d",pid);
-			processList->SetValueAt(1,i,tmp);
+			processList->SetValueAt(1,i+1,tmp);
 			if( !GetProcInfo(pid,&pInfo) ) {
-				processList->SetValueAt(2,i,"0 KB");
-				processList->SetValueAt(3,i,"0 KB");
-				processList->SetValueAt(4,i,"0 %");
-				processList->SetValueAt(5,i,"Dead");
+				processList->SetValueAt(2,i+1,"0 KB");
+				processList->SetValueAt(3,i+1,"0 KB");
+				//processList->SetValueAt(4,i+1,"0 %");
+				processList->SetValueAt(4,i+1,"Dead");
 			} else {
-				processList->SetValueAt(2,i,FormatMemory(pInfo.mem_use));
-				processList->SetValueAt(3,i,FormatMemory(pInfo.mem_peak));
-
+				sprintf(tmp, "%.0f MB", (double)pInfo.mem_use / (1024.0*1024.0));
+				processList->SetValueAt(2, i+1, tmp);
+				sprintf(tmp, "%.0f MB", (double)pInfo.mem_peak / (1024.0*1024.0));
+				processList->SetValueAt(3, i+1, tmp);
+				//sprintf(tmp, "%d %%", (int)pInfo.cpu_time);
+				//processList->SetValueAt(4, i+1, tmp);
+				/*
 				// CPU usage
 				if( lastCPUTime[i]!=-1.0f ) {
 					float dTime = appTime-lastUpdate;
@@ -244,18 +258,19 @@ void GlobalSettings::SMPUpdate(float appTime) {
 					processList->SetValueAt(4,i,"---");
 				}
 				lastCPUTime[i] = (float)pInfo.cpu_time;
+				*/
 
 				// State/Status
 				char status[128];
-				_snprintf(tmp,127,"%s: %s",prStates[states[i]],statusStr[i]);
+				_snprintf(status,127,"%s: %s",prStates[states[i]],statusStr[i]);
 				status[127]=0;
-				processList->SetValueAt(5,i,tmp);
+				processList->SetValueAt(4,i+1,status);
 
 			}
 		}
 
-		lastUpdate = appTime;
-	}
+		//lastUpdate = appTime;
+	//}
 
 }
 // ----------------------------------------------------------------

@@ -5,12 +5,6 @@
 #include "Tools.h"
 #include "Random.h"
 #include "GLApp\GLTypes.h"
-#include <iterator>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <string>
 #include <math.h>
 
 Distribution2D K_1_3_distribution = Generate_K_Distribution(1.0 / 3.0);
@@ -41,6 +35,15 @@ Distribution2D::Distribution2D(const Distribution2D &copy_src){ //copy construct
 Distribution2D::~Distribution2D(){
 	SAFE_FREE(valuesX);
 	SAFE_FREE(valuesY);
+}
+
+void Distribution2D::Resize(size_t N) {
+	if (!(N > 0) && (N < 10000000)) N = 1; //don't create 0 size distributions
+	SAFE_DELETE(valuesX);
+	SAFE_DELETE(valuesY);
+	valuesX = (double*)malloc(N * sizeof(double));
+	valuesY = (double*)malloc(N * sizeof(double));
+	size = N;
 }
 
 Distribution2D& Distribution2D::operator= (const Distribution2D &copy_src) {
@@ -81,7 +84,7 @@ double Distribution2D::InterpolateX(const double &y) {
 
 	//for (superior_index = 0; valuesY[superior_index] < y && superior_index < size; superior_index++); //To replace by binary search
 	inferior_index = binary_search(y, valuesY, size);
-	if (inferior_index == size - 1) return valuesX[size - 1]; //not found, y too large
+	if (inferior_index == size-1) return valuesX[size - 1]; //not found, y too large
 	if (inferior_index == -1)    return valuesX[0]; //not found, y too small
 	superior_index = inferior_index + 1;
 
@@ -204,7 +207,7 @@ Distribution2D Generate_Integral(double log_min, double log_max, int mode){
 		x_lower = exp(log_min + i*delta); //lower energy
 		x_higher = exp(log_min + (i + 1.0)*delta); //higher energy
 		exp_delta = x_higher - x_lower; //actual energy range for the next index
-
+		
 		x_middle = (x_lower + x_higher) / 2.0;
 		mean_photons = (SYNRAD_FAST(x_lower) + SYNRAD_FAST(x_higher)) / 2.0;
 
@@ -212,7 +215,7 @@ Distribution2D Generate_Integral(double log_min, double log_max, int mode){
 		sum_photons += interval_dN; //flux increment
 		sum_power += interval_dN*x_middle; //number of photons * average energy: energy of the interval
 		result.valuesX[i] = log(x_middle);
-		if (mode == INTEGRAL_MODE_N_PHOTONS) result.valuesY[i] = sum_photons; //used to be log(sum_flux)
+		if (mode == INTEGRAL_MODE_N_PHOTONS) result.valuesY[i] =  sum_photons; //used to be log(sum_flux)
 		else if (mode == INTEGRAL_MODE_SR_POWER) result.valuesY[i] = sum_power; //used to be log(sum_power)
 	}
 	return result;
@@ -334,8 +337,8 @@ double find_psi(double lambda_ratios, std::vector<std::vector<double>> &psi_dist
 	int foundAngle = 0;
 	/*double interpolated_CDF;
 	do { //to replace by binary search
-	foundAngle++;
-	interpolated_CDF = psi_distro[lambda_lower_index][foundAngle] + lambda_overshoot*(psi_distro[lambda_lower_index + 1][foundAngle] - psi_distro[lambda_lower_index][foundAngle]);
+		foundAngle++;
+		interpolated_CDF = psi_distro[lambda_lower_index][foundAngle] + lambda_overshoot*(psi_distro[lambda_lower_index + 1][foundAngle] - psi_distro[lambda_lower_index][foundAngle]);
 
 	} while (interpolated_CDF < lookup);*/
 
@@ -349,11 +352,11 @@ double find_psi(double lambda_ratios, std::vector<std::vector<double>> &psi_dist
 	{
 		// calculate the midpoint for roughly equal partition
 		int imid = (imin + imax) / 2;
-		interpolated_CDF_lower = WEIGH(psi_distro[lambda_lower_index][imid], psi_distro[lambda_lower_index + 1][imid], lambda_overshoot);
-		interpolated_CDF_higher = WEIGH(psi_distro[lambda_lower_index][imid + 1], psi_distro[lambda_lower_index + 1][imid + 1], lambda_overshoot);
+		interpolated_CDF_lower = WEIGH(psi_distro[lambda_lower_index][imid],psi_distro[lambda_lower_index + 1][imid],lambda_overshoot);
+		interpolated_CDF_higher = WEIGH(psi_distro[lambda_lower_index][imid+1], psi_distro[lambda_lower_index + 1][imid+1], lambda_overshoot);
 		if (imid == size - 1 || (interpolated_CDF_lower < lookup && lookup < interpolated_CDF_higher)) {
 			// key found at index imid
-			foundAngle = imid + 1; //will be lowered by 1
+			foundAngle = imid+1; //will be lowered by 1
 			break;
 		}
 		// determine which subarray to search
@@ -506,7 +509,7 @@ return local_polarization_integral.InterpolateX(seed);
 */
 double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_distro) {
 
-	double psi_index, chi_lower, chi_higher, chi_higher2, chi;
+	double psi_index, chi_lower, chi_higher,  chi;
 	double psi_relative = log10(abs(psi)*(gamma / 10000.0)); //distributions are digitized for gamma=10000, and sampled logarithmically
 	if (psi_relative < -7.0) {
 		psi_index = 0; //use lowest angle
@@ -523,9 +526,9 @@ double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_
 	int foundAngle = 0;
 	/*interpolated_CDF = 0.0;
 	do { //to replace by binary search
-	previous_interpolated_CDF = interpolated_CDF;
-	foundAngle++;
-	interpolated_CDF = WEIGH(chi_distro[foundAngle][psi_lower_index], chi_distro[foundAngle][psi_lower_index + 1], psi_overshoot);
+		previous_interpolated_CDF = interpolated_CDF;
+		foundAngle++;
+		interpolated_CDF = WEIGH(chi_distro[foundAngle][psi_lower_index], chi_distro[foundAngle][psi_lower_index + 1], psi_overshoot);
 	} while (interpolated_CDF < lookup);*/
 
 	//Binary search
@@ -621,8 +624,8 @@ double SYNGEN1(double log_x_min, double log_x_max, int mode) {
 
 	double generated_energy;
 	if (mode == SYNGEN_MODE_FLUXWISE) {
-		double flux_min = integral_N_photons.InterpolateY(MAX(LOWER_LIMIT, log_x_min));
-		double flux_max = integral_N_photons.InterpolateY(MIN(UPPER_LIMIT, log_x_max));
+		double flux_min = integral_N_photons.InterpolateY(MAX(LOWER_LIMIT,log_x_min));
+		double flux_max = integral_N_photons.InterpolateY(MIN(UPPER_LIMIT,log_x_max));
 		double generated_flux = WEIGH(flux_min, flux_max, rnd()); //uniform distribution between flux_min and flux_max
 		generated_energy = exp(integral_N_photons.InterpolateX(generated_flux));
 	}
@@ -695,61 +698,34 @@ double SYNRAD_FAST(const double &x) {
 	else return 0.0;
 }
 
+void Material::LoadCSV(FileReader *file){
+	file->SeekForChar(","); //find first comma (skip A1 cell)
+	file->ReadKeyword(",");
+	double val;
 
-void Material::LoadMaterialCSV(FileReader *file){
-	bool angleInit = true;
-	bool energyInit = true;
-	hasBackscattering = false;
-	size_t lineCount = 0;
-	while (!file->IsEof()) {
-		std::string line = file->ReadLine(); lineCount++;
-		std::stringstream   lineStream(line);
-		std::string         cell;
+	do { //store values and read subsequent angles
+		val = file->ReadDouble();
+		angleVals.push_back(val);
+		if (!file->IsEol()) file->ReadKeyword(",");
+	} while (!file->IsEol());
 
-		std::vector<std::string>    m_data;
-		while (std::getline(lineStream, cell, ','))
-		{
-			m_data.push_back(cell);
+	do {
+		std::vector<double> currentRow;
+		val = file->ReadDouble();
+		energyVals.push_back(val);
+		for (int i = 0; i < (int)angleVals.size(); i++) {
+			file->ReadKeyword(",");
+			val = file->ReadDouble();
+			currentRow.push_back(val);
 		}
-		if (angleInit) { //first line, load angles
-			InitAngles(m_data);
-			angleInit = false;
-		}
-		else if (m_data[0] == "diffuse" || m_data[0] == "back" || m_data[0] == "transparent") {
-			hasBackscattering = true;
-			energyInit = false;
-			lineCount = 0;
-			continue; //skip line
-		}
-		else { //regular row with values
-			if (energyInit) {
-				energyVals.push_back(atof(m_data[0].c_str()));
-			}
-			std::vector<std::vector<double>> newRow;
-			for (size_t i = 1; i < m_data.size(); i++) {
-				if (energyInit) { //Forward reflection, construct table
-					std::vector<double> newCell;
-					newCell.push_back(atof(m_data[i].c_str()));
-					newRow.push_back(newCell);
-				}
-				else { //table already exist, add new components
-					reflVals[lineCount - 1][i - 1].push_back(atof(m_data[i].c_str()));
-				}
-			}
-			if (energyInit) reflVals.push_back(newRow);
-		}
-	}
+		reflVals.push_back(currentRow);
+	} while (!file->IsEof());
 }
 
-void Material::InitAngles(std::vector<std::string> data) {
-	angleVals = std::vector<double>(); //Reset
-	for (size_t i = 1; i < data.size(); i++) {
-		angleVals.push_back(std::stod(data[i]));
-	}
-}
-
-std::vector<double> Material::Interpolate(const double &energy, const double &angle) {
+double Material::Interpolate(const double &energy, const double &angle) {
 	int angleLowerIndex, energyLowerIndex;
+	//for (angleLowerIndex = 0; angleLowerIndex<((int)angleVals.size() - 1) && angle>angleVals[angleLowerIndex + 1]; angleLowerIndex++); //replace by binary search
+	//for (energyLowerIndex = 0; energyLowerIndex<((int)energyVals.size() - 1) && energy>energyVals[energyLowerIndex + 1]; energyLowerIndex++); //replace by binary search
 
 	angleLowerIndex = binary_search(angle, angleVals, angleVals.size());
 	energyLowerIndex = binary_search(energy, energyVals, energyVals.size());
@@ -763,14 +739,11 @@ std::vector<double> Material::Interpolate(const double &energy, const double &an
 	double energyOvershoot = log(energy) - log(energyVals[energyLowerIndex]);
 	double energyDelta = log(energyVals[energyLowerIndex + 1]) - log(energyVals[energyLowerIndex]);
 
-	std::vector<double> interpRefl;
-	for (size_t comp = 0; comp < reflVals[energyLowerIndex][angleLowerIndex].size(); comp++) {
-		double interpolatedReflForLowerAngle = WEIGH(reflVals[energyLowerIndex][angleLowerIndex][comp], reflVals[energyLowerIndex + 1][angleLowerIndex][comp], energyOvershoot / energyDelta);
-		double interpolatedReflForHigherAngle = WEIGH(reflVals[energyLowerIndex][angleLowerIndex + 1][comp], reflVals[energyLowerIndex + 1][angleLowerIndex + 1][comp], energyOvershoot / energyDelta);
-		double refl = WEIGH(interpolatedReflForLowerAngle, interpolatedReflForHigherAngle, angleOvershoot / angleDelta);
-		SATURATE(refl, 0.0, 1.0);
-		interpRefl.push_back(refl);
-	}
+	double interpolatedReflForLowerAngle = WEIGH(reflVals[energyLowerIndex][angleLowerIndex], reflVals[energyLowerIndex + 1][angleLowerIndex], energyOvershoot / energyDelta);
+	double interpolatedReflForHigherAngle = WEIGH(reflVals[energyLowerIndex][angleLowerIndex + 1], reflVals[energyLowerIndex + 1][angleLowerIndex + 1], energyOvershoot / energyDelta);
+
+	double interpRefl = WEIGH(interpolatedReflForLowerAngle, interpolatedReflForHigherAngle, angleOvershoot / angleDelta);
+	SATURATE(interpRefl, 0.0, 1.0);
 	return interpRefl;
 }
 
@@ -783,8 +756,8 @@ template <typename T> int binary_search(double key, T A, int size)
 	while (imin <= imax)
 	{
 		// calculate the midpoint for roughly equal partition
-		int imid = (imin + imax) / 2;
-		if (imid == size - 1 || imid == 0 || (A[imid] < key && key < A[imid + 1]))
+		int imid = (imin+imax)/2;
+		if (imid==size-1 || imid==0 || (A[imid] < key && key < A[imid+1]))
 			// key found at index imid
 			return imid;
 		// determine which subarray to search
@@ -797,15 +770,4 @@ template <typename T> int binary_search(double key, T A, int size)
 	}
 	// key was not found
 	return -1;
-}
-
-int Material::GetReflectionType(const double &energy, const double &angle, double const &rnd) {
-	std::vector<double> components = Interpolate(energy, angle);
-	if (rnd < components[0]) return REFL_FORWARD; //forward reflection
-	else if (hasBackscattering) {
-		if (rnd < (components[0] + components[1])) return REFL_DIFFUSE; //diffuse reflection
-		else if (rnd < (components[0] + components[1] + components[2])) return REFL_BACK; //backscattering
-		else if (rnd < (components[0] + components[1] + components[2] + components[3])) return REFL_TRANS; //transparent pass
-	}
-	return REFL_ABSORB; //absorption
 }

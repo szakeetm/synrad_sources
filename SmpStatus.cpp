@@ -60,7 +60,7 @@ SmpStatus::SmpStatus():GLWindow() {
   nbProcText->SetBounds(210,hD-43,30,19);
   Add(nbProcText);
 
-  maxButton = new GLButton(0,"Change MAX desorbed molecules");
+  maxButton = new GLButton(0,"Change MAX generated photons");
   maxButton->SetBounds(wD-280,hD-43,180,19);
   Add(maxButton);
 
@@ -78,9 +78,9 @@ SmpStatus::SmpStatus():GLWindow() {
 
   RestoreDeviceObjects();
 
-  lastUpdate = 0.0f;
+  /*lastUpdate = 0.0f;
   for(int i=0;i<MAX_PROCESS;i++) lastCPUTime[i]=-1.0f;
-  memset(lastCPULoad,0,MAX_PROCESS*sizeof(float));
+  memset(lastCPULoad,0,MAX_PROCESS*sizeof(float));*/
 
 }
 

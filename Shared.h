@@ -26,7 +26,7 @@
 
 #define NBHLEAK     2048  // Leak history max length
 #define NBHHIT      2048  // Max. displayed number of lines and Porto (OPO)hits.
-#define MAX_PROCESS 16    // Maximum number of process
+#define MAX_PROCESS 32    // Maximum number of process
 
 typedef  struct {
     // Counts
@@ -73,12 +73,13 @@ typedef struct {
 
 static const char *prStates[] = {
 
-"Not started",
+"Starting",
 "Running",
-"Waiting",
+"Ready",
 "Killed",
 "Error",
 "Done",
+"",
 "",
 "",
 "",
@@ -88,8 +89,7 @@ static const char *prStates[] = {
 "Stop",
 "Reset",
 "Exit",
-"Close",
-
+"Close"
 };
 
 typedef struct {
@@ -106,8 +106,8 @@ typedef struct {
   int        nbFacet;   // Number of facets (total)
   int        nbVertex;  // Number of 3D vertices
   int        nbSuper;   // Number of superstructures
-  size_t        nbRegion;  //number of magnetic regions
-  size_t        nbTrajPoints; //total number of trajectory points (calculated at CopyGeometryBuffer)
+  int        nbRegion;  //number of magnetic regions
+  int        nbTrajPoints; //total number of trajectory points (calculated at CopyGeometryBuffer)
   int        generation_mode; //fluxwise or powerwise
   BOOL		 lowFluxMode;
   double	 lowFluxCutoff;
@@ -120,10 +120,8 @@ typedef struct {
   double sticking;       // Sticking        (0=>reflection  , 1=>absorption)
   double opacity;        // opacity         (0=>transparent , 1=>opaque)
   double area;           // Facet area (m^2)
-  int    doScattering;   // Do rough surface scattering
-  double rmsRoughness;   // RMS height roughness, in meters
-  double autoCorrLength; // Autocorrelation length, in meters
-  int    reflectType;    // Reflection type. 0=Diffuse, 1=Mirror, 10,11,12... : Material 0, Material 1, Material 2...., 9:invalid 
+  double roughness;      // sigmaX/sigmaH, only used if reflection type is "material scattering"
+  int    reflectType;    // Reflection type
   int    profileType;    // Profile type
   int    superIdx;       // Super structure index (Indexed from 0)
   int    superDest;      // Super structure destination index (Indexed from 1, 0=>current)
@@ -178,7 +176,7 @@ typedef struct {
 //
 //  SHELEM
 
-typedef struct {
+/*typedef struct {
 
   float   area;     // Area of element
   float   uCenter;  // Center coordinates
@@ -186,6 +184,6 @@ typedef struct {
   int     elemId;   // Element index (MESH array)
   BOOL    full;     // Element is full
 
-} SHELEM;
+} SHELEM;*/
 
 #endif /* SHAREDH */

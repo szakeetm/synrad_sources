@@ -27,6 +27,7 @@
 
 
 extern float m_fTime;
+class LoadStatus;
 class Worker
 {
 
@@ -109,6 +110,7 @@ public:
   int    generation_mode;   //fluxwise or powerwise
   BOOL   lowFluxMode;
   double lowFluxCutoff;
+  BOOL abortRequested; //signal to stop waiting for subprocesses
   std::vector<Region_full> regions;
   std::vector<Material> materials;
   std::vector<std::vector<double>> psi_distr;
@@ -116,6 +118,7 @@ public:
   char fullFileName[512]; // Current loaded file
 
   BOOL needsReload;
+  //BOOL exiting;
 
 private:
 
@@ -141,8 +144,8 @@ private:
   LEAK leakCache[NBHHIT];
 
   // Methods
-  BOOL ExecuteAndWait(int command,int waitState,int param=0,GLProgress *prg=NULL);
-  BOOL Wait(int waitState,int timeout,GLProgress *prg=NULL);
+  BOOL ExecuteAndWait(int command,int waitState,int param=0);
+  BOOL Wait(int waitState,LoadStatus *statusWindow=NULL);
   void ResetWorkerStats();
   void ClearHits();
   char *GetErrorDetails();

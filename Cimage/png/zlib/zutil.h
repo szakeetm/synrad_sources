@@ -137,7 +137,7 @@ extern const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 #  define OS_CODE  0x0a
 #endif
 
-#ifdef WIN32
+#ifdef WIN
 #  ifndef __CYGWIN__  /* Cygwin is Unix, not Win32 */
 #    define OS_CODE  0x0b
 #  endif
@@ -194,7 +194,7 @@ extern const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 #  ifdef __TURBOC__
 #    define NO_vsnprintf
 #  endif
-#  ifdef WIN32
+#  ifdef WIN
      /* In Win32, vsnprintf is available as the "non-ANSI" _vsnprintf. */
 #    if !defined(vsnprintf) && !defined(NO_vsnprintf)
 #      define vsnprintf _vsnprintf

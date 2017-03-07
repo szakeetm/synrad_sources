@@ -223,7 +223,7 @@
      /* No need for _export, use ZLIB.DEF instead. */
      /* For complete Windows compatibility, use WINAPI, not __stdcall. */
 #    define ZEXPORT WINAPI
-#    ifdef WIN32
+#    ifdef WIN
 #      define ZEXPORTVA WINAPIV
 #    else
 #      define ZEXPORTVA FAR CDECL

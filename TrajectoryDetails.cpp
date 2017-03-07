@@ -229,6 +229,9 @@ char *TrajectoryDetails::FormatCell(int idx, int mode, GenPhoton* photon) {
 			else theta = PI / 2;
 		}
 		else theta = -atan(p->direction.x / p->direction.z);
+		if (p->direction.z <= 0) //atan out of period
+			if (p->direction.x < 0) theta += PI;
+			else theta -= PI;
 		sprintf(ret, "%g", theta);
 		break; }
 	case 7: //Orbit_B
@@ -332,7 +335,7 @@ char *TrajectoryDetails::FormatCell(int idx, int mode, GenPhoton* photon) {
 		sprintf(ret, "%g", photon->energy / photon->critical_energy);
 		break;
 	case 40: //Photon_G1H2
-		sprintf(ret, "%g", "g1h2 obsolete");
+		sprintf(ret, "%s", "g1h2 obsolete");
 		break;
 	case 41: //Photon_B_factor
 		sprintf(ret, "%g", photon->B_factor);
@@ -406,7 +409,7 @@ void TrajectoryDetails::UpdateTable() {
 
 	int nbPoints = (int)worker->regions[displayedRegion].Points.size();
 
-	pointList->SetSize(nbCol, (int)((double)nbPoints / (double)freq));
+	pointList->SetSize(nbCol, (int)((double)nbPoints / (double)freq)+1);
 	pointList->SetColumnWidths(tmpWidth);
 	pointList->SetColumnLabels(tmpName);
 	pointList->SetColumnAligns(tmpAlign);

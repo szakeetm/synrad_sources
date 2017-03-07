@@ -712,7 +712,7 @@ void Geometry::SetCullMode(int mode) {
 
 
 
-void Geometry::BuildTexture(BYTE *hits) {
+void Geometry::BuildFacetTextures(BYTE *hits) {
 
   SHGHITS *shGHit = (SHGHITS *)hits;
   //float dCoef = 1.0f;
@@ -738,7 +738,11 @@ void Geometry::BuildTexture(BYTE *hits) {
   if( shGHit->total.nbDesorbed ) 
     iDesorbed = 1.0 / (double)shGHit->total.nbDesorbed;
 
+  GLProgress *prg = new GLProgress("Building texture", "Frame update");
+   prg->SetBounds(5, 28, 300, 90);
+   prg->SetVisible(TRUE);
   for(int i=0;i<sh.nbFacet;i++) {
+	  prg->SetProgress((double)i / (double)sh.nbFacet);
 	  Facet *f = facets[i];
 	  GLint max_t;
 	  glGetIntegerv(GL_MAX_TEXTURE_SIZE,&max_t);
@@ -791,10 +795,23 @@ void Geometry::BuildTexture(BYTE *hits) {
     }
 
   }
-
+    prg->SetVisible(FALSE);
+   SAFE_DELETE(prg);
 }
 
-
+void Geometry::ClearFacetTextures()
+{
+	GLProgress *prg = new GLProgress("Building texture", "Frame update");
+	prg->SetBounds(5, 28, 300, 90);
+	prg->SetVisible(TRUE);
+	for (int i = 0;i < sh.nbFacet;i++) {
+		prg->SetProgress((double)i / (double)sh.nbFacet);
+		DELETE_TEX(facets[i]->glTex);
+		glGenTextures(1, &facets[i]->glTex);
+	}
+	prg->SetVisible(FALSE);
+	SAFE_DELETE(prg);
+}
 
 void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int showMode,BOOL filter,BOOL showHidden,BOOL showMesh,BOOL showDir) {
 
@@ -913,8 +930,8 @@ void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int 
     for( int i=0; i<sh.nbFacet ;i++) {
       
 	  Facet *f = facets[i];
-      //if( f->selected && f->mesh ) glCallList(f->glElem);
-	  if( f->mesh && f->textureVisible ) {
+	  if( f->cellPropertiesIds  && f->textureVisible) {
+			if (!f->glElem) f->BuildMeshList();
 		    glEnable(GL_POLYGON_OFFSET_LINE);
 			glPolygonOffset(1.0f,2.0f);
 			glCallList(f->glElem);
@@ -940,7 +957,7 @@ void Geometry::Render(GLfloat *matView,BOOL renderVolume,BOOL renderTexture,int 
         for(int x=0;x<f->sh.texWidth;x++) {
           for(int y=0;y<f->sh.texHeight;y++) {           
              int add = x + y*f->sh.texWidth;
-             if( f->mesh[add].area > 0.0 ) {
+             if( f->GetMeshArea(add) > 0.0 ) {
                double uC = ((double)x + 0.5) * iw;
                double vC = ((double)y + 0.5) * ih;
                float xc = (float)( f->sh.O.x + f->sh.U.x*uC + f->sh.V.x*vC );

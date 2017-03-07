@@ -25,6 +25,12 @@
 #define ALIGN_CENTER 1
 #define ALIGN_RIGHT  2
 
+// Column colors
+#define COLOR_BLACK   0
+#define COLOR_RED 1
+#define COLOR_GREEN  2
+#define COLOR_BLUE 3
+
 // Editing cell format
 #define EDIT_STRING  1
 #define EDIT_NUMBER  2
@@ -45,7 +51,7 @@ public:
 
   // Component methods
   void SetWorker(Worker *w);
-  void SetSize(int nbColumn,int nbRow,BOOL showProgress=FALSE);
+  void SetSize(int nbColumn,int nbRow,BOOL keepData=FALSE,BOOL showProgress=FALSE);
   void SetColumnLabels(char **names);
   void SetColumnLabel(int colId,char *name);
   void SetAutoColumnLabel(BOOL enable);
@@ -58,10 +64,14 @@ public:
   void SetRowLabelVisible(BOOL visible);
   void SetColumnWidths(int *widths);
   void SetColumnWidth(int colId,int width);
+  void SetColumnWidthForAll(int width);
   void AutoSizeColumn();
   void SetColumnAligns(int *aligns);
   void SetColumnAlign(int colId,int align);
-  void SetColumnAlign(int align);
+  void SetAllColumnAlign(int align);
+  void SetColumnColors(int *aligns);
+  void SetColumnColor(int colId, int align);
+  void SetAllColumnColors(int align);
   void SetColumnEditable(int *editables);
   BOOL GetSelectionBox(int *row,int *col,int *rowLength,int *colLength);
   void SetVScrollVisible(BOOL visible);
@@ -69,7 +79,7 @@ public:
   void SetSelectionMode(int mode);
   void GLList::SetSelectedCell(int column,int row);
   void SetCornerLabel(char *text);
-  void Clear(BOOL showProgress=FALSE);
+  void Clear(BOOL keepColumns=FALSE,BOOL showProgress=FALSE);
   void ResetValues();
   int  GetNbRow();
   int  GetNbColumn();
@@ -103,8 +113,10 @@ public:
   int  FindIndex(int index,int inColumn);
   int GetValueInt(int row, int column);
   double GetValueDouble(int row, int column);
+  //void UpdateAllRows();
   void ReOrder();
-  void PasteClipboardText();
+  void PasteClipboardText(BOOL allowExpandRows, BOOL allowExpandColumns, int extraRowsAtEnd=0);
+  void SetFontColor(int r, int g, int b);
 
   
   int   lastRowSel;
@@ -137,10 +149,12 @@ private:
   int  *cWidths;
   int   cHeight;
   int  *cAligns;
+  int  *cColors;
   char **cNames;
   char **rNames;
   char **values;
   int  *uValues;
+  
   int   sbDragged;
   BOOL  colDragged;
   BOOL  motionSelection;
@@ -167,6 +181,10 @@ private:
   BOOL  selDragged;
   int   labelRowMargin;
   char  *cornerLabel;
+
+  int FontColorR;
+  int FontColorG;
+  int FontColorB;
 
   int   lastColX;
   int   lastColY;

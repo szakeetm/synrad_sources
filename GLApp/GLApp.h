@@ -55,10 +55,10 @@ protected:
     virtual int FrameMove()                                { return GL_OK; }
     virtual int InvalidateDeviceObjects()                  { return GL_OK; }
     virtual int OnExit()                                   { return GL_OK; }
-    virtual int EventProc(SDL_Event *event)                { return GL_OK; }
+    
 
 public:
-
+	virtual int EventProc(SDL_Event *event)                { return GL_OK; }
     // Functions to create, run, pause, and clean up the application
     virtual int  Create(int width, int height, BOOL bFullScreen);
     virtual void Pause(BOOL bPause);

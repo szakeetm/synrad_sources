@@ -175,7 +175,7 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
 	else if (src==notepadButton) {
 		char tmp[512];
 		sprintf(tmp,"notepad.exe \"%s\"",work->regions[regionSelector->GetSelectedIndex()].fileName.c_str());
-		StartProc_foreground(tmp);
+		StartProc(tmp,STARTPROC_FOREGROUND);
 	} else if (src==reloadButton) {
 		char tmp[512];
 		sprintf(tmp,"%s",work->regions[regionSelector->GetSelectedIndex()].fileName.c_str());

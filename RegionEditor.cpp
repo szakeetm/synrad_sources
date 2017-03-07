@@ -813,19 +813,19 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 		} else if (src==this->bxyEditButton) {
 			char tmp[512];
 			sprintf(tmp,"notepad.exe \"%s\"",BXYfileNameText->GetText());
-			StartProc_foreground(tmp);
+			StartProc(tmp,STARTPROC_FOREGROUND);
 		} else if (src==this->magxEditButton) {
 			char tmp[512];
 			sprintf(tmp,"notepad.exe \"%s\"",MAGfileXtext->GetText());
-			StartProc_foreground(tmp);
+			StartProc(tmp, STARTPROC_FOREGROUND);
 		} else if (src==this->magyEditButton) {
 			char tmp[512];
 			sprintf(tmp,"notepad.exe \"%s\"",MAGfileYtext->GetText());
-			StartProc_foreground(tmp);
+			StartProc(tmp, STARTPROC_FOREGROUND);
 		} else if (src==this->magzEditButton) {
 			char tmp[512];
 			sprintf(tmp,"notepad.exe \"%s\"",MAGfileZtext->GetText());
-			StartProc_foreground(tmp);
+			StartProc(tmp, STARTPROC_FOREGROUND);
 		} else if (src==this->bxyBrowseButton) {
 			//load file dialog
 			FILENAME *bxyFile=GLFileBox::OpenFile(NULL,NULL,"Open BXY file","BXY files\0*.bxy\0All files\0*.*\0",2);
@@ -863,7 +863,7 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 				"vertical_emittance = horizontal_emittance * coupling\n\n"
 				"sigma_x = sqrt( horizontal_emittance * beta_X + (eta * energy_spread)^2 )\n"
 				"sigma_y = vertical_emittance * beta_Y\n"
-				"sigma_x_prime = sqrt( horizontal_emittance / beta_X + (eta_prime / energy_spread)^2 )\n"
+				"sigma_x_prime = sqrt( horizontal_emittance / beta_X + (eta_prime * energy_spread)^2 )\n"
 				"sigma_y_prime=sqrt( vertical_emittance / beta_Y )\n\n"
 				"The beam size follows a bivariate Gaussian distribution with "
 				"sigma_x and sigma_y standard deviations.\n"

@@ -36,7 +36,7 @@
 
 #define SEL_HISTORY  100
 #define MAX_SUPERSTR 128
-#define SYNVERSION   9
+#define SYNVERSION   8
 #define GEOVERSION   15
 #define PARAMVERSION 2
 
@@ -88,6 +88,10 @@ public:
   void LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg);
   void InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, BOOL newStr);
   BOOL LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit, Worker *work, GLProgress *progressDlg);
+
+  void ClearFacetMeshLists();
+
+  void BuildFacetMeshLists();
 
   // Selection (drawing stuff)
   void SelectAll();
@@ -165,7 +169,6 @@ public:
   AABB     GetBB();
   void     Rebuild();
   void	   MergecollinearSides(Facet *f,double fT);
-  void     BuildTexture(BYTE *hits);
   void     ShiftVertex();
   int      HasIsolatedVertices();
   void     DeleteIsolatedVertices(BOOL selectedOnly);
@@ -183,7 +186,8 @@ public:
   void     LoadSpectrumSYN(FileReader *file,Dataport *dpHit);
   void UpdateName(FileReader *file);
   void UpdateName(const char *fileName);
-
+  void BuildFacetTextures(BYTE * hits);
+  void ClearFacetTextures();
  
   // Texture scaling
   int textureMode;  //MC hits/flux/power
@@ -216,7 +220,7 @@ public:
 
 
   // Memory usage (in bytes)
-  size_t GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials, std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr);
+  DWORD GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials, std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr);
   DWORD GetHitsSize();
 
 
@@ -302,6 +306,7 @@ private:
   void BuildSelectList();
   
   void SetCullMode(int mode);
+  
   GLMATERIAL fillMaterial;
   GLMATERIAL whiteMaterial;
   GLMATERIAL arrowMaterial;

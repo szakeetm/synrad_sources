@@ -53,10 +53,11 @@
 #define MIN(x,y) (((x)<(y))?(x):(y))
 #define SATURATE(x,min,max) {if(x<(min)) x=(min); if(x>(max)) x=(max);}
 #define WEIGH(a,b,weigh) a+(b-a)*weigh
-#define DELETE_LIST(l) if(l) { glDeleteLists(l,1);l=0; }
-#define DELETE_TEX(t)  if(t) { glDeleteTextures(1,&t);t=0; }
 #define SAFE_DELETE(x) if(x) { delete x;x=NULL; }
 #define SAFE_FREE(x) if(x) { free(x);x=NULL; }
+#define DELETE_LIST(l) if(l) { glDeleteLists(l,1);l=0; }
+#define DELETE_TEX(t)  if(t) { glDeleteTextures(1,&t);t=0; }
+
 #define IVALIDATE_DLG(dlg) if(dlg && !dlg->IsVisible()) dlg->InvalidateDeviceObjects();
 #define RVALIDATE_DLG(dlg) if(dlg && !dlg->IsVisible()) dlg->RestoreDeviceObjects();
 
@@ -65,6 +66,8 @@
 #define GL_OK   1
 #define GL_FAIL 0
 #define PI 3.14159265358979323846
+#define TRUE  1
+#define FALSE 0
 
 // Type definitions
 

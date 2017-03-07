@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#ifdef WIN32
+#ifdef WIN
 
  #include <windows.h>
 
@@ -74,9 +74,11 @@ extern BOOL CloseDataport(Dataport *);
 // Process management
 extern BOOL          KillProc(DWORD pID);
 extern BOOL          GetProcInfo(DWORD pID,PROCESS_INFO *pInfo);
-extern DWORD         StartProc(char *pname);
-extern DWORD         StartProc_background(char *pname);
-extern DWORD         StartProc_foreground(char *pname); //TODO: unite these three
+extern DWORD         StartProc(char *pname,int mode);
+BOOL IsProcessRunning(DWORD pID);
+
+/*extern DWORD         StartProc_background(char *pname);
+extern DWORD         StartProc_foreground(char *pname); //TODO: unite these three*/
 
 #define CLOSEDP(dp) if(dp) { CloseDataport(dp);(dp)=NULL; }
 

@@ -17,7 +17,8 @@
 */
 
 #include <windows.h>
-#include <winperf.h>
+//#include <winperf.h>
+#include<Psapi.h>
 #include <stdio.h>
 #include "SMP.h"
 
@@ -123,7 +124,7 @@ static BOOL   counterInited = FALSE;
 // Search performance counter
 //-----------------------------------------------------------------------------
 
-BOOL InitCounter() {
+/*BOOL InitCounter() {
 
   if( !counterInited ) {
 
@@ -248,8 +249,9 @@ BOOL InitCounter() {
   }
   return counterInited;
 
-}
+}*/
 
+/*
 BOOL GetProcInfo(DWORD pID,PROCESS_INFO *pInfo) {
 
     DWORD                        rc;
@@ -382,13 +384,14 @@ BOOL GetProcInfo(DWORD pID,PROCESS_INFO *pInfo) {
 
     free( buf );
     return pFound;
-}
+
+}*/
 
 //-----------------------------------------------------------------------------
 // Launch the process pname and return its PID.
 //-----------------------------------------------------------------------------
 
-DWORD StartProc(char *pname) { //minimized in Debug mode, hidden in Release mode
+DWORD StartProc(char *pname,int mode) { //minimized in Debug mode, hidden in Release mode
 
 	PROCESS_INFORMATION pi;
 	STARTUPINFO si;
@@ -397,44 +400,50 @@ DWORD StartProc(char *pname) { //minimized in Debug mode, hidden in Release mode
 
 	memset( &si, 0, sizeof(si) );      
 	si.cb = sizeof(si);
-
+	si.dwFlags = STARTF_USESHOWWINDOW;
+	DWORD launchMode;
 
 #ifndef _DEBUG
-
-  si.dwFlags     = STARTF_USESHOWWINDOW;
-	si.wShowWindow = SW_SHOW;
-
-	if( !CreateProcess(
-          NULL,             // pointer to name of executable module
-		      pname,            // pointer to command line string
-          NULL,             // process security attributes
-          NULL,             // thread security attributes
-	        FALSE,            // handle inheritance flag
-          DETACHED_PROCESS|BELOW_NORMAL_PRIORITY_CLASS , // creation flags
-          NULL,             // pointer to new environment block
-		      NULL,             // pointer to current directory name
-		      &si,              // pointer to STARTUPINFO
-          &pi               // pointer to PROCESS_INFORMATION
-		  ) ) {
-
-//Show console
+	
+	if (mode == STARTPROC_NORMAL) {
+		si.wShowWindow = SW_SHOW;
+		launchMode = DETACHED_PROCESS;
+	}
+	else if (mode == STARTPROC_BACKGROUND) {
+		si.wShowWindow = SW_MINIMIZE;
+		launchMode = CREATE_NEW_CONSOLE;
+	}
+	else {
+		si.wShowWindow = SW_SHOW;
+		launchMode = CREATE_NEW_CONSOLE;
+	}
 #else
-		si.dwFlags = STARTF_USESHOWWINDOW;
-	si.wShowWindow = SW_MINIMIZE;
-  if( !CreateProcess(
-          NULL,             // pointer to name of executable module
-		      pname,            // pointer to command line string
-          NULL,             // process security attributes
-          NULL,             // thread security attributes
-	        FALSE,            // handle inheritance flag
-          CREATE_NEW_CONSOLE|BELOW_NORMAL_PRIORITY_CLASS, // creation flags
-          NULL,             // pointer to new environment block
-		      NULL,             // pointer to current directory name
-		      &si,              // pointer to STARTUPINFO
-          &pi               // pointer to PROCESS_INFORMATION
-		  ) ) {
+	launchMode = CREATE_NEW_CONSOLE;
+	if (mode == STARTPROC_NORMAL) {
+		si.wShowWindow = SW_MINIMIZE;
+	}
+	else if (mode == STARTPROC_BACKGROUND) {
+		si.wShowWindow = SW_MINIMIZE;
+	}
+	else {
+		si.wShowWindow = SW_SHOW;
+	}
+
+
 		  
 #endif
+	if (!CreateProcess(
+		NULL,             // pointer to name of executable module
+		pname,            // pointer to command line string
+		NULL,             // process security attributes
+		NULL,             // thread security attributes
+		FALSE,            // handle inheritance flag
+		launchMode | BELOW_NORMAL_PRIORITY_CLASS, // creation flags
+		NULL,             // pointer to new environment block
+		NULL,             // pointer to current directory name
+		&si,              // pointer to STARTUPINFO
+		&pi               // pointer to PROCESS_INFORMATION
+	)) {
 
 	  return 0;
 
@@ -444,12 +453,13 @@ DWORD StartProc(char *pname) { //minimized in Debug mode, hidden in Release mode
 
 }
 
+/*
 DWORD StartProc_background(char *pname) { //always starts minimized
 
 	PROCESS_INFORMATION pi;
 	STARTUPINFO si;
 
-	/* Launch */
+	
 
 	memset( &si, 0, sizeof(si) );      
 	si.cb = sizeof(si);
@@ -486,7 +496,7 @@ DWORD StartProc_foreground(char *pname) { //always starts minimized
 	PROCESS_INFORMATION pi;
 	STARTUPINFO si;
 
-	/* Launch */
+	
 
 	memset( &si, 0, sizeof(si) );      
 	si.cb = sizeof(si);
@@ -516,4 +526,76 @@ DWORD StartProc_foreground(char *pname) { //always starts minimized
 
 	return pi.dwProcessId;
 
+}
+*/
+
+BOOL GetProcInfo(DWORD processID, PROCESS_INFO *pInfo) {
+	HANDLE hProcess;
+	PROCESS_MEMORY_COUNTERS pmc;
+
+	HANDLE process = OpenProcess(SYNCHRONIZE, FALSE, processID);
+	DWORD ret = WaitForSingleObject(process, 0);
+	CloseHandle(process);
+	if (ret != WAIT_TIMEOUT) return FALSE;
+
+	hProcess = OpenProcess(PROCESS_QUERY_INFORMATION |
+		PROCESS_VM_READ,
+		FALSE, processID);
+
+	if (GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc)))
+	{
+
+		pInfo->mem_peak=pmc.PeakWorkingSetSize;
+		pInfo->mem_use=pmc.WorkingSetSize;
+		/*
+		//Init
+		SYSTEM_INFO sysInfo;
+		FILETIME ftime, fsys, fuser;
+		ULARGE_INTEGER lastCPU, lastSysCPU, lastUserCPU;
+		
+		GetSystemInfo(&sysInfo);
+
+		GetSystemTimeAsFileTime(&ftime);
+		memcpy(&lastCPU, &ftime, sizeof(FILETIME));
+
+		GetProcessTimes(hProcess, &ftime, &ftime, &fsys, &fuser);
+		memcpy(&lastSysCPU, &fsys, sizeof(FILETIME));
+		memcpy(&lastUserCPU, &fuser, sizeof(FILETIME));
+
+		
+		ULARGE_INTEGER now, sys, user;
+		double percent;
+
+		GetSystemTimeAsFileTime(&ftime);
+		memcpy(&now, &ftime, sizeof(FILETIME));
+
+		GetProcessTimes(hProcess, &ftime, &ftime, &fsys, &fuser);
+		memcpy(&sys, &fsys, sizeof(FILETIME));
+		memcpy(&user, &fuser, sizeof(FILETIME));
+		percent = (sys.QuadPart - lastSysCPU.QuadPart) +
+			(user.QuadPart - lastUserCPU.QuadPart);
+		percent /= (now.QuadPart - lastCPU.QuadPart);
+		percent /= sysInfo.dwNumberOfProcessors;
+		lastCPU = now;
+		lastUserCPU = user;
+		lastSysCPU = sys;
+
+		pInfo->cpu_time=percent * 100;
+		*/
+			pInfo->cpu_time = 0;
+	}
+	else {
+		CloseHandle(hProcess);
+		return FALSE;
+	}
+	CloseHandle(hProcess);
+	return TRUE;
+}
+
+BOOL IsProcessRunning(DWORD pid)
+{
+	HANDLE process = OpenProcess(SYNCHRONIZE, FALSE, pid);
+	DWORD ret = WaitForSingleObject(process, 0);
+	CloseHandle(process);
+	return ret == WAIT_TIMEOUT;
 }

@@ -31,7 +31,7 @@ public:
 
   // Construction
   GlobalSettings();
-  void SMPUpdate(float appTime);
+  void SMPUpdate(float appTime,BOOL forceUpdate=FALSE);
 
   // Implementation
   void ProcessMessage(GLComponent *src,int message);
@@ -47,10 +47,6 @@ private:
   GLTextField *nbProcText;
   GLTextField *autoSaveText;
   GLTextField *cutoffText;
- 
-  float lastUpdate;
-  float lastCPUTime[MAX_PROCESS];
-  float lastCPULoad[MAX_PROCESS];
 
   GLToggle      *chkAntiAliasing;
   GLToggle      *chkWhiteBg;
@@ -63,9 +59,8 @@ private:
   GLButton    *applyButton;
   GLButton    *cancelButton;
   GLButton    *lowFluxInfo;
+  
 
-  /*GLTextField *outgassingText;
-  GLTextField *gasmassText;*/
 
 };
 
