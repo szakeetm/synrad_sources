@@ -16,19 +16,12 @@
   GNU General Public License for more details.
 */
 
-#define PI 3.14159265358979323846
-#define MAX(x,y) (((x)<(y))?(y):(x))
-#define MIN(x,y) (((x)<(y))?(x):(y))
-
-#define SAFE_FREE(x) if(x) { free(x);x=NULL; }
-#define SATURATE(x,min,max) {if(x<(min)) x=(min); if(x>(max)) x=(max);}
 #define MAX_STRUCT 512
 
 #include "Shared.h"
-#include "smp/SMP.h"
-#include "Tools.h"
+#include "SMP.h"
 #include <vector>
-#include "Tools.h"
+#include "Vector.h"
 #include "Region_mathonly.h"
 #include "TruncatedGaussian\rtnorm.hpp"
 
@@ -40,9 +33,10 @@
 typedef struct {
 
   SHFACET sh;
+  SHHITS counter;
 
   int      *indices;   // Indices (Reference to geometry vertex)
-  VERTEX2D *vertices2; // Vertices (2D plane space, UV coordinates)
+  Vector2d *vertices2; // Vertices (2D plane space, UV coordinates)
   llong     *hits_MC;      // Number of MC hits
   double    *hits_flux;  //absorbed SR flux
   double    *hits_power; //absorbed SR power
@@ -115,19 +109,18 @@ typedef struct {
   LEAK   pLeak[NBHLEAK];      // Leak history
   //llong  wallHits[BOUNCEMAX]; // 'Wall collision count before absoprtion' density histogram
   llong totalDesorbed;        //total number of generated photons, for process state reporting and simulation end check
-  int   generation_mode;      //fluxwise or powerwise
 
   // Geometry
   char        name[64];         // Global name
   int         nbVertex;         // Number of vertex
   int         totalFacet;       // Total number of facet
-  VERTEX3D   *vertices3;        // Vertices
+  Vector3d   *vertices3;        // Vertices
   int         nbSuper;          // Number of super structure
   size_t         nbRegion;
   size_t         nbMaterials;
   size_t         nbTrajPoints;
   double      sourceArea;       //number of trajectory points weighed by 1/dL
-  size_t         nbDistrPoints_MAG;
+  //size_t         nbDistrPoints_MAG;
   size_t         nbDistrPoints_BXY;
   int         curStruct;        // Current structure
   int			teleportedFrom;
@@ -148,13 +141,13 @@ typedef struct {
   BOOL loadOK;        // Load OK flag
   BOOL lastUpdateOK;  // Last hit update timeout
   BOOL hasVolatile;   // Contains volatile facet
-  BOOL hasDirection;  // Contains direction field
+  //BOOL hasDirection;  // Contains direction field
 
   gsl_rng *gen; //rnd gen stuff
 
   // Particle coordinates (MC)
-  VERTEX3D pPos;    // Position
-  VERTEX3D pDir;    // Direction
+  Vector3d pPos;    // Position
+  Vector3d pDir;    // Direction
   //int      nbPHit;  // Number of hit (current particle) //Uncommented as it had no function
   double   dF;  //Flux carried by photon
   double   dP;  //Power carried by photon
@@ -162,9 +155,10 @@ typedef struct {
   double   distTraveledCurrentParticle; //Distance traveled by particle before absorption
   double   distTraveledSinceUpdate;
 
-  BOOL lowFluxMode;
-  double lowFluxCutoff;
   double oriRatio;
+  BOOL newReflectionModel;
+
+  SHMODE mode; //Low flux, generation mode, photon cache display
 
 } SIMULATION;
 
@@ -179,21 +173,34 @@ extern SIMULATION *sHandle;
 // -- Methods ---------------------------------------------------
 
 void RecordHitOnTexture(FACET *f,double dF,double dP);
+void RecordDirectionVector(FACET *f);
 void InitSimulation();
 void ClearSimulation();
 BOOL LoadSimulation(Dataport *loader);
+BOOL UpdateSimuParams(Dataport *loader);
 BOOL StartSimulation();
 void ResetSimulation();
 BOOL SimulationRun();
 BOOL SimulationMCStep(int nbStep);
+double GetStickingProbability(FACET * collidedFacet, const double & theta, std::vector<double>& materialReflProbabilities, BOOL & complexScattering);
+
+BOOL DoOldRegularReflection(FACET * collidedFacet, double stickingProbability, double theta = 0.0, double phi = 0.0,
+	Vector3d N_rotated = Vector3d(0, 0, 0), Vector3d nU_rotated = Vector3d(0, 0, 0), Vector3d nV_rotated = Vector3d(0, 0, 0));
+BOOL DoLowFluxReflection(FACET * collidedFacet, double stickingProbability, double theta = 0.0, double phi = 0.0,
+	Vector3d N_rotated = Vector3d(0, 0, 0), Vector3d nU_rotated = Vector3d(0, 0, 0), Vector3d nV_rotated = Vector3d(0, 0, 0)); //old or new model
+int GetHardHitType(const double& stickingProbability, const std::vector<double>& materialReflProbabilities, const BOOL& complexScattering);
+void PerturbateSurface(double & sigmaRatio, FACET * collidedFacet, Vector3d & nU_rotated, Vector3d & nV_rotated, Vector3d & N_rotated);
+void GetDirComponents(Vector3d & nU_rotated, Vector3d & nV_rotated, Vector3d & N_rotated, double & u, double & v, double & n);
 void RecordHit(const int &type,const double &dF,const double &dP);
 void RecordLeakPos();
 BOOL StartFromSource();
 void ComputeSourceArea();
-//int PerformBounce(FACET *iFacet,double sigmaRatio=0.0,double theta=0.0,double phi=0.0,
-//	Vector N_rotated=Vector(0,0,0),Vector nU_rotated=Vector(0,0,0),Vector nV_rotated=Vector(0,0,0),double thetaOffset=0.0,double phiOffset=0.0, double randomAngle=0.0, int reflType=1);
-void PerformBounce(FACET *iFacet, const double &theta, const double &phi, const int &reflType);
-int Stick(FACET *collidedFacet);
+//int PerformBounce_new(FACET *iFacet,double sigmaRatio=0.0,double theta=0.0,double phi=0.0,
+//	Vector3d N_rotated=Vector3d(0,0,0),Vector3d nU_rotated=Vector3d(0,0,0),Vector3d nV_rotated=Vector3d(0,0,0),double thetaOffset=0.0,double phiOffset=0.0, double randomAngle=0.0, int reflType=1);
+void PerformBounce_new(FACET *iFacet, const double &theta, const double &phi, const int &reflType);
+BOOL PerformBounce_old(FACET * iFacet, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated);
+BOOL VerifiedSpecularReflection(FACET * iFacet, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated);
+void Stick(FACET *collidedFacet);
 void PerformTeleport(FACET *iFacet);
 void PolarToCartesian(FACET *iFacet,double theta,double phi,BOOL reverse,double rotateUV=0.0);
 
@@ -206,8 +213,9 @@ int FindBestCuttingPlane(struct AABBNODE *node,int *left,int *right);
 void ComputeBB(struct AABBNODE *node);
 void DestroyAABB(struct AABBNODE *node);
 void IntersectTree(struct AABBNODE *node);
-BOOL Intersect(VERTEX3D *rayPos,VERTEX3D *rayDir,double *dist,FACET **iFact,FACET *last);
-BOOL Visible(VERTEX3D *c1,VERTEX3D *c2,FACET *f1,FACET *f2);
+BOOL Intersect(Vector3d *rayPos,Vector3d *rayDir,double *dist,FACET **iFact,FACET *last);
+BOOL RaySphereIntersect(Vector3d *center, double radius, Vector3d *rPos, Vector3d *rDir, double *dist);
+BOOL Visible(Vector3d *c1,Vector3d *c2,FACET *f1,FACET *f2);
 void ProfileFacet(FACET *f,const double &dF,const double &dP,const double &E);
 BOOL IsInFacet(FACET *f,const double &u,const double &v);
 double GetTick();

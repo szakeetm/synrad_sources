@@ -26,12 +26,12 @@ extern SynRad *mApp;
 Viewer3DSettings::Viewer3DSettings():GLWindow() {
 
   int wD = 215;
-  int hD = 475;
+  int hD = 525;
 
   SetTitle("3D Viewer Settings");
 
   panel = new GLTitledPanel("3D Viewer settings");
-  panel->SetBounds(5,5,wD-10,320);
+  panel->SetBounds(5,5,wD-10,370);
   Add(panel);
 
   GLLabel *l4 = new GLLabel("Show facet");
@@ -114,28 +114,41 @@ Viewer3DSettings::Viewer3DSettings():GLWindow() {
   shadeLines->SetBounds(10,300,50,18);
   Add(shadeLines);
 
-  showDirection = new GLToggle(0,"Show direction");
-  showDirection->SetBounds(10,330,190,18);
-  Add(showDirection);
+  hideLotselected = new GLToggle(0, "Hide Normals, \201 \202 vectors, indices");
+  hideLotselected->SetBounds(10, 325, 150, 18);
+  Add(hideLotselected);
+
+  GLLabel* l11 = new GLLabel("when more than             facets sel.");
+  l11->SetBounds(15, 347, 150, 18);
+  Add(l11);
+
+  hideLotText = new GLTextField(0, "");
+  hideLotText->SetBounds(100, 347, 40, 18);
+  hideLotText->SetEditable(FALSE);
+  Add(hideLotText);
 
   GLTitledPanel *panel2 = new GLTitledPanel("Direction field");
-  panel2->SetBounds(5,355,wD-10,70);
+  panel2->SetBounds(5,380,wD-10,95);
   Add(panel2);
 
+  showDirection = new GLToggle(0, "Show direction");
+  showDirection->SetBounds(10, 395, 190, 18);
+  Add(showDirection);
+
   GLLabel *l7 = new GLLabel("Norme ratio");
-  l7->SetBounds(10,375,90,18);
+  l7->SetBounds(10,420,90,18);
   Add(l7);
 
   normeText = new GLTextField(0,"");
-  normeText->SetBounds(100,375,100,18);
+  normeText->SetBounds(100,420,100,18);
   Add(normeText);
 
   autoNorme = new GLToggle(0,"Normalize");
-  autoNorme->SetBounds(10,400,100,18);
+  autoNorme->SetBounds(10,445,100,18);
   Add(autoNorme);
 
   centerNorme = new GLToggle(0,"Center");
-  centerNorme->SetBounds(110,400,90,18);
+  centerNorme->SetBounds(110,445,90,18);
   Add(centerNorme);
 
   applyButton = new GLButton(0,"Apply");
@@ -146,12 +159,7 @@ Viewer3DSettings::Viewer3DSettings():GLWindow() {
   cancelButton->SetBounds(wD-85,hD-43,80,19);
   Add(cancelButton);
 
-  // Center dialog
-  int wS,hS;
-  GLToolkit::GetScreenSize(&wS,&hS);
-  int xD = (wS-wD)/2;
-  int yD = (hS-hD)/2;
-  SetBounds(xD,yD,wD,hD);
+  Reposition(wD, hD);
 
   RestoreDeviceObjects();
 
@@ -159,9 +167,16 @@ Viewer3DSettings::Viewer3DSettings():GLWindow() {
 
 }
 
-// --------------------------------------------------------------------
+void Viewer3DSettings::Reposition(int wD, int hD) {
+	// Position dialog next to Viewer parameters
+	if (wD == 0) wD = this->GetWidth();
+	if (hD == 0) hD = this->GetHeight();
+	int toggleX, toggleY, toggleW, toggleH;
+	mApp->togglePanel->GetBounds(&toggleX, &toggleY, &toggleW, &toggleH);
+	SetBounds(toggleX - wD - 10, toggleY + 20, wD, hD);
+}
 
-void Viewer3DSettings::Display(Geometry *s,GeometryViewer *v) {
+void Viewer3DSettings::Refresh(Geometry *s,GeometryViewer *v) {
 
   char tmp[128];
 
@@ -192,11 +207,17 @@ void Viewer3DSettings::Display(Geometry *s,GeometryViewer *v) {
   normeText->SetText(tmp);
   autoNorme->SetState( geom->GetAutoNorme() );
   centerNorme->SetState( geom->GetCenterNorme() );
-  DoModal();
 
+  BOOL suppressDetails = (viewer->hideLot != -1);
+  hideLotselected->SetState(suppressDetails);
+  hideLotText->SetEditable(suppressDetails);
+  if (suppressDetails) {
+	  hideLotText->SetText(viewer->hideLot);
+  }
+  else {
+	  hideLotText->SetText("");
+  }
 }
-
-// --------------------------------------------------------------------
 
 void Viewer3DSettings::ProcessMessage(GLComponent *src,int message) {
 
@@ -210,7 +231,7 @@ void Viewer3DSettings::ProcessMessage(GLComponent *src,int message) {
     } else if (src==applyButton) {
 
       double tstep,astep,nratio;
-	  int dnh,dnl,dnt;
+	  int dnh,dnl,dnt,lotofFacets;
 	  //int dnh;
 
       if( !traStepText->GetNumber(&tstep) ) {
@@ -233,6 +254,11 @@ void Viewer3DSettings::ProcessMessage(GLComponent *src,int message) {
         GLMessageBox::Display("Invalid number of displayed trajectory points.\nMust be between 10 and 10000.","Error",GLDLG_OK,GLDLG_ICONERROR);
         return;
       }
+	  if ((!hideLotText->GetNumberInt(&lotofFacets) || dnl<2)) {
+		  GLMessageBox::Display("Invalid number of selected facets.\nMust be larger than 2.", "Error", GLDLG_OK, GLDLG_ICONERROR);
+		  return;
+	  }
+
       viewer->showBack=showMode->GetSelectedIndex();
       viewer->transStep = tstep;
       viewer->angleStep = astep;
@@ -268,12 +294,17 @@ void Viewer3DSettings::ProcessMessage(GLComponent *src,int message) {
       geom->SetAutoNorme(autoNorme->GetState());
       geom->SetCenterNorme(centerNorme->GetState());
 
+	  viewer->hideLot = hideLotselected->GetState() ? lotofFacets : -1;
+
       GLWindow::ProcessMessage(NULL,MSG_CLOSE);
 
     }
     break;
 
-    case MSG_TOGGLE:
+	case MSG_TOGGLE:
+		if (src == hideLotselected) {
+			hideLotText->SetEditable(hideLotselected->GetState());
+		}
     break;
   }
 

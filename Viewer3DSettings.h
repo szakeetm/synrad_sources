@@ -39,7 +39,8 @@ public:
   Viewer3DSettings();
 
   // Component methods
-  void Display(Geometry *s,GeometryViewer *v);
+  void Refresh(Geometry *s, GeometryViewer *v);
+  void Reposition(int wD = 0, int hD = 0);
 
   // Implementation
   void ProcessMessage(GLComponent *src,int message);
@@ -66,7 +67,9 @@ private:
   GLToggle      *centerNorme;
   GLToggle		*antiAliasing;
   GLToggle		*bigDots;
+  GLToggle		*hideLotselected;
   GLTextField   *normeText;
+  GLTextField   *hideLotText;
 
   GLButton    *applyButton;
   GLButton    *cancelButton;

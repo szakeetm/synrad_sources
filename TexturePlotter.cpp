@@ -17,6 +17,7 @@ GNU General Public License for more details.
 */
 
 #include "TexturePlotter.h"
+#include "Facet.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
 #include "GLApp/GLFileBox.h"

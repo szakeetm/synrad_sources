@@ -19,7 +19,7 @@ GNU General Public License for more details.
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
 #include "GLApp/GLInputBox.h"
-#include "Utils.h"
+
 #include "Synrad.h"
 
 extern SynRad *mApp;
@@ -54,11 +54,11 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	panel->Add(chkWhiteBg);
 
 	GLTitledPanel *panel2 = new GLTitledPanel("Low flux mode");
-	panel2->SetBounds(310,2,300,78);
+	panel2->SetBounds(310,2,295,78);
 	Add(panel2);
 
 	lowFluxInfo = new GLButton(0, "Info");
-	lowFluxInfo->SetBounds(480, 20, 40, 19);
+	lowFluxInfo->SetBounds(520, 20, 40, 19);
 	panel2->Add(lowFluxInfo);
 
 	lowFluxToggle = new GLToggle(0,"Enable low flux mode");
@@ -98,6 +98,14 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	chkAutoUpdateFormulas = new GLToggle(0, "Auto update formulas");
 	chkAutoUpdateFormulas->SetBounds(315, 125, 160, 19);
 	Add(chkAutoUpdateFormulas);
+
+	chkNewReflectionModel = new GLToggle(0, "Use new reflection model");
+	chkNewReflectionModel->SetBounds(315, 150, 160, 19);
+	Add(chkNewReflectionModel);
+
+	newReflectmodeInfo = new GLButton(0, "Info");
+	newReflectmodeInfo->SetBounds(520, 150, 40, 19);
+	Add(newReflectmodeInfo);
 
 	chkCompressSavedFiles = new GLToggle(0,"Compress saved files (use .SYN7Z format)");
 	chkCompressSavedFiles->SetBounds(10,150,100,19);
@@ -181,6 +189,7 @@ void GlobalSettings::Display(Worker *w) {
 	cutoffText->SetText(worker->lowFluxCutoff);
 	cutoffText->SetEditable(worker->lowFluxMode);
 	lowFluxToggle->SetState(worker->lowFluxMode);
+	chkNewReflectionModel->SetState(worker->newReflectionModel);
 
 	sprintf(tmp,"%g",mApp->autoSaveFrequency);
 	autoSaveText->SetText(tmp);
@@ -266,9 +275,7 @@ void GlobalSettings::SMPUpdate(float appTime) {
 			*/
 
 			// State/Status
-			char status[128];
 			_snprintf(tmp, 127, "%s: %s", prStates[states[i]], statusStr[i]);
-			status[127] = 0;
 			processList->SetValueAt(4, i + 1, tmp);
 
 		}
@@ -356,26 +363,27 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 			}
 
 			if (abs(worker->lowFluxCutoff - cutoffnumber)>1e-10 || worker->lowFluxMode!=lowFluxToggle->GetState()) {
-				if (mApp->AskToReset()) {
+				//if (mApp->AskToReset()) {
 					worker->lowFluxCutoff = cutoffnumber;
 					worker->lowFluxMode = lowFluxToggle->GetState();
-					mApp->changedSinceSave = TRUE;
-					// Send to sub process
-					try { worker->Reload(); }
-					catch (Error &e) {
-						GLMessageBox::Display((char *)e.GetMsg(), "Error", GLDLG_OK, GLDLG_ICONERROR);
-						return;
-					}
-					mApp->UpdateFacetHits();
-				}
-				
+					/*mApp->changedSinceSave = TRUE;
+					worker->Reload();
+					mApp->UpdateFacetHits();*/
+					worker->ChangeSimuParams();
+				//}
 			}
 
-			
+			if (worker->newReflectionModel != chkNewReflectionModel->GetState()) {
+				if (mApp->AskToReset()) {
+					worker->newReflectionModel = chkNewReflectionModel->GetState();
+					mApp->changedSinceSave = TRUE;
+					worker->Reload();
+					mApp->PlaceScatteringControls(worker->newReflectionModel);
+				}
+			}
 
 			GLWindow::ProcessMessage(NULL,MSG_CLOSE); 
 			return;
-
 		}
 		else if (src == lowFluxInfo) {
 			GLMessageBox::Display("Low flux mode helps to gain more statistics on low flux/power parts of the system, at the expense\n"
@@ -385,6 +393,17 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 				"can be neglected. If, for example, it is 0.001, then, when after subsequent reflections the test photon carries less than 0.1%\n"
 				"of the original flux, it will be eliminated. A good advice is that if you'd like to see flux across N orders of magnitude, set it to 1E-N"
 				, "Low flux mode", GLDLG_OK, GLDLG_ICONINFO);
+			return;
+		} else if (src == newReflectmodeInfo) {
+			GLMessageBox::Display("In the old reflection model, both the material reflection probability and the new, reflected photon direction\n"
+				"depend on the ""roughness ratio"" parameter, which is generally the ratio of the RMS roughness and the autocorrelation length\n"
+				"of the rough surface.\n"
+				"In contrast, the new reflection model, described by Dugan and Sagan in the manual of Synrad3D (Cornell), treats the reflection\n"
+				"probability as the function of photon energy and grazing angle only, and then perturbates the reflection direction with an offset.\n"
+				"It also has two input paramters (roughness and autocorr. length) for a surface, and calculates the Debye-Waller factor (the probability\n"
+				"of specular reflection).\n"
+				"Until this new model is succesfully compared with Synrad3D and real life, using the old model is recommended."
+				, "New reflection model", GLDLG_OK, GLDLG_ICONINFO);
 			return;
 		}
 		break;

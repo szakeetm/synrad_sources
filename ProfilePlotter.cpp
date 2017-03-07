@@ -19,7 +19,8 @@ GNU General Public License for more details.
 #include "ProfilePlotter.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
-#include "Utils.h"
+#include "Facet.h"
+
 #include <math.h>
 #include "Synrad.h"
 
@@ -425,13 +426,15 @@ void ProfilePlotter::refreshViews() {
 				SetVisible(FALSE);
 			} else if(src==selButton) {
 				int idx = profCombo->GetSelectedIndex();
-				geom->UnSelectAll();
-				int facetId=(int)((double)profCombo->GetUserValueAt(idx)/3.0);
-				geom->GetFacet(facetId)->selected = TRUE;
-				mApp->UpdateFacetParams(TRUE);
-				geom->UpdateSelection();
-				mApp->facetList->SetSelectedRow(facetId);
-				mApp->facetList->ScrollToVisible(facetId,1,TRUE);
+				if (idx>=0) {
+					geom->UnselectAll();
+					int facetId=(int)((double)profCombo->GetUserValueAt(idx)/3.0);
+					geom->GetFacet(facetId)->selected = TRUE;
+					mApp->UpdateFacetParams(TRUE);
+					geom->UpdateSelection();
+					mApp->facetList->SetSelectedRow(facetId);
+					mApp->facetList->ScrollToVisible(facetId,1,TRUE);
+				}
 			} else if(src==addButton) {
 				int idx = profCombo->GetSelectedIndex();
 				int facetId=(int)((double)profCombo->GetUserValueAt(idx)/3.0);

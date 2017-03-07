@@ -18,11 +18,13 @@ GNU General Public License for more details.
 
 #include <math.h>
 
+#include "Facet.h"
 #include "FacetMesh.h"
 #include "GLApp/GLLabel.h"
 #include "GLApp/GLToolkit.h"
+#include "GLApp/MathTools.h" //FormatMemory
 #include "GLApp/GLMessageBox.h"
-#include "Utils.h" 
+ 
 #include "SynRad.h"
 
 //-----------------------------------------------------------------------------
@@ -263,8 +265,8 @@ void FacetMesh::EditFacet(Worker *w) {
 
 		Facet *f = geom->GetFacet(i);
 		if( f->selected ) {
-			double nU = Norme(f->sh.U);
-			double nV = Norme(f->sh.V);
+			double nU = f->sh.U.Norme();
+			double nV = f->sh.V.Norme();
 			maxU = MAX(maxU,nU);
 			maxV = MAX(maxV,nV);
 			minU = MIN(minU,nU);
@@ -436,7 +438,7 @@ void FacetMesh::QuickApply() {
 		}
 
 	}
-	geom->RebuildLists();
+	geom->BuildGLList();
 }
 
 //-----------------------------------------------------------------------------

@@ -22,12 +22,11 @@ GNU General Public License for more details.
 #include "Simulation.h"
 #include "Random.h"
 #include "Distributions.h"
-#include "Tools.h"
-#include "Utils.h" //debug only
 #include <vector>
 #include "Region_mathonly.h"
 #include "GeneratePhoton.h"
-#include "Utils.h" //rotation
+#include "GLApp/MathTools.h"
+#include "SynradTypes.h" //Histogram
 
 extern SIMULATION *sHandle;
 extern void SetErrorSub(const char *message);
@@ -48,7 +47,7 @@ void ComputeSourceArea() {
 
 void PolarToCartesian(FACET *iFacet, double theta, double phi, BOOL reverse, double rotateUV) {
 
-	VERTEX3D U, V, N;
+	Vector3d U, V, N;
 	double u, v, n;
 
 	// Polar in (nU,nV,N) to Cartesian(x,y,z) transformation  ( nU = U/|U| , nV = V/|V| )
@@ -109,12 +108,9 @@ void CartesianToPolar(FACET *iFacet, double *theta, double *phi) {
 
 	// Basis change (x,y,z) -> (nU,nV,N)
 	// We use the fact that (nU,nV,N) belongs to SO(3)
-	double u = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
-		iFacet->sh.nU.x, iFacet->sh.nU.y, iFacet->sh.nU.z);
-	double v = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
-		iFacet->sh.nV.x, iFacet->sh.nV.y, iFacet->sh.nV.z);
-	double n = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
-		iFacet->sh.N.x, iFacet->sh.N.y, iFacet->sh.N.z);
+	double u = Dot(sHandle->pDir, iFacet->sh.nU);
+	double v = Dot(sHandle->pDir, iFacet->sh.nV);
+	double n = Dot(sHandle->pDir, iFacet->sh.N);
 	SATURATE(n, -1.0, 1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
 
 	// (u,v,n) -> (theta,phi)
@@ -188,11 +184,11 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 			if (f->hitted) {
 
 				SHHITS *fFit = (SHHITS *)(buffer + f->sh.hitOffset);
-				fFit->nbAbsorbed += f->sh.counter.nbAbsorbed;
-				fFit->nbDesorbed += f->sh.counter.nbDesorbed;
-				fFit->fluxAbs += f->sh.counter.fluxAbs;
-				fFit->powerAbs += f->sh.counter.powerAbs;
-				fFit->nbHit += f->sh.counter.nbHit;
+				fFit->nbAbsorbed += f->counter.nbAbsorbed;
+				fFit->nbDesorbed += f->counter.nbDesorbed;
+				fFit->fluxAbs += f->counter.fluxAbs;
+				fFit->powerAbs += f->counter.powerAbs;
+				fFit->nbHit += f->counter.nbHit;
 
 				if (f->sh.isProfile) {
 					llong *shProfile = (llong *)(buffer + (f->sh.hitOffset + sizeof(SHHITS)));
@@ -366,12 +362,12 @@ void PerformTeleport(FACET *iFacet) {
 	sHandle->lastHit = destination;
 
 	//Count hits on teleport facets (only TP source)
-	//iFacet->sh.counter.nbAbsorbed++;
-	//destination->sh.counter.nbDesorbed++;
+	//iFacet->counter.nbAbsorbed++;
+	//destination->counter.nbDesorbed++;
 
-	iFacet->sh.counter.nbHit++;//destination->sh.counter.nbHit++;
-	iFacet->sh.counter.fluxAbs += sHandle->dF;//destination->sh.counter.fluxAbs+=sHandle->dF;
-	iFacet->sh.counter.powerAbs += sHandle->dP;//destination->sh.counter.powerAbs+=sHandle->dP;
+	iFacet->counter.nbHit++;//destination->counter.nbHit++;
+	iFacet->counter.fluxAbs += sHandle->dF;//destination->counter.fluxAbs+=sHandle->dF;
+	iFacet->counter.powerAbs += sHandle->dP;//destination->counter.powerAbs+=sHandle->dP;
 }
 
 // -------------------------------------------------------------
@@ -393,240 +389,115 @@ BOOL SimulationMCStep(int nbStep) {
 		if (found) {
 
 			// Move particule to intersection point
-			sHandle->pPos.x += d*sHandle->pDir.x;
-			sHandle->pPos.y += d*sHandle->pDir.y;
-			sHandle->pPos.z += d*sHandle->pDir.z;
-			//sHandle->distTraveledCurrentParticle += d;
+			sHandle->pPos = sHandle->pPos + d*sHandle->pDir;
 			sHandle->distTraveledSinceUpdate += d;
-
-			if (!collidedFacet->sh.teleportDest){
-				// Hit count
-				sHandle->tmpCount.nbHit++;
-				collidedFacet->sh.counter.nbHit++;
-			}
 
 			if (collidedFacet->sh.teleportDest) {
 				PerformTeleport(collidedFacet);
 			}
-			else if (collidedFacet->sh.superDest) {	// Handle super structure link facet
-				sHandle->curStruct = collidedFacet->sh.superDest - 1;
-				// Count this hit as a transparent pass
-				RecordHit(HIT_TRANS, sHandle->dF, sHandle->dP);
-				if (collidedFacet->hits_MC && collidedFacet->sh.countTrans) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
-			}
-			else if (collidedFacet->sh.isVolatile) { // Handle volatile facet
-				if (collidedFacet->ready) {
-					collidedFacet->sh.counter.nbAbsorbed++;
-					collidedFacet->sh.counter.fluxAbs += sHandle->dF;
-					collidedFacet->sh.counter.powerAbs += sHandle->dP;
-					collidedFacet->ready = FALSE;
-					if (collidedFacet->hits_MC && collidedFacet->sh.countAbs) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
+			else {
+				// Hit count
+				sHandle->tmpCount.nbHit++;
+				collidedFacet->counter.nbHit++;
+				if (collidedFacet->sh.superDest) {	// Handle super structure link facet
+					sHandle->curStruct = collidedFacet->sh.superDest - 1;
+					// Count this hit as a transparent pass
+					RecordHit(HIT_TRANS, sHandle->dF, sHandle->dP);
+					if (collidedFacet->hits_MC && collidedFacet->sh.countTrans) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
+				}
+				else { //Not superDest or Teleport
+					if (sHandle->newReflectionModel) {
+						//New reflection model (Synrad 1.4)
+						double theta, phi;
+						CartesianToPolar(collidedFacet, &theta, &phi);
+
+						double stickingProbability;
+
+						BOOL complexScattering; //forward/diffuse/back/transparent/stick
+						std::vector<double> materialReflProbabilities; //0: forward reflection, 1: diffuse, 2: backscattering, 3: transparent, 100%-(0+1+2+3): absorption
+						if (sHandle->dF == 0.0 || sHandle->dP == 0.0 || sHandle->energy < 1E-3) {
+							//stick non real photons (from beam beginning)
+							stickingProbability = 1.0; 
+							complexScattering = FALSE;
+						}
+						else if (collidedFacet->sh.reflectType < 2) {
+							//Diffuse or Mirror
+							stickingProbability = collidedFacet->sh.sticking;
+							complexScattering = FALSE;
+						}
+						else { //Material
+							stickingProbability=GetStickingProbability(collidedFacet, theta, materialReflProbabilities, complexScattering);
+						}
+						if (!sHandle->mode.lowFluxMode || complexScattering) {
+							int reflType = GetHardHitType(stickingProbability, materialReflProbabilities, complexScattering);
+							if (reflType == REFL_ABSORB) {
+								Stick(collidedFacet);
+								if (!StartFromSource()) return FALSE;
+							}
+							else PerformBounce_new(collidedFacet, theta, phi, reflType);
+						}
+						else {
+							//Low flux mode and simple scattering:
+							DoLowFluxReflection(collidedFacet, stickingProbability, theta, phi);
+						} //end low flux mode
+					}
+					else {
+						//Old reflection model (Synrad <=1.3)						
+						if (sHandle->dF == 0.0 || sHandle->dP == 0.0 || sHandle->energy < 1E-3) { //stick non real photons (from beam beginning)
+							Stick(collidedFacet);
+							if (!StartFromSource()) return FALSE;
+						}
+						else {
+							double sigmaRatio = collidedFacet->sh.doScattering?collidedFacet->sh.rmsRoughness/collidedFacet->sh.autoCorrLength:0.0;
+							if ((collidedFacet->sh.reflectType - 10) < (int)sHandle->materials.size()) { //found material type
+																										//Generate incident angle
+								Vector3d nU_rotated, N_rotated, nV_rotated;
+								double n, u, v;
+								BOOL reflected = FALSE;
+								do { //generate angles until reflecting away from surface
+										
+										double n_ori = Dot(sHandle->pDir, collidedFacet->sh.N); //original incident angle (negative if front collision, positive if back collision);
+										do { //generate angles until incidence is from front
+												
+											PerturbateSurface(sigmaRatio, collidedFacet, nU_rotated, nV_rotated, N_rotated);
+	
+											//Calculate incident angles to bent surface (Cartesian to Polar routine modified)
+											GetDirComponents(nU_rotated, nV_rotated, N_rotated, u, v, n);
+
+										} while (n*n_ori <= 0.0); //regenerate random numbers if grazing angle would be over 90deg
+
+									double rho = sqrt(v*v + u*u);
+									double theta = acos(n);       // Angle to normal (PI/2 => PI if front collision, 0..PI/2 if back)
+									double phi = asin(v / rho);
+									if (u < 0.0) phi = PI - phi;  // Angle to U
+										
+									double stickingProbability;
+									if (collidedFacet->sh.reflectType < 2) {
+										stickingProbability = collidedFacet->sh.sticking;
+									}
+									else {
+										std::vector<double> materialReflProbabilities;
+										BOOL complexScattering;
+										stickingProbability = GetStickingProbability(collidedFacet, theta, materialReflProbabilities, complexScattering);
+									}
+									if (!sHandle->mode.lowFluxMode) {
+										reflected = DoOldRegularReflection(collidedFacet, stickingProbability, theta, phi, N_rotated, nU_rotated, nV_rotated);
+									}
+									else {
+										reflected = DoLowFluxReflection(collidedFacet, stickingProbability, theta, phi, N_rotated, nU_rotated, nV_rotated);
+									}
+								} while (!reflected); //do it again if reflection wasn't successful (reflected against the surface due to roughness)
+							}
+							else {
+								std::string err = "Facet " + (collidedFacet->globalId + 1);
+								err += "reflection material type not found";
+								SetErrorSub(err.c_str());
+							}
+						}
+						
+					}
 				}
 			}
-			else { //Just a regular facet, stick or bounce
-				//Get incident angles
-				double theta, phi;
-				CartesianToPolar(collidedFacet, &theta, &phi);
-
-				double stickingProbability, random;
-				double nonTransparentProbability = 1.0;
-				BOOL complexScattering = FALSE; //forward/diffuse/back/transparent/stick
-				std::vector<double> materialReflProbabilities;
-				if (sHandle->dF == 0.0 || sHandle->dP == 0.0 || sHandle->energy < 1E-3)
-					stickingProbability = 1.0; //stick non real photons (from beam beginning)
-				else if (collidedFacet->sh.reflectType < 2) //Diffuse or Mirror
-					stickingProbability = collidedFacet->sh.sticking;
-				else { //Material
-					Material *mat = &(sHandle->materials[collidedFacet->sh.reflectType - 10]);
-					complexScattering = mat->hasBackscattering;
-					materialReflProbabilities = mat->Interpolate(sHandle->energy, abs(theta - PI / 2));
-
-					//At this point we already know that it's not a transparent pass (Intersect() routine has ran)
-
-					if (complexScattering) nonTransparentProbability -= materialReflProbabilities[3];
-
-					stickingProbability = 1.0;
-					size_t nbComponents = complexScattering ? 3 : 1;
-					for (size_t i = 0; i < nbComponents; i++) //exclude transparent pass probability
-						stickingProbability -= materialReflProbabilities[i];
-				}
-				if (!sHandle->lowFluxMode || complexScattering) {
-					int reflType;
-					//Do the original bounce or stick algorithm
-					random = rnd()*nonTransparentProbability;
-					if (random >(nonTransparentProbability - stickingProbability)) reflType = REFL_ABSORB;
-					else if (!complexScattering) {
-						reflType = REFL_FORWARD; //Not absorbed, so reflected
-					}
-					else { //complex scattering
-
-						if (random < materialReflProbabilities[0]) reflType = REFL_FORWARD; //forward reflection
-						else if (random < (materialReflProbabilities[0] + materialReflProbabilities[1])) reflType = REFL_DIFFUSE;
-						else if (random < (materialReflProbabilities[0] + materialReflProbabilities[1] + materialReflProbabilities[2])) reflType = REFL_BACK;
-						else reflType = REFL_BACK; //trasparent already excluded in Intersect() routine, and in this "else" branch we know that it doesn't stick
-					}
-					if (reflType == REFL_ABSORB) { if (!Stick(collidedFacet)) return FALSE; }
-					else PerformBounce(collidedFacet, theta, phi, reflType);
-				}
-				else {
-					//Low flux mode and simple scattering:
-					//modified Stick() routine to record only the absorbed part	
-					//No transparent pass in this case
-					collidedFacet->sh.counter.fluxAbs += sHandle->dF*stickingProbability;
-					collidedFacet->sh.counter.powerAbs += sHandle->dP*stickingProbability;
-					if (collidedFacet->hits_MC && collidedFacet->sh.countAbs) RecordHitOnTexture(collidedFacet,
-						sHandle->dF*stickingProbability, sHandle->dP*stickingProbability);
-					//okay, absorbed part recorded, let's see how much is left
-					sHandle->oriRatio *= 1.0 - stickingProbability;
-					if (sHandle->oriRatio < sHandle->lowFluxCutoff) {//reflected part not important, throw it away
-						RecordHit(HIT_ABS, sHandle->dF, sHandle->dP); //for hits and lines display
-						if (!StartFromSource())
-							// maxDesorption reached
-							return FALSE; //FALSE
-					}
-					else { //reflect remainder
-						sHandle->dF *= 1.0 - stickingProbability;
-						sHandle->dP *= 1.0 - stickingProbability;
-						PerformBounce(collidedFacet, theta, phi, REFL_FORWARD);
-					}
-				}
-			} //end treating regular facet
-
-			//Below is the old routine with the old scattering model
-			//------------------------------------------------------
-
-			//else if (collidedFacet->sh.reflectType >= 2) { //rough surface reflection
-			//	if (sHandle->dF == 0.0 || sHandle->dP == 0.0 || sHandle->energy < 1E-3) { //stick non real photons (from beam beginning)
-			//		if (!Stick(collidedFacet)) return FALSE;
-			//	}
-			//	else {
-			//		double sigmaRatio = collidedFacet->sh.rmsRoughness;
-			//		if ((collidedFacet->sh.reflectType - 2) < (int)sHandle->materials.size()) { //found material type
-			//			//Generate incident angle
-			//			Vector nU_facet = Vector(collidedFacet->sh.nU.x, collidedFacet->sh.nU.y, collidedFacet->sh.nU.z);
-			//			Vector nV_facet = Vector(collidedFacet->sh.nV.x, collidedFacet->sh.nV.y, collidedFacet->sh.nV.z);
-			//			Vector N_facet = Vector(collidedFacet->sh.N.x, collidedFacet->sh.N.y, collidedFacet->sh.N.z);
-			//			Vector nU_rotated, N_rotated, nV_rotated;
-			//			double n, u, v, thetaOffset, phiOffset, randomAngle;
-			//			BOOL reflected = FALSE;
-			//			do { //generate angles until reflecting away from surface
-			//				double n_ori = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
-			//					N_facet.x, N_facet.y, N_facet.z); //original incident angle (negative if front collision, positive if back collision);
-			//				do { //generate angles until incidence is from front
-			//					//Generating bending angle due to local roughness
-			//					double rnd1 = rnd();
-			//					double rnd2 = rnd(); //for debug
-			//					thetaOffset = atan(sigmaRatio*tan(PI*(rnd1 - 0.5)));
-			//					phiOffset = atan(sigmaRatio*tan(PI*(rnd2 - 0.5)));
-
-			//					//Random rotation around N (to discard U orientation thus make scattering isotropic)
-			//					randomAngle = rnd() * 2 * PI;
-			//					nU_facet = nU_facet.Rotate(N_facet, randomAngle);
-			//					nV_facet = nV_facet.Rotate(N_facet, randomAngle);
-
-			//					//Bending surface base vectors
-			//					nU_rotated = nU_facet.Rotate(nV_facet, thetaOffset);
-			//					N_rotated = N_facet.Rotate(nV_facet, thetaOffset);
-			//					nU_rotated = nU_rotated.Rotate(nU_facet, phiOffset); //check if correct
-			//					nV_rotated = nV_facet.Rotate(nU_facet, phiOffset);
-			//					N_rotated = N_rotated.Rotate(nU_facet, phiOffset);
-
-			//					//Calculate incident angles to bent surface (Cartesian to Polar routine modified)
-			//					u = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
-			//						nU_rotated.x, nU_rotated.y, nU_rotated.z);
-			//					v = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
-			//						nV_rotated.x, nV_rotated.y, nV_rotated.z);
-			//					n = DOT3(sHandle->pDir.x, sHandle->pDir.y, sHandle->pDir.z,
-			//						N_rotated.x, N_rotated.y, N_rotated.z);
-			//					SATURATE(n, -1.0, 1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
-
-			//				} while (n*n_ori <= 0.0); //regenerate random numbers if grazing angle would be over 90deg
-
-			//				double rho = sqrt(v*v + u*u);
-			//				double theta = acos(n);              // Angle to normal (PI/2 => PI if front collision, 0..PI/2 if back)
-			//				double phi = asin(v / rho);
-			//				if (u < 0.0) phi = PI - phi;  // Angle to U
-
-			//				if (!sHandle->lowFluxMode || sHandle->materials[collidedFacet->sh.reflectType - 2].hasBackscattering) { //original algorithm, bounce or stick
-			//					int reflType = sHandle->materials[collidedFacet->sh.reflectType - 2].GetReflectionType(sHandle->energy, abs(theta - PI / 2),rnd());
-			//					if (reflType) { //not absorbed
-			//						reflected = PerformBounce(collidedFacet, sigmaRatio, theta, phi, N_rotated, nU_rotated, nV_rotated,thetaOffset,phiOffset,randomAngle, reflType);
-			//					}
-			//					else { //sticking
-			//						if (!Stick(collidedFacet)) return FALSE;
-			//						reflected = TRUE;
-			//					}
-			//				}
-			//				else { //low flux mode
-			//					//modified Stick() routine to record only the absorbed part
-			//					double reflProbability = sHandle->materials[collidedFacet->sh.reflectType - 2].Interpolate(sHandle->energy, abs(theta - PI / 2))[0];	//first component							
-			//					collidedFacet->sh.counter.fluxAbs += sHandle->dF*(1.0 - reflProbability);
-			//					collidedFacet->sh.counter.powerAbs += sHandle->dP*(1.0 - reflProbability);
-			//					//sHandle->distTraveledSinceUpdate += sHandle->distTraveledCurrentParticle;
-			//					if (collidedFacet->hits_MC && collidedFacet->sh.countAbs) RecordHitOnTexture(collidedFacet,
-			//						sHandle->dF*(1.0 - reflProbability), sHandle->dP*(1.0 - reflProbability));
-			//					//okay, absorbed part recorded, let's see how much is left
-			//					sHandle->oriRatio *= reflProbability;
-			//					if (sHandle->oriRatio < sHandle->lowFluxCutoff) {//reflected part not important, throw it away
-			//						RecordHit(HIT_ABS, sHandle->dF, sHandle->dP); //for hits and lines display
-			//						if (!StartFromSource())
-			//							// maxDesorption reached
-			//							return FALSE; //FALSE
-			//						reflected = TRUE;
-			//					}
-			//					else { //reflect remainder
-			//						sHandle->dF *= reflProbability;
-			//						sHandle->dP *= reflProbability;
-			//						reflected = PerformBounce(collidedFacet, sigmaRatio, theta, phi, N_rotated, nU_rotated, nV_rotated, thetaOffset, phiOffset, randomAngle);
-			//					}
-			//				}
-			//			} while (!reflected); //do it again if reflection wasn't successful (reflected against the surface due to roughness)
-			//		}
-			//		else {
-			//			std::string err = "Facet " + (collidedFacet->globalId + 1);
-			//			err += "reflection material type not found\0";
-			//			SetErrorSub(err.c_str());
-			//		}
-
-			//	}
-			//}
-			//else if (collidedFacet->sh.sticking > 0.0) {
-			//	if (!sHandle->lowFluxMode) {//original algorithm, bounce or stick
-			//		if (collidedFacet->sh.sticking == 1.0 || rnd() < collidedFacet->sh.sticking) { //sticking
-			//			if (!Stick(collidedFacet)) return FALSE;
-			//		}
-			//		else {
-			//			PerformBounce(collidedFacet);
-			//		}
-			//	}
-			//	else { //low flux mode
-			//		{ //low flux mode
-			//			//modified Stick() routine to record only the absorbed part
-			//			collidedFacet->sh.counter.fluxAbs += sHandle->dF*collidedFacet->sh.sticking;
-			//			collidedFacet->sh.counter.powerAbs += sHandle->dP*collidedFacet->sh.sticking;
-			//			//sHandle->distTraveledSinceUpdate += sHandle->distTraveledCurrentParticle;
-			//			if (collidedFacet->hits_MC && collidedFacet->sh.countAbs) RecordHitOnTexture(collidedFacet,
-			//				sHandle->dF*collidedFacet->sh.sticking, sHandle->dP*collidedFacet->sh.sticking);
-			//			//okay, absorbed part recorded, let's see how much is left
-			//			sHandle->oriRatio *= (1.0 - collidedFacet->sh.sticking);
-			//			if (sHandle->oriRatio < sHandle->lowFluxCutoff) {//reflected part not important, throw it away
-			//				RecordHit(HIT_ABS, sHandle->dF, sHandle->dP); //for hits and lines display
-			//				if (!StartFromSource())
-			//					// maxDesorption reached
-			//					return FALSE; //FALSE
-			//			}
-			//			else { //reflect remainder
-			//				sHandle->dF *= 1.0 - collidedFacet->sh.sticking;
-			//				sHandle->dP *= 1.0 - collidedFacet->sh.sticking;
-			//				PerformBounce(collidedFacet);
-			//			}
-			//		}
-			//	}
-			//}
-			//else {
-			//	PerformBounce(collidedFacet); //if sticking==0, bounce without generating random number
-			//}
-
 		}
 		else { // Leak (simulation error)
 			RecordLeakPos();
@@ -637,6 +508,101 @@ BOOL SimulationMCStep(int nbStep) {
 		} //end intersect or leak
 	} //end step
 	return TRUE;
+}
+
+double GetStickingProbability(FACET* collidedFacet, const double& theta, std::vector<double>& materialReflProbabilities, BOOL& complexScattering) {
+	//Returns sticking probability, but also fills materialReflProbabilities and complexScattering (pass by reference)
+	Material *mat = &(sHandle->materials[collidedFacet->sh.reflectType - 10]);
+	complexScattering = mat->hasBackscattering;
+	materialReflProbabilities = mat->Interpolate(sHandle->energy, abs(theta - PI / 2));
+	double stickingProbability = complexScattering
+		? 1.0 - materialReflProbabilities[0] - materialReflProbabilities[1] - materialReflProbabilities[2] //100% - forward - diffuse - back (transparent already excluded in Intersect() routine)
+		: 1.0 - materialReflProbabilities[0]; //100% - forward (transparent already excluded in Intersect() routine)
+	return stickingProbability;
+}
+
+int GetHardHitType(const double& stickingProbability,const std::vector<double>& materialReflProbabilities, const BOOL& complexScattering) {
+	//Similar to Material::GetReflectionType, but transparent pass is excluded and treats Mirror/Diffuse surfaces too with single sticking factor
+	double nonTransparentProbability = (complexScattering) ? 1.0 - materialReflProbabilities[3] : 1.0;
+	double random = rnd()*nonTransparentProbability;
+	if (random > (nonTransparentProbability - stickingProbability)) return REFL_ABSORB;
+	else if (!complexScattering) {
+		return REFL_FORWARD; //Not absorbed, so reflected
+	}
+	else { //complex scattering
+		if (random < materialReflProbabilities[0]) return REFL_FORWARD; //forward reflection
+		else if (random < (materialReflProbabilities[0] + materialReflProbabilities[1])) return REFL_DIFFUSE;
+		else if (random < (materialReflProbabilities[0] + materialReflProbabilities[1] + materialReflProbabilities[2])) return REFL_BACK;
+		else return REFL_BACK; //should never be the case. Trasparent already excluded in Intersect() routine, and in this "else" branch we know that it doesn't stick
+	}
+}
+
+void PerturbateSurface(double& sigmaRatio, FACET* collidedFacet, Vector3d& nU_rotated, Vector3d& nV_rotated, Vector3d& N_rotated) {
+
+	double rnd1 = rnd();
+	double rnd2 = rnd(); //for debug
+	double thetaOffset = atan(sigmaRatio*tan(PI*(rnd1 - 0.5)));
+	double phiOffset = atan(sigmaRatio*tan(PI*(rnd2 - 0.5)));
+
+	Vector3d nU_facet = Vector3d(collidedFacet->sh.nU.x, collidedFacet->sh.nU.y, collidedFacet->sh.nU.z);
+	Vector3d nV_facet = Vector3d(collidedFacet->sh.nV.x, collidedFacet->sh.nV.y, collidedFacet->sh.nV.z);
+	Vector3d N_facet = Vector3d(collidedFacet->sh.N.x, collidedFacet->sh.N.y, collidedFacet->sh.N.z);
+
+	//Random rotation around N (to discard U orientation thus make scattering isotropic)
+	double randomAngle = rnd() * 2 * PI;
+	nU_facet = Rotate(nU_facet,Vector3d(0,0,0),N_facet, randomAngle);
+	nV_facet = Rotate(nV_facet,Vector3d(0,0,0),N_facet, randomAngle);
+
+	//Bending surface base vectors
+	nU_rotated = Rotate(nU_facet,Vector3d(0,0,0),nV_facet, thetaOffset);
+	N_rotated = Rotate(N_facet,Vector3d(0,0,0),nV_facet, thetaOffset);
+	nU_rotated = Rotate(nU_rotated,Vector3d(0,0,0),nU_facet, phiOffset); //check if correct
+	nV_rotated = Rotate(nV_facet,Vector3d(0,0,0),nU_facet, phiOffset);
+	N_rotated = Rotate(N_rotated,Vector3d(0,0,0),nU_facet, phiOffset);
+}
+
+void GetDirComponents(Vector3d& nU_rotated, Vector3d& nV_rotated, Vector3d& N_rotated, double& u, double& v, double& n) {
+	u = Dot(sHandle->pDir, nU_rotated);
+	v = Dot(sHandle->pDir, nV_rotated);
+	n = Dot(sHandle->pDir, N_rotated);
+	SATURATE(n, -1.0, 1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
+}
+
+
+
+BOOL DoLowFluxReflection(FACET* collidedFacet, double stickingProbability, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated) {
+	collidedFacet->counter.fluxAbs += sHandle->dF*stickingProbability;
+	collidedFacet->counter.powerAbs += sHandle->dP*stickingProbability;
+	//sHandle->distTraveledSinceUpdate += sHandle->distTraveledCurrentParticle;
+	if (collidedFacet->hits_MC && collidedFacet->sh.countAbs) RecordHitOnTexture(collidedFacet,
+		sHandle->dF*stickingProbability, sHandle->dP*stickingProbability);
+	//okay, absorbed part recorded, let's see how much is left
+	sHandle->oriRatio *= (1.0 - stickingProbability);
+	if (sHandle->oriRatio < sHandle->mode.lowFluxCutoff) {//reflected part not important, throw it away
+		RecordHit(HIT_ABS, sHandle->dF, sHandle->dP); //for hits and lines display
+		return StartFromSource(); //FALSE if maxdesorption reached
+	}
+	else { //reflect remainder
+		sHandle->dF *= (1.0 - stickingProbability);
+		sHandle->dP *= (1.0 - stickingProbability);
+		if (sHandle->newReflectionModel) {
+			PerformBounce_new(collidedFacet, theta, phi, REFL_FORWARD);
+			return TRUE;
+		}
+		else {
+			return PerformBounce_old(collidedFacet, theta, phi, N_rotated, nU_rotated, nV_rotated);
+		}
+	}
+}
+
+BOOL DoOldRegularReflection(FACET* collidedFacet, double stickingProbability, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated) {
+	if (rnd() < stickingProbability) {
+		Stick(collidedFacet);
+		return StartFromSource(); //FALSE if maxdesorption reached
+	}
+	else { //not sticking, bounce
+		return PerformBounce_old(collidedFacet, theta, phi, N_rotated, nU_rotated, nV_rotated);
+	}
 }
 
 // -------------------------------------------------------------
@@ -670,12 +636,12 @@ BOOL StartFromSource() {
 	regionId--;
 	//Trajectory_Point *source=&(sHandle->regions[regionId].Points[pointIdLocal]);
 	Region_mathonly *sourceRegion = &(sHandle->regions[regionId]);
-	if (!(sourceRegion->params.psimaxX > 0.0 && sourceRegion->params.psimaxY>0.0)) SetErrorSub("psiMaxX or psiMaxY not positive. No photon can be generated");
+	if (!(sourceRegion->params.psimaxX_rad > 0.0 && sourceRegion->params.psimaxY_rad>0.0)) SetErrorSub("psiMaxX or psiMaxY not positive. No photon can be generated");
 	
 	size_t retries = 0;BOOL validEnergy;GenPhoton photon;
 	do {
-		photon = GeneratePhoton(pointIdLocal, sourceRegion, sHandle->generation_mode, sHandle->psi_distr, sHandle->chi_distr, sHandle->tmpCount.nbDesorbed == 0);
-		validEnergy = (photon.energy >= sourceRegion->params.energy_low && photon.energy <= sourceRegion->params.energy_hi);
+		photon = GeneratePhoton(pointIdLocal, sourceRegion, sHandle->mode.generation_mode, sHandle->psi_distr, sHandle->chi_distr, sHandle->tmpCount.nbDesorbed == 0);
+		validEnergy = (photon.energy >= sourceRegion->params.energy_low_eV && photon.energy <= sourceRegion->params.energy_hi_eV);
 		if (!validEnergy) {
 			retries++;
 			pointIdLocal = (int)(rnd()*sourceRegion->Points.size());
@@ -695,14 +661,6 @@ BOOL StartFromSource() {
 
 	sHandle->oriRatio = 1.0;
 
-	/*Vector Z_local=source->direction.Normalize(); //Z' base vector
-	Vector X_local=source->rho.Normalize(); //X' base vector
-	Vector Y_local=Crossproduct(Z_local,X_local);*/
-
-	/*Vector start_pos=source->position;
-	start_pos=Add(start_pos,ScalarMult(X_local,photon.dX)); //apply dX offset
-	start_pos=Add(start_pos,ScalarMult(Y_local,photon.dY)); //apply dY offset*/
-
 	//starting position
 	sHandle->pPos.x = photon.start_pos.x;
 	sHandle->pPos.y = photon.start_pos.y;
@@ -711,10 +669,6 @@ BOOL StartFromSource() {
 	RecordHit(HIT_DES, sHandle->dF, sHandle->dP);
 
 	//angle
-	/*Vector start_dir=Z_local;
-	start_dir=start_dir.Rotate(Y_local,photon.divX);
-	start_dir=start_dir.Rotate(X_local,photon.divY);*/
-
 	sHandle->pDir.x = photon.start_dir.x;
 	sHandle->pDir.y = photon.start_dir.y;
 	sHandle->pDir.z = photon.start_dir.z;
@@ -743,7 +697,7 @@ BOOL StartFromSource() {
 // -------------------------------------------------------------
 double TruncatedGaussian(gsl_rng *gen, const double &mean, const double &sigma, const double &lowerBound, const double &upperBound);
 
-void PerformBounce(FACET *iFacet, const double &inTheta, const double &inPhi, const int &reflType) {
+void PerformBounce_new(FACET *iFacet, const double &inTheta, const double &inPhi, const int &reflType) {
 
 	double outTheta, outPhi; //perform bounce without scattering, will perturbate these angles later if it's a rough surface
 	if (iFacet->sh.reflectType == REF_DIFFUSE) {
@@ -816,110 +770,57 @@ void PerformBounce(FACET *iFacet, const double &inTheta, const double &inPhi, co
 	if (iFacet->hits_MC && iFacet->sh.countRefl) RecordHitOnTexture(iFacet, sHandle->dF, sHandle->dP);
 }
 
-//Old PerformBounce Routine
-//int PerformBounce(FACET *iFacet, double sigmaRatio, double theta, double phi,
-//	Vector N_rotated, Vector nU_rotated, Vector nV_rotated,  double thetaOffset, double phiOffset, double randomAngle,int reflType) {
-//
-//	double inPhi, inTheta;
-//	//BOOL revert=FALSE;
-//
-//	/*if( iFacet->sh.is2sided ) {
-//		// We may need to revert normal in case of 2 sided hit
-//		revert = DOT3(sHandle->pDir.x,sHandle->pDir.y,sHandle->pDir.z,
-//		iFacet->sh.N.x,iFacet->sh.N.y,iFacet->sh.N.z)>0.0;
-//		} //on the other hand, theta alrady contains this information*/
-//
-//	// 0<theta<PI/2:  back reflection
-//	// PI/2<theta<PI: front reflection
-//
-//	// Relaunch particle
-//	switch (iFacet->sh.reflectType) {
-//	case REF_MIRROR:
-//		CartesianToPolar(iFacet, &inTheta, &inPhi);
-//		PolarToCartesian(iFacet, PI - inTheta, inPhi, FALSE);
-//		break;
-//	case REF_DIFFUSE:
-//		//See docs/theta_gen.png for further details on angular distribution generation
-//		PolarToCartesian(iFacet, acos(sqrt(rnd())), rnd()*2.0*PI, FALSE);
-//		//To do: check if against facet
-//		break;
-//	default: //Material reflection - theta, etc. are already calculated
-//		switch (reflType) {
-//		case 1: //forward reflection
-//		{
-//			Vector N_facet = Vector(iFacet->sh.N.x, iFacet->sh.N.y, iFacet->sh.N.z);
-//
-//			double u, v, n;
-//
-//			theta = PI - theta; //perform reflection
-//
-//			u = sin(theta)*cos(phi);
-//			v = sin(theta)*sin(phi);
-//			n = cos(theta);
-//
-//			Vector newDir = Vector(u*nU_rotated.x + v*nV_rotated.x + n*N_rotated.x,
-//				u*nU_rotated.y + v*nV_rotated.y + n*N_rotated.y,
-//				u*nU_rotated.z + v*nV_rotated.z + n*N_rotated.z);
-//
-//			if ((DOT3(newDir.x, newDir.y, newDir.z,
-//				N_facet.x, N_facet.y, N_facet.z) > 0) != (theta < PI / 2)) {
-//				return 0; //if reflection would go against the surface, generate new angles
-//			}
-//
-//			sHandle->pDir.x = newDir.x;
-//			sHandle->pDir.y = newDir.y;
-//			sHandle->pDir.z = newDir.z;
-//
-//			//CartesianToPolar(iFacet, &inTheta, &inPhi);
-//			//PolarToCartesian(iFacet, PI - inTheta+2.0*thetaOffset, inPhi+2.0*phiOffset, FALSE,TRUE);
-//
-//			break;
-//		}
-//		case 2: //diffuse reflection
-//			PolarToCartesian(iFacet, acos(sqrt(rnd())), rnd()*2.0*PI, FALSE);
-//			break;
-//
-//		case 3: //back reflection
-//		{
-//			/*Vector N_facet = Vector(iFacet->sh.N.x, iFacet->sh.N.y, iFacet->sh.N.z);
-//
-//			Vector newDir;
-//			double u, v, n;
-//
-//			theta = PI + theta; //turn back ray
-//
-//			u = sin(theta)*cos(phi);
-//			v = sin(theta)*sin(phi);
-//			n = cos(theta);
-//
-//			newDir = Vector(u*nU_rotated.x + v*nV_rotated.x + n*N_facet.x,
-//				u*nU_rotated.y + v*nV_rotated.y + n*N_facet.y,
-//				u*nU_rotated.z + v*nV_rotated.z + n*N_facet.z);
-//
-//			if ((DOT3(newDir.x, newDir.y, newDir.z,
-//				N_facet.x, N_facet.y, N_facet.z) > 0) != (theta < 2*PI)) {
-//				return 0; //if reflection would go against the surface, generate new angles
-//			}*/
-//
-//			Vector backDir = Vector(-sHandle->pDir.x, -sHandle->pDir.y, -sHandle->pDir.z); //Turn back ray
-//			Vector newDir = backDir.Rotate(Crossproduct(backDir,Vector(iFacet->sh.N.x,iFacet->sh.N.y,iFacet->sh.N.z)), 5.0*thetaOffset); //Random perturbation, coeff. 5.0 empirically found
-//			newDir=newDir.Rotate(backDir, randomAngle);
-//
-//			sHandle->pDir.x = newDir.x;
-//			sHandle->pDir.y = newDir.y;
-//			sHandle->pDir.z = newDir.z;
-//			break;
-//		}
-//		}
-//		break;
-//	}
-//	RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
-//	sHandle->lastHit = iFacet;
-//
-//
-//	if (iFacet->hits_MC && iFacet->sh.countRefl) RecordHitOnTexture(iFacet, sHandle->dF, sHandle->dP);
-//	return 1;
-//}
+BOOL PerformBounce_old(FACET *iFacet, double theta, double phi,
+	Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated) {
+
+	double inPhi, inTheta;
+
+	// Relaunch particle
+	if (iFacet->sh.reflectType == REF_DIFFUSE) {
+		//See docs/theta_gen.png for further details on angular distribution generation
+		PolarToCartesian(iFacet, acos(sqrt(rnd())), rnd()*2.0*PI, FALSE);
+	} else { //Mirror reflection, optionally with surface perturbation
+		if (!VerifiedSpecularReflection(iFacet, theta, phi,
+			N_rotated, nU_rotated, nV_rotated)) {
+			return FALSE;
+		}
+	}
+	RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
+	sHandle->lastHit = iFacet;
+
+
+	if (iFacet->hits_MC && iFacet->sh.countRefl) RecordHitOnTexture(iFacet, sHandle->dF, sHandle->dP);
+	return TRUE;
+}
+
+BOOL VerifiedSpecularReflection(FACET *iFacet, double theta, double phi,
+	Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated) {
+	//Specular reflection that returns FALSE if going against surface
+
+	Vector3d N_facet = Vector3d(iFacet->sh.N.x, iFacet->sh.N.y, iFacet->sh.N.z);
+
+	Vector3d newDir;
+	double u, v, n;
+
+	theta = PI - theta; //perform reflection
+
+	u = sin(theta)*cos(phi);
+	v = sin(theta)*sin(phi);
+	n = cos(theta);
+
+	newDir = Vector3d(u*nU_rotated.x + v*nV_rotated.x + n*N_rotated.x,
+		u*nU_rotated.y + v*nV_rotated.y + n*N_rotated.y,
+		u*nU_rotated.z + v*nV_rotated.z + n*N_rotated.z);
+
+	if ((Dot(newDir,N_facet) > 0) != (theta < PI / 2)) {
+		return FALSE; //if reflection would go against the surface, generate new angles
+	}
+
+	sHandle->pDir.x = newDir.x;
+	sHandle->pDir.y = newDir.y;
+	sHandle->pDir.z = newDir.z;
+	return TRUE;
+}
 
 void RecordHitOnTexture(FACET *f, double dF, double dP) {
 	int tu = (int)(f->colU * f->sh.texWidthD);
@@ -930,31 +831,21 @@ void RecordHitOnTexture(FACET *f, double dF, double dP) {
 	f->hits_power[add] += dP*f->inc[add]; //normalized by area
 }
 
-double Gaussian(const double &sigma) {
-	//Box-Muller transform
-	//return sigma*sqrt(-2 * log(rnd()))*cos(2 * PI*rnd());
+void RecordDirectionVector(FACET *f) {
+	int tu = (int)(f->colU * f->sh.texWidthD);
+	int tv = (int)(f->colV * f->sh.texHeightD);
+	int add = tu + tv*(f->sh.texWidth);
 
-	//Generates a random number following the Gaussian distribution around 0 with 'sigma' standard deviation
-	double v1, v2, r, fac;
-	do {
-		v1 = 2.0*rnd() - 1.0;
-		v2 = 2.0*rnd() - 1.0;
-		r = Sqr(v1) + Sqr(v2);
-	} while (r >= 1.0);
-	fac = sqrt(-2.0*log(r) / r);
-	return v2*fac*sigma;
+	f->direction[add].dir.x += sHandle->pDir.x;
+	f->direction[add].dir.y += sHandle->pDir.y;
+	f->direction[add].dir.z += sHandle->pDir.z;
+	f->direction[add].count++;
 }
 
-double TruncatedGaussian(gsl_rng *gen,const double &mean, const double &sigma, const double &lowerBound, const double &upperBound) {
-	std::pair<double, double> s;  // Output argument of rtnorm
-	s = rtnorm(gen, lowerBound, upperBound, mean, sigma);
-	return s.first;
-}
-
-int Stick(FACET* collidedFacet) {
-	collidedFacet->sh.counter.nbAbsorbed++;
-	collidedFacet->sh.counter.fluxAbs += sHandle->dF;
-	collidedFacet->sh.counter.powerAbs += sHandle->dP;
+void Stick(FACET* collidedFacet) {
+	collidedFacet->counter.nbAbsorbed++;
+	collidedFacet->counter.fluxAbs += sHandle->dF;
+	collidedFacet->counter.powerAbs += sHandle->dP;
 	sHandle->tmpCount.nbAbsorbed++;
 	//sHandle->distTraveledSinceUpdate+=sHandle->distTraveledCurrentParticle;
 	//sHandle->counter.nbAbsorbed++;
@@ -962,8 +853,4 @@ int Stick(FACET* collidedFacet) {
 	//sHandle->counter.powerAbs+=sHandle->dP;
 	RecordHit(HIT_ABS, sHandle->dF, sHandle->dP); //for hits and lines display
 	if (collidedFacet->hits_MC && collidedFacet->sh.countAbs) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
-	if (!StartFromSource())
-		// maxDesorption reached
-		return 0; //FALSE
-	return 1;
 }

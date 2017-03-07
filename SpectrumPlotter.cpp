@@ -19,7 +19,8 @@ GNU General Public License for more details.
 #include "SpectrumPlotter.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
-#include "Utils.h"
+#include "Facet.h"
+
 #include <math.h>
 #include "Synrad.h"
 
@@ -148,9 +149,9 @@ void SpectrumPlotter::SetScale() {
 	if ((int)worker->regions.size()>0) {
 		Region_full *traj=&(worker->regions[0]); //scale axis X
 		if (traj->isLoaded) {
-			chart->GetXAxis()->SetMinimum(traj->params.energy_low);
-			chart->GetXAxis()->SetMaximum(traj->params.energy_hi);
-			delta=(log(traj->params.energy_hi)-log(traj->params.energy_low))/SPECTRUM_SIZE;
+			chart->GetXAxis()->SetMinimum(traj->params.energy_low_eV);
+			chart->GetXAxis()->SetMaximum(traj->params.energy_hi_eV);
+			delta=(log(traj->params.energy_hi_eV)-log(traj->params.energy_low_eV))/SPECTRUM_SIZE;
 		}
 	}
 	}
@@ -319,13 +320,15 @@ void SpectrumPlotter::ProcessMessage(GLComponent *src,int message) {
 			SetVisible(FALSE);
 		} else if(src==selButton) {
 			int idx = specCombo->GetSelectedIndex();
-			geom->UnSelectAll();
-			int facetId=(int)((double)specCombo->GetUserValueAt(idx)/2.0);
-			geom->GetFacet(facetId)->selected = TRUE;
-			mApp->UpdateFacetParams(TRUE);
-			geom->UpdateSelection();
-			mApp->facetList->SetSelectedRow(facetId);
-			mApp->facetList->ScrollToVisible(facetId,1,TRUE);
+			if (idx>=0) {
+				geom->UnselectAll();
+				int facetId=(int)((double)specCombo->GetUserValueAt(idx)/2.0);
+				geom->GetFacet(facetId)->selected = TRUE;
+				mApp->UpdateFacetParams(TRUE);
+				geom->UpdateSelection();
+				mApp->facetList->SetSelectedRow(facetId);
+				mApp->facetList->ScrollToVisible(facetId,1,TRUE);
+			}
 		} else if(src==addButton) {
 			int idx = specCombo->GetSelectedIndex();
 			int facetId=(int)((double)specCombo->GetUserValueAt(idx)/2.0);

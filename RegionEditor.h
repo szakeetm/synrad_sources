@@ -26,6 +26,8 @@ GNU General Public License for more details.
 #ifndef _REGIONEDITORH_
 #define _REGIONEDITORH_
 
+class Region_full;
+
 class RegionEditor : public GLWindow {
 
 public:
@@ -36,6 +38,7 @@ public:
 	// Implementation
 	void ProcessMessage(GLComponent *src,int message);
 	void Display(Worker *w,int regionId);
+	int GetRegionId();
 	
 
 private:
@@ -44,43 +47,147 @@ private:
 	Region_full      *cr; //current region
 	int regionId;
 	
-	GLTitledPanel *trajectoryPanel,*beamPanel,*generationPanel,*magneticPanel;
+	GLTitledPanel	*beamPanel;
+	GLLabel	*label6;
+	GLLabel	*label4;
+	GLTextField	*startPointYtext;
+	GLTextField	*startPointZtext;
+	GLLabel	*label7;
+	GLLabel	*label5;
+	GLLabel	*label3;
+	GLTextField	*startPointXtext;
+	GLLabel	*label2;
+	GLLabel	*label1;
+	GLCombo	*startDirDefinitionCombo;
+	GLLabel	*label8;
+	GLLabel	*label9;
+	GLLabel	*label10;
+	GLTextField	*theta0text;
+	GLTextField	*alpha0text;
+	GLLabel	*label11;
+	GLLabel	*label12;
+	GLButton	*startDirInfoButton;
+	GLTextField	*startDirZtext;
+	GLLabel	*label15;
+	GLTextField	*startDirYtext;
+	GLLabel	*label14;
+	GLTextField	*startDirXtext;
+	GLLabel	*label13;
+	GLLabel	*label19;
+	GLLabel	*label20;
+	GLTextField	*limitsYtext;
+	GLTextField	*limitsZtext;
+	GLLabel	*label21;
+	GLLabel	*label22;
+	GLLabel	*label23;
+	GLTextField	*limitsXtext;
+	GLLabel	*label24;
+	GLLabel	*label25;
+	GLLabel	*label16;
+	GLTextField	*dLtext;
+	GLLabel	*label17;
+	GLLabel	*label18;
+	GLButton	*limitsInfoButton;
+	GLButton	*dlInfoButton;
+	GLTitledPanel	*particlePanel;
+	GLLabel	*label27;
+	GLLabel	*label26;
+	GLTextField	*particleMassText;
+	GLLabel	*label28;
+	GLCombo	*particleChargeCombo;
+	GLLabel	*label29;
+	GLButton	*setParticleProtonButton;
+	GLButton	*setParticlePositronButton;
+	GLButton	*setParticleElectronButton;
+	GLLabel	*label30;
+	GLTitledPanel	*beamParamPanel;
+	GLLabel	*label33;
+	GLTextField	*beamCurrentText;
+	GLLabel	*label34;
+	GLLabel	*label31;
+	GLTextField	*beamEnergyText;
+	GLLabel	*label32;
+	GLToggle	*idealBeamToggle;
+	GLToggle	*emittanceCouplingToggle;
+	GLTextField	*emittanceYtext;
+	GLToggle	*emittanceXYtoggle;
+	GLTextField	*couplingText;
+	GLTextField	*emittanceXtext;
+	GLTextField	*emittanceText;
+	GLLabel	*label36;
+	GLLabel	*label35;
+	GLButton	*beamsizeInfoButton;
+	GLLabel	*label40;
+	GLLabel	*label39;
+	GLLabel	*label38;
+	GLLabel	*label37;
+	GLLabel	*label49;
+	GLLabel	*label47;
+	GLLabel	*label48;
+	GLLabel	*label50;
+	GLTextField	*etaPrimeText;
+	GLTextField	*energySpreadText;
+	GLLabel	*label45;
+	GLLabel	*label46;
+	GLTextField	*etaText;
+	GLLabel	*label43;
+	GLLabel	*label44;
+	GLTextField	*betaYtext;
+	GLLabel	*label41;
+	GLLabel	*label42;
+	GLTextField	*betaXtext;
+	GLButton	*gammaInfoButton;
+	GLTextField	*BXYfileNameText;
+	GLLabel	*label51;
+	GLToggle	*constantBXYtoggle;
+	GLButton	*bxyEditButton;
+	GLButton	*bxyBrowseButton;
+	GLTitledPanel	*photonGenPanel;
+	GLToggle	*enableParPolarizationToggle;
+	GLLabel	*label59;
+	GLLabel	*label57;
+	GLTextField	*EmaxText;
+	GLLabel	*label58;
+	GLLabel	*label54;
+	GLLabel	*label56;
+	GLTextField	*EminText;
+	GLLabel	*label55;
+	GLToggle	*enableOrtPolarizationToggle;
+	GLLabel	*label61;
+	GLLabel	*label60;
+	GLTextField	*psiMaxXtext;
+	GLTextField	*psiMaxYtext;
+	GLToggle	*limitAngleToggle;
+	GLLabel	*label63;
+	GLLabel	*label62;
+	GLTitledPanel	*magPanel;
+	GLCombo	*BxtypeCombo;
+	GLLabel	*label66;
+	GLLabel	*label65;
+	GLButton	*magxEditButton;
+	GLTextField	*constBXtext;
+	GLButton	*magxBrowseButton;
+	GLTextField	*MAGfileXtext;
+	GLLabel	*label64;
+	GLCombo	*BztypeCombo;
+	GLLabel	*label70;
+	GLLabel	*label71;
+	GLButton	*magzEditButton;
+	GLTextField	*constBZtext;
+	GLButton	*magzBrowseButton;
+	GLTextField	*MAGfileZtext;
+	GLLabel	*label72;
+	GLCombo	*BytypeCombo;
+	GLLabel	*label67;
+	GLLabel	*label68;
+	GLButton	*magyEditButton;
+	GLTextField	*constBYtext;
+	GLButton	*magyBrowseButton;
+	GLTextField	*MAGfileYtext;
+	GLLabel	*label69;
+	GLButton	*applyButton;
 
-	//trajectory properties
-	GLTextField *startPointXtext,*startPointYtext,*startPointZtext;
-	GLCombo    *startDirDefinitionCombo;
-	GLTextField *theta0text,*alpha0text,*startDirXtext,*startDirYtext,*startDirZtext;
-	GLTextField *dLtext,*limitsXtext,*limitsYtext,*limitsZtext;
-	GLButton *startDirInfoButton,*dlInfoButton,*limitsInfoButton,*beamsizeInfoButton;
-	GLButton *bxyBrowseButton,*magxBrowseButton,*magyBrowseButton,*magzBrowseButton;
-	GLButton *bxyEditButton,*magxEditButton,*magyEditButton,*magzEditButton;
-
-	//beam properties
-	GLTextField *particleMassText,*beamEnergyText,*beamCurrentText;
-	GLCombo *particleChargeCombo;
-	GLButton *setParticleElectronButton,*setParticlePositronButton,*setParticleProtonButton;
-
-	GLToggle *idealBeamToggle;
-	GLCombo *betaOrBXYCombo;
-	GLTextField *betaXtext,*betaYtext,*etaText,*etaPrimeText,*emittanceText,*couplingText,*energySpreadText;
-	//GLButton *browseBXYbutton;
-	GLTextField *BXYfileNameText;
-
-	//generation properties
-	GLTextField *EminText,*EmaxText,*psiMaxXtext,*psiMaxYtext;
-	GLToggle *limitAngleToggle;
-	GLToggle *enableParPolarizationToggle,*enableOrtPolarizationToggle;
-
-	//magnetic fields
-	GLCombo *BxtypeCombo,*BytypeCombo,*BztypeCombo;
-	GLTextField *constBXtext,*constBYtext,*constBZtext;
-	GLTextField *MAGfileXtext,*MAGfileYtext,*MAGfileZtext;
-	//GLButton *browseMAGXbutton,*browseMAGYbutton,*browseMAGZbutton;
-
-	//common stuff
-	GLButton *applyButton,*dismissButton;
-
-	void EnableDisableControls();
+	void EnableDisableControls(GLComponent* src);
 	void FillValues();
 	void ApplyChanges();
 };

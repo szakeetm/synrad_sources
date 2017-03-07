@@ -21,6 +21,7 @@
 #include "GLApp/GLToggle.h"
 #include "GLApp/GLTitledPanel.h"
 #include "GLApp/GLGradient.h"
+#include "Shared.h" //MAX_PROCESS macro
 
 #ifndef _GLOBALSETTINGSH_
 #define _GLOBALSETTINGSH_
@@ -58,11 +59,13 @@ private:
   GLToggle      *chkSimuOnly;
   GLToggle      *chkCheckForUpdates;
   GLToggle      *chkAutoUpdateFormulas;
+  GLToggle      *chkNewReflectionModel;
   GLToggle      *chkCompressSavedFiles;
   GLToggle      *lowFluxToggle;
   GLButton    *applyButton;
   GLButton    *cancelButton;
   GLButton    *lowFluxInfo;
+  GLButton    *newReflectmodeInfo;
 
   /*GLTextField *outgassingText;
   GLTextField *gasmassText;*/

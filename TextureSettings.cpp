@@ -17,8 +17,13 @@
 */
 
 #include "TextureSettings.h"
+#include "SynradGeometry.h"
+#include "Worker.h"
+#include "Facet.h"
 #include "GLApp/GLToolkit.h"
+#include "GLApp/MathTools.h" //FormatMemory
 #include "GLApp/GLMessageBox.h"
+
 
 // --------------------------------------------------------------------
 
@@ -122,7 +127,7 @@ TextureSettings::TextureSettings():GLWindow() {
   modeCombo->SetValueAt(1,"Flux (ph/sec/cm\262");
   modeCombo->SetValueAt(2,"Power (W/cm\262");
   modeCombo->SetBounds(10,180,100,25);
-  modeCombo->SetSelectedIndex(1);
+  modeCombo->SetSelectedIndex(geom->textureMode);
   Add(modeCombo);
 
 
@@ -196,7 +201,7 @@ void TextureSettings::Update() {
 void TextureSettings::Display(Worker *w,GeometryViewer **v) {
 
   worker = w;
-  geom = w->GetGeometry();
+  geom = w->GetSynradGeometry();
   viewers = v;
   if(!geom->IsLoaded()) {
 	  GLMessageBox::Display("No geometry loaded.","No geometry",GLDLG_OK,GLDLG_ICONERROR);

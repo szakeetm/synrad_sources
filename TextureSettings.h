@@ -23,11 +23,12 @@
 #include "GLApp/GLToggle.h"
 #include "GLApp/GLTitledPanel.h"
 #include "GLApp/GLGradient.h"
-#include "Geometry.h"
 #include "GeometryViewer.h"
 
 #ifndef _TEXTURESETTINGSH_
 #define _TEXTURESETTINGSH_
+
+class SynradGeometry;
 
 class TextureSettings : public GLWindow {
 
@@ -48,7 +49,7 @@ private:
   void UpdateSize();
 
   Worker         *worker;
-  Geometry       *geom;
+  SynradGeometry *geom;
   GeometryViewer **viewers;
 
   GLToggle      *texAutoScale;

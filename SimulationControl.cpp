@@ -29,13 +29,11 @@ GNU General Public License for more details.
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <vector>
 #include "Simulation.h"
 #include "Random.h"
-#include "TruncatedGaussian\rtnorm.hpp"
+#include "SynradTypes.h" //Histogram
 //#include "Tools.h"
-#include <vector>
-
-#define READBUFFER(_type) *(_type*)buffer;buffer+=sizeof(_type)
 
 extern void SetErrorSub(const char *message);
 
@@ -159,7 +157,7 @@ DWORD GetSeed() {
 
 
 
-double Norme(VERTEX3D *v) {
+double Norme(Vector3d *v) {
 	return sqrt(v->x*v->x + v->y*v->y + v->z*v->z);
 }
 
@@ -171,8 +169,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	BYTE *buffer,*bufferAfterMaterials;
 	BYTE *areaBuff;
 	BYTE *bufferStart;
-	SHGEOM *shGeom;
-	VERTEX3D *shVert;
+	Vector3d *shVert;
 	double t1,t0;
 	DWORD seed;
 	char err[128];
@@ -198,7 +195,7 @@ BOOL LoadSimulation(Dataport *loader) {
 
 	// Load new geom from the dataport
 
-	shGeom = (SHGEOM *)buffer;
+	SHGEOM* shGeom = (SHGEOM *)buffer;
 	if(shGeom->nbSuper>MAX_STRUCT) {
 		ReleaseDataport(loader);
 		SetErrorSub("Too many structures");
@@ -209,15 +206,21 @@ BOOL LoadSimulation(Dataport *loader) {
 		SetErrorSub("No structures");
 		return FALSE;
 	}
-	sHandle->lowFluxMode = shGeom->lowFluxMode;
-	sHandle->lowFluxCutoff = shGeom->lowFluxCutoff;
-	
+
+	sHandle->newReflectionModel = shGeom->newReflectionModel;
 	sHandle->nbVertex = shGeom->nbVertex;
 	sHandle->nbSuper = shGeom->nbSuper;
 	sHandle->nbRegion = shGeom->nbRegion;
 	sHandle->totalFacet = shGeom->nbFacet;
-	sHandle->generation_mode = shGeom->generation_mode;
+	
 	buffer+=sizeof(SHGEOM);
+
+	SHMODE* shMode = (SHMODE *)buffer;
+	sHandle->mode.generation_mode = shMode->generation_mode;
+	sHandle->mode.lowFluxCutoff = shMode->lowFluxCutoff;
+	sHandle->mode.lowFluxMode = shMode->lowFluxMode;
+	buffer += sizeof(SHMODE);
+
 	sHandle->nbTrajPoints=0;
 	
 	//Regions
@@ -244,7 +247,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	}
 
 	//copy distribution points
-	sHandle->nbDistrPoints_MAG=0;
+	//sHandle->nbDistrPoints_MAG=0;
 	sHandle->nbDistrPoints_BXY=0;
 	for (size_t r = 0; r<sHandle->nbRegion; r++) {
 
@@ -266,27 +269,16 @@ BOOL LoadSimulation(Dataport *loader) {
 			sHandle->regions[r].Bz_distr.valuesY[j] = READBUFFER(double);
 		}
 
-		sHandle->regions[r].beta_x_distr.Resize(sHandle->regions[r].params.nbDistr_BXY);
-		sHandle->regions[r].beta_y_distr.Resize(sHandle->regions[r].params.nbDistr_BXY);
-		sHandle->regions[r].eta_distr.Resize(sHandle->regions[r].params.nbDistr_BXY);
-		sHandle->regions[r].etaprime_distr.Resize(sHandle->regions[r].params.nbDistr_BXY);
-		sHandle->regions[r].e_spread_distr.Resize(sHandle->regions[r].params.nbDistr_BXY);
+		sHandle->regions[r].betaFunctions.Clear();
 
 		for (size_t j = 0; j<sHandle->regions[r].params.nbDistr_BXY; j++) {
-			sHandle->regions[r].beta_x_distr.valuesX[j]=
-				sHandle->regions[r].beta_y_distr.valuesX[j]=
-				sHandle->regions[r].eta_distr.valuesX[j]=
-				sHandle->regions[r].etaprime_distr.valuesX[j]=
-				sHandle->regions[r].e_spread_distr.valuesX[j]=
-				READBUFFER(double);
-			sHandle->regions[r].beta_x_distr.valuesY[j] = READBUFFER(double);
-			sHandle->regions[r].beta_y_distr.valuesY[j] = READBUFFER(double);
-			sHandle->regions[r].eta_distr.valuesY[j] = READBUFFER(double);
-			sHandle->regions[r].etaprime_distr.valuesY[j] = READBUFFER(double);
-			sHandle->regions[r].e_spread_distr.valuesY[j] = READBUFFER(double);
+			double x = READBUFFER(double);
+			std::vector<double> betaValues;
+			betaValues.resize(6);
+			memcpy(betaValues.data(), buffer, 6 * sizeof(double)); //Vector data is contigious. The 6 values are: BetaX, BetaY, EtaX, EtaX', AlphaX, AlphaY
+			buffer += 6 * sizeof(double);
 		}
 
-		sHandle->nbDistrPoints_MAG += (size_t)(sHandle->regions[r].params.nbDistr_MAG.x + sHandle->regions[r].params.nbDistr_MAG.y + sHandle->regions[r].params.nbDistr_MAG.z);
 		sHandle->nbDistrPoints_BXY+=sHandle->regions[r].params.nbDistr_BXY;
 	}
 	}
@@ -377,11 +369,11 @@ BOOL LoadSimulation(Dataport *loader) {
 	bufferAfterMaterials=buffer;
 
 	// Prepare super structure
-	buffer +=  sizeof(VERTEX3D)*sHandle->nbVertex;
+	buffer +=  sizeof(Vector3d)*sHandle->nbVertex;
 	for(i=0;i<sHandle->totalFacet;i++) {
 		SHFACET *shFacet = (SHFACET *)buffer;
 		sHandle->str[shFacet->superIdx].nbFacet++;
-		buffer+=sizeof(SHFACET) + shFacet->nbIndex*(sizeof(int) + sizeof(VERTEX2D));
+		buffer+=sizeof(SHFACET) + shFacet->nbIndex*(sizeof(int) + sizeof(Vector2d));
 	}
 	for(i=0;i<sHandle->nbSuper;i++) {
 		int nbF = sHandle->str[i].nbFacet;
@@ -399,14 +391,11 @@ BOOL LoadSimulation(Dataport *loader) {
 	memcpy(sHandle->name,shGeom->name,64);
 
 	// Vertex
-	sHandle->vertices3 = (VERTEX3D *)malloc(sHandle->nbVertex*sizeof(VERTEX3D));
-	//buffer+=sizeof(SHGEOM)+shGeom->nbRegion*sizeof(Region)
-	//	+sHandle->nbTrajPoints*sizeof(Trajectory_Point)+sHandle->nbDistrPoints_MAG*2*sizeof(double)
-	//	+sHandle->nbDistrPoints_BXY*sizeof(double)*5;
+	sHandle->vertices3 = (Vector3d *)malloc(sHandle->nbVertex*sizeof(Vector3d));
 	buffer=bufferAfterMaterials;
-	shVert = (VERTEX3D *)(buffer);
-	memcpy(sHandle->vertices3,shVert,sHandle->nbVertex*sizeof(VERTEX3D));
-	buffer+=sizeof(VERTEX3D)*sHandle->nbVertex;
+	shVert = (Vector3d *)(buffer);
+	memcpy(sHandle->vertices3,shVert,sHandle->nbVertex*sizeof(Vector3d));
+	buffer+=sizeof(Vector3d)*sHandle->nbVertex;
 
 	// Facets
 	for(i=0;i<sHandle->totalFacet;i++) {
@@ -421,7 +410,7 @@ BOOL LoadSimulation(Dataport *loader) {
 		memcpy(&(f->sh),shFacet,sizeof(SHFACET));
 
 		sHandle->hasVolatile |= f->sh.isVolatile;
-		sHandle->hasDirection |= f->sh.countDirection;
+		//sHandle->hasDirection |= f->sh.countDirection;
 
 		idx = f->sh.superIdx;
 		sHandle->str[idx].facets[sHandle->str[idx].nbFacet] = f;
@@ -447,18 +436,18 @@ BOOL LoadSimulation(Dataport *loader) {
 		}
 
 		// Reset counter in local memory
-		memset(&(f->sh.counter),0,sizeof(SHHITS));
+		memset(&(f->counter),0,sizeof(SHHITS));
 		f->indices = (int *)malloc(f->sh.nbIndex*sizeof(int));
 		buffer+=sizeof(SHFACET);
 		memcpy(f->indices,buffer,f->sh.nbIndex*sizeof(int));
 		buffer+=f->sh.nbIndex*sizeof(int);
-		f->vertices2 = (VERTEX2D *)malloc(f->sh.nbIndex * sizeof(VERTEX2D));
+		f->vertices2 = (Vector2d *)malloc(f->sh.nbIndex * sizeof(Vector2d));
 		if (!f->vertices2) {
 			SetErrorSub("Not enough memory to load vertices");
 			return FALSE;
 		}
-		memcpy(f->vertices2,buffer,f->sh.nbIndex * sizeof(VERTEX2D));
-		buffer+=f->sh.nbIndex*sizeof(VERTEX2D);
+		memcpy(f->vertices2,buffer,f->sh.nbIndex * sizeof(Vector2d));
+		buffer+=f->sh.nbIndex*sizeof(Vector2d);
 
 		//Textures
 		if(f->sh.isTextured) {
@@ -524,8 +513,8 @@ BOOL LoadSimulation(Dataport *loader) {
 			f->spectrumSize = 2*sizeof(double)*SPECTRUM_SIZE;
 			double min_energy,max_energy;
 			if (sHandle->nbRegion>0) {
-				min_energy=sHandle->regions[0].params.energy_low;
-				max_energy=sHandle->regions[0].params.energy_hi;
+				min_energy=sHandle->regions[0].params.energy_low_eV;
+				max_energy=sHandle->regions[0].params.energy_hi_eV;
 			} else {
 				min_energy=10.0;
 				max_energy=1000000.0;
@@ -574,7 +563,27 @@ BOOL LoadSimulation(Dataport *loader) {
 
 }
 
-// -------------------------------------------------------
+BOOL UpdateSimuParams(Dataport *loader) {
+	// Connect the dataport
+	if (!AccessDataportTimed(loader, 2000)) {
+		SetErrorSub("Failed to connect to DP");
+		return FALSE;
+	}
+	BYTE* buffer = (BYTE *)loader->buff;
+	
+	SHMODE* shMode = (SHMODE *)buffer;
+	sHandle->mode.generation_mode = shMode->generation_mode;
+	sHandle->mode.lowFluxCutoff = shMode->lowFluxCutoff;
+	sHandle->mode.lowFluxMode = shMode->lowFluxMode;
+	buffer += sizeof(SHMODE);
+
+	for (size_t i = 0; i < sHandle->nbRegion; i++) {
+		sHandle->regions[i].params.showPhotons = READBUFFER(BOOL);
+	}
+
+	ReleaseDataport(loader);
+	return TRUE;
+}
 
 void UpdateHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 
@@ -582,14 +591,10 @@ void UpdateHits(Dataport *dpHit,int prIdx,DWORD timeout) {
 
 }
 
-// -------------------------------------------------------
-
 size_t GetHitsSize() {
 	return sHandle->textTotalSize + sHandle->profTotalSize + sHandle->dirTotalSize +
 		sHandle->spectrumTotalSize + sHandle->totalFacet*sizeof(SHHITS) + sizeof(SHGHITS);
 }
-
-// -------------------------------------------------------
 
 void ResetCounter() {
 
@@ -607,10 +612,10 @@ void ResetCounter() {
 	for(j=0;j<sHandle->nbSuper;j++) {
 		for(i=0;i<sHandle->str[j].nbFacet;i++) {
 			FACET *f = sHandle->str[j].facets[i];
-			f->sh.counter.fluxAbs=0.0;
-			f->sh.counter.powerAbs=0.0;
-			f->sh.counter.nbHit=0;
-			f->sh.counter.nbAbsorbed=0;
+			f->counter.fluxAbs=0.0;
+			f->counter.powerAbs=0.0;
+			f->counter.nbHit=0;
+			f->counter.nbAbsorbed=0;
 			f->hitted = FALSE;
 			int textureElemNb=f->sh.texHeight*f->sh.texWidth;
 			if( f->hits_MC ) memset(f->hits_MC,0,textureElemNb*sizeof(llong));
@@ -628,8 +633,6 @@ void ResetCounter() {
 	}
 
 }
-
-// -------------------------------------------------------
 
 void ResetSimulation() {
 
@@ -649,20 +652,27 @@ void ResetSimulation() {
 
 }
 
-// -------------------------------------------------------
-
 BOOL StartSimulation() {
 	if (sHandle->regions.size()==0) {
 		SetErrorSub("No regions");
 		return FALSE;
 	}
 	
-		if(!sHandle->lastHit) StartFromSource();
-		return true;
+	//Check for invalid material (ID==9) passed from the interface
+	//It is valid to load invalid materials (to extract textures, etc.) but not to launch the simulation
+	for (int s = 0; s<sHandle->nbSuper; s++) {
+		for (int f = 0; f < sHandle->str[s].nbFacet; f++) {
+			if (sHandle->str[s].facets[f]->sh.reflectType == 9) {
+				char tmp[32];
+				sprintf(tmp, "Invalid material on Facet %d.", f + 1);
+				SetErrorSub(tmp);
+				return FALSE;
+			}
+		}
+	}
 
-	SetErrorSub("Unknown simulation mode");
-	return FALSE;
-
+	if(!sHandle->lastHit) StartFromSource();
+	return true;
 }
 
 // -------------------------------------------------------

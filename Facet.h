@@ -24,6 +24,7 @@
 #include "File.h"
 #include "PugiXML/pugixml.hpp"
 #include "Distributions.h"
+#include "Geometry.h"
 
 class Facet {
 
@@ -52,9 +53,9 @@ public:
   SHFACET sh;
 
   int      *indices;      // Indices (Reference to geometry vertex)
-  VERTEX2D *vertices2;    // Vertices (2D plane space, UV coordinates)
+  Vector2d *vertices2;    // Vertices (2D plane space, UV coordinates)
   int     *cellPropertiesIds;      // -1 if full element, -2 if outside polygon, otherwise index in meshvector
-  CELLPROPERTIES* meshvector;
+  CellProperties* meshvector;
   size_t meshvectorsize;
   //size_t       nbElem;       // Number of mesh elem
 
@@ -84,9 +85,16 @@ public:
   GLint  glList;          // Geometry with texture
   GLuint glTex;           // Handle to OpenGL texture
 
+  //Smart selection
+  std::vector<NeighborFacet> neighbors;
+
+  // Global hit counters
+  SHHITS counterCache;
+
   //Facet methods
 
-  BOOL  IsLinkFacet();
+  BOOL  IsTXTLinkFacet();
+  Vector3d GetRealCenter();
   void  LoadTXT(FileReader *file);
   void  SaveTXT(FileWriter *file);
   void  LoadGEO(FileReader *file,int version,int nbVertex);
@@ -99,18 +107,18 @@ public:
   void  Copy(Facet *f,BOOL copyMesh=FALSE);
   void  SwapNormal();
   void  Explode(FACETGROUP *group);
-  void  FillVertexArray(VERTEX3D *v);
+  void  FillVertexArray(Vector3d *v);
   void  BuildMeshList();
   void  InitVisibleEdge();
   BOOL  SetTexture(double width,double height,BOOL useMesh);
   size_t GetGeometrySize();
-  DWORD GetHitsSize();
-  DWORD GetTexSwapSize(BOOL useColormap);
-  DWORD GetTexRamSize();
-  DWORD GetTexSwapSizeForRatio(double ratio,BOOL useColor);
-  DWORD GetTexRamSizeForRatio(double ratio,BOOL useMesh,BOOL countDir);
-  DWORD GetNbCellForRatio(double ratio);
-  DWORD GetNbCell();
+  size_t GetHitsSize();
+  size_t GetTexSwapSize(BOOL useColormap);
+  size_t GetTexRamSize();
+  size_t GetTexSwapSizeForRatio(double ratio,BOOL useColor);
+  size_t GetTexRamSizeForRatio(double ratio,BOOL useMesh,BOOL countDir);
+  size_t GetNbCellForRatio(double ratio);
+  size_t GetNbCell();
   void  UpdateFlags();
   void  BuildTexture(double *texBuffer,double min,double max,double no_scans,BOOL useColorMap,BOOL doLog,BOOL normalize=TRUE);
   void  BuildTexture(llong *texBuffer,llong min,llong max,BOOL useColorMap,BOOL doLog);
@@ -126,15 +134,18 @@ public:
   void  RenderSelectedElem();
   void  SelectElem(int u,int v,int width,int height);
   void  UnselectElem();
-  float GetMeshArea(int index);
+  float GetMeshArea(int index, BOOL correct2sides = FALSE);
   size_t GetMeshNbPoint(int index);
-  VERTEX2D GetMeshPoint(int index,int pointId);
-  VERTEX2D GetMeshCenter(int index);
+  Vector2d GetMeshPoint(int index,int pointId);
+  Vector2d GetMeshCenter(int index);
+  double GetArea();
 };
 
-struct DeletedFacet {
+class DeletedFacet {
+public:
 	Facet *f;
 	size_t ori_pos;
+	BOOL replaceOri;
 };
 
 #endif /* FACETH */

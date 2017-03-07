@@ -31,7 +31,6 @@ BOOL EndsWithParam(const char* s);
 
 RegionInfo::RegionInfo(Worker *w):GLWindow() {
 
-	regionEditor=NULL;
   int wD = 550;
   int hD = 240;
   //traj=&(w->regions[0]);
@@ -135,8 +134,9 @@ RegionInfo::RegionInfo(Worker *w):GLWindow() {
 
   
 
-  pathLabel=new GLLabel("No PAR file loaded");
-  pathLabel->SetBounds(100,10,380,18);
+  pathLabel=new GLTextField(0,"No PAR file loaded");
+  pathLabel->SetEditable(FALSE);
+  pathLabel->SetBounds(100,10,430,18);
   Add(pathLabel);
 
   regionSelector=new GLCombo(0);
@@ -164,7 +164,7 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
 		if( freqField->GetNumberInt(&exportFrequency) ) {
 			char tmp[256];
 			sprintf(tmp,"%d points will be exported with an interval of %g cm.",
-				(int)((double)selectedRegion->Points.size()/(double)exportFrequency),selectedRegion->params.dL*(double)exportFrequency);
+				(int)((double)selectedRegion->Points.size()/(double)exportFrequency),selectedRegion->params.dL_cm*(double)exportFrequency);
 			freqLabel->SetText(tmp);
 			integrateToggle->SetState(exportFrequency==1);
 		}
@@ -175,7 +175,7 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
 	else if (src==notepadButton) {
 		char tmp[512];
 		sprintf(tmp,"notepad.exe \"%s\"",work->regions[regionSelector->GetSelectedIndex()].fileName.c_str());
-		StartProc_foreground(tmp);
+		StartProc(tmp,STARTPROC_FOREGROUND);
 	} else if (src==reloadButton) {
 		char tmp[512];
 		sprintf(tmp,"%s",work->regions[regionSelector->GetSelectedIndex()].fileName.c_str());
@@ -188,17 +188,14 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
 			return;
 		}
 		Update();
+		if (mApp->trajectoryDetails && mApp->trajectoryDetails->IsVisible() && mApp->trajectoryDetails->GetRegionId() == regionSelector->GetSelectedIndex()) mApp->trajectoryDetails->Update();
+		if (mApp->spectrumPlotter) mApp->spectrumPlotter->SetScale();
 	} else if (src==editButton) {
-		if( regionEditor==NULL ) regionEditor = new RegionEditor();
-		regionEditor->Display(work,regionSelector->GetSelectedIndex());
-		regionEditor->DoModal();
-		SAFE_DELETE(regionEditor);
+		if( mApp->regionEditor==NULL ) mApp->regionEditor = new RegionEditor();
+		mApp->regionEditor->Display(work,regionSelector->GetSelectedIndex());
+		//regionEditor->DoModal();
+		//SAFE_DELETE(regionEditor);
 	} else if (src==viewPointsButton) {
-		/*if( !freqField->GetNumberInt(&exportFrequency) ) {
-				GLMessageBox::Display("Invalid export frequency","Error",GLDLG_OK,GLDLG_ICONERROR);
-				return;
-		}
-		ExportPoints(regionSelector->GetSelectedIndex(),exportFrequency,integrateToggle->GetState());*/
 		if ( mApp->trajectoryDetails==NULL) mApp->trajectoryDetails = new TrajectoryDetails();
 		mApp->trajectoryDetails->Display(work,regionSelector->GetSelectedIndex());
 	} else if (src==saveAsButton) {
@@ -264,36 +261,17 @@ void RegionInfo::Update() {
 	t4->SetText(tmp);
 	
 	if (selectedRegion->selectedPoint!=-1) {
-		Vector B=selectedRegion->B(selectedRegion->selectedPoint,Vector(0,0,0));
+		Vector3d B=selectedRegion->B(selectedRegion->selectedPoint,Vector3d(0,0,0));
 		sprintf(tmp,"B=%g T (%g , %g , %g)",B.Norme(),B.x,B.y,B.z);
 	} else sprintf(tmp,"");
 	t5->SetText(tmp);
 	
 	if (selectedRegion->selectedPoint!=-1) {
-		Vector Rho=selectedRegion->Points[selectedRegion->selectedPoint].rho;
+		Vector3d Rho=selectedRegion->Points[selectedRegion->selectedPoint].rho;
 		sprintf(tmp,"Rho=%g cm (%g , %g , %g)",Rho.Norme(),Rho.x,Rho.y,Rho.z);
 	} else sprintf(tmp,"");
 	t6->SetText(tmp);
 	return;
-}
-
-void RegionInfo::ExportPoints(int regionId,int exportFrequency,BOOL doFullScan) {
-	FILENAME *fn = GLFileBox::SaveFile(NULL,NULL,"Save Region Points","CSV files\0*.csv\0Text files\0*.txt\0All files\0*.*\0",3);
-
-	if( fn ) {
-		GLProgress *prg = new GLProgress("Exporting points...","Region export in progress");
-		prg->SetProgress(0.0);
-		prg->SetVisible(TRUE);
-		try {
-			work->ExportRegionPoints(fn->fullName,prg,regionId,exportFrequency,doFullScan); //include dofullscan
-		} catch (Error &e) {
-			char errMsg[512];
-			sprintf(errMsg,"%s\nFile:%s",e.GetMsg(),fn->fullName);
-			GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
-		}
-		prg->SetVisible(FALSE);
-		SAFE_DELETE(prg);
-	}
 }
 
 BOOL EndsWithParam(const char* s)

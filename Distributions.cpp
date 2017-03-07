@@ -2,9 +2,11 @@
 #include <cstring>
 #include <math.h>
 #include "Distributions.h"
-#include "Tools.h"
+#include "File.h"
 #include "Random.h"
+#include "GLApp/MathTools.h"
 #include "GLApp\GLTypes.h"
+#include "Shared.h"
 #include <iterator>
 #include <iostream>
 #include <fstream>
@@ -19,6 +21,36 @@ Distribution2D integral_N_photons = Generate_Integral(LOWER_LIMIT, UPPER_LIMIT, 
 Distribution2D integral_SR_power = Generate_Integral(LOWER_LIMIT, UPPER_LIMIT, INTEGRAL_MODE_SR_POWER);
 //Distribution2D polarization_distribution=Generate_Polarization_Distribution(true,true);
 //Distribution2D g1h2_distribution=Generate_G1_H2_Distribution();
+
+DistributionND::DistributionND() {
+	Clear();
+}
+
+void DistributionND::Clear() {
+	values = std::vector<std::pair<double, std::vector<double>>>();
+}
+
+void DistributionND::AddPair(const double& x, const std::vector<double>& insertVals) {
+	values.push_back(std::make_pair(x, insertVals));
+}
+
+std::vector<double> DistributionND::GetYValues(const double& x) {
+	return InterpolateVector(x, values, TRUE, FALSE); //linear interpolation, limited to bounds
+}
+
+double DistributionND::GetXValue(const size_t& index) {
+	_ASSERTE(index < values.size());
+	return values[index].first;
+}
+
+std::vector<double> DistributionND::GetYValues(const size_t& index) {
+	_ASSERTE(index < values.size());
+	return values[index].second;
+}
+
+size_t DistributionND::GetSize() {
+	return values.size();
+}
 
 Distribution2D::Distribution2D() {
 	valuesX = (double*)malloc(1 * sizeof(double));
@@ -76,7 +108,7 @@ double Distribution2D::InterpolateY(const double &x) {
 	double slope, overshoot;
 
 	//for (superior_index = 0; valuesX[superior_index] < x && superior_index < size; superior_index++); //To replace by binary search
-	inferior_index = binary_search(x, valuesX, size);
+	inferior_index = my_binary_search(x, valuesX, size);
 	if (inferior_index == size - 1) inferior_index--; //not found, x too large
 	if (inferior_index == -1)    inferior_index++; //not found, x too small
 	superior_index = inferior_index + 1;
@@ -94,7 +126,7 @@ double Distribution2D::InterpolateX(const double &y) {
 	double slope, overshoot;
 
 	//for (superior_index = 0; valuesY[superior_index] < y && superior_index < size; superior_index++); //To replace by binary search
-	inferior_index = binary_search(y, valuesY, size);
+	inferior_index = my_binary_search(y, valuesY, size);
 	if (inferior_index == size - 1) return valuesX[size - 1]; //not found, y too large
 	if (inferior_index == -1)    return valuesX[0]; //not found, y too small
 	superior_index = inferior_index + 1;
@@ -616,7 +648,7 @@ double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_
 double SYNGEN1(double log_x_min, double log_x_max, int mode) {
 	/*
 	{ Generates a random normalized SR photon energy in (xmin,xmax) from a        }
-	{ cumulative distribution given by the Vector array integ[i,1] calculated by  }
+	{ cumulative distribution given by the Vector3d array integ[i,1] calculated by  }
 	{ the procedure integral before calling SYNGEN1.                              }
 	{ Makes a linear interpolation, on a log-log scale, of integ[i-1,1] and       }
 	{ integ[i,1], in the energy interval (integ[i-1,3],integ[i,3])                }
@@ -765,8 +797,8 @@ void Material::InitAngles(std::vector<std::string> data) {
 std::vector<double> Material::Interpolate(const double &energy, const double &angle) {
 	int angleLowerIndex, energyLowerIndex;
 
-	angleLowerIndex = binary_search(angle, angleVals, angleVals.size());
-	energyLowerIndex = binary_search(energy, energyVals, energyVals.size());
+	angleLowerIndex = my_binary_search(angle, angleVals, angleVals.size());
+	energyLowerIndex = my_binary_search(energy, energyVals, energyVals.size());
 
 	if (angleLowerIndex == ((int)angleVals.size() - 1)) angleLowerIndex--; //if not in table
 	if (energyLowerIndex == ((int)energyVals.size() - 1)) energyLowerIndex--; //if not in table
@@ -788,30 +820,7 @@ std::vector<double> Material::Interpolate(const double &energy, const double &an
 	return interpRefl;
 }
 
-template <typename T> int binary_search(double key, T A, int size)
-//"iterative" version of algorithm, modified from https://en.wikipedia.org/wiki/Binary_search_algorithm
-{
-	int imin = 0;
-	int imax = size - 1;
-	// continue searching while [imin,imax] is not empty
-	while (imin <= imax)
-	{
-		// calculate the midpoint for roughly equal partition
-		int imid = (imin + imax) / 2;
-		if (imid == size - 1 || imid == 0 || (A[imid] <= key && key < A[imid + 1]))
-			// key found at index imid
-			return imid;
-		// determine which subarray to search
-		else if (A[imid] < key)
-			// change min index to search upper subarray
-			imin = imid + 1;
-		else
-			// change max index to search lower subarray
-			imax = imid - 1;
-	}
-	// key was not found
-	return -1;
-}
+
 
 int Material::GetReflectionType(const double &energy, const double &angle, double const &rnd) {
 	std::vector<double> components = Interpolate(energy, angle);

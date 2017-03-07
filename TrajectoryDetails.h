@@ -27,7 +27,9 @@
 #ifndef _TRAJECTORYDETAILSH_
 #define _TRAJECTORYDETAILSH_
 
-#define NB_TPCOLUMN 45
+#define NB_TPCOLUMN 53
+
+class Facet;
 
 class TrajectoryDetails : public GLWindow {
 

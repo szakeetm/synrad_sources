@@ -19,12 +19,21 @@
 #ifndef _WORKERH_
 #define _WORKERH_
 
-#include "Geometry.h"
 #include "Region_full.h"
-#include "Distributions.h" //for materials
-#include "PugiXML/pugixml.hpp"
+//#include "LoadStatus.h"
+//#include "Distributions.h" //for materials
+//#include "PugiXML/pugixml.hpp"
 #include <string>
+#include "GLApp/GLTypes.h"
+#include "Shared.h"
+#include "Smp.h"
 
+typedef float ACFLOAT;
+
+class Geometry;
+class SynradGeometry;
+class GLProgress;
+class LoadStatus;
 
 extern float m_fTime;
 class Worker
@@ -38,6 +47,7 @@ public:
 
   // Return a handle to the currently loaded geometry
   Geometry *GetGeometry();
+  SynradGeometry* GetSynradGeometry();
   void AddMaterial(std::string *fileName);
   void LoadGeometry(char *fileName, BOOL insert=FALSE, BOOL newStr=FALSE);// Loads or inserts a geometry (throws Error)
   //void InsertGeometry(BOOL newStr,char *fileName); // Inserts a new geometry (throws Error)
@@ -54,9 +64,6 @@ public:
   void ExportRegionPoints(char *fileName,GLProgress *prg,int regionId,int exportFrequency,BOOL doFullScan);
   void ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr);
 
-  // Save a geometry using the current file name (throws Error)
-  void SaveGeometry(GLProgress *prg);
-
   // Return/Set the current filename
   char *GetFileName();
   char *GetShortFileName();
@@ -66,9 +73,10 @@ public:
   int GetProcNumber();  // Get number of processes
   void SetMaxDesorption(llong max);// Set the number of maximum desorption
   DWORD GetPID(int prIdx);// Get PID
-  void Reset(float appTime);// Reset simulation
+  void ResetStatsAndHits(float appTime);
   void Reload();    // Reload simulation (throws Error)
   void RealReload();
+  void ChangeSimuParams();
   void StartStop(float appTime,int mode);    // Switch running/stopped
   void Stop_Public();// Switch running/stopped
   void Exit(); // Free all allocated resource
@@ -110,6 +118,7 @@ public:
   int    generation_mode;   //fluxwise or powerwise
   BOOL   lowFluxMode;
   double lowFluxCutoff;
+  BOOL   newReflectionModel;
   std::vector<Region_full> regions;
   std::vector<Material> materials;
   std::vector<std::vector<double>> psi_distr;
@@ -117,6 +126,9 @@ public:
   char fullFileName[512]; // Current loaded file
 
   BOOL needsReload;
+  BOOL abortRequested;
+
+  BOOL calcAC; //Not used in Synrad, kept for ResetStatsAndHits function shared with Molflow
 
 private:
 
@@ -127,7 +139,7 @@ private:
   BOOL   allDone;
 
   // Geometry handle
-  Geometry *geom;
+  SynradGeometry *geom;
 
   // Dataport handles and names
   Dataport *dpControl;
@@ -142,10 +154,10 @@ private:
   LEAK leakCache[NBHHIT];
 
   // Methods
-  BOOL ExecuteAndWait(int command,int waitState,int param=0,GLProgress *prg=NULL);
-  BOOL Wait(int waitState,int timeout,GLProgress *prg=NULL);
+  BOOL ExecuteAndWait(int command, int waitState, int param=0);
+  BOOL Wait(int waitState, LoadStatus *statusWindow);
   void ResetWorkerStats();
-  void ClearHits();
+  void ClearHits(BOOL noReload);
   char *GetErrorDetails();
   void ThrowSubProcError(char *message=NULL);
   void Start();

@@ -18,22 +18,38 @@ GNU General Public License for more details.
 
 
 #include "Worker.h"
+#include "Facet.h"
+#include "SynradGeometry.h"
 #include "GLApp/GLApp.h"
 #include "GLApp/GLMessageBox.h"
 #include <math.h>
 #include <stdlib.h>
 #include <Process.h>
 #include "GLApp/GLUnitDialog.h"
-#include "Synrad.h"
+#ifdef MOLFLOW
+#include "MolFlow.h"
+#endif
+
+#ifdef SYNRAD
+#include "SynRad.h"
+#endif
+
 #include <direct.h>
 
 #include "ZipUtils/zip.h"
 #include "ZipUtils/unzip.h"
+#include "File.h" //File utils (Get extension, etc)
 
 using namespace pugi;
-extern SynRad *mApp;
 
-BOOL EndsWithPar(const char* s);
+#ifdef MOLFLOW
+extern MolFlow *mApp;
+#endif
+
+#ifdef SYNRAD
+extern SynRad*mApp;
+#endif
+
 Worker::Worker() {
 
 	pid = _getpid();
@@ -46,10 +62,11 @@ Worker::Worker() {
 	distTraveledTotal=0.0;
 	lowFluxCutoff = 1E-7;
 	lowFluxMode = FALSE;
+	newReflectionModel = FALSE;
 	ResetWorkerStats();
-	geom = new Geometry();
+	geom = new SynradGeometry();
 	regions = std::vector<Region_full>();
-	generation_mode=SYNGEN_MODE_POWERWISE;
+	generation_mode=SYNGEN_MODE_FLUXWISE;
 	dpControl = NULL;
 	dpHit = NULL;
 	nbHHit = 0;
@@ -61,80 +78,15 @@ Worker::Worker() {
 	simuTime = 0.0f;
 	nbTrajPoints=0;
 	running = FALSE;
+	calcAC = FALSE; //not used, reserved for shared function
 
 	strcpy(fullFileName,"");
 
-
-
 }
 
-// -------------------------------------------------------------
-
-Worker::~Worker() {
-	CLOSEDP(dpHit);
-	Exit();
-	delete geom;
-}
-
-// -------------------------------------------------------------
-
-Geometry *Worker::GetGeometry() {
+SynradGeometry *Worker::GetSynradGeometry() {
 	return geom;
 }
-
-BOOL Worker::IsDpInitialized(){
-
-	return (dpHit != NULL);
-}
-// -------------------------------------------------------------
-
-char *Worker::GetFileName() {
-	return fullFileName;
-}
-
-char *Worker::GetShortFileName() {
-
-	static char ret[512];
-	char *r = strrchr(fullFileName,'/');
-	if(!r) r = strrchr(fullFileName,'\\');
-	if(!r) strcpy(ret,fullFileName);
-	else   {
-		r++;
-		strcpy(ret,r);
-	}
-
-	return ret;
-
-}
-
-char *Worker::GetShortFileName(char* longFileName) {
-
-	static char ret[512];
-	char *r = strrchr(longFileName, '/');
-	if (!r) r = strrchr(longFileName, '\\');
-	if (!r) strcpy(ret, longFileName);
-	else   {
-		r++;
-		strcpy(ret, r);
-	}
-
-	return ret;
-
-}
-
-// -------------------------------------------------------------
-
-void Worker::SetFileName(char *fileName) {
-
-	strcpy(fullFileName,fileName);
-}
-
-
-
-
-
-
-
 
 void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL saveSelected,BOOL autoSave,BOOL crashSave) {
 
@@ -181,7 +133,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 	if(isTXT || isSYN || isSYN7Z || isSTR) {
 
 		if (WAIT_TIMEOUT==WaitForSingleObject(mApp->compressProcessHandle,0)) {
-			GLMessageBox::Display("Compressing a previous save file is in progress. Wait until that finishes"
+			GLMessageBox::Display("Compressing a previous save file is in progress. Wait until that finishes "
 				"or close process \"compress.exe\"\nIf this was an autosave attempt,"
 				"you have to lower the autosave frequency.","Can't save right now.",GLDLG_OK,GLDLG_ICONERROR);
 			return;
@@ -247,7 +199,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 
 					//Save regions
 					for (int i=0;i<(int)regions.size();i++) {
-						if (EndsWithPar((char*)regions[i].fileName.c_str())) { //fileName doesn't end with .param, save a param version
+						if (FileUtils::GetExtension(regions[i].fileName)=="par") { //fileName doesn't end with .param, save a param version
 							sprintf(tmp,"%sam",regions[i].fileName.c_str());
 							regions[i].fileName=tmp;
 						}	
@@ -308,7 +260,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 					if (!regions[i].BXYfileName.empty())
 						sprintf(tmp,"%s \"%s\"",tmp,regions[i].BXYfileName.c_str());
 				}
-				int procId = StartProc_background(tmp);
+				int procId = StartProc(tmp, STARTPROC_BACKGROUND);
 				mApp->compressProcessHandle=OpenProcess(PROCESS_ALL_ACCESS, TRUE, procId);
 				fileName=fileNameWithSyn7z;
 			} else {
@@ -320,78 +272,6 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 			SetFileName(fileName);
 			mApp->UpdateTitle();
 		}
-	
-
-
-
-}
-
-
-
-void Worker::ExportTextures(char *fileName,int grouping,int mode,BOOL askConfirm,BOOL saveSelected) {
-
-	char tmp[512];
-
-	// Read a file
-	FILE *f = NULL;
-
-
-
-	BOOL ok = TRUE;
-	if( askConfirm ) {
-		if( FileUtils::Exist(fileName) ) {
-			sprintf(tmp,"Overwrite existing file ?\n%s",fileName);
-			ok = ( GLMessageBox::Display(tmp,"Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING)==GLDLG_OK );
-		}
-	}
-	if( ok ) {
-		f=fopen(fileName,"w");
-		if (!f) {
-
-
-
-			throw Error("Couldn't open file for writing");
-		}
-		geom->ExportTextures(f,grouping,mode,no_scans,dpHit,saveSelected);
-		fclose(f);
-	}
-
-}
-
-
-
-void Worker::ExportRegionPoints(char *fileName,GLProgress *prg,int regionId,int exportFrequency,BOOL doFullScan){
-	char tmp[512];
-
-	// Read a file
-	FileWriter *f = NULL;
-
-	BOOL ok = TRUE;
-	char *ext,*dir;
-
-	dir = strrchr(fileName,'\\');
-	ext = strrchr(fileName,'.');
-
-	if(!(ext) || !(*ext=='.') || ((dir)&&(dir>ext)) ) { 
-		sprintf(fileName,"%s.csv",fileName); //set to default CSV extension
-		ext = strrchr(fileName,'.');
-	}
-
-
-
-
-
-	if( FileUtils::Exist(fileName) ) {
-		sprintf(tmp,"Overwrite existing file ?\n%s",fileName);
-		ok = ( GLMessageBox::Display(tmp,"Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING)==GLDLG_OK );
-	}
-
-	if( ok ) {
-
-		f= new FileWriter(fileName);
-		regions[regionId].ExportPoints(f,prg,exportFrequency,doFullScan);
-		SAFE_DELETE(f);
-	}
 }
 
 void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr) {
@@ -421,9 +301,6 @@ void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double e
 	try {
 	if (needsReload) RealReload();
 	geom->SaveDesorption(f,dpHit,selectedOnly,mode,eta0,alpha,distr);
-
-
-
 
 	} catch (Error &e) {
 		char errMsg[512];
@@ -590,7 +467,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			//Load regions
 			if (regionsToLoad.size()>0) {
 				char tmp[256];
-				sprintf(tmp,"This geometry refers to %d regions. Load them now?",regionsToLoad.size());
+				sprintf(tmp,"This geometry refers to %zd regions. Load them now?",regionsToLoad.size());
 				BOOL loadThem = ( GLMessageBox::Display(tmp,"File load",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONINFO)==GLDLG_OK );
 				if (loadThem) {
 					progressDlg->SetMessage("Loading regions");
@@ -1093,31 +970,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 
 }*/
 
-// -------------------------------------------------------------
 
-void Worker::GetLeak(LEAK *buffer,int *nb) {
-
-	*nb=0;
-	if( dpHit ) {
-		memcpy(buffer,leakCache,sizeof(LEAK)*NBHLEAK);
-		*nb = (int)MIN(nbLastLeaks,NBHLEAK);
-	}
-
-}
-
-// -------------------------------------------------------------
-
-void Worker::SetLeak(LEAK *buffer,int *nb,SHGHITS *gHits) { //When loading from file
-
-	if( nb>0 ) {
-		memcpy(leakCache,buffer,sizeof(LEAK)*MIN(NBHLEAK,*nb));
-		memcpy(gHits->pLeak,buffer,sizeof(LEAK)*MIN(NBHLEAK,*nb));
-		gHits->nbLastLeaks = *nb;
-	}
-
-}
-
-// -------------------------------------------------------------
 void Worker::LoadTexturesSYN(const char *fileName,int version) {
 
 	if (FileUtils::GetExtension(fileName) == "syn") {
@@ -1141,38 +994,6 @@ void Worker::LoadTexturesSYN(const char *fileName,int version) {
 	}
 }
 
-
-
-// -------------------------------------------------------------
-
-void Worker::GetHHit(HIT *buffer,int *nb) {
-
-	*nb=0;
-	if( dpHit ) {
-		memcpy(buffer,hhitCache,sizeof(HIT)*NBHHIT);
-		*nb = nbHHit;
-	}
-
-}
-
-// -------------------------------------------------------------
-
-void Worker::SetHHit(HIT *buffer,int *nb,SHGHITS *gHits) {
-
-	if( nb>0 ) {
-		memcpy(hhitCache,buffer,sizeof(HIT)*MIN(*nb,NBHHIT));
-		memcpy(gHits->pHits,buffer,sizeof(LEAK)*MIN(NBHLEAK,*nb));
-		gHits->nbHHit = *nb;
-
-
-
-
-	}
-
-}
-
-// -------------------------------------------------------------
-
 void Worker::InnerStop(float appTime) {
 
 	stopTime =appTime;
@@ -1180,19 +1001,6 @@ void Worker::InnerStop(float appTime) {
 	running  = FALSE;
 
 
-}
-
-void Worker::Stop_Public() {
-	// Stop
-	InnerStop(m_fTime);
-	try {
-		Stop();
-		Update(m_fTime);
-
-
-	} catch(Error &e) {
-		GLMessageBox::Display((char *)e.GetMsg(),"Error (Stop)",GLDLG_OK,GLDLG_ICONERROR);
-	}
 }
 
 // -------------------------------------------------------------
@@ -1252,7 +1060,7 @@ void Worker::Update(float appTime) {
 		if( dpControl ) {
 			if( AccessDataport(dpControl) ) {
 				int i = 0;
-				SHMASTER *master =(SHMASTER *)dpControl->buff;
+				SHCONTROL *master =(SHCONTROL *)dpControl->buff;
 				for(int i=0;i<nbProcess && done;i++) {
 					done = done && (master->states[i]==PROCESS_DONE);
 					error = error && (master->states[i]==PROCESS_ERROR);
@@ -1300,10 +1108,10 @@ void Worker::Update(float appTime) {
 				int nbFacet = geom->GetNbFacet();
 				for(int i=0;i<nbFacet;i++) {    
 					Facet *f = geom->GetFacet(i);
-					memcpy(&(f->sh.counter),buffer+f->sh.hitOffset,sizeof(SHHITS));
+					memcpy(&(f->counterCache),buffer+f->sh.hitOffset,sizeof(SHHITS));
 				}
 				try {
-					if (mApp->needsTexture) geom->BuildFacetTextures(buffer);
+					if (mApp->needsTexture || mApp->needsDirection) geom->BuildFacetTextures(buffer, mApp->needsTexture, mApp->needsDirection);
 				}
 				catch (Error &e) {
 					GLMessageBox::Display((char *)e.GetMsg(), "Error building texture", GLDLG_OK, GLDLG_ICONERROR);
@@ -1340,7 +1148,7 @@ void Worker::SendHits() {
 			int nbFacet = geom->GetNbFacet();
 			for(int i=0;i<nbFacet;i++) {
 				Facet *f = geom->GetFacet(i);
-				memcpy(pBuff+f->sh.hitOffset,&(f->sh.counter),sizeof(SHHITS));
+				memcpy(pBuff+f->sh.hitOffset,&(f->counterCache),sizeof(SHHITS));
 			}
 			ReleaseDataport(dpHit);
 		} else {
@@ -1349,44 +1157,6 @@ void Worker::SendHits() {
 
 	}
 }
-
-// -------------------------------------------------------------
-
-void  Worker::ReleaseHits() {
-
-	ReleaseDataport(dpHit);
-
-}
-
-// -------------------------------------------------------------
-
-BYTE *Worker::GetHits() {
-	if( dpHit )
-		if( AccessDataport(dpHit) ) 
-			return (BYTE *)dpHit->buff;
-
-	return NULL;
-
-}
-
-// -------------------------------------------------------------
-
-void Worker::ThrowSubProcError(char *message) {
-
-	char errMsg[1024];
-	if( !message )
-		sprintf(errMsg,"Bad response from sub process(es):\n%s",GetErrorDetails());
-	else
-		sprintf(errMsg,"%s\n%s",message,GetErrorDetails());
-	throw Error(errMsg);
-
-}
-
-void Worker::Reload (){
-	needsReload=true;
-}
-
-// -------------------------------------------------------------
 
 void Worker::RealReload() { //Sharing geometry with workers
 
@@ -1419,7 +1189,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 	progressDlg->SetMessage("Accessing dataport...");
 	AccessDataportTimed(loader,3000+nbProcess*(int)((double)loadSize/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");
-	geom->CopyGeometryBuffer((BYTE *)loader->buff,&regions,&materials,psi_distr,chi_distr,generation_mode,lowFluxMode,lowFluxCutoff);
+	geom->CopyGeometryBuffer((BYTE *)loader->buff,&regions,&materials,psi_distr,chi_distr,generation_mode,lowFluxMode,lowFluxCutoff,newReflectionModel);
 	progressDlg->SetMessage("Releasing dataport...");
 	ReleaseDataport(loader);
 
@@ -1436,7 +1206,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 
 	// Compute number of max desorption per process
 	if(AccessDataportTimed(dpControl,3000+nbProcess*(int)((double)loadSize/10000.0))) {
-		SHMASTER *m = (SHMASTER *)dpControl->buff;
+		SHCONTROL *m = (SHCONTROL *)dpControl->buff;
 		llong common = maxDesorption / (llong)nbProcess;
 		int remain = (int)(maxDesorption % (llong)nbProcess);
 		for(int i=0;i<nbProcess;i++) {
@@ -1448,7 +1218,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 
 	// Load geometry
 	progressDlg->SetMessage("Waiting for subprocesses to load geometry...");
-	if( !ExecuteAndWait(COMMAND_LOAD,PROCESS_READY,loadSize,progressDlg) ) {
+	if( !ExecuteAndWait(COMMAND_LOAD,PROCESS_READY,loadSize) ) {
 		CLOSEDP(loader);
 		char errMsg[1024];
 		sprintf(errMsg,"Failed to send geometry to sub process:\n%s",GetErrorDetails());
@@ -1483,150 +1253,75 @@ void Worker::RealReload() { //Sharing geometry with workers
 	SAFE_DELETE(progressDlg);
 }
 
-// -------------------------------------------------------------
+void Worker::ChangeSimuParams() { //Send simulation mode changes to subprocesses without reloading the whole geometry
+	if (nbProcess == 0 || !geom->IsLoaded()) return;
+	if (needsReload) RealReload(); //Sync (number of) regions
 
-void Worker::SetMaxDesorption(llong max) {
+	GLProgress *progressDlg = new GLProgress("Creating dataport...", "Passing simulation mode to workers");
+	progressDlg->SetVisible(TRUE);
+	progressDlg->SetProgress(0.0);
+	
+	// Create the temporary geometry shared structure
+	size_t loadSize = sizeof(SHMODE) + regions.size() * sizeof(BOOL);
+	Dataport *loader = CreateDataport(loadDpName, loadSize);
+	if (!loader) {
+		progressDlg->SetVisible(FALSE);
+		SAFE_DELETE(progressDlg);
+		throw Error("Failed to create 'loader' dataport.\nMost probably out of memory.\nReduce number of subprocesses or texture size.");
+	}
+	progressDlg->SetMessage("Accessing dataport...");
+	AccessDataportTimed(loader, 1000);
+	progressDlg->SetMessage("Assembling parameters to pass...");
+	
+	BYTE* buffer = (BYTE*)loader->buff;
 
-	try {
-		Reset(0.0);
-		maxDesorption = max;
-		Reload();
+	SHMODE* shMode = (SHMODE*)buffer;
+	shMode->generation_mode = generation_mode;
+	shMode->lowFluxCutoff = lowFluxCutoff;
+	shMode->lowFluxMode = lowFluxMode;
+	buffer += sizeof(SHMODE);
 
-
-	} catch(Error &e) {
-		GLMessageBox::Display((char *)e.GetMsg(),"Error",GLDLG_OK,GLDLG_ICONERROR);
+	for (size_t i = 0; i < regions.size(); i++) {
+		WRITEBUFFER(regions[i].params.showPhotons, BOOL);
 	}
 
-}
+	progressDlg->SetMessage("Releasing dataport...");
+	ReleaseDataport(loader);
 
-// -------------------------------------------------------------
-
-char *Worker::GetErrorDetails() {
-
-	static char err[1024];
-	strcpy(err,"");
-
-	AccessDataport(dpControl);
-	SHMASTER *shMaster = (SHMASTER *)dpControl->buff;
-	for(int i=0;i<nbProcess;i++) {
-		char tmp[256];
-		if( pID[i]!=0 ) {
-			int st = shMaster->states[i];
-			if(st==PROCESS_ERROR) {
-				sprintf(tmp,"[#%d] Process [PID %d] %s: %s\n",i,pID[i],prStates[st],shMaster->statusStr[i]);
+	// Pass to workers
+	progressDlg->SetMessage("Waiting for subprocesses to read mode...");
+	if (!ExecuteAndWait(COMMAND_UPDATEPARAMS, running?PROCESS_RUN:PROCESS_READY, running ? PROCESS_RUN : PROCESS_READY)) {
+		CLOSEDP(loader);
+		char errMsg[1024];
+		sprintf(errMsg, "Failed to send params to sub process:\n%s", GetErrorDetails());
+		GLMessageBox::Display(errMsg, "Warning (Updateparams)", GLDLG_OK, GLDLG_ICONWARNING);
 
 
-			} else {
-				sprintf(tmp,"[#%d] Process [PID %d] %s\n",i,pID[i],prStates[st]);
-			}
-
-		} else {
-			sprintf(tmp,"[#%d] Process [PID ???] Not started\n",i);
-		}
-		strcat(err,tmp);
+		progressDlg->SetVisible(FALSE);
+		SAFE_DELETE(progressDlg);
+		return;
 	}
-	ReleaseDataport(dpControl);
 
-	return err;
+	progressDlg->SetMessage("Closing dataport...");
+	CLOSEDP(loader);
+	progressDlg->SetVisible(FALSE);
+	SAFE_DELETE(progressDlg);
 }
 
-// -------------------------------------------------------------
-
-void Worker::ClearHits() {
+void Worker::ClearHits(BOOL noReload) {
 	try {
-		if (needsReload) RealReload();
+		if (!noReload && needsReload) RealReload();
 	}
 	catch (Error &e) {
 		GLMessageBox::Display((char *)e.GetMsg(), "Error (Stop)", GLDLG_OK, GLDLG_ICONERROR);
 		return;
 	}
-	if(dpHit) {
+	if (dpHit) {
 		AccessDataport(dpHit);
-		memset(dpHit->buff,0,geom->GetHitsSize());
+		memset(dpHit->buff, 0, geom->GetHitsSize());
 		ReleaseDataport(dpHit);
 	}
 
-}
-
-// -------------------------------------------------------------
-
-BOOL Worker::Wait(int waitState,int timeout,GLProgress *prg) {
-
-	BOOL ok = FALSE;
-	BOOL error = FALSE;
-	int t = 0;
-	int nbReady = 0;
-	double initialProgress = 0.0;
-	if (prg) initialProgress = prg->GetProgress();
-	int nbError = 0;
-	allDone = TRUE;
-
-	// Wait for completion
-	while(!ok && t<timeout) {
-
-		ok = TRUE;
-		AccessDataport(dpControl);
-		SHMASTER *shMaster = (SHMASTER *)dpControl->buff;
-		nbReady=nbError=0;
-		for(int i=0;i<nbProcess;i++) {
-			if (shMaster->states[i]==waitState) nbReady++;
-			ok = ok & (shMaster->states[i]==waitState || shMaster->states[i]==PROCESS_ERROR || shMaster->states[i]==PROCESS_DONE);
-			if( shMaster->states[i]==PROCESS_ERROR ) {
-				error = TRUE;
-				nbError++;
-			}
-			allDone = allDone & (shMaster->states[i]==PROCESS_DONE);
-		}
-		ReleaseDataport(dpControl);
-
-		if(!ok) {
-			if (prg) prg->SetProgress(double(nbReady)/(double)nbProcess);
-			Sleep(500);
-			t+=500;
-		}
-
-	}
-
-	if (t>=timeout) {
-		if ((prg) && ((double)nbReady/(double)nbProcess)>initialProgress) //progress advanced, wait more
-			return Wait(waitState,timeout,prg);
-		char tmp[512];
-		sprintf(tmp,"Total workers : %d\n"
-			"%d are ready, %d reported errors\n"
-			"Do you want to wait a bit more?\n"
-			"(Loading continues while this dialog is visible)\n",nbProcess,nbReady,nbError);
-		int waitmore = GLMessageBox::Display(tmp,"Info",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONINFO)==GLDLG_OK;
-		if (waitmore) {
-			t=0;
-			return Wait(waitState,timeout,prg);
-		}
-	}
-
-	return ok && !error;
-
-}
-
-BOOL Worker::ExecuteAndWait(int command,int waitState,int param,GLProgress *prg) {
-
-
-
-
-
-
-
-	if(!dpControl) return FALSE;
-
-	// Send command
-	AccessDataport(dpControl);
-	SHMASTER *shMaster = (SHMASTER *)dpControl->buff;
-	for(int i=0;i<nbProcess;i++) {
-		shMaster->states[i]=command;
-		shMaster->cmdParam[i]=param;
-	}
-	ReleaseDataport(dpControl);
-
-	Sleep(100);
-	return Wait(waitState,3000 + nbProcess * 500,prg);
 }
 
 void Worker::ResetWorkerStats() {
@@ -1643,32 +1338,6 @@ void Worker::ResetWorkerStats() {
 
 }
 
-// -------------------------------------------------------------
-
-void Worker::Reset(float appTime) {
-
-	stopTime = 0.0f;
-	startTime = 0.0f;
-	simuTime = 0.0f;
-	running = FALSE;
-	if( nbProcess==0 ) 
-		return;
-
-	try {
-		ResetWorkerStats();
-		if( !ExecuteAndWait(COMMAND_RESET,PROCESS_READY) )
-			ThrowSubProcError();
-		ClearHits();
-		Update(appTime);
-
-
-	} catch(Error &e) {
-		GLMessageBox::Display((char *)e.GetMsg(),"Error",GLDLG_OK,GLDLG_ICONERROR);
-	}
-}
-
-// -------------------------------------------------------------
-
 void Worker::Start() {
 
 	if( nbProcess==0 )
@@ -1678,99 +1347,15 @@ void Worker::Start() {
 		ThrowSubProcError();
 }
 
-// -------------------------------------------------------------
-
-void Worker::Stop() {
-
-	if( nbProcess==0 )
-		throw Error("No sub process found. (Simulation not available)");
-
-	if( !ExecuteAndWait(COMMAND_PAUSE,PROCESS_READY) )
-		ThrowSubProcError();
-}
-
-// -------------------------------------------------------------
-
-void Worker::KillAll() {
-
-	if( dpControl && nbProcess>0 ) {
-		if( !ExecuteAndWait(COMMAND_EXIT,PROCESS_KILLED) ) {
-			AccessDataport(dpControl);
-			SHMASTER *shMaster = (SHMASTER *)dpControl->buff;
-			for(int i=0;i<nbProcess;i++) 
-				if(shMaster->states[i]==PROCESS_KILLED) pID[i]=0;
-			ReleaseDataport(dpControl);
-			// Force kill
-			for(int i=0;i<nbProcess;i++)
-				if(pID[i]) KillProc(pID[i]);
-		}
-		CLOSEDP(dpHit);
-	}
-	nbProcess = 0;
-
-}
-
-// -------------------------------------------------------------
-
-void Worker::Exit() {
-
-	if( dpControl && nbProcess>0 ) {
-		KillAll();
-		CLOSEDP(dpControl);
-	}
-
-}
-
-// -------------------------------------------------------------
-
 void Worker::GetProcStatus(int *states,char **status) {
 
 	if(nbProcess==0) return;
 
 	AccessDataport(dpControl);
-	SHMASTER *shMaster = (SHMASTER *)dpControl->buff;
+	SHCONTROL *shMaster = (SHCONTROL *)dpControl->buff;
 	memcpy(states,shMaster->states,MAX_PROCESS*sizeof(int));
 	memcpy(status,shMaster->statusStr,MAX_PROCESS*64);
 	ReleaseDataport(dpControl);
-
-}
-
-
-
-void Worker::SetProcNumber(int n) {
-
-	char cmdLine[512];
-
-	// Kill all sub process
-	KillAll();
-
-	// Create new control dataport
-	if( !dpControl ) 
-		dpControl = CreateDataport(ctrlDpName,sizeof(SHMASTER));
-	if( !dpControl )
-		throw Error("Failed to create 'control' dataport");
-	AccessDataport(dpControl);
-	memset(dpControl->buff,0,sizeof(SHMASTER));
-	ReleaseDataport(dpControl);
-
-	// Launch n subprocess
-	for(int i=0;i<n;i++) {
-		sprintf(cmdLine,"synradSub.exe %d %d",pid,i);
-		pID[i] = StartProc(cmdLine);
-		Sleep(25); // Wait a bit
-		if( pID[i]==0 ) {
-			nbProcess = 0;
-			throw Error(cmdLine);
-		}
-	}
-
-	nbProcess = n;
-
-	if( !Wait(PROCESS_READY,3000) )
-		ThrowSubProcError("Sub process(es) starting failure");
-
-
-
 
 }
 
@@ -1786,30 +1371,15 @@ void Worker::ImportCSV(FileReader *file,std::vector<std::vector<double>>& table)
 	} while (!file->IsEof());
 }
 
-int Worker::GetProcNumber() {
-	return nbProcess;
-}
-
-
-
-DWORD Worker::GetPID(int prIdx) {
-	return pID[prIdx];
-}
-
-
 void Worker::AddRegion(const char *fileName,int position) {
 	//if (!geom->IsLoaded()) throw Error("Load geometry first!");
 	needsReload=TRUE;
 
 	std::string ext = FileUtils::GetExtension(fileName);
-	FileReader *f = NULL;
 	if(ext=="par" || ext=="PAR" || ext=="param") {
-
-			f = new FileReader(fileName);
 			Region_full newtraj;
-			if (ext=="par" || ext=="PAR") newtraj.LoadPAR(f);
-			else newtraj.LoadParam(f);
-			SAFE_DELETE(f);
+			if (ext=="par" || ext=="PAR") newtraj.LoadPAR(&FileReader(fileName));
+			else newtraj.LoadParam(&FileReader(fileName));
 			newtraj.fileName=fileName;
 			if (position==-1) regions.push_back(newtraj);
 			else {
@@ -1817,10 +1387,9 @@ void Worker::AddRegion(const char *fileName,int position) {
 				regions[position]=newtraj;
 				//regions[position].Points=newtraj.Points; //need to force because of operator=
 			}
-			geom->InitializeGeometry(-1,TRUE); //recalculate bounding box
+			geom->RecalcBoundingBox(); //recalculate bounding box
 			nbTrajPoints+=(int)newtraj.Points.size();
 	}  else {
-		SAFE_DELETE(f);
 		throw Error("LoadParam(): Invalid file extension [Only par or param]");
 	}
 }
@@ -1837,7 +1406,7 @@ void Worker::RecalcRegion(int regionId) {
 			nbTrajPoints+=(int)regions[regionId].Points.size();
 			//regions[regionId]=newtraj;
 			//regions[regionId].Points=newtraj.Points; //need to force because of operator=
-			geom->InitializeGeometry(-1,TRUE); //recalculate bounding box
+			geom->RecalcBoundingBox(); //recalculate bounding box
 		} catch(Error &e) {
 			throw e;
 		}
@@ -1846,7 +1415,7 @@ void Worker::RecalcRegion(int regionId) {
 void Worker::ClearRegions() {
 	//if ((int)regions.size()>0) regions.clear();
 	regions=std::vector<Region_full>();
-	geom->InitializeGeometry(-1,TRUE); //recalculate bounding box
+	geom->RecalcBoundingBox(); //recalculate bounding box
 	nbTrajPoints=0;
 	Reload();
 }
@@ -1862,7 +1431,7 @@ void Worker::RemoveRegion(int index) {
 	regions.erase(regions.end() - 1); //delete last
 	*/
 	regions.erase(regions.begin() + index);
-	geom->InitializeGeometry(-1, TRUE); //recalculate bounding box
+	geom->RecalcBoundingBox(); //recalculate bounding box
 }
 
 void Worker::AddMaterial(std::string *fileName){
@@ -1871,6 +1440,7 @@ void Worker::AddMaterial(std::string *fileName){
 	sprintf(tmp,"param\\Materials\\%s",fileName->c_str());
 	FileReader *f=new FileReader(tmp);
 	result.LoadMaterialCSV(f);
+	delete f;
 	int lastindex = fileName->find_last_of(".");
 	result.name = fileName->substr(0, lastindex);
 	materials.push_back(result);
@@ -1910,17 +1480,4 @@ BOOL EndsWithPar(const char* s)
   }
 
   return ret;
-}
-
-void Worker::RebuildTextures() {
-	if (!dpHit) return;
-	if (AccessDataport(dpHit)) {
-		BYTE *buffer = (BYTE *)dpHit->buff;
-		if (mApp->needsTexture) try{ geom->BuildFacetTextures(buffer); }
-		catch (Error &e) {
-			ReleaseDataport(dpHit);
-			throw e;
-		}
-		ReleaseDataport(dpHit);
-	}
 }

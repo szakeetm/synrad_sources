@@ -1,21 +1,21 @@
 #include "Region_mathonly.h"
 #include "Random.h"
-#include "Tools.h"
 #include "GLApp\GLTypes.h"
+#include "GLApp\MathTools.h"
 #include <ctime>
 #include <vector>
 #include <string>
 
 
-Vector Region_mathonly::B(int pointId, const Vector &offset) {
+Vector3d Region_mathonly::B(int pointId, const Vector3d &offset) {
 	//Calculates the magnetic field at a given point
 	
-	Vector result; //return value with the magnetic field vector
+	Vector3d result; //return value with the magnetic field vector
 
 	//Creating references to X,Y,Z components -> we can avoid repeating code 3 times
 	double* result_ptr[3]={&result.x,&result.y,&result.z};
 	double* Bconst_ptr[3]={&params.B_const.x,&params.B_const.y,&params.B_const.z};
-	Vector* Bdir_ptr[3]={&params.Bx_dir,&params.By_dir,&params.Bz_dir};
+	Vector3d* Bdir_ptr[3]={&params.Bx_dir,&params.By_dir,&params.Bz_dir};
 	int* Bmode_ptr[3]={&params.Bx_mode,&params.By_mode,&params.Bz_mode};
 	double* Bperiod_ptr[3]={&params.Bx_period,&params.By_period,&params.Bz_period};
 	double* Bphase_ptr[3]={&params.Bx_phase,&params.By_phase,&params.Bz_phase};
@@ -23,7 +23,7 @@ Vector Region_mathonly::B(int pointId, const Vector &offset) {
 	double Ls_,ratio,K_,K_x,K_y;
 	bool Bset=false; //if true, then when we have calculated the X component, we already set Y and Z as well. Used for rotating dipole and analytic expressions
 
-	Vector position_along_beam;
+	Vector3d position_along_beam;
 	/*if (Points.size()<=1) {
 		position_along_beam=Points[0].position;
 	} else {
@@ -32,18 +32,18 @@ Vector Region_mathonly::B(int pointId, const Vector &offset) {
 		Trajectory_Point previousPoint=Points[(int)pointId];
 		Trajectory_Point nextPoint=Points[(int)pointId+1];
 		double overshoot=pointId-(int)pointId;
-		position_along_beam=Vector(
+		position_along_beam=Vector3d(
 			WEIGH(previousPoint.position.x,nextPoint.position.x,overshoot),
 			WEIGH(previousPoint.position.y,nextPoint.position.y,overshoot),
 			WEIGH(previousPoint.position.z,nextPoint.position.z,overshoot)
 			);
 	}*/
 	position_along_beam = Points[pointId].position;
-	Vector position_with_offset(Add(position_along_beam,offset));
+	Vector3d position_with_offset = position_along_beam + offset;
 	
 	for (int i=0;i<3&&!Bset;i++) { //X,Y,Z components
-		Ls_=DotProduct(Bdir_ptr[i]->Normalize(),Subtract(position_with_offset, params.startPoint));//distance towards Bx_dir direction (specified in .MAG file)
-		Ls_-=(int)(Ls_/(*Bperiod_ptr)[i])*(*Bperiod_ptr)[i]; //substract filled periods
+		Ls_= Dot(Bdir_ptr[i]->Normalized(),position_with_offset - params.startPoint);//distance towards Bx_dir direction (specified in .MAG file)
+		Ls_-= (int)(Ls_/(*Bperiod_ptr)[i])*(*Bperiod_ptr)[i]; //substract filled periods
 		switch(*Bmode_ptr[i]) {
 		case B_MODE_CONSTANT:
 			*result_ptr[i]=*Bconst_ptr[i];
@@ -52,7 +52,7 @@ Vector Region_mathonly::B(int pointId, const Vector &offset) {
 			*result_ptr[i]=distr_ptr[i]->InterpolateY(Ls_);
 			break;
 		case B_MODE_ALONGBEAM:
-			Ls_=pointId*this->params.dL; //distance along the beam path
+			Ls_=pointId*this->params.dL_cm; //distance along the beam path
 			Ls_-=(int)(Ls_/(*Bperiod_ptr)[i])*(*Bperiod_ptr)[i]; //substract filled periods
 			*result_ptr[i]=distr_ptr[i]->InterpolateY(Ls_);
 			break;
@@ -66,7 +66,7 @@ Vector Region_mathonly::B(int pointId, const Vector &offset) {
 			break;
 		case B_MODE_QUADRUPOLE: //mode 4
 			Bset=true;
-			result= params.quad.B(position_with_offset);
+			result= params.quad_params.B(position_with_offset);
 			break;
 		case B_MODE_ANALYTIC: //mode 5
 			K_=2*PI/ params.Bx_period;
@@ -99,44 +99,25 @@ Vector Region_mathonly::B(int pointId, const Vector &offset) {
 }
 
 Region_mathonly::Region_mathonly(){
-	/*
-	//object placeholders until MAG files are loaded
-	Bx_distr = Distribution2D(1);
-	By_distr = Distribution2D(1);
-	Bz_distr = Distribution2D(1);
-	beta_x_distr = Distribution2D(1);
-	beta_y_distr = Distribution2D(1);
-	eta_distr = Distribution2D(1);
-	etaprime_distr = Distribution2D(1);
-	e_spread_distr = Distribution2D(1);
-	*/
 
 	//default values
 	//generation_mode = SYNGEN_MODE_POWERWISE;
 	params.nbDistr_BXY = 0;
-	params.dL=0.01;
-	params.limits=Vector(1000,1000,0.1);
-	params.startPoint=Vector(0,0,0);
-	params.startDir=Vector(0,0,1);
-	params.particleMass=-0.0005110034; //electron
-	params.E=1;params.current=1;
-	params.betax= params.betay= params.eta= params.etaprime= params.energy_spread= params.emittance=0.0;
-	params.coupling=100.0;
-	params.energy_low=10;
-	params.energy_hi=1e6;
+	params.dL_cm=0.01;
+	params.limits=Vector3d(1000,1000,0.1);
+	params.startPoint=Vector3d(0,0,0);
+	params.startDir=Vector3d(0,0,1);
+	params.particleMass_GeV=-0.0005110034; //electron
+	params.E_GeV=1;params.current_mA=1;
+	params.betax_const_cm= params.betay_const_cm= params.eta_x_const_cm= params.eta_x_prime_const= params.energy_spread_percent= params.emittance_cm=0.0;
+	params.coupling_percent=100.0;
+	params.energy_low_eV=10;
+	params.energy_hi_eV=1e6;
 	params.enable_ort_polarization= params.enable_par_polarization=true;
-	params.psimaxX= params.psimaxY=PI;
+	params.psimaxX_rad= params.psimaxY_rad=PI;
 	params.Bx_mode= params.By_mode= params.Bz_mode=B_MODE_CONSTANT;
-	params.B_const=Vector(0,0,0);
-}
-
-Region_mathonly::~Region_mathonly(){
-	/*Distribution2D* distr_ptr[9]={&Bx_distr,&By_distr,&Bz_distr,&beta_x_distr,&beta_y_distr,&eta_distr,
-		&etaprime_distr,&e_spread_distr};
-	for (int i=0;i<9;i++)
-		SAFE_DELETE(distr_ptr[i]);*/
-	//if ((int)Points.size()>0) Points.clear();*/
-	Points.clear();
+	params.B_const=Vector3d(0,0,0);
+	params.showPhotons = TRUE;
 }
 
 
@@ -145,11 +126,7 @@ Region_mathonly::Region_mathonly(const Region_mathonly &src) {
 	Bx_distr = Distribution2D(src.Bx_distr);
 	By_distr = Distribution2D(src.By_distr);
 	Bz_distr = Distribution2D(src.Bz_distr);
-	beta_x_distr = Distribution2D(src.beta_x_distr);
-	beta_y_distr = Distribution2D(src.beta_y_distr);
-	eta_distr = Distribution2D(src.eta_distr);
-	etaprime_distr = Distribution2D(src.etaprime_distr);
-	e_spread_distr = Distribution2D(src.e_spread_distr);
+	this->betaFunctions = src.betaFunctions;
 	this->Points = src.Points;
 }
 
@@ -158,11 +135,7 @@ Region_mathonly& Region_mathonly::operator=(const Region_mathonly &src) {
 	Bx_distr = Distribution2D(src.Bx_distr);
 	By_distr = Distribution2D(src.By_distr);
 	Bz_distr = Distribution2D(src.Bz_distr);
-	beta_x_distr = Distribution2D(src.beta_x_distr);
-	beta_y_distr = Distribution2D(src.beta_y_distr);
-	eta_distr = Distribution2D(src.eta_distr);
-	etaprime_distr = Distribution2D(src.etaprime_distr);
-	e_spread_distr = Distribution2D(src.e_spread_distr);
+	betaFunctions = src.betaFunctions;
 	this->Points = src.Points;
 	return *this;
 }

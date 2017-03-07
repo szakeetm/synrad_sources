@@ -17,9 +17,11 @@ GNU General Public License for more details.
 */
 
 #include "FacetDetails.h"
+#include "Facet.h"
 #include "GLApp/GLToolkit.h"
+#include "GLApp/MathTools.h" //FormatMemory
 #include "GLApp/GLMessageBox.h"
-#include "Utils.h"
+
 #include "SynRad.h"
 
 extern SynRad *mApp;
@@ -39,9 +41,11 @@ static COLUMN allColumn[] = {
 	{"Structure"     , 80 , ALIGN_CENTER} ,
 	{"Link"          , 40 , ALIGN_CENTER} ,
 	{"Reflection"    , 80 , ALIGN_CENTER} ,
-	{"Roughness"     , 80 , ALIGN_CENTER} ,
+	{"Roughness (nm)", 80 , ALIGN_CENTER } ,
+	{"Autocorr.l (nm)", 80 , ALIGN_CENTER } ,
 	{"2 Sided"       , 60 , ALIGN_CENTER} ,
 	{"Vertex"        , 80 , ALIGN_CENTER} ,
+
 	{"Area"          , 80 , ALIGN_CENTER} ,
 	{"Facet 2D Box"  , 100, ALIGN_CENTER} ,
 	{"Texture (u,v)" , 120, ALIGN_CENTER} ,
@@ -52,6 +56,7 @@ static COLUMN allColumn[] = {
 	{"Profile"       , 80 , ALIGN_CENTER} ,
 	{"Spectrum"      , 80 , ALIGN_CENTER} ,
 	{"Hits"        , 80 , ALIGN_CENTER} ,
+
 	{"Abs."        , 80 , ALIGN_CENTER} ,
 	{"Flux"        , 80 , ALIGN_CENTER} ,
 	{"Power"        , 80 , ALIGN_CENTER} ,
@@ -122,51 +127,57 @@ FacetDetails::FacetDetails():GLWindow() {
 	show[6] = new GLToggle(6,"Roughness");
 	show[6]->SetState(TRUE);
 	sPanel->Add(show[6]);
-	show[7] = new GLToggle(7,"2 Sided");
+	show[7] = new GLToggle(7, "AutoCorr");
 	show[7]->SetState(TRUE);
 	sPanel->Add(show[7]);
-	show[8] = new GLToggle(8,"Vertex nb");
+	show[8] = new GLToggle(8,"2 Sided");
 	show[8]->SetState(TRUE);
 	sPanel->Add(show[8]);
-	show[9] = new GLToggle(9,"Area");
+	show[9] = new GLToggle(9,"Vertex nb");
 	show[9]->SetState(TRUE);
 	sPanel->Add(show[9]);
-	show[10] = new GLToggle(10,"2D Box");
+	show[10] = new GLToggle(10,"Area");
 	show[10]->SetState(TRUE);
 	sPanel->Add(show[10]);
-	show[11] = new GLToggle(11,"Texture UV");
+
+	show[11] = new GLToggle(11,"2D Box");
 	show[11]->SetState(TRUE);
 	sPanel->Add(show[11]);
-	show[12] = new GLToggle(12,"Sample/cm");
+	show[12] = new GLToggle(12,"Texture UV");
 	show[12]->SetState(TRUE);
 	sPanel->Add(show[12]);
-	show[13] = new GLToggle(13,"Count mode");
+
+	show[13] = new GLToggle(13,"Sample/cm");
 	show[13]->SetState(TRUE);
 	sPanel->Add(show[13]);
-	show[14] = new GLToggle(14,"Memory");
+	show[14] = new GLToggle(14,"Count mode");
 	show[14]->SetState(TRUE);
 	sPanel->Add(show[14]);
-	show[15] = new GLToggle(15,"Planarity");
+	show[15] = new GLToggle(14,"Memory");
 	show[15]->SetState(TRUE);
 	sPanel->Add(show[15]);
-	show[16] = new GLToggle(16,"Profile");
+	show[16] = new GLToggle(16,"Planarity");
 	show[16]->SetState(TRUE);
 	sPanel->Add(show[16]);
-	show[17] = new GLToggle(17,"Spectrum");
+	show[17] = new GLToggle(17,"Profile");
 	show[17]->SetState(TRUE);
 	sPanel->Add(show[17]);
-	show[18] = new GLToggle(18,"Hits");
+	show[18] = new GLToggle(18,"Spectrum");
 	show[18]->SetState(TRUE);
 	sPanel->Add(show[18]);
-	show[19] = new GLToggle(19,"Abs.");
+	show[19] = new GLToggle(19,"Hits");
 	show[19]->SetState(TRUE);
 	sPanel->Add(show[19]);
-	show[20] = new GLToggle(20,"Flux");
+	show[20] = new GLToggle(20,"Abs.");
 	show[20]->SetState(TRUE);
 	sPanel->Add(show[20]);
-	show[21] = new GLToggle(21,"Power");
+
+	show[21] = new GLToggle(21,"Flux");
 	show[21]->SetState(TRUE);
 	sPanel->Add(show[21]);
+	show[22] = new GLToggle(22,"Power");
+	show[22]->SetState(TRUE);
+	sPanel->Add(show[22]);
 
 	// Center dialog
 	int wS,hS;
@@ -255,56 +266,61 @@ char *FacetDetails::FormatCell(int idx,Facet *f,int mode) {
 		else sprintf(ret,"%s",worker->materials[f->sh.reflectType-10].name.c_str());
 		break;
 	case 6:
-		sprintf(ret,"%g",f->sh.rmsRoughness);
+		sprintf(ret,"%g",f->sh.rmsRoughness*1E9);
 		break;
 	case 7:
-		sprintf(ret,"%s",ynStr[f->sh.is2sided]);      
+		sprintf(ret,"%g",f->sh.autoCorrLength*1E9);
 		break;
 	case 8:
-		sprintf(ret,"%d",f->sh.nbIndex);
+		sprintf(ret,"%s",ynStr[f->sh.is2sided]);      
 		break;
 	case 9:
-		sprintf(ret,"%g",f->sh.area);
+		sprintf(ret,"%d",f->sh.nbIndex);
 		break;
 	case 10:
-		sprintf(ret,"%g x %g",Norme(f->sh.U),Norme(f->sh.V));
+		sprintf(ret,"%g",f->sh.area);
 		break;
+
 	case 11:
+		sprintf(ret,"%g x %g",f->sh.U.Norme(),f->sh.V.Norme());
+		break;
+	case 12:
 		if( f->sh.isTextured ) {
 			sprintf(ret,"%dx%d (%g x %g)",f->sh.texWidth,f->sh.texHeight,f->sh.texWidthD,f->sh.texHeightD);
 		} else {
 			sprintf(ret,"None");
 		}
 		break;
-	case 12:
+	case 13:
 		sprintf(ret,"%g",f->tRatio);
 		break;
-	case 13:
+	case 14:
 		sprintf(ret,"%s",GetCountStr(f));
 		break;
-	case 14:
+	case 15:
 		sprintf(ret,"%s",FormatMemory(f->GetTexRamSize()));
 		break;
-	case 15:
+	case 16:
 		sprintf(ret,"%f",f->err);
 		break;
-	case 16:
+	case 17:
 		sprintf(ret,"%s",profStr[f->sh.profileType]);
 		break;
-	case 17:
+	case 18:
 		sprintf(ret,f->sh.hasSpectrum==1?"Yes":"No");
 		break;
-	case 18:
-		sprintf(ret,"%d",f->sh.counter.nbHit);
-		break;
 	case 19:
-		sprintf(ret,"%d",f->sh.counter.nbAbsorbed);
+		sprintf(ret,"%d",f->counterCache.nbHit);
 		break;
 	case 20:
-		sprintf(ret,"%g",f->sh.counter.fluxAbs/worker->no_scans);
+		sprintf(ret,"%d",f->counterCache.nbAbsorbed);
 		break;
+
 	case 21:
-		sprintf(ret,"%g",f->sh.counter.powerAbs/worker->no_scans);
+		sprintf(ret,"%g",f->counterCache.fluxAbs/worker->no_scans);
+		break;
+	case 22:
+		sprintf(ret,"%g",f->counterCache.powerAbs/worker->no_scans);
 		break;
 	}
 

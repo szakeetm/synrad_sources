@@ -1,12 +1,11 @@
 #include "Region_mathonly.h"
 #include "Random.h"
-#include "Tools.h"
 #include <ctime>
 #include <vector>
 #include <string>
 using namespace std;
 
-Vector Quadrupole::B(const Vector &position) {
+Vector3d Quadrupole::B(const Vector3d &position) {
 	
 	double dX,dY,dZ; //offsets from quadrupole center
 	double Bx_,By_,Bz_; //magnetic field in the transformed coordinates
@@ -40,7 +39,7 @@ Vector Quadrupole::B(const Vector &position) {
 	yp=Bx_*sinrot_q+By_*cosrot_q;
 	zp=Bz_;
 
-	return Vector(xp*cosbeta_q-yp*sinalfa_q*sinbeta_q -zp*cosalfa_q*sinbeta_q,
+	return Vector3d(xp*cosbeta_q-yp*sinalfa_q*sinbeta_q -zp*cosalfa_q*sinbeta_q,
 		yp*cosalfa_q -zp*sinalfa_q,
 		xp*sinbeta_q+yp*sinalfa_q*cosbeta_q +zp*cosalfa_q*cosbeta_q);
 }

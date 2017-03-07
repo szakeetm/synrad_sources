@@ -15,13 +15,13 @@
 
 
 
-class Region_full : public Region_mathonly { //Beam trajectory0
+class Region_full : public Region_mathonly { //Beam trajectory
 public:
 	
 	//References
 	std::string fileName,MAGXfileName,MAGYfileName,MAGZfileName,BXYfileName;
 	bool isLoaded;
-	Vector AABBmin,AABBmax;
+	Vector3d AABBmin,AABBmax;
 	int selectedPoint;
 
 	//Methods
@@ -34,15 +34,13 @@ public:
 	void CalculateTrajectory(int max_steps);
 	Trajectory_Point OneStep(int pointId); //moves the beam by dL length from the i-th calculated point
 	void CalcPointProperties(int pointId); //calculates magnetic field, sigma values, etc. for a trajectory point
-	bool isOutsideBoundaries(Vector a,BOOL recalcDirs);
+	bool isOutsideBoundaries(Vector3d a,BOOL recalcDirs);
 	void LoadPAR(FileReader *file);
 	void LoadParam(FileReader *f);
-	void LoadRegion(FileReader *file,GLProgress *prg);
-	Distribution2D LoadMAGFile(FileReader *file,Vector *dir,double *period,double *phase,int mode);
-	int LoadBXY(FileReader *file);
-	void Render(int dispNumTraj,GLMATERIAL *B_material,double vectorLength);
+	Distribution2D LoadMAGFile(FileReader *file,Vector3d *dir,double *period,double *phase,int mode);
+	int LoadBXY(const std::string& fileName); //Throws error
+	void Render(const int& regionId, const int& dispNumTraj, GLMATERIAL *B_material, const double& vectorLength);
 	void SelectTrajPoint(int x,int y,int regionId);
-	void ExportPoints(FileWriter *f,GLProgress *prg,int frequency=1,BOOL doFullScan=FALSE);
 	void SaveParam(FileWriter *f);
 	
 };

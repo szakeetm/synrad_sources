@@ -16,17 +16,41 @@
   GNU General Public License for more details.
 */
 
-#include "Types.h"
 #include <Windows.h>
 #include <vector>
-#include "Tools.h"
+#include "GLApp/GLTypes.h"
+#include "SynradTypes.h"
+//#include "Worker.h"
 
 #ifndef SHAREDH
 #define SHAREDH
 
+#define SPECTRUM_SIZE 100 //number of histogram bins
+#define PROFILE_SIZE  100 // Size of profile
 #define NBHLEAK     2048  // Leak history max length
 #define NBHHIT      2048  // Max. displayed number of lines and Porto (OPO)hits.
 #define MAX_PROCESS 32    // Maximum number of process
+
+typedef struct {
+
+	Vector3d pos;
+	int    type;
+	double dF;
+	double dP;
+} HIT;
+
+// Velocity field
+typedef struct {
+	Vector3d dir;
+	llong count;
+} VHIT;
+
+typedef struct {
+
+	Vector3d pos;
+	Vector3d dir;
+
+} LEAK;
 
 typedef  struct {
     // Counts
@@ -66,10 +90,11 @@ typedef struct {
 #define COMMAND_NONE     10  // No change
 #define COMMAND_LOAD     11  // Load geometry
 #define COMMAND_START    12  // Start simu
-#define COMMAND_PAUSE     13  // Pause simu
+#define COMMAND_PAUSE    13  // Pause simu
 #define COMMAND_RESET    14  // Reset simu
 #define COMMAND_EXIT     15  // Exit
 #define COMMAND_CLOSE    16  // Release handles
+#define COMMAND_UPDATEPARAMS 17 //Update simulation mode (low flux, fluxwise/powerwise, displayed regions)
 
 static const char *prStates[] = {
 
@@ -82,6 +107,7 @@ static const char *prStates[] = {
 "",
 "",
 "",
+"",
 "No command",
 "Load",
 "Start",
@@ -89,7 +115,7 @@ static const char *prStates[] = {
 "Reset",
 "Exit",
 "Close",
-
+"Update params"
 };
 
 typedef struct {
@@ -99,20 +125,24 @@ typedef struct {
   int    cmdParam[MAX_PROCESS];      // Command param 1
   llong  cmdParam2[MAX_PROCESS];     // Command param 2
   char   statusStr[MAX_PROCESS][64]; // Status message
-} SHMASTER;
+} SHCONTROL;
 
 typedef struct {
 
-  int        nbFacet;   // Number of facets (total)
-  int        nbVertex;  // Number of 3D vertices
+  size_t        nbFacet;   // Number of facets (total)
+  size_t        nbVertex;  // Number of 3D vertices
   int        nbSuper;   // Number of superstructures
   size_t        nbRegion;  //number of magnetic regions
   size_t        nbTrajPoints; //total number of trajectory points (calculated at CopyGeometryBuffer)
-  int        generation_mode; //fluxwise or powerwise
-  BOOL		 lowFluxMode;
-  double	 lowFluxCutoff;
+  BOOL       newReflectionModel;
   char       name[64];  // (Short file name)
-} SHGEOM;
+} SHGEOM; //Shared memory interface with main program
+
+typedef struct {
+	int      generation_mode; //fluxwise or powerwise
+	BOOL	 lowFluxMode;
+	double	 lowFluxCutoff;
+} SHMODE;
 
 typedef struct {
 
@@ -141,27 +171,24 @@ typedef struct {
   BOOL   isTextured;   // texture
   BOOL   isVolatile;   // Volatile facet (absorbtion facet which does not affect particule trajectory)
 
-  // Global hit counters
-  SHHITS counter;
-
   // Normal vector
-  VERTEX3D    N;    // normalized
-  VERTEX3D    Nuv;  // normal to (u,v) not normlized
+  Vector3d    N;    // normalized
+  Vector3d    Nuv;  // normal to (u,v) not normlized
 
   // Axis Aligned Bounding Box (AABB)
   AABB       bb;
-  VERTEX3D   center;
+  Vector3d   center;
 
   // Geometry
   int    nbIndex;   // Number of index/vertex
   double sign;      // Facet vertex rotation (see Facet::DetectOrientation())
 
   // Plane basis (O,U,V) (See Geometry::InitializeGeometry() for info)
-  VERTEX3D   O;  // Origin
-  VERTEX3D   U;  // U vector
-  VERTEX3D   V;  // V vector
-  VERTEX3D   nU; // Normalized U
-  VERTEX3D   nV; // Normalized V
+  Vector3d   O;  // Origin
+  Vector3d   U;  // U vector
+  Vector3d   V;  // V vector
+  Vector3d   nU; // Normalized U
+  Vector3d   nV; // Normalized V
 
   // Hit/Abs/Des/Density recording on 2D texture map
   int    texWidth;    // Rounded texture resolution (U)
@@ -178,6 +205,36 @@ typedef struct {
 //
 //  SHELEM
 
+// Hit type
 
+#define HIT_DES   1
+#define HIT_ABS   2
+#define HIT_REF   3
+#define HIT_TRANS 4
+#define HIT_TELEPORT 5
+#define LASTHIT 6
+
+//Reflection type
+#define REFL_ABSORB 0
+#define REFL_FORWARD 1
+#define REFL_DIFFUSE 2
+#define REFL_BACK 3
+#define REFL_TRANS 4
+
+// Reflection type
+#define REF_DIFFUSE 0   // Diffuse (cosine law)
+#define REF_MIRROR  1   // Mirror
+#define REF_MATERIAL 10 //Real rough surface reflection
+
+// Profile type
+
+#define REC_NONE       0  // No recording
+#define REC_PRESSUREU  1  // Pressure profile (U direction)
+#define REC_PRESSUREV  2  // Pressure profile (V direction)
+#define REC_ANGULAR    3  // Angular profile
+
+// Density/Hit field stuff
+#define HITMAX_INT64 18446744073709551615
+#define HITMAX_DOUBLE 1E308
 
 #endif /* SHAREDH */

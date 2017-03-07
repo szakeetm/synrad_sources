@@ -38,14 +38,11 @@
 
 static Dataport *dpControl=NULL;
 static Dataport *dpHit=NULL;
-//static int       noHeartBeatSince;
 static int       prIdx;
 static int       prState;
 static int       prParam;
 static llong     prParam2;
 static DWORD     hostProcessId;
-//static float       heartBeat;
-//static HANDLE    masterHandle;
 static char      ctrlDpName[32];
 static char      loadDpName[32];
 static char      hitsDpName[32];
@@ -54,8 +51,6 @@ static char      materialsDpName[32];
 BOOL end = FALSE;
 void SetErrorSub(const char *message);
 BOOL IsProcessRunning(DWORD pid);
-//int FIND_PROC_BY_NAME(const char *szToFind);
-// -------------------------------------------------
 
 
 void GetState() {
@@ -63,7 +58,7 @@ void GetState() {
   prParam = 0;
 
   if( AccessDataport(dpControl) ) {
-    SHMASTER *master = (SHMASTER *)dpControl->buff;
+    SHCONTROL *master = (SHCONTROL *)dpControl->buff;
     prState = master->states[prIdx];
     prParam = master->cmdParam[prIdx];
     prParam2 = master->cmdParam2[prIdx];
@@ -71,11 +66,7 @@ void GetState() {
     master->cmdParam2[prIdx] = 0;
 
     ReleaseDataport(dpControl);
-	/*if (FIND_PROC_BY_NAME("synrad.exe")!=1) { //if there is no running Windows process called "synrad.exe"
-		printf("synrad.exe not running. Closing.");
-		SetErrorSub("synrad.exe not running. Closing subprocess.");
-		end = TRUE;
-	}*/
+
 	if (!IsProcessRunning(hostProcessId)) {
 		printf("Host synrad.exe (process id %d) not running. Closing.",hostProcessId);
 		SetErrorSub("Host synrad.exe not running. Closing subprocess.");
@@ -103,7 +94,7 @@ void SetState(int state,const char *status) {
 	prState = state;
 	printf("\n setstate %d \n",state);
 	if( AccessDataport(dpControl) ) {
-		SHMASTER *master = (SHMASTER *)dpControl->buff;
+		SHCONTROL *master = (SHCONTROL *)dpControl->buff;
 		master->states[prIdx] = state;
 		strncpy(master->statusStr[prIdx],status,63);
 		master->statusStr[prIdx][63]=0;
@@ -154,7 +145,7 @@ void SetReady() {
 void SetStatus(char *message) {
 
   if( AccessDataport(dpControl) ) {
-    SHMASTER *master = (SHMASTER *)dpControl->buff;
+    SHCONTROL *master = (SHCONTROL *)dpControl->buff;
     strcpy(master->statusStr[prIdx],message);
     ReleaseDataport(dpControl);
   }
@@ -197,6 +188,30 @@ void Load() {
 
 }
 
+BOOL UpdateParams() {
+
+	Dataport *loader;
+	long hSize;
+
+	// Load geometry
+	loader = OpenDataport(loadDpName, prParam);
+	if (!loader) {
+		char err[512];
+		sprintf(err, "Failed to connect to 'loader' dataport %s (%d Bytes)", loadDpName, prParam);
+		SetErrorSub(err);
+		return FALSE;
+	}
+
+	printf("Connected to %s\n", loadDpName);
+
+	if (!UpdateSimuParams(loader)) {
+		CLOSEDP(loader);
+		return FALSE;
+	}
+	CLOSEDP(loader);
+	return TRUE;
+}
+
 // -------------------------------------------------
 
 int main(int argc,char* argv[])
@@ -216,13 +231,13 @@ int main(int argc,char* argv[])
   sprintf(hitsDpName,"SRDHITS%s",argv[1]);
   sprintf(materialsDpName,"SRDMATS%s",argv[1]);
 
-  dpControl = OpenDataport(ctrlDpName,sizeof(SHMASTER));
+  dpControl = OpenDataport(ctrlDpName,sizeof(SHCONTROL));
   if( !dpControl ) {
     printf("Usage: Cannot connect to SRDCTRL%s\n",argv[1]);
     return 1;
   }
 
-  printf("Connected to %s (%d bytes), synradSub.exe #%d\n",ctrlDpName,sizeof(SHMASTER),prIdx);
+  printf("Connected to %s (%zd bytes), synradSub.exe #%d\n",ctrlDpName,sizeof(SHCONTROL),prIdx);
 
   InitSimulation();
 
@@ -245,6 +260,12 @@ int main(int argc,char* argv[])
         }
         break;
 
+	  case COMMAND_UPDATEPARAMS:
+		  printf("COMMAND: UPDATEPARAMS (%d,%I64d)\n", prParam, prParam2);
+		  if (UpdateParams()) {
+			  SetState(prParam, GetSimuStatus());
+		  }
+		  break;
 
       case COMMAND_START:
         printf("COMMAND: START (%d,%I64d)\n",prParam,prParam2);

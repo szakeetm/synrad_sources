@@ -16,6 +16,7 @@ GNU General Public License for more details.
 */
 
 #include "ExportDesorption.h"
+#include "Facet.h"
 #include "GLApp/GLTitledPanel.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLWindowManager.h"

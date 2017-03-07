@@ -19,8 +19,9 @@ GNU General Public License for more details.
 #include "TrajectoryDetails.h"
 #include "GeneratePhoton.h"
 #include "GLApp/GLToolkit.h"
+#include "GLApp/MathTools.h" //Pi Min max
 #include "GLApp/GLMessageBox.h"
-#include "Utils.h"
+
 #include "SynRad.h"
 #include "Random.h"
 
@@ -36,6 +37,7 @@ typedef struct {
 
 static COLUMN allColumn[] = {
 	{ "#", 40, ALIGN_CENTER },
+
 	{ "L (cm)", 100, ALIGN_CENTER },
 	{ "Orbit_pos_X (cm)", 100, ALIGN_CENTER },
 	{ "Orbit_pos_Y (cm)", 100, ALIGN_CENTER },
@@ -46,20 +48,31 @@ static COLUMN allColumn[] = {
 	{ "Orbit_Bx (T)", 100, ALIGN_CENTER },
 	{ "Orbit_By (T)", 100, ALIGN_CENTER },
 	{ "Orbit_Bz (T)", 100, ALIGN_CENTER },
+
 	{ "Orbit_Radius (cm)", 100, ALIGN_CENTER },
 	{ "Orbit_Critical_E (eV)", 110, ALIGN_CENTER },
 	{ "Orbit_Emittance_X (cm)", 110, ALIGN_CENTER },
 	{ "Orbit_Emittance_Y (cm)", 110, ALIGN_CENTER },
 	{ "Orbit_Beta_X (cm)", 100, ALIGN_CENTER },
 	{ "Orbit_Beta_Y (cm)", 100, ALIGN_CENTER },
-	{ "Orbit_Eta", 100, ALIGN_CENTER },
-	{ "Orbit_Eta_Prime", 100, ALIGN_CENTER },
-	{ "Orbit_Energy_Spread", 110, ALIGN_CENTER },
+	{ "Orbit_Eta_X (cm)", 100, ALIGN_CENTER },
+	{ "Orbit_Eta_X_Prime", 100, ALIGN_CENTER },
+	{ "Orbit_Alpha_X", 110, ALIGN_CENTER },
+	{ "Orbit_Alpha_Y", 110, ALIGN_CENTER },
+
+	{ "Orbit_Gamma_X (1/cm)", 110, ALIGN_CENTER },
+	{ "Orbit_Gamma_Y (1/cm)", 110, ALIGN_CENTER },
 	{ "Orbit_Sigma_X (cm)", 100, ALIGN_CENTER },
 	{ "Orbit_Sigma_Y (cm)", 100, ALIGN_CENTER },
 	{ "Orbit_Sigma_X_Prime (rad)", 110, ALIGN_CENTER },
 	{ "Orbit_Sigma_Y_Prime (rad)", 110, ALIGN_CENTER },
+	{ "XX'_a", 110, ALIGN_CENTER},
+	{ "XX'_b", 110, ALIGN_CENTER },
+	{ "YY'_a", 110, ALIGN_CENTER },
+	{ "YY'_b", 110, ALIGN_CENTER },
 
+	{ "XX'_phase_theta (rad)", 110, ALIGN_CENTER },
+	{ "YY'_phase_theta (rad)", 110, ALIGN_CENTER },
 	{ "Photon_Natural_div_X (rad)", 110, ALIGN_CENTER },
 	{ "Photon_Natural_div_Y (rad)", 110, ALIGN_CENTER },
 	{ "Photon_Offset_X (cm)", 110, ALIGN_CENTER },
@@ -68,6 +81,7 @@ static COLUMN allColumn[] = {
 	{ "Photon_div_Y (rad)", 100, ALIGN_CENTER },
 	{ "Photon_B (T)", 100, ALIGN_CENTER },
 	{ "Photon_Bx (T)", 100, ALIGN_CENTER },
+
 	{ "Photon_By (T)", 100, ALIGN_CENTER },
 	{ "Photon_Bz (T)", 100, ALIGN_CENTER },
 	{ "Photon_B_ortho (T)", 100, ALIGN_CENTER },
@@ -76,18 +90,11 @@ static COLUMN allColumn[] = {
 	{ "Photon_Critical_Energy (eV)", 110, ALIGN_CENTER },
 	{ "Photon_Energy (eV)", 100, ALIGN_CENTER },
 	{ "Photon_E/E_crit", 100, ALIGN_CENTER },
-	{ "Photon_G1H2", 100, ALIGN_CENTER },
 	{ "Photon_B_factor", 100, ALIGN_CENTER },
 	{ "Photon_B_factor_P", 100, ALIGN_CENTER },
+
 	{ "Photon_Flux (1/s)", 100, ALIGN_CENTER },
 	{ "Photon_Power (W)", 100, ALIGN_CENTER },
-
-	/*{ "Integral_Flux (1/s)", 100, ALIGN_CENTER },
-	{ "Integral_Power (W)", 100, ALIGN_CENTER },
-	{ "Integral_Bx (T)", 100, ALIGN_CENTER },
-	{ "Integral_By (T)", 100, ALIGN_CENTER },
-	{ "Integral_Bz (T)", 100, ALIGN_CENTER },*/
-
 };
 
 // -----------------------------------------------------------------
@@ -102,7 +109,6 @@ TrajectoryDetails::TrajectoryDetails() :GLWindow() {
 	SetIconfiable(TRUE);
 	SetResizable(TRUE);
 	SetMinimumSize(600, 300);
-
 
 
 	regionCombo = new GLCombo(0);
@@ -208,7 +214,7 @@ char *TrajectoryDetails::FormatCell(int idx, int mode, GenPhoton* photon) {
 		sprintf(ret, "%d", idx + 1);
 		break;
 	case 1: //L
-		sprintf(ret, "%g", (double)idx*reg->params.dL);
+		sprintf(ret, "%g", (double)idx*reg->params.dL_cm);
 		break;
 	case 2: //Orbit_posX
 		sprintf(ret, "%g", p->position.x);
@@ -229,6 +235,9 @@ char *TrajectoryDetails::FormatCell(int idx, int mode, GenPhoton* photon) {
 			else theta = PI / 2;
 		}
 		else theta = -atan(p->direction.x / p->direction.z);
+		if (p->direction.z <= 0) //atan out of period
+			if (p->direction.x < 0) theta += PI;
+			else theta -= PI;
 		sprintf(ret, "%g", theta);
 		break; }
 	case 7: //Orbit_B
@@ -261,89 +270,115 @@ char *TrajectoryDetails::FormatCell(int idx, int mode, GenPhoton* photon) {
 	case 16: //Orbit_Beta_Y
 		sprintf(ret, "%g", p->beta_Y);
 		break;
-	case 17: //Orbit_Eta
+	case 17: //Orbit_Eta_X
 		sprintf(ret, "%g", p->eta);
 		break;
-	case 18: //Orbit_Eta_Prime
+	case 18: //Orbit_Eta_X_Prime
 		sprintf(ret, "%g", p->eta_prime);
 		break;
-	case 19: //Orbit_Energy_Spread
-		sprintf(ret, "%g %%", p->energy_spread);
+	case 19: //Orbit_Alpha_X
+		sprintf(ret, "%g", p->alpha_X);
 		break;
-	case 20: //Orbit_Sigma_X
+	case 20: //Orbit_Alpha_Y
+		sprintf(ret, "%g", p->alpha_Y);
+		break;
+	case 21: //Orbit_Gamma_X
+		sprintf(ret, "%g", p->gamma_X);
+		break;
+	case 22: //Orbit_Gamma_Y
+		sprintf(ret, "%g", p->gamma_Y);
+		break;
+	case 23: //Orbit_Sigma_X
 		sprintf(ret, "%g", p->sigma_x);
 		break;
-	case 21: //Orbit_Sigma_Y
+	case 24: //Orbit_Sigma_Y
 		sprintf(ret, "%g", p->sigma_y);
 		break;
-	case 22: //Orbit_Sigma_X_Prime
+	case 25: //Orbit_Sigma_X_Prime
 		sprintf(ret, "%g", p->sigma_x_prime);
 		break;
-	case 23: //Orbit_Sigma_Y_Prime
+	case 26: //Orbit_Sigma_Y_Prime
 		sprintf(ret, "%g", p->sigma_y_prime);
 		break;
+	case 27: //Orbit_a_x
+		sprintf(ret, "%g", p->a_x);
+		break;
+	case 28: //Orbit_b_x'
+		sprintf(ret, "%g", p->b_x);
+		break;
+	case 29: //Orbit_a_y
+		sprintf(ret, "%g", p->a_y);
+		break;
+	case 30: //Orbit_b_y'
+		sprintf(ret, "%g", p->b_y);
+		break;
 
-	case 24: //Photon_Natural_div_X (rad)
+	case 31: //Orbit_phase_theta_X
+		sprintf(ret, "%g", p->theta_X);
+		break;
+	case 32: //Orbit_phase_theta_y
+		sprintf(ret, "%g", p->theta_Y);
+		break;
+	case 33: //Photon_Natural_div_X (rad)
 		sprintf(ret, "%g", photon->natural_divx);
 		break;
-	case 25: //Photon_Natural_div_Y (rad)
+	case 34: //Photon_Natural_div_Y (rad)
 		sprintf(ret, "%g", photon->natural_divy);
 		break;
-	case 26: //Photon_Offset_X (cm)
+	case 35: //Photon_Offset_X (cm)
 		sprintf(ret, "%g", photon->offset_x);
 		break;
-	case 27: //Photon_Offset_Y (cm)
+	case 36: //Photon_Offset_Y (cm)
 		sprintf(ret, "%g", photon->offset_y);
 		break;
-	case 28: //Photon_div_X (rad)
+	case 37: //Photon_div_X (rad)
 		sprintf(ret, "%g", photon->offset_divx);
 		break;
-	case 29: //Photon_div_Y (rad)
+	case 38: //Photon_div_Y (rad)
 		sprintf(ret, "%g", photon->offset_divy);
 		break;
-	case 30: //Photon_B (T)
+	case 39: //Photon_B (T)
 		sprintf(ret, "%g", photon->B.Norme());
 		break;
-	case 31: //Photon_Bx (T)
+	case 40: //Photon_Bx (T)
 		sprintf(ret, "%g", photon->B.x);
 		break;
-	case 32: //Photon_By (T)
+
+	case 41: //Photon_By (T)
 		sprintf(ret, "%g", photon->B.y);
 		break;
-	case 33: //Photon_Bz (T)
+	case 42: //Photon_Bz (T)
 		sprintf(ret, "%g", photon->B.z);
 		break;
-	case 34: //Photon_B_ortho (T)
+	case 43: //Photon_B_ortho (T)
 		sprintf(ret, "%g", photon->B_ort);
 		break;
-	case 35: //Photon_B_par (T)
+	case 44: //Photon_B_par (T)
 		sprintf(ret, "%g", photon->B_par);
 		break;
-	case 36: //Photon_Radius (cm)
+	case 45: //Photon_Radius (cm)
 		sprintf(ret, "%g", photon->radius);
 		break;
-	case 37: //Photon_Critical_Energy (eV)
+	case 46: //Photon_Critical_Energy (eV)
 		sprintf(ret, "%g", photon->critical_energy);
 		break;
-	case 38: //Photon_Energy (eV)
+	case 47: //Photon_Energy (eV)
 		sprintf(ret, "%g", photon->energy);
 		break;
-	case 39: //Photon_E/E_crit
+	case 48: //Photon_E/E_crit
 		sprintf(ret, "%g", photon->energy / photon->critical_energy);
 		break;
-	case 40: //Photon_G1H2
-		sprintf(ret, "%s", "g1h2 obsolete");
-		break;
-	case 41: //Photon_B_factor
+	case 49: //Photon_B_factor
 		sprintf(ret, "%g", photon->B_factor);
 		break;
-	case 42: //Photon_B_factor_P
+	case 50: //Photon_B_factor_P
 		sprintf(ret, "%g", photon->B_factor_power);
 		break;
-	case 43: //Photon_Flux
+
+	case 51: //Photon_Flux
 		sprintf(ret, "%g", photon->SR_flux);
 		break;
-	case 44: //Photon_Power (W)
+	case 52: //Photon_Power (W)
 		sprintf(ret, "%g", photon->SR_power);
 		break;
 
@@ -428,6 +463,7 @@ void TrajectoryDetails::Update() {
 	if (!worker) return;
 	if (!IsVisible()) return;
 
+	freq = MAX(1, (int)((double)worker->regions[displayedRegion].Points.size() / 1000.0)); //Update frequency in case number of points changed
 	UpdateTable();
 
 }
@@ -449,7 +485,7 @@ void TrajectoryDetails::Display(Worker *w, int regionId) {
 	}
 	sprintf(tmp, "%d", freq);
 	freqText->SetText(tmp);
-	sprintf(tmp, "th point (%d in total)", (int)((double)worker->regions[displayedRegion].Points.size() / (double)freq));
+	sprintf(tmp, "th point (%d of the %d in total)", (int)((double)worker->regions[displayedRegion].Points.size() / (double)freq),(int)(worker->regions[displayedRegion].Points.size()));
 	nbPointLabel->SetText(tmp);
 	regionCombo->SetSelectedIndex(regionId);
 	SetVisible(TRUE);

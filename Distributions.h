@@ -1,7 +1,7 @@
-#ifndef _DISTRIBUTIONS_
-#define _DISTRIBUTIONS_
+#pragma once
+//Synrad stuff, distributions and interpolation
+
 #define NUMBER_OF_DISTRO_VALUES 100
-#define VERY_SMALL 1.0E-30
 
 #define UPPER_LIMIT log(20)
 #define LOWER_LIMIT log(1E-10)
@@ -14,21 +14,9 @@
 #define SYNGEN_MODE_FLUXWISE  0
 #define SYNGEN_MODE_POWERWISE 1
 
-#define REFL_ABSORB 0
-#define REFL_FORWARD 1
-#define REFL_DIFFUSE 2
-#define REFL_BACK 3
-#define REFL_TRANS 4
-
-#include "File.h" //FileReader for LoadCSV
+//#include "File.h" //FileReader for LoadCSV
+class FileReader;
 #include <vector>
-
-/*class Averages {
-public:
-	double average;
-	double average1;
-	double average_;
-};*/
 
 class Distribution2D {
 public:
@@ -44,6 +32,18 @@ public:
 	//int findXindex(const double &x);
 	int size;
 	//double sum_energy,sum_photons;
+};
+
+class DistributionND {
+	std::vector<std::pair<double, std::vector<double>>> values;
+public:
+	DistributionND();
+	void Clear();
+	void AddPair(const double & x, const std::vector<double>& values);
+	std::vector<double> GetYValues(const double& x);
+	std::vector<double> GetYValues(const size_t& index);
+	size_t GetSize();
+	double GetXValue(const size_t& index);
 };
 
 class Material { //2-variable interpolation
@@ -80,7 +80,6 @@ double SYNGEN1(double x_min, double x_max, int mode);
 
 Distribution2D Generate_K_Distribution(double order);
 //Distribution2D Generate_G1_H2_Distribution();
-Distribution2D Generate_LN_Distribution(); //precalculated ln(x) values for the most used energies
 //Distribution2D Generate_Polarization_Distribution(bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
 Distribution2D Generate_Integral(double log_min, double log_max, int mode);
 /*
@@ -91,7 +90,3 @@ Distribution2D integral_SR_power=Generate_Integral(LOWER_LIMIT,UPPER_LIMIT,INTEG
 Distribution2D polarization_distribution=Generate_Polarization_Distribution(true,true);
 Distribution2D g1h2_distribution=Generate_G1_H2_Distribution();
 */
-
-template <typename T> int binary_search(double key, T A, int size);
-
-#endif

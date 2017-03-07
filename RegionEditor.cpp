@@ -17,10 +17,12 @@ GNU General Public License for more details.
 #include "GLApp/GLLabel.h"
 #include "RegionEditor.h"
 #include "GLApp/GLToolkit.h"
+#include "GLApp/MathTools.h" //PI
 #include "GLApp/GLMessageBox.h"
 #include "GLApp/GLInputBox.h"
 #include "GLApp/GLTitledPanel.h"
-#include "Utils.h"
+#include "GLApp/GLCombo.h"
+
 #include "Synrad.h"
 
 extern GLApplication *theApp;
@@ -29,696 +31,509 @@ extern GLApplication *theApp;
 
 RegionEditor::RegionEditor():GLWindow() {
 
-	int wD=785;
-	int hD=650;
-
-	SetTitle("Region Editor");
-	SetIconfiable(TRUE);
-	SetMinimumSize(wD,hD);
-
-	GLLabel*	label1 = new GLLabel("");
-	GLLabel* label2 = new GLLabel("");
-	startPointXtext = new GLTextField(0,"");
-	startPointYtext = new GLTextField(0,"");
-	GLLabel* label3 = new GLLabel("");
-	startPointZtext = new GLTextField(0,"");
-	GLLabel* label4 = new GLLabel("");
-	GLLabel* label5 = new GLLabel("");
-	startDirDefinitionCombo = new GLCombo(0);
-	GLLabel* label6 = new GLLabel("");
-	theta0text = new GLTextField(0,"");
-	GLLabel* label7 = new GLLabel("");
-	alpha0text = new GLTextField(0,"");
-	GLLabel* label8 = new GLLabel("");
-	startDirXtext = new GLTextField(0,"");
-	GLLabel* label9 = new GLLabel("");
-	startDirYtext = new GLTextField(0,"");
-	GLLabel* label10 = new GLLabel("");
-	startDirZtext = new GLTextField(0,"");
-	GLLabel* label11 = new GLLabel("");
-	GLLabel* label12 = new GLLabel("");
-	dLtext = new GLTextField(0,"");
-	GLLabel* label13 = new GLLabel("");
-	GLLabel* label14 = new GLLabel("");
-	GLLabel* label15 = new GLLabel("");
-	GLLabel* label19 = new GLLabel("");
-	GLLabel* label20 = new GLLabel("");
-	GLLabel* label21 = new GLLabel("");
-	GLLabel* label22 = new GLLabel("");
-	GLLabel* label16 = new GLLabel("");
-	limitsXtext = new GLTextField(0,"");
-	GLLabel* label17 = new GLLabel("");
-	GLLabel* label18 = new GLLabel("");
-	limitsYtext = new GLTextField(0,"");
-	GLLabel* label23 = new GLLabel("");
-	GLLabel* label24 = new GLLabel("");
-	limitsZtext = new GLTextField(0,"");
-	GLLabel* label25 = new GLLabel("");
-	GLLabel* label26 = new GLLabel("");
-	particleMassText = new GLTextField(0,"");
-	GLLabel* label27 = new GLLabel("");
-	GLLabel* label28 = new GLLabel("");
-	GLLabel* label29 = new GLLabel("");
-	particleChargeCombo = new GLCombo(0);
-	setParticleProtonButton = new GLButton(0,"");
-	setParticleElectronButton = new GLButton(0,"");
-	setParticlePositronButton = new GLButton(0,"");
-	GLLabel* label30 = new GLLabel("");
-	GLLabel* label301 = new GLLabel("Beam energy:");
-	beamEnergyText = new GLTextField(0,"");
-	GLLabel *currentLabel=new GLLabel("Current:");
-	beamCurrentText = new GLTextField(0,"");
-	GLLabel *mALabel=new GLLabel("mA");
-	GLLabel* label302 = new GLLabel("GeV");
-	idealBeamToggle = new GLToggle(0,"Ideal Beam");
-	betaOrBXYCombo = new GLCombo(0);
-	BXYfileNameText = new GLTextField(0,"");
-	GLLabel* label31 = new GLLabel("");
-	GLLabel* label32 = new GLLabel("");
-	betaXtext = new GLTextField(0,"");
-	betaYtext = new GLTextField(0,"");
-	GLLabel* label34 = new GLLabel("");
-	etaText = new GLTextField(0,"");
-	emittanceText = new GLTextField(0,"");
-	GLLabel* emittance_cm = new GLLabel("cm");
-	GLLabel* betax_cm = new GLLabel("cm");
-	GLLabel* betay_cm = new GLLabel("cm");
-	GLLabel* coupling_percent = new GLLabel("%");
-	GLLabel* eta_cm = new GLLabel("cm");
-	GLLabel* etaprime_rad = new GLLabel("rad");
-	GLLabel* E_spread_percent = new GLLabel("%");
-
-	GLLabel* label35 = new GLLabel("");
-	GLLabel* label36 = new GLLabel("");
-	GLLabel* label37 = new GLLabel("");
-	etaPrimeText = new GLTextField(0,"");
-	GLLabel* label33 = new GLLabel("");
-	EminText = new GLTextField(0,"");
-	GLLabel* label38 = new GLLabel("");
-	GLLabel* label39 = new GLLabel("");
-	EmaxText = new GLTextField(0,"");
-	GLLabel* label40 = new GLLabel("");
-	GLLabel* label41 = new GLLabel("");
-	GLLabel* label42 = new GLLabel("");
-	enableParPolarizationToggle = new GLToggle(0,"Parallel");
-	enableOrtPolarizationToggle = new GLToggle(0,"Orthogonal");
-	limitAngleToggle = new GLToggle(0,"Limit photon divergence:");
-	GLLabel* label43 = new GLLabel("");
-	psiMaxXtext = new GLTextField(0,"");
-	GLLabel* label44 = new GLLabel("");
-	GLLabel* label45 = new GLLabel("");
-	psiMaxYtext = new GLTextField(0,"");
-	GLLabel* label46 = new GLLabel("");
-	GLLabel* label47 = new GLLabel("");
-	BxtypeCombo = new GLCombo(0);
-	constBXtext = new GLTextField(0,"");
-	GLLabel* label48 = new GLLabel("");
-	GLLabel* label49 = new GLLabel("");
-	MAGfileXtext = new GLTextField(0,"");
-	GLLabel* label50 = new GLLabel("");
-	BytypeCombo = new GLCombo(0);
-	constBYtext = new GLTextField(0,"");
-	GLLabel* label51 = new GLLabel("");
-	GLLabel* label52 = new GLLabel("");
-	MAGfileYtext = new GLTextField(0,"");
-	GLLabel* label53 = new GLLabel("");
-	BztypeCombo = new GLCombo(0);
-	constBZtext = new GLTextField(0,"");
-	GLLabel* label54 = new GLLabel("");
-	GLLabel* label55 = new GLLabel("");
-	MAGfileZtext = new GLTextField(0,"");
-	applyButton = new GLButton(0,"");
-	dismissButton = new GLButton(0,"");
-	limitsInfoButton = new GLButton(0,"Info");
-	dlInfoButton = new GLButton(0,"Info");
-	startDirInfoButton = new GLButton(0,"Info");
-	beamsizeInfoButton = new GLButton(0,"Info");
-	bxyBrowseButton = new GLButton(0,"...");
-	magxBrowseButton = new GLButton(0,"...");
-	magyBrowseButton = new GLButton(0,"...");
-	magzBrowseButton = new GLButton(0,"...");
-	bxyEditButton = new GLButton(0,"Edit");
-	magxEditButton = new GLButton(0,"Edit");
-	magyEditButton = new GLButton(0,"Edit");
-	magzEditButton = new GLButton(0,"Edit");
-	GLTitledPanel* geomPanel = new GLTitledPanel("Beam geometry");
-	GLTitledPanel* particlePanel = new GLTitledPanel("Particle settings");
-	GLTitledPanel* beamPanel = new GLTitledPanel("Additional beam parameters");
-	GLTitledPanel* generationPanel = new GLTitledPanel("Photon generation");
-	GLTitledPanel* magPanel = new GLTitledPanel("Magnetic field");
-
-	geomPanel->SetBounds(10,5,wD-20,150);
-	Add(geomPanel);
-
-	//---- label1 ----
-	label1->SetText("Beam start position:");
-	Add(label1);
-	label1->SetBounds(30, 25, 125, 18);
-
-	//---- label2 ----
-	label2->SetText("X0:");
-	Add(label2);
-	label2->SetBounds(180, 25, 23,18);
-	Add(startPointXtext);
-	startPointXtext->SetBounds(240, 24, 80, 18);
-
-	//---- label3 ----
-	label3->SetText("Y0:");
-	Add(label3);
-	label3->SetBounds(365, 25, 23, 18);
-	Add(startPointYtext);
-	startPointYtext->SetBounds(425, 24, 80, 18);
-
-	//---- label4 ----
-	label4->SetText("Z0:");
-	Add(label4);
-	label4->SetBounds(565, 25, 23, 18);
-	Add(startPointZtext);
-	startPointZtext->SetBounds(615, 24, 80, 18);
-	
-	//---- label5 ----
-	label5->SetText("Beam start direction:");
-	Add(label5);
-	label5->SetBounds(30, 50, 140, 18);
-	Add(startDirDefinitionCombo);
-	startDirDefinitionCombo->SetBounds(240, 48, 80, 19);
-	startDirDefinitionCombo->SetSize(2);
-	startDirDefinitionCombo->SetValueAt(0,"By angle:");
-	startDirDefinitionCombo->SetValueAt(1,"By vector:");
-	startDirDefinitionCombo->SetSelectedIndex(1); //Defining by direction vector is always well-defined
-
-	//---- label6 ----
-	label6->SetText("Theta0:");
-	Add(label6);
-	label6->SetBounds(365, 50, 50, 18);
-	Add(theta0text);
-	theta0text->SetBounds(425, 49, 80, 18);
-
-	//---- label7 ----
-	label7->SetText("Alpha0:");
-	Add(label7);
-	label7->SetBounds(565, 50, 53, 18);
-	Add(alpha0text);
-	alpha0text->SetBounds(615, 49, 80, 18);
-
-	//---- startDirInfoButton ----
-	Add(startDirInfoButton);
-	startDirInfoButton->SetBounds(725, 49, 40, 18);
-
-	//---- label8 ----
-	label8->SetText("dirX:");
-	Add(label8);
-	label8->SetBounds(180, 75, 30, 18);
-
-	//---- startDirXtext ----
-	startDirXtext->SetEditable(FALSE);
-	Add(startDirXtext);
-	startDirXtext->SetBounds(240, 74, 80, 18);
-
-	//---- label9 ----
-	label9->SetText("dirY:");
-	Add(label9);
-	label9->SetBounds(365, 75, 33, 18);
-
-	//---- startDirYtext ----
-	startDirYtext->SetEditable(FALSE);
-	Add(startDirYtext);
-	startDirYtext->SetBounds(425, 74, 80, 18);
-
-	//---- label10 ----
-	label10->SetText("dirZ:");
-	Add(label10);
-	label10->SetBounds(565, 75, 28, 18);
-
-	//---- startDirZtext ----
-	startDirZtext->SetEditable(FALSE);
-	Add(startDirZtext);
-	startDirZtext->SetBounds(615, 74, 80, 18);
-
-	//---- label11 ----
-	label11->SetText("Trajectory step length:");
-	Add(label11);
-	label11->SetBounds(30, 100, 135, 18);
-
-	//---- label12 ----
-	label12->SetText("dL:");
-	Add(label12);
-	label12->SetBounds(180, 100, 18, 18);
-	Add(dLtext);
-	dLtext->SetBounds(240, 99, 80, 18);
-
-	//---- dlInfoButton ----
-	Add(dlInfoButton);
-	dlInfoButton->SetBounds(725, 99, 40, 18);
-
-	//---- label13 ----
-	label13->SetText("cm");
-	Add(label13);
-	label13->SetBounds(325, 25, 17,18);
-
-	//---- label14 ----
-	label14->SetText("cm");
-	Add(label14);
-	label14->SetBounds(510, 25, 17, 18);
-
-	//---- label15 ----
-	label15->SetText("cm");
-	Add(label15);
-	label15->SetBounds(700, 25, 17, 18);
-
-	//---- label19 ----
-	label19->SetText("cm");
-	Add(label19);
-	label19->SetBounds(325, 100, 17, 18);
-
-	//---- label20 ----
-	label20->SetText("rad");
-	Add(label20);
-	label20->SetBounds(510, 50, 25, 18);
-
-	//---- label21 ----
-	label21->SetText("rad");
-	Add(label21);
-	label21->SetBounds(700, 50, 25, 18);
-
-	//---- label22 ----
-	label22->SetText("Calculation boundary:");
-	Add(label22);
-	label22->SetBounds(30, 125, 135, 18);
-
-	//---- label16 ----
-	label16->SetText("Xmax:");
-	Add(label16);
-	label16->SetBounds(180, 125, 40, 18);
-	Add(limitsXtext);
-	limitsXtext->SetBounds(240, 124, 80, 18);
-
-	//---- label17 ----
-	label17->SetText("cm");
-	Add(label17);
-	label17->SetBounds(325, 125, 17, 18);
-
-	//---- label18 ----
-	label18->SetText("Ymax:");
-	Add(label18);
-	label18->SetBounds(365, 125, 38, 18);
-	Add(limitsYtext);
-	limitsYtext->SetBounds(425, 124, 80, 18);
-
-	//---- label23 ----
-	label23->SetText("cm");
-	Add(label23);
-	label23->SetBounds(510, 125, 17, 18);
-
-	//---- label24 ----
-	label24->SetText("Zmax:");
-	Add(label24);
-	label24->SetBounds(565, 125, 43, 18);
-	Add(limitsZtext);
-	limitsZtext->SetBounds(615, 124, 80, 18);
-
-	//---- label25 ----
-	label25->SetText("cm");
-	Add(label25);
-	label25->SetBounds(700, 125, 17, 18);
-
-	//---- limitsInfoButton ----
-	Add(limitsInfoButton);
-	limitsInfoButton->SetBounds(725, 124, 40, 18);
-
-	particlePanel->SetBounds(10,160,wD-20,70);
-	Add(particlePanel);
-
-	//---- label26 ----
-	label26->SetText("Particle mass:");
-	Add(label26);
-	label26->SetBounds(30, 175, 135, 18);
-	Add(particleMassText);
-	particleMassText->SetBounds(240, 174, 80, 18);
-
-	//---- label27 ----
-	label27->SetText("pmass:");
-	Add(label27);
-	label27->SetBounds(180, 175, 45, 18);
-
-	//---- label28 ----
-	label28->SetText("GeV/c\262");
-	Add(label28);
-	label28->SetBounds(325, 175, 17, 18);
-
-	//---- label29 ----
-	label29->SetText("Particle charge:");
-	Add(label29);
-	label29->SetBounds(30, 200, 135, 18);
-	Add(particleChargeCombo);
-	particleChargeCombo->SetBounds(240, 199, 80, 19);
-	particleChargeCombo->SetSize(2);
-	particleChargeCombo->SetValueAt(0,"Positive");
-	particleChargeCombo->SetValueAt(1,"Negative");		
-	particleChargeCombo->SetSelectedIndex(0);
-
-	//---- label30 ----
-	label30->SetText("Quick set to:");
-	Add(label30);
-	label30->SetBounds(425, 175, 60, 18);
-
-	//---- setParticleElectronButton ----
-	setParticleElectronButton->SetText("Electron");
-	Add(setParticleElectronButton);
-	setParticleElectronButton->SetBounds(425, 200, 80, 18);
-
-	//---- setParticlePositronButton ----
-	setParticlePositronButton->SetText("Positron");
-	Add(setParticlePositronButton);
-	setParticlePositronButton->SetBounds(515, 200, 80, 18);
-
-	//---- setParticleProtonButton ----
-	setParticleProtonButton->SetText("Proton");
-	Add(setParticleProtonButton);
-	setParticleProtonButton->SetBounds(605, 200, 80, 18);
-
-	beamPanel->SetBounds(10,235,wD-20,150);
+	int wD = 773;
+	int hD = 683;
+	beamPanel = new GLTitledPanel("Beam geometry");
+	beamPanel->SetBounds(12, 12, 745, 160);
 	Add(beamPanel);
-
-	label301->SetBounds(165,250,100,18);//Beam energy:
-	Add(label301);
-
-	beamEnergyText->SetBounds(240,250,80,18);
-	Add(beamEnergyText);
-
-	label302->SetBounds(325,250,20,18);//GeV
-	Add(label302);
-
-	currentLabel->SetBounds(365,250,50,18);
-	Add(currentLabel);
-
-	beamCurrentText->SetBounds(425,250,80,18);
-	Add(beamCurrentText);
-
-	mALabel->SetBounds(510,250,30,18);
-	Add(mALabel);
-
-	//---- idealBeamToggle ----
-	//idealBeamToggle->SetText("Ideal beam");
-	idealBeamToggle->SetState(TRUE);
-	Add(idealBeamToggle);
-	idealBeamToggle->SetBounds(30, 285, 160, 18);
-
-	//---- betaOrBXYCombo ----
-	betaOrBXYCombo->SetEditable(FALSE);
-	betaOrBXYCombo->SetEnabled(FALSE);
-	Add(betaOrBXYCombo);
-	betaOrBXYCombo->SetBounds(180, 284, 140, 19);
-	betaOrBXYCombo->SetSize(2);
-	betaOrBXYCombo->SetValueAt(0,"Constant values");
-	betaOrBXYCombo->SetValueAt(1,"From BXY file");
-	betaOrBXYCombo->SetSelectedIndex(0);
-
-	//---- label31 ----
-	label31->SetText("BXY file:");
-	Add(label31);
-	label31->SetBounds(365, 285, 48, 18);
-
-	//---- BXYfileNameText ----
-	BXYfileNameText->SetEditable(FALSE);
-	Add(BXYfileNameText);
-	BXYfileNameText->SetBounds(425, 284, 260, 18);
-	
-	//---- label56 ----
-	Add(bxyBrowseButton);
-	bxyBrowseButton->SetBounds(688, 284, 35, 18);
-
-	bxyEditButton->SetBounds(727,284,40,18);
-	Add(bxyEditButton);
-
-	//---- label35 ----
-	label35->SetText("Emittance:");
-	Add(label35);
-	label35->SetBounds(180, 309, 65, 18);
-	
-	//---- emittanceText ----
-	emittanceText->SetEditable(FALSE);
-	Add(emittanceText);
-	emittanceText->SetBounds(240, 309, 80, 18);
-
-	Add(emittance_cm);
-	emittance_cm->SetBounds(325, 309, 17, 18);
-
-	//---- label32 ----
-	label32->SetText("BetaX:");
-	Add(label32);
-	label32->SetBounds(365, 310, 40, 18);
-
-	//---- betaXtext ----
-	betaXtext->SetEditable(FALSE);
-	Add(betaXtext);
-	betaXtext->SetBounds(425, 309, 80, 18);
-
-	Add(betax_cm);
-	betax_cm->SetBounds(510, 309, 17, 18);
-
-	//---- label36 ----
-	label36->SetText("BetaY:");
-	Add(label36);
-	label36->SetBounds(555, 310, 40, 18);
-
-	//---- betaYtext ----
-	betaYtext->SetEditable(FALSE);
-	Add(betaYtext);
-	betaYtext->SetBounds(605, 309, 80, 18);
-
-	Add(betay_cm);
-	betay_cm->SetBounds(690, 309, 17, 18);
-
-	//Couplinglabel
-	GLLabel *couplingLabel = new GLLabel("Coupling:");
-	couplingLabel->SetBounds(180,335,60,18);
-	Add(couplingLabel);
-
-	//couplingText
-	couplingText = new GLTextField(0,"");
-	couplingText->SetEditable(FALSE);
-	couplingText->SetBounds(240,334,80,18);
-	Add(couplingText);
-
-	Add(coupling_percent);
-	coupling_percent->SetBounds(325,335,17,18);
-
-	//---- label34 ----
-	label34->SetText("Eta:");
-	Add(label34);
-	label34->SetBounds(365, 335, 23, 18);
-
-	//---- etaText ----
-	etaText->SetEditable(FALSE);
-	Add(etaText);
-	etaText->SetBounds(425, 334, 80, 18);
-
-	Add(eta_cm);
-	eta_cm->SetBounds(510,335,17,18);
-
-	//---- label37 ----
-	label37->SetText("EtaPrime:");
-	Add(label37);
-	label37->SetBounds(555, 335, 58, 18);
-
-	//---- etaPrimeText ----
-	etaPrimeText->SetEditable(FALSE);
-	Add(etaPrimeText);
-	etaPrimeText->SetBounds(605, 334, 80, 18);
-
-	Add(etaprime_rad);
-	etaprime_rad->SetBounds(690,335,17,18);
-
-	//---- beamsizeInfoButton ----
-	Add(beamsizeInfoButton);
-	beamsizeInfoButton->SetBounds(240, 359, 80, 18);
-
-	//energySpreadLabel
-	GLLabel *energySpreadLabel = new GLLabel("E_Spread:");
-	energySpreadLabel->SetBounds(365,360,60,18);
-	Add(energySpreadLabel);
-
-	//energySpreadText
-	energySpreadText = new GLTextField(0,"");
-	energySpreadText->SetEditable(FALSE);
-	energySpreadText->SetBounds(425,359,80,18);
-	Add(energySpreadText);
-
-	Add(E_spread_percent);
-	E_spread_percent->SetBounds(510,360,17,18);
-
-	generationPanel->SetBounds(10,390,wD-20,100);
-	Add(generationPanel);
-
-	//---- label41 ----
-	label41->SetText("Generated photon energy:");
-	Add(label41);
-	label41->SetBounds(30, 410, 165, 18);
-
-	//---- label33 ----
-	label33->SetText("Emin:");
-	Add(label33);
-	label33->SetBounds(180, 410, 35, 18);
-	
-	Add(EminText);
-	EminText->SetBounds(240, 409, 80, 18);
-
-	//---- label38 ----
-	label38->SetText("eV");
-	Add(label38);
-	label38->SetBounds(325, 410, 17, 18);
-
-	//---- label39 ----
-	label39->SetText("Emax:");
-	Add(label39);
-	label39->SetBounds(365, 410, 38, 18);
-	
-	Add(EmaxText);
-	EmaxText->SetBounds(425, 409, 80, 18);
-
-	//---- label40 ----
-	label40->SetText("eV");
-	Add(label40);
-	label40->SetBounds(510, 410, 17, 18);
-
-	//---- label42 ----
-	label42->SetText("Generated polarization modes:");
-	Add(label42);
-	label42->SetBounds(30, 435, 180, 18);
-
-	enableParPolarizationToggle->SetState(TRUE);
-	Add(enableParPolarizationToggle);
-	enableParPolarizationToggle->SetBounds(240, 434, 100, 18);
-
-	enableOrtPolarizationToggle->SetState(TRUE);
-	Add(enableOrtPolarizationToggle);
-	enableOrtPolarizationToggle->SetBounds(425, 434, 100, 18);
-
-	Add(limitAngleToggle);
-	limitAngleToggle->SetBounds(30, 460, 120,18);
-
-	//---- label43 ----
-	label43->SetText("psiMaxX:");
-	Add(label43);
-	label43->SetBounds(365, 460, 55, 18);
-
-	//---- psiMaxXtext ----
-	psiMaxXtext->SetEditable(FALSE);
-	Add(psiMaxXtext);
-	psiMaxXtext->SetBounds(425, 459, 80, 18);
-
-	//---- label44 ----
-	label44->SetText("Rad");
-	Add(label44);
-	label44->SetBounds(510, 460, 40, 18);
-
-	//---- label45 ----
-	label45->SetText("psiMaxY:");
-	Add(label45);
-	label45->SetBounds(560, 460, 55, 18);
-
-	//---- psiMaxYtext ----
-	psiMaxYtext->SetEditable(FALSE);
-	Add(psiMaxYtext);
-	psiMaxYtext->SetBounds(615, 459, 80, 18);
-
-	//---- label46 ----
-	label46->SetText("Rad");
-	Add(label46);
-	label46->SetBounds(700, 460, 40, 18);
-
-	magPanel->SetBounds(10,495,wD-20,100);
+	particlePanel = new GLTitledPanel("Particle settings");
+	particlePanel->SetBounds(12, 178, 745, 81);
+	Add(particlePanel);
+	beamParamPanel = new GLTitledPanel("Additional beam parameters");
+	beamParamPanel->SetBounds(12, 265, 745, 155);
+	Add(beamParamPanel);
+	photonGenPanel = new GLTitledPanel("Photon generation");
+	photonGenPanel->SetBounds(13, 426, 744, 101);
+	Add(photonGenPanel);
+	magPanel = new GLTitledPanel("Magnetic Field");
+	magPanel->SetBounds(13, 533, 744, 97);
 	Add(magPanel);
+	label6 = new GLLabel("cm");
+	beamPanel->SetCompBounds(label6, 631, 27, 21, 13);
+	beamPanel->Add(label6);
 
-	//---- label47 ----
-	label47->SetText("Bx:");
-	Add(label47);
-	label47->SetBounds(30, 515, 25, 20);
-	Add(BxtypeCombo);
-	BxtypeCombo->SetBounds(60, 514, 150, 19);
+	label4 = new GLLabel("cm");
+	beamPanel->SetCompBounds(label4, 449, 27, 21, 13);
+	beamPanel->Add(label4);
+
+	startPointYtext = new GLTextField(0, "");
+	beamPanel->SetCompBounds(startPointYtext, 343, 24, 100, 20);
+	beamPanel->Add(startPointYtext);
+
+	startPointZtext = new GLTextField(0, "");
+	beamPanel->SetCompBounds(startPointZtext, 525, 24, 100, 20);
+	beamPanel->Add(startPointZtext);
+
+	label7 = new GLLabel("Z0:");
+	beamPanel->SetCompBounds(label7, 501, 27, 23, 13);
+	beamPanel->Add(label7);
+
+	label5 = new GLLabel("Y0:");
+	beamPanel->SetCompBounds(label5, 319, 27, 23, 13);
+	beamPanel->Add(label5);
+
+	label3 = new GLLabel("cm");
+	beamPanel->SetCompBounds(label3, 274, 27, 21, 13);
+	beamPanel->Add(label3);
+
+	startPointXtext = new GLTextField(0, "");
+	beamPanel->SetCompBounds(startPointXtext, 168, 24, 100, 20);
+	beamPanel->Add(startPointXtext);
+
+	label2 = new GLLabel("X0:");
+	beamPanel->SetCompBounds(label2, 142, 27, 23, 13);
+	beamPanel->Add(label2);
+
+	label1 = new GLLabel("Beam start position:");
+	beamPanel->SetCompBounds(label1, 8, 27, 99, 13);
+	beamPanel->Add(label1);
+
+	startDirDefinitionCombo = new GLCombo(0);
+	beamPanel->SetCompBounds(startDirDefinitionCombo, 168, 50, 100, 21);
+	beamPanel->Add(startDirDefinitionCombo);
+	startDirDefinitionCombo->SetSize(2);
+	startDirDefinitionCombo->SetValueAt(0, "By vector:");
+	startDirDefinitionCombo->SetValueAt(1, "By angle:");
+
+	label8 = new GLLabel("Beam start direction:");
+	beamPanel->SetCompBounds(label8, 8, 53, 103, 13);
+	beamPanel->Add(label8);
+
+	label9 = new GLLabel("rad");
+	beamPanel->SetCompBounds(label9, 631, 53, 22, 13);
+	beamPanel->Add(label9);
+
+	label10 = new GLLabel("rad");
+	beamPanel->SetCompBounds(label10, 449, 53, 22, 13);
+	beamPanel->Add(label10);
+
+	theta0text = new GLTextField(0, "");
+	beamPanel->SetCompBounds(theta0text, 343, 50, 100, 20);
+	beamPanel->Add(theta0text);
+
+	alpha0text = new GLTextField(0, "");
+	beamPanel->SetCompBounds(alpha0text, 525, 50, 100, 20);
+	beamPanel->Add(alpha0text);
+
+	label11 = new GLLabel("Alpha0:");
+	beamPanel->SetCompBounds(label11, 481, 53, 43, 13);
+	beamPanel->Add(label11);
+
+	label12 = new GLLabel("Theta0:");
+	beamPanel->SetCompBounds(label12, 298, 53, 44, 13);
+	beamPanel->Add(label12);
+
+	startDirInfoButton = new GLButton(0, "Info");
+	beamPanel->SetCompBounds(startDirInfoButton, 659, 49, 40, 21);
+	beamPanel->Add(startDirInfoButton);
+
+	startDirZtext = new GLTextField(0, "");
+	beamPanel->SetCompBounds(startDirZtext, 525, 77, 100, 20);
+	beamPanel->Add(startDirZtext);
+
+	label15 = new GLLabel("dirZ:");
+	beamPanel->SetCompBounds(label15, 496, 80, 28, 13);
+	beamPanel->Add(label15);
+
+	startDirYtext = new GLTextField(0, "");
+	beamPanel->SetCompBounds(startDirYtext, 343, 77, 100, 20);
+	beamPanel->Add(startDirYtext);
+
+	label14 = new GLLabel("dirY:");
+	beamPanel->SetCompBounds(label14, 314, 80, 28, 13);
+	beamPanel->Add(label14);
+
+	startDirXtext = new GLTextField(0, "");
+	beamPanel->SetCompBounds(startDirXtext, 168, 77, 100, 20);
+	beamPanel->Add(startDirXtext);
+
+	label13 = new GLLabel("dirX:");
+	beamPanel->SetCompBounds(label13, 137, 80, 28, 13);
+	beamPanel->Add(label13);
+
+	label19 = new GLLabel("cm");
+	beamPanel->SetCompBounds(label19, 631, 132, 21, 13);
+	beamPanel->Add(label19);
+
+	label20 = new GLLabel("cm");
+	beamPanel->SetCompBounds(label20, 449, 132, 21, 13);
+	beamPanel->Add(label20);
+
+	limitsYtext = new GLTextField(0, "");
+	beamPanel->SetCompBounds(limitsYtext, 343, 129, 100, 20);
+	beamPanel->Add(limitsYtext);
+
+	limitsZtext = new GLTextField(0, "");
+	beamPanel->SetCompBounds(limitsZtext, 525, 129, 100, 20);
+	beamPanel->Add(limitsZtext);
+
+	label21 = new GLLabel("Zmax:");
+	beamPanel->SetCompBounds(label21, 488, 132, 36, 13);
+	beamPanel->Add(label21);
+
+	label22 = new GLLabel("Ymax:");
+	beamPanel->SetCompBounds(label22, 306, 132, 36, 13);
+	beamPanel->Add(label22);
+
+	label23 = new GLLabel("cm");
+	beamPanel->SetCompBounds(label23, 274, 132, 21, 13);
+	beamPanel->Add(label23);
+
+	limitsXtext = new GLTextField(0, "");
+	beamPanel->SetCompBounds(limitsXtext, 168, 129, 100, 20);
+	beamPanel->Add(limitsXtext);
+
+	label24 = new GLLabel("Xmax:");
+	beamPanel->SetCompBounds(label24, 129, 132, 36, 13);
+	beamPanel->Add(label24);
+
+	label25 = new GLLabel("Calculation boundary:");
+	beamPanel->SetCompBounds(label25, 8, 132, 109, 13);
+	beamPanel->Add(label25);
+
+	label16 = new GLLabel("cm");
+	beamPanel->SetCompBounds(label16, 274, 106, 21, 13);
+	beamPanel->Add(label16);
+
+	dLtext = new GLTextField(0, "");
+	beamPanel->SetCompBounds(dLtext, 168, 103, 100, 20);
+	beamPanel->Add(dLtext);
+
+	label17 = new GLLabel("dL:");
+	beamPanel->SetCompBounds(label17, 143, 106, 22, 13);
+	beamPanel->Add(label17);
+
+	label18 = new GLLabel("Trajectory step length:");
+	beamPanel->SetCompBounds(label18, 8, 106, 112, 13);
+	beamPanel->Add(label18);
+
+	limitsInfoButton = new GLButton(0, "Info");
+	beamPanel->SetCompBounds(limitsInfoButton, 659, 128, 40, 21);
+	beamPanel->Add(limitsInfoButton);
+
+	dlInfoButton = new GLButton(0, "Info");
+	beamPanel->SetCompBounds(dlInfoButton, 297, 102, 40, 21);
+	beamPanel->Add(dlInfoButton);
+
+	label27 = new GLLabel("GeV/c2");
+	particlePanel->SetCompBounds(label27, 274, 25, 45, 13);
+	particlePanel->Add(label27);
+
+	label26 = new GLLabel("Particle mass:");
+	particlePanel->SetCompBounds(label26, 8, 25, 72, 13);
+	particlePanel->Add(label26);
+
+	particleMassText = new GLTextField(0, "");
+	particlePanel->SetCompBounds(particleMassText, 168, 22, 100, 20);
+	particlePanel->Add(particleMassText);
+
+	label28 = new GLLabel("pmass:");
+	particlePanel->SetCompBounds(label28, 125, 25, 40, 13);
+	particlePanel->Add(label28);
+
+	particleChargeCombo = new GLCombo(0);
+	particlePanel->SetCompBounds(particleChargeCombo, 168, 48, 100, 21);
+	particlePanel->Add(particleChargeCombo);
+	particleChargeCombo->SetSize(2);
+	particleChargeCombo->SetValueAt(0, "Positive");
+	particleChargeCombo->SetValueAt(1, "Negative");
+
+	label29 = new GLLabel("Particle charge:");
+	particlePanel->SetCompBounds(label29, 9, 51, 81, 13);
+	particlePanel->Add(label29);
+
+	setParticleProtonButton = new GLButton(0, "Proton");
+	particlePanel->SetCompBounds(setParticleProtonButton, 558, 47, 100, 21);
+	particlePanel->Add(setParticleProtonButton);
+
+	setParticlePositronButton = new GLButton(0, "Positron");
+	particlePanel->SetCompBounds(setParticlePositronButton, 452, 47, 100, 21);
+	particlePanel->Add(setParticlePositronButton);
+
+	setParticleElectronButton = new GLButton(0, "Electron");
+	particlePanel->SetCompBounds(setParticleElectronButton, 343, 47, 100, 21);
+	particlePanel->Add(setParticleElectronButton);
+
+	label30 = new GLLabel("Quick set to:");
+	particlePanel->SetCompBounds(label30, 468, 25, 67, 13);
+	particlePanel->Add(label30);
+
+	label33 = new GLLabel("mA");
+	beamParamPanel->SetCompBounds(label33, 355, 22, 22, 13);
+	beamParamPanel->Add(label33);
+
+	beamCurrentText = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(beamCurrentText, 275, 19, 76, 20);
+	beamParamPanel->Add(beamCurrentText);
+
+	label34 = new GLLabel("Current:");
+	beamParamPanel->SetCompBounds(label34, 231, 22, 44, 13);
+	beamParamPanel->Add(label34);
+
+	label31 = new GLLabel("GeV");
+	beamParamPanel->SetCompBounds(label31, 172, 23, 28, 13);
+	beamParamPanel->Add(label31);
+
+	beamEnergyText = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(beamEnergyText, 91, 19, 76, 20);
+	beamParamPanel->Add(beamEnergyText);
+
+	label32 = new GLLabel("Beam energy:");
+	beamParamPanel->SetCompBounds(label32, 10, 22, 72, 13);
+	beamParamPanel->Add(label32);
+
+	idealBeamToggle = new GLToggle(0, "Ideal Beam");
+	beamParamPanel->SetCompBounds(idealBeamToggle, 9, 55, 79, 17);
+	beamParamPanel->Add(idealBeamToggle);
+
+	emittanceCouplingToggle = new GLToggle(0, "Emittance:");
+	beamParamPanel->SetCompBounds(emittanceCouplingToggle, 9, 78, 76, 17);
+	beamParamPanel->Add(emittanceCouplingToggle);
+
+	emittanceYtext = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(emittanceYtext, 275, 102, 76, 20);
+	beamParamPanel->Add(emittanceYtext);
+
+	emittanceXYtoggle = new GLToggle(0, "X emittance:");
+	beamParamPanel->SetCompBounds(emittanceXYtoggle, 9, 104, 85, 17);
+	beamParamPanel->Add(emittanceXYtoggle);
+
+	couplingText = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(couplingText, 275, 76, 76, 20);
+	beamParamPanel->Add(couplingText);
+
+	emittanceXtext = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(emittanceXtext, 91, 102, 76, 20);
+	beamParamPanel->Add(emittanceXtext);
+
+	emittanceText = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(emittanceText, 91, 76, 76, 20);
+	beamParamPanel->Add(emittanceText);
+
+	label36 = new GLLabel("Y emittance:");
+	beamParamPanel->SetCompBounds(label36, 205, 105, 66, 13);
+	beamParamPanel->Add(label36);
+
+	label35 = new GLLabel("Y/X coupling:");
+	beamParamPanel->SetCompBounds(label35, 199, 79, 72, 13);
+	beamParamPanel->Add(label35);
+
+	beamsizeInfoButton = new GLButton(0, "Info");
+	beamParamPanel->SetCompBounds(beamsizeInfoButton, 9, 126, 40, 21);
+	beamParamPanel->Add(beamsizeInfoButton);
+
+	label40 = new GLLabel("%");
+	beamParamPanel->SetCompBounds(label40, 357, 79, 15, 13);
+	beamParamPanel->Add(label40);
+
+	label39 = new GLLabel("cm");
+	beamParamPanel->SetCompBounds(label39, 357, 105, 21, 13);
+	beamParamPanel->Add(label39);
+
+	label38 = new GLLabel("cm");
+	beamParamPanel->SetCompBounds(label38, 172, 105, 21, 13);
+	beamParamPanel->Add(label38);
+
+	label37 = new GLLabel("cm");
+	beamParamPanel->SetCompBounds(label37, 172, 79, 21, 13);
+	beamParamPanel->Add(label37);
+
+	label49 = new GLLabel("%");
+	beamParamPanel->SetCompBounds(label49, 550, 53, 15, 13);
+	beamParamPanel->Add(label49);
+
+	label47 = new GLLabel("cm");
+	beamParamPanel->SetCompBounds(label47, 712, 105, 21, 13);
+	beamParamPanel->Add(label47);
+
+	label48 = new GLLabel("EtaX\':");
+	beamParamPanel->SetCompBounds(label48, 591, 105, 35, 13);
+	beamParamPanel->Add(label48);
+
+	label50 = new GLLabel("En. spread:");
+	beamParamPanel->SetCompBounds(label50, 404, 53, 61, 13);
+	beamParamPanel->Add(label50);
+
+	etaPrimeText = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(etaPrimeText, 631, 101, 75, 20);
+	beamParamPanel->Add(etaPrimeText);
+
+	energySpreadText = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(energySpreadText, 471, 50, 74, 20);
+	beamParamPanel->Add(energySpreadText);
+
+	label45 = new GLLabel("cm");
+	beamParamPanel->SetCompBounds(label45, 712, 79, 21, 13);
+	beamParamPanel->Add(label45);
+
+	label46 = new GLLabel("EtaX:");
+	beamParamPanel->SetCompBounds(label46, 591, 79, 33, 13);
+	beamParamPanel->Add(label46);
+
+	etaText = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(etaText, 632, 75, 74, 20);
+	beamParamPanel->Add(etaText);
+
+	label43 = new GLLabel("cm");
+	beamParamPanel->SetCompBounds(label43, 550, 105, 21, 13);
+	beamParamPanel->Add(label43);
+
+	label44 = new GLLabel("BetaY:");
+	beamParamPanel->SetCompBounds(label44, 425, 105, 39, 13);
+	beamParamPanel->Add(label44);
+
+	betaYtext = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(betaYtext, 471, 102, 74, 20);
+	beamParamPanel->Add(betaYtext);
+
+	label41 = new GLLabel("cm");
+	beamParamPanel->SetCompBounds(label41, 550, 79, 21, 13);
+	beamParamPanel->Add(label41);
+
+	label42 = new GLLabel("BetaX:");
+	beamParamPanel->SetCompBounds(label42, 425, 79, 39, 13);
+	beamParamPanel->Add(label42);
+
+	betaXtext = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(betaXtext, 471, 76, 74, 20);
+	beamParamPanel->Add(betaXtext);
+
+	gammaInfoButton = new GLButton(0, "Info");
+	beamParamPanel->SetCompBounds(gammaInfoButton, 580, 128, 50, 21);
+	beamParamPanel->Add(gammaInfoButton);
+
+	BXYfileNameText = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(BXYfileNameText, 275, 128, 298, 20);
+	beamParamPanel->Add(BXYfileNameText);
+
+	label51 = new GLLabel("BXY file:");
+	beamParamPanel->SetCompBounds(label51, 224, 131, 47, 13);
+	beamParamPanel->Add(label51);
+
+	constantBXYtoggle = new GLToggle(0, "Constant beta function");
+	beamParamPanel->SetCompBounds(constantBXYtoggle, 91, 130, 133, 17);
+	beamParamPanel->Add(constantBXYtoggle);
+
+	bxyEditButton = new GLButton(0, "Edit");
+	beamParamPanel->SetCompBounds(bxyEditButton, 691, 128, 50, 21);
+	beamParamPanel->Add(bxyEditButton);
+
+	bxyBrowseButton = new GLButton(0, "...");
+	beamParamPanel->SetCompBounds(bxyBrowseButton, 635, 128, 50, 21);
+	beamParamPanel->Add(bxyBrowseButton);
+
+	enableParPolarizationToggle = new GLToggle(0, "Parallel");
+	photonGenPanel->SetCompBounds(enableParPolarizationToggle, 276, 50, 60, 17);
+	photonGenPanel->Add(enableParPolarizationToggle);
+
+	label59 = new GLLabel("Generated photon energy:");
+	photonGenPanel->SetCompBounds(label59, 8, 51, 131, 13);
+	photonGenPanel->Add(label59);
+
+	label57 = new GLLabel("eV");
+	photonGenPanel->SetCompBounds(label57, 576, 25, 20, 13);
+	photonGenPanel->Add(label57);
+
+	EmaxText = new GLTextField(0, "");
+	photonGenPanel->SetCompBounds(EmaxText, 472, 22, 100, 20);
+	photonGenPanel->Add(EmaxText);
+
+	label58 = new GLLabel("Emax:");
+	photonGenPanel->SetCompBounds(label58, 432, 25, 36, 13);
+	photonGenPanel->Add(label58);
+
+	label54 = new GLLabel("eV");
+	photonGenPanel->SetCompBounds(label54, 379, 25, 20, 13);
+	photonGenPanel->Add(label54);
+
+	label56 = new GLLabel("Generated photon energy:");
+	photonGenPanel->SetCompBounds(label56, 7, 25, 131, 13);
+	photonGenPanel->Add(label56);
+
+	EminText = new GLTextField(0, "");
+	photonGenPanel->SetCompBounds(EminText, 276, 22, 100, 20);
+	photonGenPanel->Add(EminText);
+
+	label55 = new GLLabel("Emin:");
+	photonGenPanel->SetCompBounds(label55, 241, 25, 33, 13);
+	photonGenPanel->Add(label55);
+
+	enableOrtPolarizationToggle = new GLToggle(0, "Orthogonal");
+	photonGenPanel->SetCompBounds(enableOrtPolarizationToggle, 472, 50, 78, 17);
+	photonGenPanel->Add(enableOrtPolarizationToggle);
+
+	label61 = new GLLabel("rad");
+	photonGenPanel->SetCompBounds(label61, 576, 76, 22, 13);
+	photonGenPanel->Add(label61);
+
+	label60 = new GLLabel("rad");
+	photonGenPanel->SetCompBounds(label60, 379, 76, 22, 13);
+	photonGenPanel->Add(label60);
+
+	psiMaxXtext = new GLTextField(0, "");
+	photonGenPanel->SetCompBounds(psiMaxXtext, 276, 73, 100, 20);
+	photonGenPanel->Add(psiMaxXtext);
+
+	psiMaxYtext = new GLTextField(0, "");
+	photonGenPanel->SetCompBounds(psiMaxYtext, 472, 73, 100, 20);
+	photonGenPanel->Add(psiMaxYtext);
+
+	limitAngleToggle = new GLToggle(0, "Limit photon divergence:");
+	photonGenPanel->SetCompBounds(limitAngleToggle, 10, 75, 142, 17);
+	photonGenPanel->Add(limitAngleToggle);
+
+	label63 = new GLLabel("divYmax:");
+	photonGenPanel->SetCompBounds(label63, 418, 76, 50, 13);
+	photonGenPanel->Add(label63);
+
+	label62 = new GLLabel("divXmax:");
+	photonGenPanel->SetCompBounds(label62, 224, 76, 50, 13);
+	photonGenPanel->Add(label62);
+
+	BxtypeCombo = new GLCombo(0);
+	magPanel->SetCompBounds(BxtypeCombo, 35, 18, 135, 21);
+	magPanel->Add(BxtypeCombo);
 	BxtypeCombo->SetSize(8);
-	BxtypeCombo->SetValueAt(0,"Constant field");
-	BxtypeCombo->SetValueAt(1,"Coords along a direction");
-	BxtypeCombo->SetValueAt(2,"Coords along the beam");
-	BxtypeCombo->SetValueAt(3,"Sine / cosine");
-	BxtypeCombo->SetValueAt(4,"Quadrupole");
-	BxtypeCombo->SetValueAt(5,"Analytical expression");
-	BxtypeCombo->SetValueAt(6,"Helicoidal");
-	BxtypeCombo->SetValueAt(7,"Rotating dipole");
-	BxtypeCombo->SetSelectedIndex(0);
-	Add(constBXtext);
-	constBXtext->SetBounds(240, 514, 80, 18);
+	BxtypeCombo->SetValueAt(0, "Constant field");
+	BxtypeCombo->SetValueAt(1, "Coords along a direction");
+	BxtypeCombo->SetValueAt(2, "Coords along the beam");
+	BxtypeCombo->SetValueAt(3, "Sine / cosine");
+	BxtypeCombo->SetValueAt(4, "Quadrupole");
+	BxtypeCombo->SetValueAt(5, "Analytical expression");
+	BxtypeCombo->SetValueAt(6, "Helicoidal");
+	BxtypeCombo->SetValueAt(7, "Rotating dipole");
 
-	//---- label48 ----
-	label48->SetText("T");
-	Add(label48);
-	label48->SetBounds(325, 515, 17, 18);
+	label66 = new GLLabel("Bx:");
+	magPanel->SetCompBounds(label66, 7, 22, 22, 13);
+	magPanel->Add(label66);
 
-	//---- label49 ----
-	label49->SetText("MAG file:");
-	Add(label49);
-	label49->SetBounds(365, 515, 55, 18);
+	label65 = new GLLabel("T");
+	magPanel->SetCompBounds(label65, 273, 21, 14, 13);
+	magPanel->Add(label65);
 
-	//---- MAGfileXtext ----
-	MAGfileXtext->SetEditable(FALSE);
-	Add(MAGfileXtext);
-	MAGfileXtext->SetBounds(425, 514, 260, 18);
+	magxEditButton = new GLButton(0, "Edit");
+	magPanel->SetCompBounds(magxEditButton, 690, 18, 48, 21);
+	magPanel->Add(magxEditButton);
 
-		//---- label57 ----
-	Add(magxBrowseButton);
-	magxBrowseButton->SetBounds(688, 514, 35, 18);
+	constBXtext = new GLTextField(0, "");
+	magPanel->SetCompBounds(constBXtext, 176, 19, 91, 20);
+	magPanel->Add(constBXtext);
 
-	magxEditButton->SetBounds(727,514,40,18);
-	Add(magxEditButton);
+	magxBrowseButton = new GLButton(0, "...");
+	magPanel->SetCompBounds(magxBrowseButton, 634, 18, 50, 21);
+	magPanel->Add(magxBrowseButton);
 
-	//---- label50 ----
-	label50->SetText("By:");
-	Add(label50);
-	label50->SetBounds(30, 540, 25, 18);
-	Add(BytypeCombo);
-	BytypeCombo->SetBounds(60, 539, 150, 19);
-	BytypeCombo->SetSize(8);
-	BytypeCombo->SetValueAt(0, "Constant field");
-	BytypeCombo->SetValueAt(1, "Coords along a direction");
-	BytypeCombo->SetValueAt(2, "Coords along the beam");
-	BytypeCombo->SetValueAt(3, "Sine / cosine");
-	BytypeCombo->SetValueAt(4, "Quadrupole");
-	BytypeCombo->SetValueAt(5, "Analytical expression");
-	BytypeCombo->SetValueAt(6, "Helicoidal");
-	BytypeCombo->SetValueAt(7, "Rotating dipole");
-	BytypeCombo->SetSelectedIndex(0);
-	Add(constBYtext);
-	constBYtext->SetBounds(240, 539, 80, 18);
+	MAGfileXtext = new GLTextField(0, "");
+	magPanel->SetCompBounds(MAGfileXtext, 349, 19, 279, 20);
+	magPanel->Add(MAGfileXtext);
 
-	//---- label51 ----
-	label51->SetText("T");
-	Add(label51);
-	label51->SetBounds(325, 540, 17, 18);
+	label64 = new GLLabel("MAG file:");
+	magPanel->SetCompBounds(label64, 297, 22, 50, 13);
+	magPanel->Add(label64);
 
-	//---- label52 ----
-	label52->SetText("MAG file:");
-	Add(label52);
-	label52->SetBounds(365, 540, 55, 18);
-
-	//---- MAGfileYtext ----
-	MAGfileYtext->SetEditable(FALSE);
-	Add(MAGfileYtext);
-	MAGfileYtext->SetBounds(425, 539, 260, 18);
-
-	//---- label58 ----
-	Add(magyBrowseButton);
-	magyBrowseButton->SetBounds(688, 539, 35, 18);
-
-	magyEditButton->SetBounds(727,539,40,18);
-	Add(magyEditButton);
-
-	//---- label53 ----
-	label53->SetText("Bz:");
-	Add(label53);
-	label53->SetBounds(30, 565, 25, 18);
-	Add(BztypeCombo);
-	BztypeCombo->SetBounds(60, 564, 150, 19);
+	BztypeCombo = new GLCombo(0);
+	magPanel->SetCompBounds(BztypeCombo, 35, 70, 135, 21);
+	magPanel->Add(BztypeCombo);
 	BztypeCombo->SetSize(8);
 	BztypeCombo->SetValueAt(0, "Constant field");
 	BztypeCombo->SetValueAt(1, "Coords along a direction");
@@ -728,48 +543,87 @@ RegionEditor::RegionEditor():GLWindow() {
 	BztypeCombo->SetValueAt(5, "Analytical expression");
 	BztypeCombo->SetValueAt(6, "Helicoidal");
 	BztypeCombo->SetValueAt(7, "Rotating dipole");
-	BztypeCombo->SetSelectedIndex(0);
-	Add(constBZtext);
-	constBZtext->SetBounds(240, 564, 80, 18);
 
-	//---- label54 ----
-	label54->SetText("T");
-	Add(label54);
-	label54->SetBounds(325, 565, 17, 18);
+	label70 = new GLLabel("Bz:");
+	magPanel->SetCompBounds(label70, 7, 74, 22, 13);
+	magPanel->Add(label70);
 
-	//---- label55 ----
-	label55->SetText("MAG file:");
-	Add(label55);
-	label55->SetBounds(365, 565, 55, 18);
+	label71 = new GLLabel("T");
+	magPanel->SetCompBounds(label71, 273, 73, 14, 13);
+	magPanel->Add(label71);
 
-	//---- MAGfileZtext ----
-	MAGfileZtext->SetEditable(FALSE);
-	Add(MAGfileZtext);
-	MAGfileZtext->SetBounds(425, 564, 260, 18);
+	magzEditButton = new GLButton(0, "Edit");
+	magPanel->SetCompBounds(magzEditButton, 690, 70, 48, 21);
+	magPanel->Add(magzEditButton);
 
-	//---- label59 ----
-	Add(magzBrowseButton);
-	magzBrowseButton->SetBounds(688, 564, 35, 18);
+	constBZtext = new GLTextField(0, "");
+	magPanel->SetCompBounds(constBZtext, 176, 71, 91, 20);
+	magPanel->Add(constBZtext);
 
-	magzEditButton->SetBounds(727,564,40,18);
-	Add(magzEditButton);
+	magzBrowseButton = new GLButton(0, "...");
+	magPanel->SetCompBounds(magzBrowseButton, 634, 70, 50, 21);
+	magPanel->Add(magzBrowseButton);
 
-	//---- applyButton ----
-	applyButton->SetText("Apply & Recalculate points");
+	MAGfileZtext = new GLTextField(0, "");
+	magPanel->SetCompBounds(MAGfileZtext, 349, 71, 279, 20);
+	magPanel->Add(MAGfileZtext);
+
+	label72 = new GLLabel("MAG file:");
+	magPanel->SetCompBounds(label72, 297, 74, 50, 13);
+	magPanel->Add(label72);
+
+	BytypeCombo = new GLCombo(0);
+	magPanel->SetCompBounds(BytypeCombo, 35, 44, 135, 21);
+	magPanel->Add(BytypeCombo);
+	BytypeCombo->SetSize(8);
+	BytypeCombo->SetValueAt(0, "Constant field");
+	BytypeCombo->SetValueAt(1, "Coords along a direction");
+	BytypeCombo->SetValueAt(2, "Coords along the beam");
+	BytypeCombo->SetValueAt(3, "Sine / cosine");
+	BytypeCombo->SetValueAt(4, "Quadrupole");
+	BytypeCombo->SetValueAt(5, "Analytical expression");
+	BytypeCombo->SetValueAt(6, "Helicoidal");
+	BytypeCombo->SetValueAt(7, "Rotating dipole");
+
+	label67 = new GLLabel("By:");
+	magPanel->SetCompBounds(label67, 7, 48, 22, 13);
+	magPanel->Add(label67);
+
+	label68 = new GLLabel("T");
+	magPanel->SetCompBounds(label68, 273, 47, 14, 13);
+	magPanel->Add(label68);
+
+	magyEditButton = new GLButton(0, "Edit");
+	magPanel->SetCompBounds(magyEditButton, 690, 44, 48, 21);
+	magPanel->Add(magyEditButton);
+
+	constBYtext = new GLTextField(0, "");
+	magPanel->SetCompBounds(constBYtext, 176, 45, 91, 20);
+	magPanel->Add(constBYtext);
+
+	magyBrowseButton = new GLButton(0, "...");
+	magPanel->SetCompBounds(magyBrowseButton, 634, 44, 50, 21);
+	magPanel->Add(magyBrowseButton);
+
+	MAGfileYtext = new GLTextField(0, "");
+	magPanel->SetCompBounds(MAGfileYtext, 349, 45, 279, 20);
+	magPanel->Add(MAGfileYtext);
+
+	label69 = new GLLabel("MAG file:");
+	magPanel->SetCompBounds(label69, 297, 48, 50, 13);
+	magPanel->Add(label69);
+
+	applyButton = new GLButton(0, "Apply && Recalculate points");
+	applyButton->SetBounds(289, 636, 223, 23);
 	Add(applyButton);
-	applyButton->SetBounds(425, 600, 225, 21);
 
-	//---- dismissButton ----
-	dismissButton->SetText("Dismiss");
-	Add(dismissButton);
-	dismissButton->SetBounds(655, 600, 120, 21);
-
+	SetTitle("RegionEditor");
 	// Center dialog
-	int wS,hS;
-	GLToolkit::GetScreenSize(&wS,&hS);
-	int xD = (wS-wD)/2;
-	int yD = (hS-hD)/2;
-	SetBounds(xD,yD,wD,hD);
+	int wS, hS;
+	GLToolkit::GetScreenSize(&wS, &hS);
+	int xD = (wS - wD) / 2;
+	int yD = (hS - hD) / 2;
+	SetBounds(xD, yD, wD, hD);
 
 	RestoreDeviceObjects();
 }
@@ -784,11 +638,17 @@ void RegionEditor::Display(Worker *w,int Id) {
 	worker = w;
 	this->regionId=Id;
 	cr = &(worker->regions[regionId]);
+	SetTitle("Editing region " + std::to_string(regionId + 1));
 
 	FillValues();
-	EnableDisableControls();
+	EnableDisableControls(NULL);
 
 	SetVisible(TRUE);
+}
+
+int RegionEditor::GetRegionId()
+{
+	return this->regionId;
 }
 
 
@@ -797,11 +657,7 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 	switch(message) {
 	case MSG_BUTTON:
 
-		if(src==dismissButton) {
-
-			GLWindow::ProcessMessage(NULL,MSG_CLOSE);
-
-		} else if (src==setParticleElectronButton) {
+		if (src==setParticleElectronButton) {
 			particleMassText->SetText("0.0005110034");
 			particleChargeCombo->SetSelectedIndex(1);
 		} else if (src==setParticlePositronButton) {
@@ -813,19 +669,19 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 		} else if (src==this->bxyEditButton) {
 			char tmp[512];
 			sprintf(tmp,"notepad.exe \"%s\"",BXYfileNameText->GetText());
-			StartProc_foreground(tmp);
+			StartProc(tmp,STARTPROC_FOREGROUND);
 		} else if (src==this->magxEditButton) {
 			char tmp[512];
 			sprintf(tmp,"notepad.exe \"%s\"",MAGfileXtext->GetText());
-			StartProc_foreground(tmp);
+			StartProc(tmp, STARTPROC_FOREGROUND);
 		} else if (src==this->magyEditButton) {
 			char tmp[512];
 			sprintf(tmp,"notepad.exe \"%s\"",MAGfileYtext->GetText());
-			StartProc_foreground(tmp);
+			StartProc(tmp, STARTPROC_FOREGROUND);
 		} else if (src==this->magzEditButton) {
 			char tmp[512];
 			sprintf(tmp,"notepad.exe \"%s\"",MAGfileZtext->GetText());
-			StartProc_foreground(tmp);
+			StartProc(tmp, STARTPROC_FOREGROUND);
 		} else if (src==this->bxyBrowseButton) {
 			//load file dialog
 			FILENAME *bxyFile=GLFileBox::OpenFile(NULL,NULL,"Open BXY file","BXY files\0*.bxy\0All files\0*.*\0",2);
@@ -863,7 +719,7 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 				"vertical_emittance = horizontal_emittance * coupling\n\n"
 				"sigma_x = sqrt( horizontal_emittance * beta_X + (eta * energy_spread)^2 )\n"
 				"sigma_y = vertical_emittance * beta_Y\n"
-				"sigma_x_prime = sqrt( horizontal_emittance / beta_X + (eta_prime / energy_spread)^2 )\n"
+				"sigma_x_prime = sqrt( horizontal_emittance / beta_X + (eta_prime * energy_spread)^2 )\n"
 				"sigma_y_prime=sqrt( vertical_emittance / beta_Y )\n\n"
 				"The beam size follows a bivariate Gaussian distribution with "
 				"sigma_x and sigma_y standard deviations.\n"
@@ -886,6 +742,18 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 				"when the trajectory's X coordinate is equal or larger than Xmax.) If these limits are never reached,\n"
 				"calculation stops when the maximum number of trajectory points (1 million) is reached.\n";
 			GLMessageBox::Display(tmp,"Calculation boundaries",GLDLG_OK,GLDLG_ICONINFO);
+		} else if (src==gammaInfoButton) {
+			char tmp[] = "The gamma invariant (not to be confused with the gamma relativistic factor!) connects\n"
+				"the accelerator Alpha and Beta functions through the relation:\n"
+				"Gamma * Beta - Alpha^2 = 1     or     Gamma = (1 + Alpha)^2 / Beta\n"
+				"Where the Alpha function describes the change of the Beta function: Alpha(s) = - 1/2 * dBeta/ds\n"
+				"The importance of this is while the offset of generated photons depends only on the beam size,\n"
+				"proportional to the Beta function, the angular divergence relative to the beam direction depends also\n"
+				"on the change of the Beta, expressed by the Alpha function.\n"
+				"If you have the Alpha and Beta function values at any point, calculate Gamma using the above expression,\n"
+				"it will remain invariant through the trajectory. If you don't know the Alpha function, write 0 for an approximation.";
+				
+			GLMessageBox::Display(tmp,"Calculation boundaries",GLDLG_OK,GLDLG_ICONINFO);
 		} else if (src==applyButton) {
 			//read values, apply them and reload region
 			//close the window
@@ -903,58 +771,122 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 		break;
 	case MSG_COMBO:
 	case MSG_TOGGLE:
-		EnableDisableControls();
+	{
+		//Radio button behavior:
+		std::vector<GLToggle*> radio1 = { idealBeamToggle, emittanceCouplingToggle, emittanceXYtoggle };
+		if (Contains(radio1, (GLToggle*)src)) {
+			for (auto comp : radio1) {
+				comp->SetState(comp == src);
+			}
+		}
+		//Enable/disable text fields:
+		EnableDisableControls(src);
 		break;
-
+	}
+	case MSG_TEXT_UPD:
+		if (Contains({ emittanceText,couplingText }, src)) {
+			double emittance, coupling;
+			if (emittanceText->GetNumber(&emittance) && couplingText->GetNumber(&coupling)) {
+				double emittanceX = emittance / (1.0 + coupling * 0.01);
+				emittanceXtext->SetText(emittanceX);
+				emittanceYtext->SetText(emittanceX * coupling * 0.01);
+			}
+		} else if (Contains({ emittanceXtext,emittanceYtext }, src)) {
+			double emittanceX, emittanceY;
+			if (emittanceXtext->GetNumber(&emittanceX) && emittanceYtext->GetNumber(&emittanceY)) {
+				double coupling = 100.0 * emittanceY / emittanceX;
+				emittanceText->SetText(emittanceX * (1.0 + coupling * 0.01));
+				couplingText->SetText(coupling);
+			}
+		}
+		break;
 	}
 	GLWindow::ProcessMessage(src,message);
 }
-void RegionEditor::EnableDisableControls() {
+void RegionEditor::EnableDisableControls(GLComponent* src) {
 	BOOL defineByAngle=(startDirDefinitionCombo->GetSelectedIndex()==0);
 	theta0text->SetEditable(defineByAngle);
 	alpha0text->SetEditable(defineByAngle);
 	startDirXtext->SetEditable(!defineByAngle);
 	startDirYtext->SetEditable(!defineByAngle);
 	startDirZtext->SetEditable(!defineByAngle);
+
+	/*
 	BOOL useMAGfile=(BxtypeCombo->GetSelectedIndex()!=0);
 	constBXtext->SetEditable(!useMAGfile);
 	MAGfileXtext->SetEditable(useMAGfile);
 	magxBrowseButton->SetEnabled(useMAGfile);
 	magxEditButton->SetEnabled(useMAGfile);
+
 	useMAGfile=(BytypeCombo->GetSelectedIndex()!=0);
 	constBYtext->SetEditable(!useMAGfile);
 	MAGfileYtext->SetEditable(useMAGfile);
 	magyBrowseButton->SetEnabled(useMAGfile);
 	magyEditButton->SetEnabled(useMAGfile);
+
 	useMAGfile=(BztypeCombo->GetSelectedIndex()!=0);
 	constBZtext->SetEditable(!useMAGfile);
 	MAGfileZtext->SetEditable(useMAGfile);
 	magzBrowseButton->SetEnabled(useMAGfile);
-	magzEditButton->SetEnabled(useMAGfile);
+	magzEditButton->SetEnabled(useMAGfile);*/
+
+	
+	//Control of magnetic field components
+	std::vector<GLComponent*> combos = { BxtypeCombo,BytypeCombo,BztypeCombo };
+	if (Contains(combos, src)) {
+		std::vector<GLTextField*> constFields = { constBXtext , constBYtext, constBZtext };
+		std::vector<GLTextField*> magFileFields = { MAGfileXtext , MAGfileYtext, MAGfileZtext };
+		std::vector<GLButton*> browseButtons = { magxBrowseButton , magyBrowseButton, magzBrowseButton };
+		std::vector<GLButton*> editButtons = { magxEditButton , magyEditButton, magzEditButton };
+		
+		std::vector<int> allCompModes = { B_MODE_QUADRUPOLE,B_MODE_ANALYTIC,B_MODE_ROTATING_DIPOLE };
+		BOOL setAllComponents = Contains(allCompModes, ((GLCombo*)src)->GetSelectedIndex()+1);
+		
+		for (size_t i = 0; i < 3; i++) {
+			int compMode = ((GLCombo*)combos[i])->GetSelectedIndex() + 1;
+			BOOL useMagFile = (compMode != B_MODE_CONSTANT);
+			
+			((GLCombo*)combos[i])->SetEditable(!setAllComponents || src==combos[i]);
+			constFields[i]->SetEditable((!setAllComponents || src == combos[i]) && !useMagFile);
+			magFileFields[i]->SetEditable((!setAllComponents || src == combos[i]) && useMagFile);
+			browseButtons[i]->SetEnabled((!setAllComponents || src == combos[i]) && useMagFile);
+			editButtons[i]->SetEnabled((!setAllComponents || src == combos[i]) && useMagFile);
+		}
+	}
+
 	BOOL useIdealBeam=idealBeamToggle->GetState();
-	BOOL useBXYfile=(betaOrBXYCombo->GetSelectedIndex()==1);
-	betaOrBXYCombo->SetEditable(!useIdealBeam);
-	betaOrBXYCombo->SetEnabled(!useIdealBeam);
+	BOOL useBXYfile=(constantBXYtoggle->GetState()==0);
+
+	energySpreadText->SetEditable(!useIdealBeam);
+
+	constantBXYtoggle->SetEnabled(!useIdealBeam);
 	BXYfileNameText->SetEditable(!useIdealBeam && useBXYfile);
 	bxyBrowseButton->SetEnabled(!useIdealBeam && useBXYfile);
 	bxyEditButton->SetEnabled(!useIdealBeam && useBXYfile);
-	emittanceText->SetEditable(!useIdealBeam);
-	couplingText->SetEditable(!useIdealBeam);
+	
+	emittanceText->SetEditable(!useIdealBeam && emittanceCouplingToggle->GetState());
+	couplingText->SetEditable(!useIdealBeam  && emittanceCouplingToggle->GetState());
+	emittanceXtext->SetEditable(!useIdealBeam  && emittanceXYtoggle->GetState());
+	emittanceYtext->SetEditable(!useIdealBeam  && emittanceXYtoggle->GetState());
+	
 	betaXtext->SetEditable(!useIdealBeam && !useBXYfile);
 	betaYtext->SetEditable(!useIdealBeam && !useBXYfile);
 	etaText->SetEditable(!useIdealBeam && !useBXYfile);
 	etaPrimeText->SetEditable(!useIdealBeam && !useBXYfile);			
-	energySpreadText->SetEditable(!useIdealBeam && !useBXYfile);			
+
 	BOOL limitAngle=limitAngleToggle->GetState();
 	psiMaxXtext->SetEditable(limitAngle);
 	psiMaxYtext->SetEditable(limitAngle);
+
+	enableParPolarizationToggle->SetEnabled(FALSE);
+	enableOrtPolarizationToggle->SetEnabled(FALSE);
 }
 
 void RegionEditor::FillValues() {
 	char tmp[512];
-	sprintf(tmp,"%.9g",cr->params.startPoint.x);startPointXtext->SetText(tmp);
-	sprintf(tmp,"%.9g",cr->params.startPoint.y);startPointYtext->SetText(tmp);
-	sprintf(tmp,"%.9g",cr->params.startPoint.z);startPointZtext->SetText(tmp);
+	startPointXtext->SetText(cr->params.startPoint.x);
+	startPointYtext->SetText(cr->params.startPoint.y);
+	startPointZtext->SetText(cr->params.startPoint.z);
 
 	double t0;
 	if (cr->params.startDir.z == 0) {
@@ -968,77 +900,84 @@ void RegionEditor::FillValues() {
 			else t0 -= PI;
 	}
 	theta0text->SetText(t0);
-	alpha0text->SetText(-asin(cr->params.startDir.Normalize().y));
-	sprintf(tmp,"%g",cr->params.startDir.x);startDirXtext->SetText(tmp);
-	sprintf(tmp,"%g",cr->params.startDir.y);startDirYtext->SetText(tmp);
-	sprintf(tmp,"%g",cr->params.startDir.z);startDirZtext->SetText(tmp);
+	alpha0text->SetText(-asin(cr->params.startDir.Normalized().y));
+	startDirXtext->SetText(cr->params.startDir.x);
+	startDirYtext->SetText(cr->params.startDir.y);
+	startDirZtext->SetText(cr->params.startDir.z);
 
-	sprintf(tmp,"%g",cr->params.dL);dLtext->SetText(tmp);
+	dLtext->SetText(cr->params.dL_cm);
 
-	sprintf(tmp,"%g",cr->params.limits.x);limitsXtext->SetText(tmp);
-	sprintf(tmp,"%g",cr->params.limits.y);limitsYtext->SetText(tmp);
-	sprintf(tmp,"%g",cr->params.limits.z);limitsZtext->SetText(tmp);
+	limitsXtext->SetText(cr->params.limits.x);
+	limitsYtext->SetText(cr->params.limits.y);
+	limitsZtext->SetText(cr->params.limits.z);
 
-	sprintf(tmp,"%g",abs(cr->params.particleMass));particleMassText->SetText(tmp);
-	particleChargeCombo->SetSelectedIndex(cr->params.particleMass<0);
+	particleMassText->SetText(abs(cr->params.particleMass_GeV));
+	particleChargeCombo->SetSelectedIndex(cr->params.particleMass_GeV<0);
 
-	sprintf(tmp,"%g",cr->params.E);beamEnergyText->SetText(tmp);
-	sprintf(tmp,"%g",cr->params.current);beamCurrentText->SetText(tmp);
-	idealBeamToggle->SetState(cr->params.emittance==0.0);
+	beamEnergyText->SetText(cr->params.E_GeV);
+	beamCurrentText->SetText(cr->params.current_mA);
+	idealBeamToggle->SetState(cr->params.emittance_cm==0.0);
+	emittanceCouplingToggle->SetState(cr->params.emittance_cm != 0.0);
 
-	if (cr->params.emittance==0.0) { //ideal beam
-		betaOrBXYCombo->SetSelectedIndex(0);
+	if (cr->params.emittance_cm==0.0) { //ideal beam
+		constantBXYtoggle->SetState(1);
 		BXYfileNameText->SetText("");
 		emittanceText->SetText("0");
-		betaXtext->SetText("0");
-		betaYtext->SetText("0");
-		etaText->SetText("0");
-		etaPrimeText->SetText("0");
-		couplingText->SetText("0");
-		energySpreadText->SetText("0");
+		betaXtext->SetText("");
+		betaYtext->SetText("");
+		etaText->SetText("");
+		etaPrimeText->SetText("");
+		couplingText->SetText("");
+		energySpreadText->SetText("");
+		emittanceXtext->SetText("");
+		emittanceYtext->SetText("");
 	}
 	
-	sprintf(tmp,"%g",cr->params.emittance);emittanceText->SetText(tmp);
-	sprintf(tmp,"%g",cr->params.coupling);couplingText->SetText(tmp);
+	emittanceText->SetText(cr->params.emittance_cm);
+	couplingText->SetText(cr->params.coupling_percent);
+	double emittanceX = cr->params.emittance_cm / (1.0 + cr->params.coupling_percent * 0.01);
+	emittanceXtext->SetText(emittanceX);
+	emittanceYtext->SetText(emittanceX * cr->params.coupling_percent * 0.01);
+	energySpreadText->SetText(cr->params.energy_spread_percent);
 
-	if (cr->params.betax>=0.0) { //don't use BXY file
-		betaOrBXYCombo->SetSelectedIndex(0);
+	if (cr->params.betax_const_cm>=0.0) { //don't use BXY file
+		constantBXYtoggle->SetState(1);
 		BXYfileNameText->SetText("");
-		sprintf(tmp,"%g",cr->params.betax);betaXtext->SetText(tmp);
-		sprintf(tmp,"%g",cr->params.betay);betaYtext->SetText(tmp);
-		sprintf(tmp,"%g",cr->params.eta);etaText->SetText(tmp);
-		sprintf(tmp,"%g",cr->params.etaprime);etaPrimeText->SetText(tmp);
-		sprintf(tmp,"%g",cr->params.energy_spread);energySpreadText->SetText(tmp);
+		betaXtext->SetText(cr->params.betax_const_cm);
+		betaYtext->SetText(cr->params.betay_const_cm);
+		etaText->SetText(cr->params.eta_x_const_cm);
+		etaPrimeText->SetText(cr->params.eta_x_prime_const);
+		energySpreadText->SetText(cr->params.energy_spread_percent);
 	} else {
-		betaOrBXYCombo->SetSelectedIndex(1);
-		BXYfileNameText->SetText((char*)cr->BXYfileName.c_str());
+		constantBXYtoggle->SetState(0);
+		BXYfileNameText->SetText(cr->BXYfileName);
 	}
 
-	sprintf(tmp,"%g",cr->params.energy_low);EminText->SetText(tmp);
-	sprintf(tmp,"%g",cr->params.energy_hi);EmaxText->SetText(tmp);
+	EminText->SetText(cr->params.energy_low_eV);
+	EmaxText->SetText(cr->params.energy_hi_eV);
 	enableOrtPolarizationToggle->SetState(cr->params.enable_ort_polarization);
 	enableParPolarizationToggle->SetState(cr->params.enable_par_polarization);
-	limitAngleToggle->SetState(cr->params.psimaxX<3.14159 || cr->params.psimaxY<3.14159);
-	sprintf(tmp,"%g",cr->params.psimaxX);psiMaxXtext->SetText(tmp);
-	sprintf(tmp,"%g",cr->params.psimaxY);psiMaxYtext->SetText(tmp);
+	limitAngleToggle->SetState(cr->params.psimaxX_rad<3.14159 || cr->params.psimaxY_rad<3.14159);
+	psiMaxXtext->SetText(cr->params.psimaxX_rad);
+	psiMaxYtext->SetText(cr->params.psimaxY_rad);
 
 	BxtypeCombo->SetSelectedIndex(cr->params.Bx_mode-1);
 	if (cr->params.Bx_mode==B_MODE_CONSTANT) {
-		sprintf(tmp,"%g",cr->params.B_const.x);constBXtext->SetText(tmp);
+		constBXtext->SetText(cr->params.B_const.x);
 	} else {
-		MAGfileXtext->SetText((char*)cr->MAGXfileName.c_str());
+		MAGfileXtext->SetText(cr->MAGXfileName);
 	}
 	BytypeCombo->SetSelectedIndex(cr->params.By_mode-1);
 	if (cr->params.By_mode==B_MODE_CONSTANT) {
-		sprintf(tmp,"%g",cr->params.B_const.y);constBYtext->SetText(tmp);
+		constBYtext->SetText(cr->params.B_const.y);
 	} else {
-		MAGfileYtext->SetText((char*)cr->MAGYfileName.c_str());
+		MAGfileYtext->SetText(cr->MAGYfileName);
 	}
 	BztypeCombo->SetSelectedIndex(cr->params.Bz_mode-1);
 	if (cr->params.Bz_mode==B_MODE_CONSTANT) {
-		sprintf(tmp,"%g",cr->params.B_const.z);constBZtext->SetText(tmp);
+		constBZtext->SetText(cr->params.B_const.z);
 	} else {
-		MAGfileZtext->SetText((char*)cr->MAGZfileName.c_str());
+		MAGfileZtext->SetText(cr->MAGZfileName);
 	}
 }
 
@@ -1057,7 +996,7 @@ void RegionEditor::ApplyChanges() {
 		if (!startDirXtext->GetNumber(&x)) {GLMessageBox::Display("Invalid dirX","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		if (!startDirYtext->GetNumber(&y)) {GLMessageBox::Display("Invalid dirY","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		if (!startDirZtext->GetNumber(&z)) {GLMessageBox::Display("Invalid dirZ","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
-		Vector dir=Vector(x,y,z);
+		Vector3d dir=Vector3d(x,y,z);
 		if (dir.Norme()==0.0) {GLMessageBox::Display("Start direction can't be a null-vector","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	}
 	if (!dLtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid dL","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
@@ -1079,11 +1018,11 @@ void RegionEditor::ApplyChanges() {
 		if (tmp<=0.0) {GLMessageBox::Display("Emittance must be positive","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		if (!couplingText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid Coupling","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		if (tmp<0.0) {GLMessageBox::Display("Coupling must be non-negative","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
-		if (betaOrBXYCombo->GetSelectedIndex()==0) { //constant values
+		if (constantBXYtoggle->GetState()==1) { //constant values
 			if (!betaXtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid BetaX","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
-			if (tmp<0.0) {GLMessageBox::Display("BetaX must be non-negative","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
+			if (tmp<=0.0) {GLMessageBox::Display("BetaX must be positive","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 			if (!betaYtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid BetaY","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
-			if (tmp<0.0) {GLMessageBox::Display("BetaY must be non-negative","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
+			if (tmp<=0.0) {GLMessageBox::Display("BetaY must be positive","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 			if (!etaText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid Eta","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 			if (tmp<0.0) {GLMessageBox::Display("Eta must be non-negative","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 			if (!etaPrimeText->GetNumber(&tmp)) {GLMessageBox::Display("Invalid EtaPrime","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
@@ -1142,39 +1081,38 @@ void RegionEditor::ApplyChanges() {
 		double a0,t0;
 		alpha0text->GetNumber(&a0);
 		theta0text->GetNumber(&t0);
-		cr->params.startDir=Vector(sin(-t0)*cos(a0),sin(-a0),cos(a0)*cos(t0));  //left-handed coordinate system
+		cr->params.startDir=Vector3d(sin(-t0)*cos(a0),sin(-a0),cos(a0)*cos(t0));  //left-handed coordinate system
 	} else { // define by vector
 		startDirXtext->GetNumber(&cr->params.startDir.x);
 		startDirYtext->GetNumber(&cr->params.startDir.y);
 		startDirZtext->GetNumber(&cr->params.startDir.z);
 	}
-	dLtext->GetNumber(&cr->params.dL);
+	dLtext->GetNumber(&cr->params.dL_cm);
 	limitsXtext->GetNumber(&cr->params.limits.x);
 	limitsYtext->GetNumber(&cr->params.limits.y);
 	limitsZtext->GetNumber(&cr->params.limits.z);
-	particleMassText->GetNumber(&cr->params.particleMass);
+	particleMassText->GetNumber(&cr->params.particleMass_GeV);
 	if (particleChargeCombo->GetSelectedIndex()==1) //negative charge
-		cr->params.particleMass*=-1;
-	beamEnergyText->GetNumber(&cr->params.E);
-	beamCurrentText->GetNumber(&cr->params.current);
-	cr->params.gamma=abs(cr->params.E/cr->params.particleMass);
-	if (idealBeamToggle->GetState()) cr->params.emittance=0.0;
+		cr->params.particleMass_GeV*=-1;
+	beamEnergyText->GetNumber(&cr->params.E_GeV);
+	beamCurrentText->GetNumber(&cr->params.current_mA);
+	cr->params.gamma=abs(cr->params.E_GeV/cr->params.particleMass_GeV);
+	if (idealBeamToggle->GetState()) cr->params.emittance_cm=0.0;
 	else {
-		emittanceText->GetNumber(&cr->params.emittance);
-		couplingText->GetNumber(&cr->params.coupling);
-		if (betaOrBXYCombo->GetSelectedIndex()==0) { //constant values
-			betaXtext->GetNumber(&cr->params.betax);
-			betaYtext->GetNumber(&cr->params.betay);
-			etaText->GetNumber(&cr->params.eta);
-			etaPrimeText->GetNumber(&cr->params.etaprime);	
-			energySpreadText->GetNumber(&cr->params.energy_spread);
+		emittanceText->GetNumber(&cr->params.emittance_cm);
+		couplingText->GetNumber(&cr->params.coupling_percent);
+		energySpreadText->GetNumber(&cr->params.energy_spread_percent);
+		if (constantBXYtoggle->GetState()==1) { //constant values
+			betaXtext->GetNumber(&cr->params.betax_const_cm);
+			betaYtext->GetNumber(&cr->params.betay_const_cm);
+			etaText->GetNumber(&cr->params.eta_x_const_cm);
+			etaPrimeText->GetNumber(&cr->params.eta_x_prime_const);
 		} else { //load BXY file
-			cr->params.betax=-1.0; //negative value: use BXY file
+			cr->params.betax_const_cm=-1.0; //negative value: use BXY file
 			cr->BXYfileName.assign(BXYfileNameText->GetText());
 			//loadbxy
 			try {
-				FileReader BXYfile(BXYfileNameText->GetText());
-				cr->params.nbDistr_BXY=cr->LoadBXY(&BXYfile);
+				cr->params.nbDistr_BXY=cr->LoadBXY(BXYfileNameText->GetText());
 			} catch(Error &e) {
 				char tmp[256];
 				sprintf(tmp,"Couldn't load BXY file. Error message:\n%s",e.GetMsg());
@@ -1184,16 +1122,16 @@ void RegionEditor::ApplyChanges() {
 		}
 	}
 
-	EminText->GetNumber(&cr->params.energy_low);
-	EmaxText->GetNumber(&cr->params.energy_hi);
+	EminText->GetNumber(&cr->params.energy_low_eV);
+	EmaxText->GetNumber(&cr->params.energy_hi_eV);
 	cr->params.enable_ort_polarization=enableOrtPolarizationToggle->GetState();
 	cr->params.enable_par_polarization=enableParPolarizationToggle->GetState();
 	if (limitAngleToggle->GetState()) { //limit angle
-		psiMaxXtext->GetNumber(&cr->params.psimaxX);
-		psiMaxYtext->GetNumber(&cr->params.psimaxY);
+		psiMaxXtext->GetNumber(&cr->params.psimaxX_rad);
+		psiMaxYtext->GetNumber(&cr->params.psimaxY_rad);
 	} else { 
-		cr->params.psimaxX=PI;
-		cr->params.psimaxY=PI;
+		cr->params.psimaxX_rad=PI;
+		cr->params.psimaxY_rad=PI;
 	}
 
 	//X comp.
@@ -1249,6 +1187,7 @@ void RegionEditor::ApplyChanges() {
 
 	worker->RecalcRegion(regionId);
 	if (mApp->regionInfo) mApp->regionInfo->Update();
+	if (mApp->trajectoryDetails && mApp->trajectoryDetails->IsVisible() && mApp->trajectoryDetails->GetRegionId() == regionId) mApp->trajectoryDetails->Update();
 	if (mApp->spectrumPlotter) mApp->spectrumPlotter->SetScale();
 	GLWindow::ProcessMessage(NULL,MSG_CLOSE);
 }
