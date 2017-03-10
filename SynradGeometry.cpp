@@ -627,7 +627,7 @@ void SynradGeometry::SaveProfileGEO(FileWriter *file, int super, BOOL saveSelect
 	file->Write("}\n");
 }
 
-void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, LEAK *pleak, int *nbleak, HIT *pHits, int *nbHHit, int *version) {
+void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 
 	//mApp->ClearAllSelections();
 	//mApp->ClearAllViews();
@@ -648,14 +648,14 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, LEAK *pleak, int
 	}
 
 	file->ReadKeyword("totalHit"); file->ReadKeyword(":");
-	tNbHit = 0; file->ReadLLong();
+	loaded_nbHit = 0; file->ReadLLong();
 	file->ReadKeyword("totalDes"); file->ReadKeyword(":");
-	tNbDesorption = 0; file->ReadLLong();
+	loaded_nbDesorption = 0; file->ReadLLong();
 	file->ReadKeyword("totalLeak"); file->ReadKeyword(":");
-	tNbLeak = 0; file->ReadLLong();
+	loaded_nbLeak = 0; file->ReadLLong();
 	if (*version >= 12) {
 		file->ReadKeyword("totalAbs"); file->ReadKeyword(":");
-		tNbAbsorption = 0; file->ReadLLong();
+		loaded_nbAbsorption = 0; file->ReadLLong();
 		if (*version >= 15) {
 			file->ReadKeyword("totalDist_total");
 		}
@@ -663,18 +663,18 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, LEAK *pleak, int
 			file->ReadKeyword("totalDist");
 		}
 		file->ReadKeyword(":");
-		distTraveledTotal = 0.0; file->ReadDouble();
+		loaded_distTraveledTotal = 0.0; file->ReadDouble();
 		if (*version >= 15) {
 			file->ReadKeyword("totalDist_fullHitsOnly"); file->ReadKeyword(":");
 			file->ReadDouble();
 		}
 	}
 	else {
-		tNbAbsorption = 0;
-		distTraveledTotal = 0.0;
+		loaded_nbAbsorption = 0;
+		loaded_distTraveledTotal = 0.0;
 	}
 	file->ReadKeyword("maxDes"); file->ReadKeyword(":");
-	tNbDesorptionMax = file->ReadLLong();
+	loaded_desorptionLimit = 0;  file->ReadLLong();
 	file->ReadKeyword("nbVertex"); file->ReadKeyword(":");
 	sh.nbVertex = file->ReadInt();
 	file->ReadKeyword("nbFacet"); file->ReadKeyword(":");
@@ -824,32 +824,32 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, LEAK *pleak, int
 		// Read leaks
 		file->ReadKeyword("leaks"); file->ReadKeyword("{");
 		file->ReadKeyword("nbLeak"); file->ReadKeyword(":");
-		*nbleak = file->ReadInt();
-		for (int i = 0; i < *nbleak; i++) {
+		/* *nbleak = */ int tmpNbLeak = file->ReadInt();
+		for (int i = 0; i < tmpNbLeak; i++) {
 			int idx = file->ReadInt();
 			if (idx != i) throw Error(file->MakeError("Wrong leak index !"));
-			(pleak + i)->pos.x = file->ReadDouble();
-			(pleak + i)->pos.y = file->ReadDouble();
-			(pleak + i)->pos.z = file->ReadDouble();
+			/*(pleak + i)->pos.x =*/ file->ReadDouble();
+			/*(pleak + i)->pos.y =*/ file->ReadDouble();
+			/*(pleak + i)->pos.z =*/ file->ReadDouble();
 
-			(pleak + i)->dir.x = file->ReadDouble();
-			(pleak + i)->dir.y = file->ReadDouble();
-			(pleak + i)->dir.z = file->ReadDouble();
+			/*(pleak + i)->dir.x =*/ file->ReadDouble();
+			/*(pleak + i)->dir.y =*/ file->ReadDouble();
+			/*(pleak + i)->dir.z =*/ file->ReadDouble();
 		}
 		file->ReadKeyword("}");
 
 		// Read hit cache
 		file->ReadKeyword("hits"); file->ReadKeyword("{");
 		file->ReadKeyword("nbHHit"); file->ReadKeyword(":");
-		*nbHHit = file->ReadInt();
-		for (int i = 0; i < *nbHHit; i++) {
+		/* *hitCacheSize =*/ int tmpNbHHit = file->ReadInt();
+		for (int i = 0; i < tmpNbHHit; i++) {
 			int idx = file->ReadInt();
 			if (idx != i) throw Error(file->MakeError("Wrong hit cache index !"));
-			(pHits + i)->pos.x = file->ReadDouble();
-			(pHits + i)->pos.y = file->ReadDouble();
-			(pHits + i)->pos.z = file->ReadDouble();
+			/*(hitCache + i)->pos.x =*/ file->ReadDouble();
+			/*(hitCache + i)->pos.y =*/ file->ReadDouble();
+			/*(hitCache + i)->pos.z =*/ file->ReadDouble();
 
-			(pHits + i)->type = file->ReadInt();
+			/*(hitCache + i)->type =*/ file->ReadInt();
 		}
 		file->ReadKeyword("}");
 	}
@@ -911,13 +911,13 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 		BYTE *buffer = (BYTE *)dpHit->buff;
 		SHGHITS *gHits = (SHGHITS *)buffer;
 
-		gHits->total.nbHit = tNbHit;
-		gHits->total.nbDesorbed = tNbDesorption;
-		gHits->total.nbAbsorbed = tNbAbsorption;
-		gHits->nbLeakTotal = tNbLeak;
-		gHits->total.fluxAbs = tFlux;
-		gHits->total.powerAbs = tPower;
-		gHits->distTraveledTotal = distTraveledTotal;
+		gHits->total.nbHit = loaded_nbHit;
+		gHits->total.nbDesorbed = loaded_nbDesorption;
+		gHits->total.nbAbsorbed = loaded_nbAbsorption;
+		gHits->nbLeakTotal = loaded_nbLeak;
+		gHits->total.fluxAbs = loaded_totalFlux;
+		gHits->total.powerAbs = loaded_totalPower;
+		gHits->distTraveledTotal = loaded_distTraveledTotal;
 
 		// Read facets
 		file->ReadKeyword("minHit_MC"); file->ReadKeyword(":");
@@ -1016,153 +1016,12 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 
 }
 
-// -----------------------------------------------------------
-/*
-void SynradGeometry::SaveGEO(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL saveSelected,LEAK *pleak,int *nbleakSave,HIT *pHits,int *nbHHitSave,BOOL crashSave) {
-
-SynRad *mApp = (SynRad *)theApp;
-prg->SetMessage("Counting hits...");
-if(!IsLoaded()) throw Error("Nothing to save !");
-
-
-// Block dpHit during the whole disc writing
-AccessDataport(dpHit);
-
-// Globals
-//BYTE *buffer = (BYTE *)dpHit->buff;
-//SHGHITS *gHits = (SHGHITS *)buffer;
-
-
-float dCoef = 1.0f;
-
-
-prg->SetMessage("Writing geometry details...");
-file->Write("version:");file->WriteInt(GEOVERSION,"\n");
-file->Write("totalHit:");file->WriteLLong(0,"\n");
-file->Write("totalDes:");file->WriteLLong(0,"\n");
-file->Write("totalLeak:");file->WriteInt(0,"\n");
-file->Write("maxDes:");file->WriteLLong(tNbDesorptionMax,"\n");
-file->Write("nbVertex:");file->WriteInt(sh.nbVertex,"\n");
-file->Write("nbFacet:");file->WriteInt(saveSelected?nbSelected:sh.nbFacet,"\n");
-file->Write("nbSuper:");file->WriteInt(sh.nbSuper,"\n");
-file->Write("nbFormula:");file->WriteInt(mApp->nbFormula,"\n");
-file->Write("nbView:");file->WriteInt(mApp->nbView,"\n");
-file->Write("nbSelection:");file->WriteInt(mApp->nbSelection,"\n");
-file->Write("gasMass:");file->WriteDouble(gasMass,"\n");
-
-file->Write("formulas {\n");
-for(int i=0;i<mApp->nbFormula;i++) {
-file->Write("  \"");
-file->Write(mApp->formulas[i].parser->GetName());
-file->Write("\" \"");
-file->Write(mApp->formulas[i].parser->GetExpression());
-file->Write("\"\n");
-}
-file->Write("}\n");
-
-file->Write("views {\n");
-for(int i=0;i<mApp->nbView;i++) {
-file->Write("  \"");
-file->Write(mApp->views[i].name);
-file->Write("\"\n");
-file->WriteInt(mApp->views[i].projMode," ");
-file->WriteDouble(mApp->views[i].camAngleOx," ");
-file->WriteDouble(mApp->views[i].camAngleOy," ");
-file->WriteDouble(mApp->views[i].camDist," ");
-file->WriteDouble(mApp->views[i].camOffset.x," ");
-file->WriteDouble(mApp->views[i].camOffset.y," ");
-file->WriteDouble(mApp->views[i].camOffset.z," ");
-file->WriteInt(mApp->views[i].performXY," ");
-file->WriteDouble(mApp->views[i].vLeft," ");
-file->WriteDouble(mApp->views[i].vRight," ");
-file->WriteDouble(mApp->views[i].vTop," ");
-file->WriteDouble(mApp->views[i].vBottom,"\n");
-}
-file->Write("}\n");
-
-file->Write("selections {\n");
-for(int i=0;i<mApp->nbSelection;i++) {
-file->Write("  \"");
-file->Write(mApp->selections[i].name);
-file->Write("\"\n ");
-file->WriteInt(mApp->selections[i].nbSel,"\n");
-for (int j=0;j<mApp->selections[i].nbSel;j++) {
-file->Write("  ");
-file->WriteInt(mApp->selections[i].selection[j],"\n");
-}
-}
-file->Write("}\n");
-
-file->Write("structures {\n");
-for(int i=0;i<sh.nbSuper;i++) {
-file->Write("  \"");
-file->Write(strName[i]);
-file->Write("\"\n");
-}
-file->Write("}\n");
-//vertices
-prg->SetMessage("Writing vertices...");
-file->Write("vertices {\n");
-for(int i=0;i<sh.nbVertex;i++) {
-prg->SetProgress(0.33*((double)i/(double)sh.nbVertex));
-file->Write("  ");
-file->WriteInt(i+1," ");
-file->WriteDouble(vertices3[i].x," ");
-file->WriteDouble(vertices3[i].y," ");
-file->WriteDouble(vertices3[i].z,"\n");
-}
-file->Write("}\n");
-
-//leaks
-prg->SetMessage("Writing leaks...");
-file->Write("leaks {\n");
-file->Write("  nbLeak:");file->WriteInt(0,"\n");
-file->Write("}\n");
-
-//hit cache (lines and dots)
-prg->SetMessage("Writing hits...");
-file->Write("hits {\n");
-file->Write("  nbHHit:");file->WriteInt(0,"\n");
-file->Write("}\n");
-
-//facets
-
-prg->SetMessage("Writing facets...");
-
-for(int i=0,k=0;i<sh.nbFacet;i++) {
-prg->SetProgress(0.33+((double)i/(double)sh.nbFacet) *0.33);
-if( saveSelected ) {
-if( facets[i]->selected ) { facets[i]->SaveGEO(file,k);k++; }
-} else {
-facets[i]->SaveGEO(file,i);
-}
-}
-
-prg->SetMessage("Writing profiles...");
-SaveProfileGEO(file,-1,saveSelected);
-
-///Save textures, for GEO file version 3
-char tmp[256];
-sprintf(tmp,"{textures}\n");
-file->Write(tmp);
-file->Write("minHit:");file->WriteDouble(0,"\n");
-file->Write("maxHit:");file->WriteDouble(1,"\n");
-
-ReleaseDataport(dpHit);
-
-}
-*/
-// -----------------------------------------------------------
-
 void SynradGeometry::SaveTXT(FileWriter *file, Dataport *dpHit, BOOL saveSelected) {
 
 	if (!IsLoaded()) throw Error("Nothing to save !");
 
 	// Unused
 	file->WriteInt(0, "\n");
-
-	// Block dpHit during the whole disc writing
-	AccessDataport(dpHit);
 
 	// Globals
 	//BYTE *buffer = (BYTE *)dpHit->buff;
@@ -1172,7 +1031,7 @@ void SynradGeometry::SaveTXT(FileWriter *file, Dataport *dpHit, BOOL saveSelecte
 	file->WriteLLong(0, "\n");
 	file->WriteInt(0, "\n");
 	file->WriteLLong(0, "\n");
-	file->WriteLLong(tNbDesorptionMax, "\n");
+	file->WriteLLong(loaded_desorptionLimit, "\n");
 
 	file->WriteInt(sh.nbVertex, "\n");
 	file->WriteInt(saveSelected ? nbSelected : sh.nbFacet, "\n");
@@ -1221,8 +1080,6 @@ void SynradGeometry::SaveTXT(FileWriter *file, Dataport *dpHit, BOOL saveSelecte
 	}
 
 	SaveProfileTXT(file);
-
-	ReleaseDataport(dpHit);
 
 }
 
@@ -1402,8 +1259,8 @@ void SynradGeometry::SaveDesorption(FILE *file, Dataport *dpHit, BOOL selectedOn
 }
 
 
-void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit, BOOL saveSelected, LEAK *pleak,
-	int *nbleakSave, HIT *pHits, int *nbHHitSave, BOOL crashSave) {
+void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit, BOOL saveSelected, LEAK *leakCacheSave,
+	size_t *nbLeakSave, HIT *hitCacheSave, size_t *nbHitSave, BOOL crashSave) {
 
 	prg->SetMessage("Counting hits...");
 	if (!IsLoaded()) throw Error("Nothing to save !");
@@ -1438,7 +1295,7 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	file->Write("totalLeak:"); file->WriteLLong((!crashSave && !saveSelected) ? gHits->nbLeakTotal : 0, "\n");
 	file->Write("totalFlux:"); file->WriteDouble((!crashSave && !saveSelected) ? gHits->total.fluxAbs : 0, "\n");
 	file->Write("totalPower:"); file->WriteDouble((!crashSave && !saveSelected) ? gHits->total.powerAbs : 0, "\n");
-	file->Write("maxDes:"); file->WriteLLong((!crashSave && !saveSelected) ? tNbDesorptionMax : 0, "\n");
+	file->Write("maxDes:"); file->WriteLLong((!crashSave && !saveSelected) ? loaded_desorptionLimit : 0, "\n");
 	file->Write("nbVertex:"); file->WriteInt(sh.nbVertex, "\n");
 	file->Write("nbFacet:"); file->WriteInt(saveSelected ? nbSelected : sh.nbFacet, "\n");
 	file->Write("nbSuper:"); file->WriteInt(sh.nbSuper, "\n");
@@ -1530,35 +1387,35 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	//leaks
 	prg->SetMessage("Writing leaks...");
 	file->Write("leaks {\n");
-	file->Write("  nbLeak:"); file->WriteInt((!crashSave && !saveSelected) ? *nbleakSave : 0, "\n");
-	for (int i = 0; (i < *nbleakSave) && (!crashSave && !saveSelected); i++) {
+	file->Write("  nbLeak:"); file->WriteInt((!crashSave && !saveSelected) ? MIN(*nbLeakSave,LEAKCACHESIZE) : 0, "\n");
+	for (int i = 0; (i <  MIN(*nbLeakSave, LEAKCACHESIZE)) && (!crashSave && !saveSelected); i++) {
 
 		file->Write("  ");
 		file->WriteInt(i, " ");
-		file->WriteDouble((pleak + i)->pos.x, " ");
-		file->WriteDouble((pleak + i)->pos.y, " ");
-		file->WriteDouble((pleak + i)->pos.z, " ");
+		file->WriteDouble((leakCacheSave + i)->pos.x, " ");
+		file->WriteDouble((leakCacheSave + i)->pos.y, " ");
+		file->WriteDouble((leakCacheSave + i)->pos.z, " ");
 
-		file->WriteDouble((pleak + i)->dir.x, " ");
-		file->WriteDouble((pleak + i)->dir.y, " ");
-		file->WriteDouble((pleak + i)->dir.z, "\n");
+		file->WriteDouble((leakCacheSave + i)->dir.x, " ");
+		file->WriteDouble((leakCacheSave + i)->dir.y, " ");
+		file->WriteDouble((leakCacheSave + i)->dir.z, "\n");
 	}
 	file->Write("}\n");
 
 	//hit cache (lines and dots)
 	prg->SetMessage("Writing hit cache...");
 	file->Write("hits {\n");
-	file->Write("  nbHHit:"); file->WriteInt((!crashSave && !saveSelected) ? *nbHHitSave : 0, "\n");
-	for (int i = 0; (i < *nbHHitSave) && (!crashSave && !saveSelected); i++) {
+	file->Write("  nbHHit:"); file->WriteInt((!crashSave && !saveSelected) ? HITCACHESIZE : 0, "\n");
+	for (int i = 0; (i < HITCACHESIZE) && (!crashSave && !saveSelected); i++) {
 
 		file->Write("  ");
 		file->WriteInt(i, " ");
-		file->WriteDouble((pHits + i)->pos.x, " ");
-		file->WriteDouble((pHits + i)->pos.y, " ");
-		file->WriteDouble((pHits + i)->pos.z, " ");
-		file->WriteDouble((pHits + i)->dF, " ");
-		file->WriteDouble((pHits + i)->dP, " ");
-		file->WriteInt((pHits + i)->type, "\n");
+		file->WriteDouble((hitCacheSave + i)->pos.x, " ");
+		file->WriteDouble((hitCacheSave + i)->pos.y, " ");
+		file->WriteDouble((hitCacheSave + i)->pos.z, " ");
+		file->WriteDouble((hitCacheSave + i)->dF, " ");
+		file->WriteDouble((hitCacheSave + i)->dP, " ");
+		file->WriteInt((hitCacheSave + i)->type, "\n");
 	}
 	file->Write("}\n");
 
@@ -1625,7 +1482,7 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 
 }
 
-std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *prg, LEAK *pleak, int *nbleak, HIT *pHits, int *nbHHit, int *version) {
+std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *prg, LEAK *pleak, size_t *nbleak, HIT *hitCache, size_t *hitCacheSize, int *version) {
 
 	prg->SetMessage("Clearing current geometry...");
 	Clear();
@@ -1644,26 +1501,26 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 	}
 
 	file->ReadKeyword("totalHit"); file->ReadKeyword(":");
-	tNbHit = file->ReadLLong();
+	loaded_nbHit = file->ReadLLong();
 	file->ReadKeyword("totalDes"); file->ReadKeyword(":");
-	tNbDesorption = file->ReadLLong();
+	loaded_nbDesorption = file->ReadLLong();
 	if (*version >= 6) {
 		file->ReadKeyword("no_scans"); file->ReadKeyword(":");
 		loaded_no_scans = file->ReadDouble();
 	}
 	else loaded_no_scans = 0;
 	file->ReadKeyword("totalLeak"); file->ReadKeyword(":");
-	tNbLeak = file->ReadInt();
+	loaded_nbLeak = file->ReadInt();
 	if (*version > 2) {
 		file->ReadKeyword("totalFlux"); file->ReadKeyword(":");
-		tFlux = file->ReadDouble();
+		loaded_totalFlux = file->ReadDouble();
 		file->ReadKeyword("totalPower"); file->ReadKeyword(":");
-		tPower = file->ReadDouble();
+		loaded_totalPower = file->ReadDouble();
 	}
-	tNbAbsorption = 0;
-	distTraveledTotal = 0.0;
+	loaded_nbAbsorption = 0;
+	loaded_distTraveledTotal = 0.0;
 	file->ReadKeyword("maxDes"); file->ReadKeyword(":");
-	tNbDesorptionMax = file->ReadLLong();
+	loaded_desorptionLimit = file->ReadLLong();
 	file->ReadKeyword("nbVertex"); file->ReadKeyword(":");
 	sh.nbVertex = file->ReadInt();
 	file->ReadKeyword("nbFacet"); file->ReadKeyword(":");
@@ -1784,29 +1641,41 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 	for (int i = 0; i < *nbleak; i++) {
 		int idx = file->ReadInt();
 		if (idx != i) throw Error(file->MakeError("Wrong leak index !"));
-		(pleak + i)->pos.x = file->ReadDouble();
-		(pleak + i)->pos.y = file->ReadDouble();
-		(pleak + i)->pos.z = file->ReadDouble();
+		if (i < LEAKCACHESIZE) {
+			(pleak + i)->pos.x = file->ReadDouble();
+			(pleak + i)->pos.y = file->ReadDouble();
+			(pleak + i)->pos.z = file->ReadDouble();
 
-		(pleak + i)->dir.x = file->ReadDouble();
-		(pleak + i)->dir.y = file->ReadDouble();
-		(pleak + i)->dir.z = file->ReadDouble();
+			(pleak + i)->dir.x = file->ReadDouble();
+			(pleak + i)->dir.y = file->ReadDouble();
+			(pleak + i)->dir.z = file->ReadDouble();
+		}
+		else { //Saved file has more leaks than we could load
+			for (int i = 0; i < 6; i++)
+				file->ReadDouble();
+		}
 	}
 	file->ReadKeyword("}");
 
 	// Read hit cache
 	file->ReadKeyword("hits"); file->ReadKeyword("{");
 	file->ReadKeyword("nbHHit"); file->ReadKeyword(":");
-	*nbHHit = file->ReadInt();
-	for (int i = 0; i < *nbHHit; i++) {
+	*hitCacheSize = file->ReadInt();
+	for (int i = 0; i < *hitCacheSize; i++) {
 		int idx = file->ReadInt();
 		if (idx != i) throw Error(file->MakeError("Wrong hit cache index !"));
-		(pHits + i)->pos.x = file->ReadDouble();
-		(pHits + i)->pos.y = file->ReadDouble();
-		(pHits + i)->pos.z = file->ReadDouble();
-		(pHits + i)->dF = file->ReadDouble();
-		(pHits + i)->dP = file->ReadDouble();
-		(pHits + i)->type = file->ReadInt();
+		if (i < HITCACHESIZE) {
+			(hitCache + i)->pos.x = file->ReadDouble();
+			(hitCache + i)->pos.y = file->ReadDouble();
+			(hitCache + i)->pos.z = file->ReadDouble();
+			(hitCache + i)->dF = file->ReadDouble();
+			(hitCache + i)->dP = file->ReadDouble();
+			(hitCache + i)->type = file->ReadInt();
+		}
+		else { //Saved file has more hits than we could load
+			for (int i = 0; i < 6; i++)
+				file->ReadDouble();
+		}
 	}
 	file->ReadKeyword("}");
 	// Read facets
@@ -1992,7 +1861,7 @@ void SynradGeometry::SaveSpectrumSYN(FileWriter *file, Dataport *dpHit, int supe
 //Temporary placeholders
 void SynradGeometry::SaveXML_geometry(pugi::xml_node saveDoc, Worker *work, GLProgress *prg, BOOL saveSelected){}
 BOOL SynradGeometry::SaveXML_simustate(pugi::xml_node saveDoc, Worker *work, BYTE *buffer, SHGHITS *gHits, int nbLeakSave, int nbHHitSave,
-	LEAK *pLeak, HIT *pHits, GLProgress *prg, BOOL saveSelected){
+	LEAK *leakCache, HIT *hitCache, GLProgress *prg, BOOL saveSelected){
 	return FALSE;
 }
 void SynradGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg){

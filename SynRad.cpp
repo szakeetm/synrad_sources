@@ -29,6 +29,7 @@ GNU General Public License for more details.
 #include "RecoveryDialog.h"
 #include "Facet.h"
 #include "SynradGeometry.h"
+#include "GLApp\MathTools.h"
  //for Remainder
 #include "direct.h"
 #include <vector>
@@ -82,9 +83,12 @@ SynRad *mApp;
 #define MENU_REGIONS_CLEARALL    903
 #define MENU_REGIONS_REGIONINFO 904
 
-#define MENU_REGIONS_LOADRECENT   910
-#define MENU_REGIONS_LOADTO       930
-#define MENU_REGIONS_REMOVE       950
+#define MENU_REGIONS_LOADRECENT		910
+#define MENU_REGIONS_LOADTO			930
+#define MENU_REGIONS_REMOVE			950
+#define MENU_REGIONS_SHOWHITS		970
+#define MENU_REGIONS_SHOWNONE		990
+#define MENU_REGIONS_SHOWALL		991
 
 #define MENU_TOOLS_SPECTRUMPLOTTER 403
 
@@ -195,10 +199,11 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("Regions")->Add("Load recent", MENU_REGIONS_LOADRECENT); //Will add recent files after loading config
 	menu->GetSubMenu("Regions")->Add("Remove all", MENU_REGIONS_CLEARALL);
 	menu->GetSubMenu("Regions")->Add(NULL); // Separator
-	menu->GetSubMenu("Regions")->Add("Load to");
-	PARloadToMenu = menu->GetSubMenu("Regions")->GetSubMenu("Load to");
-	menu->GetSubMenu("Regions")->Add("Remove");
-	PARremoveMenu = menu->GetSubMenu("Regions")->GetSubMenu("Remove");
+	
+	PARloadToMenu = menu->GetSubMenu("Regions")->Add("Load to");
+	PARremoveMenu = menu->GetSubMenu("Regions")->Add("Remove");
+	menu->GetSubMenu("Regions")->Add(NULL); // Separator
+	ShowHitsMenu = menu->GetSubMenu("Regions")->Add("Show lines, hits");
 	menu->GetSubMenu("Regions")->Add(NULL); // Separator
 	menu->GetSubMenu("Regions")->Add("Region Info ...", MENU_REGIONS_REGIONINFO);
 
@@ -1747,6 +1752,22 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			}
 			else GLMessageBox::Display("No geometry loaded.", "No geometry", GLDLG_OK, GLDLG_ICONERROR);
 			break;
+
+		case MENU_REGIONS_SHOWALL:
+			for (size_t i = 0; i < worker.regions.size(); i++)
+				worker.regions[i].params.showPhotons = TRUE;
+			worker.ChangeSimuParams();
+			for (size_t i = 0; i < worker.regions.size(); i++)
+				ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS+i, worker.regions[i].params.showPhotons);
+			break;
+
+		case MENU_REGIONS_SHOWNONE:
+			for (size_t i = 0; i < worker.regions.size(); i++)
+				worker.regions[i].params.showPhotons = FALSE;
+			worker.ChangeSimuParams();
+			for (size_t i = 0; i < worker.regions.size(); i++)
+				ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS+i, worker.regions[i].params.showPhotons);
+			break;
 		}
 
 		
@@ -1759,18 +1780,26 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		}
 		
 		// Load PAR to... menu
-		if (src->GetId() >= MENU_REGIONS_LOADTO && src->GetId() < MENU_REGIONS_LOADTO + (int)worker.regions.size()) {
+		else if (src->GetId() >= MENU_REGIONS_LOADTO && src->GetId() < MENU_REGIONS_LOADTO + MIN((int)worker.regions.size(),19)) {
 			if (AskToReset()) {
 				if (worker.running) worker.Stop_Public();
 				LoadParam(NULL, src->GetId() - MENU_REGIONS_LOADTO);
 			}
 		}
 		// Remove region menu
-		if (src->GetId() >= MENU_REGIONS_REMOVE && src->GetId() < MENU_REGIONS_REMOVE + (int)worker.regions.size()) {
+		else if (src->GetId() >= MENU_REGIONS_REMOVE && src->GetId() < MENU_REGIONS_REMOVE + MIN((int)worker.regions.size(), 19)) {
 			if (AskToReset()) {
 				if (worker.running) worker.Stop_Public();
 				RemoveRegion(src->GetId() - MENU_REGIONS_REMOVE);
 			}
+		}
+
+		//View hits menu
+		else if (src->GetId() >= MENU_REGIONS_SHOWHITS && src->GetId() < MENU_REGIONS_SHOWHITS + MIN((int)worker.regions.size(), 19)) {
+			size_t index = src->GetId() - MENU_REGIONS_SHOWHITS;
+			worker.regions[index].params.showPhotons = !ShowHitsMenu->GetCheck(MENU_REGIONS_SHOWHITS+index);
+			worker.ChangeSimuParams();
+			ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS+index, worker.regions[index].params.showPhotons);
 		}
 
 		//TEXT --------------------------------------------------------------------
@@ -1958,7 +1987,8 @@ void SynRad::BuildPipe(double ratio, int steps) {
 void SynRad::RebuildPARMenus() {
 	PARloadToMenu->Clear();
 	PARremoveMenu->Clear();
-	for (int i = 0; i < (int)worker.regions.size(); i++){
+	ShowHitsMenu->Clear(); ShowHitsMenu->Add("Show All", MENU_REGIONS_SHOWALL); ShowHitsMenu->Add("Show None", MENU_REGIONS_SHOWNONE); ShowHitsMenu->Add(NULL);
+	for (int i = 0; i < MIN((int)worker.regions.size(),19); i++){
 		std::ostringstream tmp;
 		tmp << "Region " << (i + 1);
 		if (worker.regions[i].fileName.length() > 0) {
@@ -1966,6 +1996,8 @@ void SynRad::RebuildPARMenus() {
 		}
 		PARloadToMenu->Add(tmp.str().c_str(), MENU_REGIONS_LOADTO + i);
 		PARremoveMenu->Add(tmp.str().c_str(), MENU_REGIONS_REMOVE + i);
+		ShowHitsMenu->Add(tmp.str().c_str(), MENU_REGIONS_SHOWHITS + i);
+		ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS+i,worker.regions[i].params.showPhotons);
 	}
 }
 

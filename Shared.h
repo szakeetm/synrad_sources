@@ -27,8 +27,8 @@
 
 #define SPECTRUM_SIZE 100 //number of histogram bins
 #define PROFILE_SIZE  100 // Size of profile
-#define NBHLEAK     2048  // Leak history max length
-#define NBHHIT      2048  // Max. displayed number of lines and Porto (OPO)hits.
+#define LEAKCACHESIZE     2048  // Leak history max length
+#define HITCACHESIZE      2048  // Max. displayed number of lines and Porto (OPO)hits.
 #define MAX_PROCESS 32    // Maximum number of process
 
 typedef struct {
@@ -63,11 +63,15 @@ typedef  struct {
 typedef struct {
 
   SHHITS total;               // Global counts
-  llong  nbLeakTotal;         // Total leaks
-  int    nbLastLeaks;         // Last leaks
-  int    nbHHit;              // Last hits
-  HIT    pHits[NBHHIT];       // Hit history
-  LEAK   pLeak[NBHLEAK];      // Leak history
+  size_t hitCacheSize;              // Number of valid hits in cache
+  size_t lastHitIndex;					//Index of last recorded hit in gHits (turns over when reaches HITCACHESIZE)
+  HIT    hitCache[HITCACHESIZE];       // Hit history
+  
+  size_t  lastLeakIndex;		  //Index of last recorded leak in gHits (turns over when reaches LEAKCACHESIZE)
+  size_t  leakCacheSize;        //Number of valid leaks in the cache
+  size_t  nbLeakTotal;         // Total leaks
+  LEAK   leakCache[LEAKCACHESIZE];      // Leak history
+
   llong  minHit_MC,maxHit_MC;
   double   minHit_flux;              // Minimum on texture
   double   maxHit_flux;              // Maximum on texture

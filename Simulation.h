@@ -100,13 +100,16 @@ typedef struct {
 
 typedef struct {
 
-  SHHITS tmpCount;            // Temporary number of hits (between 2 updates)
-  llong nbLeakTotal;          // Total number of unexpected leak (simulation error)
-  int    nbLastLeak;          // Last leaks
-  int    nbHHit;              // Last hits
-  llong  maxDesorption;       // Maximum number of desorption
-  HIT    pHits[NBHHIT];       // Last hit history
-  LEAK   pLeak[NBHLEAK];      // Leak history
+  SHHITS tmpCount;            // Temporary number of hits (between 2 calls of UpdateMC)
+  llong  desorptionLimit;       // Maximum number of desorption
+
+  int    hitCacheSize;              // Last hits  
+  HIT    hitCache[HITCACHESIZE];       // Last hit history
+
+  size_t    nbLeakSinceUpdate;   // Leaks since last UpdateMC
+  size_t	leakCacheSize;		// Leaks from regions with displayed photons since last UpdateMC (registered in cache)
+  LEAK		leakCache[LEAKCACHESIZE];      // Leak cache since last UpdateMC
+
   //llong  wallHits[BOUNCEMAX]; // 'Wall collision count before absoprtion' density histogram
   llong totalDesorbed;        //total number of generated photons, for process state reporting and simulation end check
 
@@ -124,6 +127,7 @@ typedef struct {
   size_t         nbDistrPoints_BXY;
   int         curStruct;        // Current structure
   int			teleportedFrom;
+  size_t sourceRegionId;
   SUPERSTRUCT str[MAX_STRUCT];
 
   std::vector<Region_mathonly> regions;// Regions
@@ -207,7 +211,7 @@ void PolarToCartesian(FACET *iFacet,double theta,double phi,BOOL reverse,double 
 void CartesianToPolar(FACET *iFacet,double *theta,double *phi);
 void UpdateHits(Dataport *dpHit,int prIdx,DWORD timeout);
 void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout);
-void ResetCounter();
+void ResetTmpCounter();
 struct AABBNODE *BuildAABBTree(FACET **list,int nbFacet,int depth);
 int FindBestCuttingPlane(struct AABBNODE *node,int *left,int *right);
 void ComputeBB(struct AABBNODE *node);

@@ -29,13 +29,10 @@ static const char *fileTrajFilters = "CSV files\0*.csv\tTXT files\0*.txt\0All fi
 static const int   nbTrajFilter = 3;
 BOOL EndsWithParam(const char* s);
 
-RegionInfo::RegionInfo(Worker *w):GLWindow() {
+RegionInfo::RegionInfo(Worker *w) {
 
   int wD = 550;
   int hD = 240;
-  //traj=&(w->regions[0]);
-  exportFrequency=1;
-  calcIntegrals=1;
 
   SetTitle("Region info");
 
@@ -160,7 +157,8 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
   //double dX,dY,dZ;
 
   switch(message) {
-    case MSG_TEXT_UPD:
+  /* 
+  case MSG_TEXT_UPD:
 		if( freqField->GetNumberInt(&exportFrequency) ) {
 			char tmp[256];
 			sprintf(tmp,"%d points will be exported with an interval of %g cm.",
@@ -168,6 +166,7 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
 			freqLabel->SetText(tmp);
 			integrateToggle->SetState(exportFrequency==1);
 		}
+		*/
 	case MSG_BUTTON:
 
     if(src==cancelButton) 

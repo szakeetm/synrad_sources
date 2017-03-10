@@ -582,6 +582,14 @@ BOOL UpdateSimuParams(Dataport *loader) {
 	}
 
 	ReleaseDataport(loader);
+
+	//Reset hit cache
+	sHandle->hitCacheSize = 0;
+	//memset(sHandle->hitCache, 0, sizeof(HIT)*HITCACHESIZE);
+	
+	sHandle->leakCacheSize = 0;
+	//memset(sHandle->leakCache, 0, sizeof(LEAK)*LEAKCACHESIZE); //No need to reset, will gradually overwrite
+
 	return TRUE;
 }
 
@@ -596,7 +604,7 @@ size_t GetHitsSize() {
 		sHandle->spectrumTotalSize + sHandle->totalFacet*sizeof(SHHITS) + sizeof(SHGHITS);
 }
 
-void ResetCounter() {
+void ResetTmpCounter() {
 
 	int i,j;
 	//printf("Resetcounter called.");
@@ -605,8 +613,12 @@ void ResetCounter() {
 	sHandle->tmpCount.powerAbs = 0.0;
 	sHandle->tmpCount.nbAbsorbed = 0;
 	sHandle->tmpCount.nbDesorbed = 0;
+
 	sHandle->distTraveledSinceUpdate = 0.0;
-	sHandle->nbLeakTotal = 0;
+	sHandle->nbLeakSinceUpdate = 0;
+	sHandle->hitCacheSize = 0;
+	sHandle->leakCacheSize = 0;
+	sHandle->totalDesorbed = 0;
 	//memset(sHandle->wallHits,0,BOUNCEMAX * sizeof(llong));
 
 	for(j=0;j<sHandle->nbSuper;j++) {
@@ -637,17 +649,15 @@ void ResetCounter() {
 void ResetSimulation() {
 
 	printf("ResetSimulation called.");
-	sHandle->nbHHit = 0;
-	memset(sHandle->pHits,0,sizeof(HIT)*NBHHIT);
+
 	sHandle->lastHit = NULL;
 /*	sHandle->counter.nbHit = 0;
 	sHandle->counter.fluxAbs = 0.0;
 	sHandle->counter.powerAbs = 0.0;
 	sHandle->counter.nbAbsorbed = 0;
 	sHandle->counter.nbDesorbed = 0;*/
-	sHandle->totalDesorbed=0;
-	sHandle->distTraveledSinceUpdate=0.0;
-	ResetCounter();
+
+	ResetTmpCounter();
 	//if( sHandle->acDensity ) memset(sHandle->acDensity,0,sHandle->nbAC*sizeof(ACFLOAT));
 
 }
@@ -678,24 +688,27 @@ BOOL StartSimulation() {
 // -------------------------------------------------------
 
 void RecordHit(const int &type,const double &dF,const double &dP) {
-
-	sHandle->pHits[sHandle->nbHHit].pos = sHandle->pPos;
-	sHandle->pHits[sHandle->nbHHit].type = type;
-	sHandle->pHits[sHandle->nbHHit].dF=sHandle->dF;
-	sHandle->pHits[sHandle->nbHHit].dP=sHandle->dP;
-	sHandle->nbHHit++;
-	if((sHandle->nbHHit)>=NBHHIT) sHandle->nbHHit = 0;
-	sHandle->pHits[sHandle->nbHHit].type=LASTHIT;
+	if (sHandle->regions[sHandle->sourceRegionId].params.showPhotons) {
+		if (sHandle->hitCacheSize < HITCACHESIZE) {
+			sHandle->hitCache[sHandle->hitCacheSize].pos = sHandle->pPos;
+			sHandle->hitCache[sHandle->hitCacheSize].type = type;
+			sHandle->hitCache[sHandle->hitCacheSize].dF = sHandle->dF;
+			sHandle->hitCache[sHandle->hitCacheSize].dP = sHandle->dP;
+			sHandle->hitCacheSize++;
+		}
+	}
 }
 
 void RecordLeakPos() {
+	// Source region check performed when calling this routine 
 	// Record leak for debugging
-	sHandle->pLeak[sHandle->nbLastLeak].pos = sHandle->pPos;
-	sHandle->pLeak[sHandle->nbLastLeak].dir = sHandle->pDir;
-	sHandle->nbLastLeak++;
-	if((sHandle->nbLastLeak)>=NBHLEAK) sHandle->nbLastLeak = 0;
-	RecordHit(HIT_REF,sHandle->dF,sHandle->dP);
-	RecordHit(LASTHIT,sHandle->dF,sHandle->dP);
+	RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
+	RecordHit(LASTHIT, sHandle->dF, sHandle->dP);
+	if (sHandle->leakCacheSize < LEAKCACHESIZE) {
+		sHandle->leakCache[sHandle->leakCacheSize].pos = sHandle->pPos;
+		sHandle->leakCache[sHandle->leakCacheSize].dir = sHandle->pDir;
+		sHandle->leakCacheSize++;
+	}
 }
 
 // -------------------------------------------------------

@@ -41,19 +41,19 @@ private:
 	void SaveProfileGEO(FileWriter *file, int super = -1, BOOL saveSelected = FALSE);
 public:
 	SynradGeometry();
-	void LoadGEO(FileReader *file, GLProgress *prg, LEAK *pleak, int *nbleakLoad, HIT *pHits, int *nbHHitLoad, int *version);
-	std::vector<std::string> LoadSYN(FileReader *file, GLProgress *prg, LEAK *pleak, int *nbleakLoad, HIT *pHits, int *nbHHitLoad, int *version);
+	void LoadGEO(FileReader *file, GLProgress *prg, int *version);
+	std::vector<std::string> LoadSYN(FileReader *file, GLProgress *prg, LEAK *pleak, size_t *nbleakLoad, HIT *hitCache, size_t *nbHHitLoad, int *version);
 	bool LoadTextures(FileReader *file, GLProgress *prg, Dataport *dpHit, int version);
 	std::vector<std::string> InsertSYN(FileReader *file, GLProgress *prg, BOOL newStr);
 	void SaveTXT(FileWriter *file, Dataport *dhHit, BOOL saveSelected);
 	void ExportTextures(FILE *file, int grouping, int mode, double no_scans, Dataport *dhHit, BOOL saveSelected);
 	void SaveDesorption(FILE *file, Dataport *dhHit, BOOL selectedOnly, int mode, double eta0, double alpha, Distribution2D *distr);
 
-	//void SaveGEO(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL saveSelected,LEAK *pleak,int *nbleakSave,HIT *pHits,int *nbHHitSave,BOOL crashSave=FALSE);
-	void SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit, BOOL saveSelected, LEAK *pleak, int *nbleakSave, HIT *pHits, int *nbHHitSave, BOOL crashSave = FALSE);
+	//void SaveGEO(FileWriter *file,GLProgress *prg,Dataport *dpHit,BOOL saveSelected,LEAK *pleak,int *nbleakSave,HIT *hitCache,int *nbHHitSave,BOOL crashSave=FALSE);
+	void SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit, BOOL saveSelected, LEAK *leakCache, size_t *nbLeakTotal, HIT *hitCache, size_t *nbHitSave, BOOL crashSave = FALSE);
 	void SaveXML_geometry(pugi::xml_node saveDoc, Worker *work, GLProgress *prg, BOOL saveSelected);
 	BOOL SaveXML_simustate(pugi::xml_node saveDoc, Worker *work, BYTE *buffer, SHGHITS *gHits, int nbLeakSave, int nbHHitSave,
-		LEAK *pLeak, HIT *pHits, GLProgress *prg, BOOL saveSelected);
+		LEAK *leakCache, HIT *hitCache, GLProgress *prg, BOOL saveSelected);
 	void LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg);
 	void InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, BOOL newStr);
 	BOOL LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit, Worker *work, GLProgress *progressDlg);
@@ -74,8 +74,8 @@ public:
 
 
 	// Temporary variable (used by LoadXXX)
-	double tFlux;
-	double tPower;
+	double loaded_totalFlux;
+	double loaded_totalPower;
 	double loaded_no_scans;
 
 };

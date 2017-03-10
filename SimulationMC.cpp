@@ -164,16 +164,19 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 	//for(i=0;i<BOUNCEMAX;i++) gHits->wallHits[i] += sHandle->wallHits[i];
 
 	// Leak
-	nb = gHits->nbLastLeaks;
-	for (i = 0; i < sHandle->nbLastLeak && i < NBHLEAK; i++)
-		gHits->pLeak[(i + nb) % NBHLEAK] = sHandle->pLeak[i];
-	gHits->nbLeakTotal += sHandle->nbLeakTotal;
-	gHits->nbLastLeaks += sHandle->nbLastLeak;
+	for (size_t leakIndex = 0; leakIndex < sHandle->leakCacheSize; leakIndex++)
+		gHits->leakCache[(leakIndex + gHits->lastLeakIndex) % LEAKCACHESIZE] = sHandle->leakCache[leakIndex];
+	gHits->nbLeakTotal += sHandle->nbLeakSinceUpdate;
+	gHits->lastLeakIndex = (gHits->lastLeakIndex + sHandle->leakCacheSize) % LEAKCACHESIZE;
+	gHits->leakCacheSize = MIN(LEAKCACHESIZE, gHits->leakCacheSize + sHandle->leakCacheSize);
 
 	// HHit (Only prIdx 0)
 	if (prIdx == 0) {
-		gHits->nbHHit = sHandle->nbHHit;
-		memcpy(gHits->pHits, sHandle->pHits, NBHHIT*sizeof(HIT));
+		for (size_t hitIndex = 0; hitIndex < sHandle->hitCacheSize; hitIndex++)
+			gHits->hitCache[(hitIndex + gHits->lastHitIndex) % HITCACHESIZE] = sHandle->hitCache[hitIndex];
+		
+		gHits->lastHitIndex = (gHits->lastHitIndex + sHandle->hitCacheSize) % HITCACHESIZE;
+		gHits->hitCacheSize = MIN(HITCACHESIZE, gHits->hitCacheSize + sHandle->hitCacheSize);
 	}
 
 	// Facets
@@ -287,7 +290,7 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 	ReleaseDataport(dpHit);
 
 	//printf("\nResetCounter called from UpdateMCHits");
-	ResetCounter();
+	ResetTmpCounter();
 
 #ifdef _DEBUG
 	t1 = GetTick();
@@ -500,10 +503,12 @@ BOOL SimulationMCStep(int nbStep) {
 			}
 		}
 		else { // Leak (simulation error)
-			RecordLeakPos();
-			sHandle->nbLeakTotal++;
+			sHandle->nbLeakSinceUpdate++;
+			if (sHandle->regions[sHandle->sourceRegionId].params.showPhotons){
+				RecordLeakPos();
+			}
 			if (!StartFromSource())
-				// maxDesorption reached
+				// desorptionLimit reached
 				return FALSE;
 		} //end intersect or leak
 	} //end step
@@ -612,8 +617,8 @@ BOOL DoOldRegularReflection(FACET* collidedFacet, double stickingProbability, do
 BOOL StartFromSource() {
 
 	// Check end of simulation
-	if (sHandle->maxDesorption > 0) {
-		if (sHandle->totalDesorbed >= sHandle->maxDesorption) {
+	if (sHandle->desorptionLimit > 0) {
+		if (sHandle->totalDesorbed >= sHandle->desorptionLimit) {
 			sHandle->lastHit = NULL;
 			return FALSE;
 		}
@@ -665,6 +670,8 @@ BOOL StartFromSource() {
 	sHandle->pPos.x = photon.start_pos.x;
 	sHandle->pPos.y = photon.start_pos.y;
 	sHandle->pPos.z = photon.start_pos.z;
+
+	sHandle->sourceRegionId = regionId;
 
 	RecordHit(HIT_DES, sHandle->dF, sHandle->dP);
 

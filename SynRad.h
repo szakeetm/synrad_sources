@@ -100,6 +100,7 @@ public:
 
 	GLMenu        *PARloadToMenu;
 	GLMenu        *PARremoveMenu;
+	GLMenu		  *ShowHitsMenu;
 
 	//Materials (photon reflection)
 	vector<string> materialPaths;

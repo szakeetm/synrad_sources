@@ -118,7 +118,7 @@ char *GetSimuStatus() {
 
   static char ret[128];
   llong count = sHandle->totalDesorbed;
-  llong max   = sHandle->maxDesorption;
+  llong max   = sHandle->desorptionLimit;
 
       if( max!=0 ) {
         double percent = (double)(count)*100.0 / (double)(max);
@@ -255,7 +255,7 @@ int main(int argc,char* argv[])
         printf("COMMAND: LOAD (%d,%I64d)\n",prParam,prParam2);
         Load();
         if( sHandle->loadOK ) {
-          sHandle->maxDesorption = prParam2; // 0 for endless
+          sHandle->desorptionLimit = prParam2; // 0 for endless
           SetReady();
         }
         break;

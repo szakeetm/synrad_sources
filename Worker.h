@@ -83,10 +83,8 @@ public:
   void KillAll();// Kill all sub processes
   void Update(float appTime);// Get hit counts for sub process
   void SendHits();// Send total and facet hit counts to subprocesses
-  void GetLeak(LEAK *buffer,int *nb);  // Get Leak
-  void SetLeak(LEAK *buffer,int *nb,SHGHITS *gHits);// Set Leak
-  void GetHHit(HIT *buffer,int *nb); // Get HHit
-  void SetHHit(HIT *buffer,int *nb,SHGHITS *gHits);  // Set HHit
+  void SetLeakCache(LEAK *buffer,size_t *nb,Dataport *dpHit);// Set Leak
+  void SetHitCache(HIT *buffer,size_t *nb, Dataport *dpHit);  // Set HHit
   void GetProcStatus(int *states,char **status);// Get process status
   BYTE *GetHits(); // Access to dataport (HIT)
   void  ReleaseHits();
@@ -98,22 +96,20 @@ public:
 
 
   // Global simulation parameters
-  llong  nbAbsorption;      // Total number of molecules absorbed (64 bit integer)
-  llong  nbDesorption;      // Total number of molecules generated (64 bit integer)
-  llong  nbHit;             // Total number of hit (64 bit integer)
+  size_t  nbAbsorption;      // Total number of molecules absorbed (64 bit integer)
+  size_t  nbDesorption;      // Total number of molecules generated (64 bit integer)
+  size_t  nbHit;             // Total number of hit (64 bit integer)
+  size_t  nbLeakTotal;            // Total number of leak
   double totalFlux;         // Total desorbed Flux
   double totalPower;        // Total desorbed power
-  llong  maxDesorption;     // Number of desoprtion before halting
+  size_t  desorptionLimit;     // Number of desoprtion before halting
   double distTraveledTotal; // Total distance traveled by particles (for mean free path calc.)
-  llong  nbLeakTotal;            // Total number of leak
-  int    nbLastLeaks;
-  int    nbHHit;            // Total number of hhit
   BOOL   running;           // Started/Stopped state
   float  startTime;         // Start time
   float  stopTime;          // Stop time
   float  simuTime;          // Total simulation time
   int    mode;              // Simulation mode
-  int    nbTrajPoints;       // number of all points in trajectory
+  size_t    nbTrajPoints;       // number of all points in trajectory
   double no_scans;           // = nbDesorption/nbTrajPoints. Stored separately for saving/loading
   int    generation_mode;   //fluxwise or powerwise
   BOOL   lowFluxMode;
@@ -129,6 +125,12 @@ public:
   BOOL abortRequested;
 
   BOOL calcAC; //Not used in Synrad, kept for ResetStatsAndHits function shared with Molflow
+
+  // Caches
+  HIT  hitCache[HITCACHESIZE];
+  LEAK leakCache[LEAKCACHESIZE];
+  size_t    hitCacheSize;            // Total number of hhit
+  size_t leakCacheSize;
 
 private:
 
@@ -148,10 +150,6 @@ private:
   char      loadDpName[32];
   char      hitsDpName[32];
   char      materialsDpName[32];
-
-  // Caches
-  HIT  hhitCache[NBHHIT];
-  LEAK leakCache[NBHHIT];
 
   // Methods
   BOOL ExecuteAndWait(int command, int waitState, int param=0);
