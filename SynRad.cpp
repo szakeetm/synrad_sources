@@ -1959,7 +1959,10 @@ void SynRad::BuildPipe(double ratio, int steps) {
 		viewer[i]->SetWorker(&worker);
 	startSimu->SetEnabled(TRUE);
 	ClearFacetParams();
-	UpdatePlotters();
+	//UpdatePlotters();
+	if (profilePlotter) profilePlotter->Reset();
+	if (spectrumPlotter) spectrumPlotter->Reset();
+
 	if (textureSettings) textureSettings->Update();
 	if (facetDetails) facetDetails->Update();
 	if (facetCoordinates) facetCoordinates->UpdateFromSelection();

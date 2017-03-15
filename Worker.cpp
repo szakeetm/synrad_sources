@@ -341,7 +341,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 				geom->InsertTXT(f, progressDlg, newStr);
 				Reload();
 			}
-
+			SAFE_DELETE(f);
 		} catch(Error &e) {
 			if (!insert) geom->Clear();
 			SAFE_DELETE(f);
@@ -388,6 +388,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 					geom->InsertSTL(f, progressDlg, scaleFactor, newStr);
 					Reload();
 				}
+				SAFE_DELETE(f);
 			}
 		} catch(Error &e) {
 			if (!insert) geom->Clear();
@@ -405,9 +406,9 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			f = new FileReader(fileName);
 			progressDlg->SetVisible(TRUE);
 			geom->LoadSTR(f,progressDlg);
-
+			SAFE_DELETE(f);
 			strcpy(fullFileName,fileName);
-		} 
+		}
 		catch(Error &e) {
 			if (!insert) geom->Clear();
 			SAFE_DELETE(f);
@@ -493,9 +494,10 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 				SetLeakCache(loaded_leakCache, &loaded_nbLeak, dpHit);
 				SetHitCache(hitCache, &hitCacheSize, dpHit);
 				progressDlg->SetMessage("Loading texture values...");
-				LoadTexturesSYN((ext=="syn7z") ? ((std::string)CWD+"\\tmp\\Geometry.syn").c_str() : fileName, version);
+				LoadTexturesSYN(f, version);
 				strcpy(fullFileName, fileName);
 			}
+			SAFE_DELETE(f);
 		} catch(Error &e) {
 			geom->Clear();
 			SAFE_DELETE(f);
@@ -504,7 +506,6 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			SAFE_DELETE(progressDlg);
 			throw e;
 		}
-		SAFE_DELETE(f);
 	} else if(ext=="geo" || ext=="geo7z") {
 		std::string toOpen;
 		int version;
@@ -515,16 +516,8 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 				progressDlg->SetMessage("Decompressing file...");
 				char tmp[1024];
 				sprintf(tmp,"cmd /C \"pushd \"%s\"&&7za.exe x -t7z -aoa \"%s\" -otmp&&popd\"",CWD,fileName);
-				//execCMD(tmp);
 				system(tmp);
-
-				/*filebegin= strrchr(fileName,'\\');
-				if (filebegin) filebegin++;
-				else filebegin=fileName;
-				memcpy(fileOnly,filebegin,sizeof(char)*(strlen(filebegin)-2));
-				fileOnly[strlen(filebegin)-2]='\0';
-				sprintf(tmp2,"%s\\tmp\\Geometry.geo",CWD);*/
-				toOpen = (std::string)CWD + "\\tmp\\Geometry.geo"; //newer geo7z format: contain Geometry.geo
+				toOpen = (std::string)CWD + "\\tmp\\Geometry.geo"; //newer geo7z format: contains Geometry.geo
 				if (!FileUtils::Exist(toOpen)) toOpen = ((std::string)fileName).substr(0, strlen(fileName) - 2); //Inside the zip, try original filename with extension changed from geo7z to geo
 				f = new FileReader(toOpen);
 			}
@@ -535,11 +528,6 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			progressDlg->SetMessage("Resetting worker...");
 			ResetWorkerStats();
 			if (!insert) {
-				//leaks
-				LEAK leakCache[LEAKCACHESIZE];
-				//hits
-				HIT hitCache[HITCACHESIZE];
-
 				geom->LoadGEO(f, progressDlg, &version);
 				SAFE_DELETE(f);
 				desorptionLimit = 0;
@@ -550,9 +538,9 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			else { //insert
 				mApp->changedSinceSave = TRUE;
 				geom->InsertGEO(f,progressDlg,newStr);
+				SAFE_DELETE(f);
 				Reload();
 			}
-			
 		} catch(Error &e) {
 			if (!insert) geom->Clear();
 			SAFE_DELETE(f);
@@ -561,7 +549,6 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			SAFE_DELETE(progressDlg);
 			throw e;
 		}
-
 	}
 	else if (ext == "xml" || ext == "zip") { //XML file, optionally in ZIP container
 		xml_document loadXML;
@@ -628,7 +615,6 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			SAFE_DELETE(progressDlg);
 			throw e;
 		}
-
 	}
 	else if (ext == "ase") {
 		try {
@@ -636,7 +622,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			f = new FileReader(fileName);
 			progressDlg->SetVisible(TRUE);
 			geom->LoadASE(f,progressDlg);
-			//RealReload();
+			SAFE_DELETE(f);
 			strcpy(fullFileName,fileName);
 
 		} catch(Error &e) {
@@ -648,26 +634,18 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 		}
 		
 	} else {
-
-		SAFE_DELETE(f);
 		progressDlg->SetVisible(FALSE);
 		SAFE_DELETE(progressDlg);
 		throw Error("LoadGeometry(): Invalid file extension [Only txt,geo,geo7z,ase,stl or str]");
 	}
-	
 	progressDlg->SetVisible(FALSE);
 	SAFE_DELETE(progressDlg);
-	SAFE_DELETE(f);
 }
 
-void Worker::LoadTexturesSYN(const char *fileName,int version) {
-
-	if (FileUtils::GetExtension(fileName) == "syn") {
+void Worker::LoadTexturesSYN(FileReader* f,int version) {
 		GLProgress *progressDlg = new GLProgress("Loading texture values", "Please wait");
 		progressDlg->SetProgress(0.0);
-		FileReader *f = NULL;
 		try {
-			f = new FileReader(fileName);
 			progressDlg->SetVisible(TRUE);
 			geom->LoadTextures(f, progressDlg, dpHit, version);
 			RebuildTextures();
@@ -679,8 +657,6 @@ void Worker::LoadTexturesSYN(const char *fileName,int version) {
 		}
 		progressDlg->SetVisible(FALSE);
 		SAFE_DELETE(progressDlg);
-		SAFE_DELETE(f);
-	}
 }
 
 void Worker::InnerStop(float appTime) {
@@ -736,117 +712,6 @@ void Worker::StartStop(float appTime,int mode) {
 		}
 	}
 
-}
-
-// -------------------------------------------------------------
-
-void Worker::Update(float appTime) {
-	if (needsReload) RealReload();
-	
-		// Check calculation ending
-		BOOL done = TRUE;
-		BOOL error = TRUE;
-		if( dpControl ) {
-			if( AccessDataport(dpControl) ) {
-				int i = 0;
-				SHCONTROL *master =(SHCONTROL *)dpControl->buff;
-				for(int i=0;i<nbProcess && done;i++) {
-					done = done && (master->states[i]==PROCESS_DONE);
-					error = error && (master->states[i]==PROCESS_ERROR);
-
-				}
-				ReleaseDataport(dpControl);
-			}
-		}
-
-		// End of simulation reached (Stop GUI)
-		if( (error || done) && running && appTime!=0.0f ) {
-			InnerStop(appTime);
-			if (error) ThrowSubProcError();
-		}
-
-		// Retrieve hit count recording from the shared memory
-		if( dpHit ) {
-
-			if( AccessDataport(dpHit) ) {
-				BYTE *buffer = (BYTE *)dpHit->buff;
-
-				mApp->changedSinceSave = TRUE;
-				// Globals
-				SHGHITS *gHits = (SHGHITS *)buffer;
-
-				// Global hits and leaks
-				nbHit = gHits->total.nbHit;
-				nbAbsorption = gHits->total.nbAbsorbed;
-				nbDesorption = gHits->total.nbDesorbed;
-				totalFlux = gHits->total.fluxAbs;
-				totalPower = gHits->total.powerAbs;
-				distTraveledTotal = gHits->distTraveledTotal;
-
-				if (nbDesorption && nbTrajPoints) {
-					no_scans = (double)nbDesorption / (double)nbTrajPoints;
-				}
-				else {
-					no_scans = 1.0;
-				}
-
-				nbLeakTotal = gHits->nbLeakTotal;
-				hitCacheSize = gHits->hitCacheSize;
-				memcpy(hitCache,gHits->hitCache,sizeof(HIT)*hitCacheSize);
-				leakCacheSize = gHits->leakCacheSize;
-				memcpy(leakCache,gHits->leakCache,sizeof(LEAK)*leakCacheSize); //will display only first leakCacheSize leaks
-
-				// Facets
-				int nbFacet = geom->GetNbFacet();
-				for(int i=0;i<nbFacet;i++) {    
-					Facet *f = geom->GetFacet(i);
-					memcpy(&(f->counterCache),buffer+f->sh.hitOffset,sizeof(SHHITS));
-				}
-				try {
-					if (mApp->needsTexture || mApp->needsDirection) geom->BuildFacetTextures(buffer, mApp->needsTexture, mApp->needsDirection);
-				}
-				catch (Error &e) {
-					GLMessageBox::Display((char *)e.GetMsg(), "Error building texture", GLDLG_OK, GLDLG_ICONERROR);
-					ReleaseDataport(dpHit);
-					return;
-				}
-				ReleaseDataport(dpHit);
-			}
-		}
-}
-
-// -------------------------------------------------------------
-
-void Worker::SendHits() {
-	//if (!needsReload) {
-	if(dpHit) {
-		if( AccessDataport(dpHit) ) {
-
-			// Store initial hit counts in the shared memory
-			BYTE *pBuff = (BYTE *)dpHit->buff;
-			memset(pBuff,0,geom->GetHitsSize());
-
-			SHGHITS *gHits = (SHGHITS *)pBuff;
-			gHits->total.nbHit = nbHit;
-			gHits->nbLeakTotal = nbLeakTotal;
-			gHits->total.nbDesorbed = nbDesorption;
-			gHits->total.nbAbsorbed = nbAbsorption;
-
-			gHits->total.fluxAbs = totalFlux;
-			gHits->total.powerAbs = totalPower;
-			gHits->distTraveledTotal = distTraveledTotal;
-
-			int nbFacet = geom->GetNbFacet();
-			for(int i=0;i<nbFacet;i++) {
-				Facet *f = geom->GetFacet(i);
-				memcpy(pBuff+f->sh.hitOffset,&(f->counterCache),sizeof(SHHITS));
-			}
-			ReleaseDataport(dpHit);
-		} else {
-			throw Error("Failed to initialise 'hits' dataport");
-		}
-
-	}
 }
 
 void Worker::RealReload() { //Sharing geometry with workers
@@ -1176,4 +1041,37 @@ BOOL EndsWithPar(const char* s)
   }
 
   return ret;
+}
+
+void Worker::SendHits() {
+	//if (!needsReload) {
+	if (dpHit) {
+		if (AccessDataport(dpHit)) {
+
+			// Store initial hit counts in the shared memory
+			BYTE *pBuff = (BYTE *)dpHit->buff;
+			//memset(pBuff, 0, geom->GetHitsSize());
+
+			SHGHITS *gHits = (SHGHITS *)pBuff;
+
+			gHits->total.nbHit = nbHit;
+			gHits->nbLeakTotal = nbLeakTotal;
+			gHits->total.nbDesorbed = nbDesorption;
+			gHits->total.nbAbsorbed = nbAbsorption;
+			gHits->distTraveledTotal = distTraveledTotal;
+			gHits->total.fluxAbs = totalFlux;
+			gHits->total.powerAbs = totalPower;
+
+			int nbFacet = geom->GetNbFacet();
+			for (int i = 0; i<nbFacet; i++) {
+				Facet *f = geom->GetFacet(i);
+				memcpy(pBuff + f->sh.hitOffset, &(f->counterCache), sizeof(SHHITS));
+			}
+			ReleaseDataport(dpHit);
+		}
+		else {
+			throw Error("Failed to initialise 'hits' dataport");
+		}
+
+	}
 }

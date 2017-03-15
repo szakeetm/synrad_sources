@@ -51,7 +51,7 @@ public:
   void AddMaterial(std::string *fileName);
   void LoadGeometry(char *fileName, BOOL insert=FALSE, BOOL newStr=FALSE);// Loads or inserts a geometry (throws Error)
   //void InsertGeometry(BOOL newStr,char *fileName); // Inserts a new geometry (throws Error)
-  void LoadTexturesSYN(const char *fileName,int version);  // Load a textures(throws Error)
+  void LoadTexturesSYN(FileReader* f,int version);  // Load a textures(throws Error)
   void RebuildTextures();
   void ImportCSV(FileReader *file, std::vector<std::vector<double>> &table);
   

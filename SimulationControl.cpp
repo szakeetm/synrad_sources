@@ -604,25 +604,17 @@ size_t GetHitsSize() {
 		sHandle->spectrumTotalSize + sHandle->totalFacet*sizeof(SHHITS) + sizeof(SHGHITS);
 }
 
-void ResetTmpCounter() {
+void ResetTmpCounters() {
 
-	int i,j;
-	//printf("Resetcounter called.");
-	sHandle->tmpCount.nbHit = 0;
-	sHandle->tmpCount.fluxAbs = 0.0;
-	sHandle->tmpCount.powerAbs = 0.0;
-	sHandle->tmpCount.nbAbsorbed = 0;
-	sHandle->tmpCount.nbDesorbed = 0;
+	memset(&sHandle->tmpCount, 0, sizeof(SHHITS));
 
 	sHandle->distTraveledSinceUpdate = 0.0;
 	sHandle->nbLeakSinceUpdate = 0;
 	sHandle->hitCacheSize = 0;
 	sHandle->leakCacheSize = 0;
-	sHandle->totalDesorbed = 0;
-	//memset(sHandle->wallHits,0,BOUNCEMAX * sizeof(llong));
 
-	for(j=0;j<sHandle->nbSuper;j++) {
-		for(i=0;i<sHandle->str[j].nbFacet;i++) {
+	for(int j=0;j<sHandle->nbSuper;j++) {
+		for(int i=0;i<sHandle->str[j].nbFacet;i++) {
 			FACET *f = sHandle->str[j].facets[i];
 			f->counter.fluxAbs=0.0;
 			f->counter.powerAbs=0.0;
@@ -648,17 +640,9 @@ void ResetTmpCounter() {
 
 void ResetSimulation() {
 
-	printf("ResetSimulation called.");
-
 	sHandle->lastHit = NULL;
-/*	sHandle->counter.nbHit = 0;
-	sHandle->counter.fluxAbs = 0.0;
-	sHandle->counter.powerAbs = 0.0;
-	sHandle->counter.nbAbsorbed = 0;
-	sHandle->counter.nbDesorbed = 0;*/
-
-	ResetTmpCounter();
-	//if( sHandle->acDensity ) memset(sHandle->acDensity,0,sHandle->nbAC*sizeof(ACFLOAT));
+	sHandle->totalDesorbed = 0;
+	ResetTmpCounters();
 
 }
 

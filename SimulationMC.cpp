@@ -290,7 +290,7 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 	ReleaseDataport(dpHit);
 
 	//printf("\nResetCounter called from UpdateMCHits");
-	ResetTmpCounter();
+	ResetTmpCounters();
 
 #ifdef _DEBUG
 	t1 = GetTick();

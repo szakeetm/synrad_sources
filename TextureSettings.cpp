@@ -127,7 +127,7 @@ TextureSettings::TextureSettings():GLWindow() {
   modeCombo->SetValueAt(1,"Flux (ph/sec/cm\262");
   modeCombo->SetValueAt(2,"Power (W/cm\262");
   modeCombo->SetBounds(10,180,100,25);
-  modeCombo->SetSelectedIndex(geom->textureMode);
+  modeCombo->SetSelectedIndex(1);
   Add(modeCombo);
 
 
@@ -170,14 +170,27 @@ void TextureSettings::Update() {
   if(!IsVisible() || IsIconic()) return;  
 
   char tmp[128];
+  //Manual minimum label
+  if (geom->textureMode == TEXTURE_MODE_MCHITS) sprintf(tmp, "%.3E", (double)geom->texMin_MC);
+  else if (geom->textureMode == TEXTURE_MODE_FLUX) sprintf(tmp, "%.3E", geom->texMin_flux);
+  else if (geom->textureMode == TEXTURE_MODE_POWER) sprintf(tmp, "%.3E", geom->texMin_power);
+  texMinText->SetText(tmp);
+  //Manual maximum label
+  if (geom->textureMode == TEXTURE_MODE_MCHITS) sprintf(tmp, "%.3E", (double)geom->texMax_MC);
+  else if (geom->textureMode == TEXTURE_MODE_FLUX) sprintf(tmp, "%.3E", geom->texMax_flux);
+  else if (geom->textureMode == TEXTURE_MODE_POWER) sprintf(tmp, "%.3E", geom->texMax_power);
+  texMaxText->SetText(tmp);
+  //Autoscale minimum label
   if (geom->textureMode==TEXTURE_MODE_MCHITS) sprintf(tmp,"%.3E",(double)geom->texCMin_MC);
   else if (geom->textureMode==TEXTURE_MODE_FLUX) sprintf(tmp,"%.3E",geom->texCMin_flux);
   else if (geom->textureMode==TEXTURE_MODE_POWER) sprintf(tmp,"%.3E",geom->texCMin_power);
   texCMinText->SetText(tmp);
+  //Autoscale maximum label
    if (geom->textureMode==TEXTURE_MODE_MCHITS) sprintf(tmp,"%.3E",(double)geom->texCMax_MC);
   else if (geom->textureMode==TEXTURE_MODE_FLUX) sprintf(tmp,"%.3E",geom->texCMax_flux);
   else if (geom->textureMode==TEXTURE_MODE_POWER) sprintf(tmp,"%.3E",geom->texCMax_power);
   texCMaxText->SetText(tmp);
+
   texAutoScale->SetState(geom->texAutoScale);
   logBtn->SetState(geom->texLogScale);
   gradient->SetScale(geom->texLogScale?LOG_SCALE:LINEAR_SCALE);
@@ -192,6 +205,7 @@ void TextureSettings::Update() {
   }
   colormapBtn->SetState(viewers[0]->showColormap);
   gradient->SetType( viewers[0]->showColormap?GRADIENT_COLOR:GRADIENT_BW );
+  modeCombo->SetSelectedIndex(geom->textureMode);
   UpdateSize();
 
 }
@@ -207,16 +221,6 @@ void TextureSettings::Display(Worker *w,GeometryViewer **v) {
 	  GLMessageBox::Display("No geometry loaded.","No geometry",GLDLG_OK,GLDLG_ICONERROR);
 	  return;
   }
-  char tmp[128];
-    if (geom->textureMode==TEXTURE_MODE_MCHITS) sprintf(tmp,"%.3E",(double)geom->texMin_MC);
-  else if (geom->textureMode==TEXTURE_MODE_FLUX) sprintf(tmp,"%.3E",geom->texMin_flux);
-  else if (geom->textureMode==TEXTURE_MODE_POWER) sprintf(tmp,"%.3E",geom->texMin_power);
-  texMinText->SetText(tmp);
-  if (geom->textureMode==TEXTURE_MODE_MCHITS) sprintf(tmp,"%.3E",(double)geom->texMax_MC);
-  else if (geom->textureMode==TEXTURE_MODE_FLUX) sprintf(tmp,"%.3E",geom->texMax_flux);
-  else if (geom->textureMode==TEXTURE_MODE_POWER) sprintf(tmp,"%.3E",geom->texMax_power);
-  texMaxText->SetText(tmp);
-
   SetVisible(TRUE);
   Update();
 

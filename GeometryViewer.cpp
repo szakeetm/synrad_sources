@@ -60,7 +60,7 @@ void GeometryViewer::SetBounds(int x, int y, int width, int height) {
 void GeometryViewer::DrawLinesAndHits() {
 
 	// Lines
-	if (showLine) {
+	if (showLine && mApp->worker.hitCacheSize) {
 
 		glDisable(GL_TEXTURE_2D);
 		glDisable(GL_LIGHTING);
@@ -77,7 +77,7 @@ void GeometryViewer::DrawLinesAndHits() {
 				if (work->generation_mode == SYNGEN_MODE_FLUXWISE) {
 					logVal = log10(mApp->worker.hitCache[count].dP);
 				}
-				else {
+				else { //Powerwise
 					logVal = log10(mApp->worker.hitCache[count].dF);
 				}
 				if (logVal > logOpacityMax) logOpacityMax = logVal;
@@ -186,6 +186,7 @@ void GeometryViewer::DrawLinesAndHits() {
 				}
 			}
 			if (count < MIN(dispNumHits, mApp->worker.hitCacheSize) && mApp->worker.hitCache[count].type != 0) {
+				//Absorption
 				glVertex3d(mApp->worker.hitCache[count].pos.x, mApp->worker.hitCache[count].pos.y, mApp->worker.hitCache[count].pos.z);
 				count++;
 			}
@@ -195,11 +196,10 @@ void GeometryViewer::DrawLinesAndHits() {
 				glDisable(GL_BLEND);
 			}
 		}
-
 	}
 
 	// Hit
-	if (showHit) {
+	if (showHit && mApp->worker.hitCacheSize) {
 
 		glDisable(GL_TEXTURE_2D);
 		glDisable(GL_LIGHTING);
