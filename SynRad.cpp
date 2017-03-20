@@ -51,7 +51,7 @@ char *cName[] = { "#", "Hits", "Flux", "Power", "Abs" };
 #ifdef _DEBUG
 std::string appName = "SynRad+ development version (Compiled " __DATE__ " " __TIME__ ") DEBUG MODE";
 #else
-std::string appName = "Synrad+ 1.4.6 (" __DATE__ ")";
+std::string appName = "Synrad+ 1.4.7 (" __DATE__ ")";
 #endif
 
 std::vector<string> formulaPrefixes = { "A","D","H",","};
