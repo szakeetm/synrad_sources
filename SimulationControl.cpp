@@ -177,6 +177,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	t0 = GetTick();
 
 	sHandle->loadOK = FALSE;
+	SetState(PROCESS_STARTING, "Clearing previous simulation");
 	try {
 		ClearSimulation();
 	}
@@ -184,11 +185,15 @@ BOOL LoadSimulation(Dataport *loader) {
 		SetErrorSub("Error clearing geometry");
 		return FALSE;
 	}
+	/* //Mutex not necessary: by the time the COMMAND_LOAD is issued the interface releases the handle, concurrent reading is safe and it's only destroyed by the interface when all processes are ready loading
+	//Result: faster, parallel loading
 	// Connect the dataport
+	SetState(PROCESS_STARTING, "Waiting for 'loader' dataport access...");
 	if( !AccessDataportTimed(loader,40000) ) {
 		SetErrorSub("Failed to connect to DP");
 		return FALSE;
 	}
+	*/
 
 	bufferStart = (BYTE *)loader->buff;
 	buffer = bufferStart;
@@ -526,7 +531,7 @@ BOOL LoadSimulation(Dataport *loader) {
 
 	}
 
-	ReleaseDataport(loader);
+	//ReleaseDataport(loader); //Commented out as AccessDataport removed
 
 	// Build all AABBTrees
 	for(i=0;i<sHandle->nbSuper;i++)
@@ -605,6 +610,7 @@ size_t GetHitsSize() {
 }
 
 void ResetTmpCounters() {
+	SetState(NULL, "Resetting local cache...", FALSE, TRUE);
 
 	memset(&sHandle->tmpCount, 0, sizeof(SHHITS));
 
@@ -639,7 +645,6 @@ void ResetTmpCounters() {
 }
 
 void ResetSimulation() {
-
 	sHandle->lastHit = NULL;
 	sHandle->totalDesorbed = 0;
 	ResetTmpCounters();

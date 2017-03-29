@@ -208,12 +208,14 @@ void GlobalSettings::Display(Worker *w) {
 
 // ----------------------------------------------------------------
 
-void GlobalSettings::SMPUpdate(float appTime) {
+void GlobalSettings::SMPUpdate() {
+	int time = SDL_GetTicks();
 
 	if (!IsVisible() || IsIconic()) return;
 	int nb = worker->GetProcNumber();
+	if (processList->GetNbRow() != (nb + 1)) processList->SetSize(5, nb + 1, TRUE);
 
-	//if( forceUpdate || appTime-lastUpdate>1.0 && nb>0 ) {
+	if (time - lastUpdate>333) {
 
 	char tmp[512];
 	PROCESS_INFO pInfo;
@@ -281,8 +283,8 @@ void GlobalSettings::SMPUpdate(float appTime) {
 		}
 	}
 
-	//lastUpdate = appTime;
-	//}
+	lastUpdate = SDL_GetTicks();
+	}
 
 }
 // ----------------------------------------------------------------

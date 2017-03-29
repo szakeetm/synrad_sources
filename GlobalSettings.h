@@ -32,7 +32,7 @@ public:
 
   // Construction
   GlobalSettings();
-  void SMPUpdate(float appTime);
+  void SMPUpdate();
 
   // Implementation
   void ProcessMessage(GLComponent *src,int message);

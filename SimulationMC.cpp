@@ -134,7 +134,9 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 	double t0, t1;
 	t0 = GetTick();
 #endif
+	SetState(NULL, "Waiting for 'hits' dataport access...", FALSE, TRUE);
 	sHandle->lastUpdateOK = AccessDataportTimed(dpHit, timeout);
+	SetState(NULL, "Updating MC hits...", FALSE, TRUE);
 	if (!sHandle->lastUpdateOK) return;
 
 	buffer = (BYTE*)dpHit->buff;
@@ -288,9 +290,9 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 	if (gHits->maxHit_power == 0.0) gHits->maxHit_power = maxHitsOld_power;
 
 	ReleaseDataport(dpHit);
-
-	//printf("\nResetCounter called from UpdateMCHits");
 	ResetTmpCounters();
+	extern char* GetSimuStatus();
+	SetState(NULL, GetSimuStatus(), FALSE, TRUE);
 
 #ifdef _DEBUG
 	t1 = GetTick();

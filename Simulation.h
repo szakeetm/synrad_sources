@@ -179,6 +179,8 @@ void RecordHitOnTexture(FACET *f,double dF,double dP);
 void RecordDirectionVector(FACET *f);
 void InitSimulation();
 void ClearSimulation();
+void SetState(int state, const char *status, BOOL changeState = TRUE, BOOL changeStatus = TRUE);
+void SetErrorSub(const char *msg);
 BOOL LoadSimulation(Dataport *loader);
 BOOL UpdateSimuParams(Dataport *loader);
 BOOL StartSimulation();

@@ -2058,8 +2058,18 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 		facets[idx] = new Facet(nbIndex);
 		facets[idx]->LoadXML(facetNode, sh.nbVertex + nbNewVertex, isSynradFile, sh.nbVertex);
 		facets[idx]->selected = TRUE;
-		facets[idx]->sh.superIdx += structId; //offset structure
-		if (facets[idx]->sh.superDest>0) facets[idx]->sh.superDest += structId;
+
+
+		if (newStr) {
+			facets[idx]->sh.superIdx += sh.nbSuper; //offset structure
+			if (facets[idx]->sh.superDest>0) facets[idx]->sh.superDest += sh.nbSuper;
+		}
+		else {
+
+			facets[idx]->sh.superIdx += structId; //offset structure
+			if (facets[idx]->sh.superDest>0) facets[idx]->sh.superDest += structId;
+		}
+		
 		if (isSynradFile) {
 			//Nothing yet...
 		}
