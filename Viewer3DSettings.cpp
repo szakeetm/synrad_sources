@@ -254,7 +254,7 @@ void Viewer3DSettings::ProcessMessage(GLComponent *src,int message) {
         GLMessageBox::Display("Invalid number of displayed trajectory points.\nMust be between 10 and 10000.","Error",GLDLG_OK,GLDLG_ICONERROR);
         return;
       }
-	  if ((!hideLotText->GetNumberInt(&lotofFacets) || dnl<2)) {
+	  if (hideLotselected->GetState() && (!hideLotText->GetNumberInt(&lotofFacets) || lotofFacets<2)) {
 		  GLMessageBox::Display("Invalid number of selected facets.\nMust be larger than 2.", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		  return;
 	  }
