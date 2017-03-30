@@ -730,28 +730,29 @@ void SynRad::ApplyFacetParams() {
 	}
 
 
-	// Super structure destination
+	// Super structure destination (link)
 	int superDest;
-	BOOL doSuper = FALSE;
+	BOOL doLink = FALSE;
 	if (strcmp(facetSuperDest->GetText(), "none") == 0 || strcmp(facetSuperDest->GetText(), "no") == 0 || strcmp(facetSuperDest->GetText(), "0") == 0) {
-		doSuper = TRUE;
+		doLink = TRUE;
 		superDest = 0;
 	}
 	else if (sscanf(facetSuperDest->GetText(), "%d", &superDest) > 0) {
 		if (superDest == superStruct) {
 			GLMessageBox::Display("Link and superstructure can't be the same", "Error", GLDLG_OK, GLDLG_ICONERROR);
-			UpdateFacetParams();
 			return;
 		}
-		else if (superDest > 0 && superDest <= geom->GetNbStructure()) doSuper = TRUE;
+		else if (superDest < 0 || superDest > geom->GetNbStructure()) {
+			GLMessageBox::Display("Link destination points to a structure that doesn't exist", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			return;
+		}
+		else
+			doLink = TRUE;
 	}
+	else if (strcmp(facetSuperDest->GetText(), "...") == 0) doLink = FALSE;
 	else {
-		if (strcmp(facetSuperDest->GetText(), "...") == 0) doSuper = FALSE;
-		else {
-			GLMessageBox::Display("Invalid superstructre destination", "Error", GLDLG_OK, GLDLG_ICONERROR);
-			UpdateFacetParams();
-			return;
-		}
+		GLMessageBox::Display("Invalid superstructure destination", "Error", GLDLG_OK, GLDLG_ICONERROR);
+		return;
 	}
 
 	// Record type
@@ -805,7 +806,7 @@ void SynRad::ApplyFacetParams() {
 					structChanged = TRUE;
 				}
 			}
-			if (doSuper) {
+			if (doLink) {
 				f->sh.superDest = superDest;
 				if (superDest) f->sh.opacity = 1.0; // Force opacity for link facet
 			}
