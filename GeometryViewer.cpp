@@ -175,14 +175,14 @@ void GeometryViewer::DrawLinesAndHits() {
 					glEnd();glBegin(GL_LINE_STRIP); //pen up pen down for leaks
 				}*/
 
-
-
-				glVertex3d(mApp->worker.hitCache[count].pos.x, mApp->worker.hitCache[count].pos.y, mApp->worker.hitCache[count].pos.z);
-				count++;
-				if (mApp->worker.hitCache[count].type == LASTHIT) { //pen up at cache refresh border
+				if (mApp->worker.hitCache[count].type == HIT_LAST) { //pen up at cache refresh border
 					glEnd();
 					count++;
 					glBegin(GL_LINE_STRIP);
+				}
+				else {
+					glVertex3d(mApp->worker.hitCache[count].pos.x, mApp->worker.hitCache[count].pos.y, mApp->worker.hitCache[count].pos.z);
+					count++;
 				}
 			}
 			if (count < MIN(dispNumHits, mApp->worker.hitCacheSize) && mApp->worker.hitCache[count].type != 0) {

@@ -170,6 +170,8 @@ void TextureSettings::Update() {
   if(!IsVisible() || IsIconic()) return;  
 
   char tmp[128];
+  
+  /*
   //Manual minimum label
   if (geom->textureMode == TEXTURE_MODE_MCHITS) sprintf(tmp, "%.3E", (double)geom->texMin_MC);
   else if (geom->textureMode == TEXTURE_MODE_FLUX) sprintf(tmp, "%.3E", geom->texMin_flux);
@@ -180,6 +182,8 @@ void TextureSettings::Update() {
   else if (geom->textureMode == TEXTURE_MODE_FLUX) sprintf(tmp, "%.3E", geom->texMax_flux);
   else if (geom->textureMode == TEXTURE_MODE_POWER) sprintf(tmp, "%.3E", geom->texMax_power);
   texMaxText->SetText(tmp);
+  */
+
   //Autoscale minimum label
   if (geom->textureMode==TEXTURE_MODE_MCHITS) sprintf(tmp,"%.3E",(double)geom->texCMin_MC);
   else if (geom->textureMode==TEXTURE_MODE_FLUX) sprintf(tmp,"%.3E",geom->texCMin_flux);
@@ -223,6 +227,18 @@ void TextureSettings::Display(Worker *w,GeometryViewer **v) {
   }
   SetVisible(TRUE);
   Update();
+
+  char tmp[64];
+  //Manual minimum label
+  if (geom->textureMode == TEXTURE_MODE_MCHITS) sprintf(tmp, "%.3E", (double)geom->texMin_MC);
+  else if (geom->textureMode == TEXTURE_MODE_FLUX) sprintf(tmp, "%.3E", geom->texMin_flux);
+  else if (geom->textureMode == TEXTURE_MODE_POWER) sprintf(tmp, "%.3E", geom->texMin_power);
+  texMinText->SetText(tmp);
+  //Manual maximum label
+  if (geom->textureMode == TEXTURE_MODE_MCHITS) sprintf(tmp, "%.3E", (double)geom->texMax_MC);
+  else if (geom->textureMode == TEXTURE_MODE_FLUX) sprintf(tmp, "%.3E", geom->texMax_flux);
+  else if (geom->textureMode == TEXTURE_MODE_POWER) sprintf(tmp, "%.3E", geom->texMax_power);
+  texMaxText->SetText(tmp);
 
 }
 

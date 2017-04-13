@@ -48,6 +48,7 @@ int   cSize = 5;
 int   cWidth[] = { 30, 56, 50, 50, 50 };
 char *cName[] = { "#", "Hits", "Flux", "Power", "Abs" };
 
+int appVersion = 1480;
 #ifdef _DEBUG
 std::string appName = "SynRad+ development version (Compiled " __DATE__ " " __TIME__ ") DEBUG MODE";
 #else
@@ -1116,7 +1117,7 @@ int SynRad::FrameMove()
 	Interface::FrameMove();
 	char tmp[256];
 	if (globalSettings) globalSettings->SMPUpdate();
-	if (worker.running) {
+	if (worker.running && ((m_fTime - lastUpdate) >= 1.0f)) {
 		if (textureSettings) textureSettings->Update();
 	}
 

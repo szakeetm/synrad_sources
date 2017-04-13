@@ -35,7 +35,6 @@ class SynradGeometry;
 class GLProgress;
 class LoadStatus;
 
-extern float m_fTime;
 class Worker
 {
 

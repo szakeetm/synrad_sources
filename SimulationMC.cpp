@@ -176,9 +176,17 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 	if (prIdx == 0) {
 		for (size_t hitIndex = 0; hitIndex < sHandle->hitCacheSize; hitIndex++)
 			gHits->hitCache[(hitIndex + gHits->lastHitIndex) % HITCACHESIZE] = sHandle->hitCache[hitIndex];
-		
-		gHits->lastHitIndex = (gHits->lastHitIndex + sHandle->hitCacheSize) % HITCACHESIZE;
-		gHits->hitCacheSize = MIN(HITCACHESIZE, gHits->hitCacheSize + sHandle->hitCacheSize);
+
+		if (sHandle->hitCacheSize > 0) {
+			gHits->lastHitIndex = (gHits->lastHitIndex + sHandle->hitCacheSize) % HITCACHESIZE;
+
+			if (gHits->lastHitIndex < (HITCACHESIZE - 1)) {
+				gHits->lastHitIndex++;
+				gHits->hitCache[gHits->lastHitIndex].type = HIT_LAST; //Penup (border between blocks of consecutive hits in the hit cache)
+			}
+
+			gHits->hitCacheSize = MIN(HITCACHESIZE, gHits->hitCacheSize + sHandle->hitCacheSize);
+		}
 	}
 
 	// Facets

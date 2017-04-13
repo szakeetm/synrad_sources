@@ -692,7 +692,7 @@ void RecordLeakPos() {
 	// Source region check performed when calling this routine 
 	// Record leak for debugging
 	RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
-	RecordHit(LASTHIT, sHandle->dF, sHandle->dP);
+	RecordHit(HIT_LAST, sHandle->dF, sHandle->dP);
 	if (sHandle->leakCacheSize < LEAKCACHESIZE) {
 		sHandle->leakCache[sHandle->leakCacheSize].pos = sHandle->pPos;
 		sHandle->leakCache[sHandle->leakCacheSize].dir = sHandle->pDir;

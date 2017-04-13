@@ -878,7 +878,7 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 
 	InitializeGeometry();
 	//AdjustProfile();
-	isLoaded = TRUE;
+	//isLoaded = TRUE; //InitializeGeometry() already sets it to TRUE
 	UpdateName(file);
 
 	// Update mesh
@@ -1703,7 +1703,7 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 	prg->SetMessage("Initalizing geometry and building mesh...");
 	InitializeGeometry();
 	//AdjustProfile();
-	isLoaded = TRUE;
+	//isLoaded = TRUE; //InitializeGeometry() already sets it to TRUE
 	UpdateName(file);
 
 	// Update mesh
@@ -1973,7 +1973,7 @@ void SynradGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgre
 
 	InitializeGeometry(); //Includes Buildgllist
 
-	isLoaded = TRUE;
+	//isLoaded = TRUE; //InitializeGeometry() already sets it to TRUE
 
 	// Update mesh
 	progressDlg->SetMessage("Building mesh...");
@@ -2128,7 +2128,7 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 	if (newStr) sh.nbSuper += nbNewSuper;
 	else if (sh.nbSuper < structId + nbNewSuper) sh.nbSuper = structId + nbNewSuper;
 	InitializeGeometry(); //Includes Buildgllist
-	isLoaded = TRUE;
+	//isLoaded = TRUE; //InitializeGeometry() already sets it to TRUE
 
 }
 BOOL SynradGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit, Worker *work, GLProgress *progressDlg){ return FALSE; }
