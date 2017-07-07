@@ -66,7 +66,7 @@ size_t SynradGeometry::GetGeometrySize(std::vector<Region_full> *regions, std::v
 	//Material library
 	memoryUsage += sizeof(size_t); //number of (*materials)
 	for (size_t i = 0; i < (*materials).size(); i++) { //going through all (*materials)
-		memoryUsage += sizeof(BOOL);//hasBackscattering
+		memoryUsage += sizeof(bool);//hasBackscattering
 		memoryUsage += sizeof(size_t);//copying number of angles (columns)
 		memoryUsage += sizeof(size_t);//copying number of energies (rows)
 		memoryUsage += ((*materials)[i].angleVals.size())*sizeof(double);//copying angles (header)
@@ -91,8 +91,8 @@ size_t SynradGeometry::GetGeometrySize(std::vector<Region_full> *regions, std::v
 }
 
 void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *regions, std::vector<Material> *materials,
-	std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr, int generation_mode, BOOL lowFluxMode, double lowFluxCutoff,
-	BOOL newReflectionModel) {
+	std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr, int generation_mode, bool lowFluxMode, double lowFluxCutoff,
+	bool newReflectionModel) {
 
 	// Build shared buffer for geometry (see Shared.h)
 	int fOffset = sizeof(SHGHITS);
@@ -154,7 +154,7 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *
 	WRITEBUFFER((*materials).size(), size_t); //copying number of materials
 
 	for (auto material : *materials) { //going through all materials
-		WRITEBUFFER(material.hasBackscattering, BOOL);
+		WRITEBUFFER(material.hasBackscattering, bool);
 		WRITEBUFFER(material.angleVals.size(), size_t); //copying number of angles (columns)
 		WRITEBUFFER(material.energyVals.size(), size_t); //copying number of energies (rows)
 
@@ -350,7 +350,7 @@ void  SynradGeometry::BuildPipe(double L, double R, double s, int step) {
 				facets[9 * d + i] = new Facet(4);
 				facets[9 * d + i]->sh.sticking = 0.0;
 				facets[9 * d + i]->sh.opacity = 0.0;
-				facets[9 * d + i]->sh.isVolatile = TRUE;
+				facets[9 * d + i]->sh.isVolatile = true;
 				facets[9 * d + i]->indices[0] = idx + 0;
 				facets[9 * d + i]->indices[1] = idx + 1;
 				facets[9 * d + i]->indices[2] = idx + 2;
@@ -367,13 +367,13 @@ void  SynradGeometry::BuildPipe(double L, double R, double s, int step) {
 		throw Error("Unspecified Error while building pipe");
 	}
 	InitializeGeometry();
-	//isLoaded = TRUE;
+	//isLoaded = true;
 	strName[0] = _strdup("Pipe");
 	strFileName[0] = _strdup("pipe.txt");
 
 }
 
-std::vector<std::string> SynradGeometry::InsertSYN(FileReader *file, GLProgress *prg, BOOL newStr) {
+std::vector<std::string> SynradGeometry::InsertSYN(FileReader *file, GLProgress *prg, bool newStr) {
 
 	int structId = viewStruct;
 	if (structId == -1) structId = 0;
@@ -387,7 +387,7 @@ std::vector<std::string> SynradGeometry::InsertSYN(FileReader *file, GLProgress 
 
 
 
-std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t *nbVertex, size_t *nbFacet, InterfaceVertex **vertices3, Facet ***facets, size_t strIdx, BOOL newStruct) {
+std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t *nbVertex, size_t *nbFacet, InterfaceVertex **vertices3, Facet ***facets, size_t strIdx, bool newStruct) {
 
 	std::vector<std::string> parFileList;
 	UnselectAll();
@@ -488,17 +488,16 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 
 	file->ReadKeyword("selections"); file->ReadKeyword("{");
 	for (int i = 0; i < nbS; i++) {
-		ASELECTION s;
+		SelectionGroup s;
 		char tmpName[256];
 		strcpy(tmpName, file->ReadString());
 		s.name = _strdup(tmpName);
-		s.nbSel = file->ReadInt();
-		s.selection = (int *)malloc((s.nbSel)*sizeof(int));
+		int nbFS = file->ReadInt();
 
-		for (int j = 0; j < s.nbSel; j++) {
-			s.selection[j] = file->ReadInt() + sh.nbFacet;
+		for (int j = 0; j < nbFS; j++) {
+			s.selection.push_back((size_t)file->ReadInt() + sh.nbFacet); //offset facet number by current
 		}
-		mApp->AddSelection(s.name, s);
+		mApp->AddSelection(s);
 	}
 	file->ReadKeyword("}");
 
@@ -534,7 +533,7 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 		(*vertices3 + i)->x = file->ReadDouble();
 		(*vertices3 + i)->y = file->ReadDouble();
 		(*vertices3 + i)->z = file->ReadDouble();
-		(*vertices3 + i)->selected = FALSE;
+		(*vertices3 + i)->selected = false;
 	}
 	file->ReadKeyword("}");
 
@@ -592,7 +591,7 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 
 		*(*facets + i) = new Facet(nb);
 		(*facets)[i]->LoadSYN(file, mApp->worker.materials, version2, nbNewVertex);
-		(*facets)[i]->selected = TRUE;
+		(*facets)[i]->selected = true;
 		for (int j = 0; j < nb; j++)
 			(*facets)[i]->indices[j] += *nbVertex;
 		file->ReadKeyword("}");
@@ -615,11 +614,11 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 	return parFileList;
 }
 
-void SynradGeometry::SaveProfileGEO(FileWriter *file, int super, BOOL saveSelected) {
+void SynradGeometry::SaveProfileGEO(FileWriter *file, int super, bool saveSelected) {
 	file->Write("profiles {\n");
 	// Profiles
 	int nbProfile = 0;
-	file->Write(" number: "); file->WriteInt(nbProfile, "\n");
+	file->Write(" number: "); file->Write(nbProfile, "\n");
 	file->Write(" facets: ");
 	file->Write("\n");
 	for (int j = 0; j < PROFILE_SIZE; j++)
@@ -771,17 +770,16 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 	if (*version >= 8) {
 		file->ReadKeyword("selections"); file->ReadKeyword("{");
 		for (int i = 0; i < nbS; i++) {
-			ASELECTION s;
+			SelectionGroup s;
 			char tmpName[256];
 			strcpy(tmpName, file->ReadString());
 			s.name = _strdup(tmpName);
-			s.nbSel = file->ReadInt();
-			s.selection = (int *)malloc((s.nbSel)*sizeof(int));
+			int nbFS = file->ReadInt();
 
-			for (int j = 0; j < s.nbSel; j++) {
-				s.selection[j] = file->ReadInt();
+			for (int j = 0; j < nbFS; j++) {
+				s.selection.push_back((size_t)file->ReadInt()); //offset facet number by current
 			}
-			mApp->AddSelection(s.name, s);
+			mApp->AddSelection(s);
 		}
 		file->ReadKeyword("}");
 	}
@@ -815,7 +813,7 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 		vertices3[i].x = file->ReadDouble();
 		vertices3[i].y = file->ReadDouble();
 		vertices3[i].z = file->ReadDouble();
-		vertices3[i].selected = FALSE;
+		vertices3[i].selected = false;
 	}
 	file->ReadKeyword("}");
 
@@ -878,7 +876,7 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 
 	InitializeGeometry();
 	//AdjustProfile();
-	//isLoaded = TRUE; //InitializeGeometry() already sets it to TRUE
+	//isLoaded = true; //InitializeGeometry() already sets it to true
 	UpdateName(file);
 
 	// Update mesh
@@ -1016,31 +1014,31 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 
 }
 
-void SynradGeometry::SaveTXT(FileWriter *file, Dataport *dpHit, BOOL saveSelected) {
+void SynradGeometry::SaveTXT(FileWriter *file, Dataport *dpHit, bool saveSelected) {
 
 	if (!IsLoaded()) throw Error("Nothing to save !");
 
 	// Unused
-	file->WriteInt(0, "\n");
+	file->Write(0, "\n");
 
 	// Globals
 	//BYTE *buffer = (BYTE *)dpHit->buff;
 	//SHGHITS *gHits = (SHGHITS *)buffer;
 
 	// Unused
-	file->WriteLLong(0, "\n");
-	file->WriteInt(0, "\n");
-	file->WriteLLong(0, "\n");
-	file->WriteLLong(loaded_desorptionLimit, "\n");
+	file->Write(0, "\n");
+	file->Write(0, "\n");
+	file->Write(0, "\n");
+	file->Write(loaded_desorptionLimit, "\n");
 
-	file->WriteInt(sh.nbVertex, "\n");
-	file->WriteInt(saveSelected ? nbSelected : sh.nbFacet, "\n");
+	file->Write(sh.nbVertex, "\n");
+	file->Write(saveSelected ? GetNbSelectedFacets() : sh.nbFacet, "\n");
 
 	// Read geometry vertices
 	for (int i = 0; i < sh.nbVertex; i++) {
-		file->WriteDouble(vertices3[i].x, " ");
-		file->WriteDouble(vertices3[i].y, " ");
-		file->WriteDouble(vertices3[i].z, "\n");
+		file->Write(vertices3[i].x, " ");
+		file->Write(vertices3[i].y, " ");
+		file->Write(vertices3[i].z, "\n");
 	}
 
 	// Facets
@@ -1049,17 +1047,17 @@ void SynradGeometry::SaveTXT(FileWriter *file, Dataport *dpHit, BOOL saveSelecte
 		int j;
 		if (saveSelected) {
 			if (f->selected) {
-				file->WriteInt(f->sh.nbIndex, " ");
+				file->Write(f->sh.nbIndex, " ");
 				for (j = 0; j < f->sh.nbIndex - 1; j++)
-					file->WriteInt(f->indices[j] + 1, " ");
-				file->WriteInt(f->indices[j] + 1, "\n");
+					file->Write(f->indices[j] + 1, " ");
+				file->Write(f->indices[j] + 1, "\n");
 			}
 		}
 		else {
-			file->WriteInt(f->sh.nbIndex, " ");
+			file->Write(f->sh.nbIndex, " ");
 			for (j = 0; j < f->sh.nbIndex - 1; j++)
-				file->WriteInt(f->indices[j] + 1, " ");
-			file->WriteInt(f->indices[j] + 1, "\n");
+				file->Write(f->indices[j] + 1, " ");
+			file->Write(f->indices[j] + 1, "\n");
 		}
 	}
 
@@ -1083,7 +1081,7 @@ void SynradGeometry::SaveTXT(FileWriter *file, Dataport *dpHit, BOOL saveSelecte
 
 }
 
-void SynradGeometry::ExportTextures(FILE *file, int grouping, int mode, double no_scans, Dataport *dpHit, BOOL saveSelected) {
+void SynradGeometry::ExportTextures(FILE *file, int grouping, int mode, double no_scans, Dataport *dpHit, bool saveSelected) {
 
 	//if(!IsLoaded()) throw Error("Nothing to save !");
 
@@ -1182,7 +1180,7 @@ void SynradGeometry::ExportTextures(FILE *file, int grouping, int mode, double n
 
 }
 
-void SynradGeometry::SaveDesorption(FILE *file, Dataport *dpHit, BOOL selectedOnly, int mode, double eta0, double alpha, Distribution2D *distr) {
+void SynradGeometry::SaveDesorption(FILE *file, Dataport *dpHit, bool selectedOnly, int mode, double eta0, double alpha, Distribution2D *distr) {
 
 	if (!IsLoaded()) throw Error("Nothing to save !");
 
@@ -1259,8 +1257,8 @@ void SynradGeometry::SaveDesorption(FILE *file, Dataport *dpHit, BOOL selectedOn
 }
 
 
-void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit, BOOL saveSelected, LEAK *leakCacheSave,
-	size_t *nbLeakSave, HIT *hitCacheSave, size_t *nbHitSave, BOOL crashSave) {
+void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit, bool saveSelected, LEAK *leakCacheSave,
+	size_t *nbLeakSave, HIT *hitCacheSave, size_t *nbHitSave, bool crashSave) {
 
 	prg->SetMessage("Counting hits...");
 	if (!IsLoaded()) throw Error("Nothing to save !");
@@ -1288,22 +1286,23 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	texCMax_power = (!crashSave && !saveSelected) ? gHits->maxHit_power : 1;
 
 	prg->SetMessage("Writing geometry details...");
-	file->Write("version:"); file->WriteInt(SYNVERSION, "\n");
-	file->Write("totalHit:"); file->WriteLLong((!crashSave && !saveSelected) ? gHits->total.nbHit : 0, "\n");
-	file->Write("totalDes:"); file->WriteLLong((!crashSave && !saveSelected) ? gHits->total.nbDesorbed : 0, "\n");
-	file->Write("no_scans:"); file->WriteDouble((!crashSave && !saveSelected) ? worker->no_scans : 0, "\n");
-	file->Write("totalLeak:"); file->WriteLLong((!crashSave && !saveSelected) ? gHits->nbLeakTotal : 0, "\n");
-	file->Write("totalFlux:"); file->WriteDouble((!crashSave && !saveSelected) ? gHits->total.fluxAbs : 0, "\n");
-	file->Write("totalPower:"); file->WriteDouble((!crashSave && !saveSelected) ? gHits->total.powerAbs : 0, "\n");
-	file->Write("maxDes:"); file->WriteLLong((!crashSave && !saveSelected) ? loaded_desorptionLimit : 0, "\n");
-	file->Write("nbVertex:"); file->WriteInt(sh.nbVertex, "\n");
-	file->Write("nbFacet:"); file->WriteInt(saveSelected ? nbSelected : sh.nbFacet, "\n");
-	file->Write("nbSuper:"); file->WriteInt(sh.nbSuper, "\n");
-	file->Write("nbFormula:"); file->WriteInt((!saveSelected) ? mApp->nbFormula : 0, "\n");
-	file->Write("nbView:"); file->WriteInt(mApp->nbView, "\n");
-	file->Write("nbSelection:"); file->WriteInt((!saveSelected) ? mApp->nbSelection : 0, "\n");
+	file->Write("version:"); file->Write(SYNVERSION, "\n");
+	file->Write("totalHit:"); file->Write((!crashSave && !saveSelected) ? gHits->total.nbHit : 0, "\n");
+	file->Write("totalDes:"); file->Write((!crashSave && !saveSelected) ? gHits->total.nbDesorbed : 0, "\n");
+	file->Write("no_scans:"); file->Write((!crashSave && !saveSelected) ? worker->no_scans : 0, "\n");
+	file->Write("totalLeak:"); file->Write((!crashSave && !saveSelected) ? gHits->nbLeakTotal : 0, "\n");
+	file->Write("totalFlux:"); file->Write((!crashSave && !saveSelected) ? gHits->total.fluxAbs : 0, "\n");
+	file->Write("totalPower:"); file->Write((!crashSave && !saveSelected) ? gHits->total.powerAbs : 0, "\n");
+	file->Write("maxDes:"); file->Write((!crashSave && !saveSelected) ? loaded_desorptionLimit : 0, "\n");
+	file->Write("nbVertex:"); file->Write(sh.nbVertex, "\n");
+	auto selectedFacets = GetSelectedFacets();
+	file->Write("nbFacet:"); file->Write(saveSelected ? selectedFacets.size() : sh.nbFacet, "\n");
+	file->Write("nbSuper:"); file->Write(sh.nbSuper, "\n");
+	file->Write("nbFormula:"); file->Write((!saveSelected) ? mApp->formulas_n.size() : 0, "\n");
+	file->Write("nbView:"); file->Write(mApp->nbView, "\n");
+	file->Write("nbSelection:"); file->Write((!saveSelected) ? selectedFacets.size() : 0, "\n");
 
-	file->Write("nbRegions:"); file->WriteInt((!saveSelected) ? (int)worker->regions.size() : 0, "\n");
+	file->Write("nbRegions:"); file->Write((!saveSelected) ? (int)worker->regions.size() : 0, "\n");
 	file->Write("PARfiles {\n");
 	for (int i = 0; (!saveSelected) && (i < (int)worker->regions.size()); i++) { //write only the filenames without the path
 		file->Write("  \"");
@@ -1321,12 +1320,14 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	file->Write("}\n");
 
 	file->Write("formulas {\n");
-	for (int i = 0; (!saveSelected) && (i < mApp->nbFormula); i++) {
-		file->Write("  \"");
-		file->Write(mApp->formulas[i].parser->GetName());
-		file->Write("\" \"");
-		file->Write(mApp->formulas[i].parser->GetExpression());
-		file->Write("\"\n");
+	if (!saveSelected) {
+		for (auto f : mApp->formulas_n) {
+			file->Write("  \"");
+			file->Write(f->GetName());
+			file->Write("\" \"");
+			file->Write(f->GetExpression());
+			file->Write("\"\n");
+		}
 	}
 	file->Write("}\n");
 
@@ -1335,30 +1336,31 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 		file->Write("  \"");
 		file->Write(mApp->views[i].name);
 		file->Write("\"\n");
-		file->WriteInt(mApp->views[i].projMode, " ");
-		file->WriteDouble(mApp->views[i].camAngleOx, " ");
-		file->WriteDouble(mApp->views[i].camAngleOy, " ");
-		file->WriteDouble(mApp->views[i].camDist, " ");
-		file->WriteDouble(mApp->views[i].camOffset.x, " ");
-		file->WriteDouble(mApp->views[i].camOffset.y, " ");
-		file->WriteDouble(mApp->views[i].camOffset.z, " ");
-		file->WriteInt(mApp->views[i].performXY, " ");
-		file->WriteDouble(mApp->views[i].vLeft, " ");
-		file->WriteDouble(mApp->views[i].vRight, " ");
-		file->WriteDouble(mApp->views[i].vTop, " ");
-		file->WriteDouble(mApp->views[i].vBottom, "\n");
+		file->Write(mApp->views[i].projMode, " ");
+		file->Write(mApp->views[i].camAngleOx, " ");
+		file->Write(mApp->views[i].camAngleOy, " ");
+		file->Write(mApp->views[i].camDist, " ");
+		file->Write(mApp->views[i].camOffset.x, " ");
+		file->Write(mApp->views[i].camOffset.y, " ");
+		file->Write(mApp->views[i].camOffset.z, " ");
+		file->Write(mApp->views[i].performXY, " ");
+		file->Write(mApp->views[i].vLeft, " ");
+		file->Write(mApp->views[i].vRight, " ");
+		file->Write(mApp->views[i].vTop, " ");
+		file->Write(mApp->views[i].vBottom, "\n");
 	}
 	file->Write("}\n");
 
 	file->Write("selections {\n");
-	for (int i = 0; (!saveSelected) && (i < mApp->nbSelection); i++) {
+	for (int i = 0; (i < selectedFacets.size()) && !saveSelected; i++) { //don't save selections when exporting part of the geometry (saveSelected)
+
 		file->Write("  \"");
 		file->Write(mApp->selections[i].name);
 		file->Write("\"\n ");
-		file->WriteInt(mApp->selections[i].nbSel, "\n");
-		for (int j = 0; j < mApp->selections[i].nbSel; j++) {
+		file->Write(mApp->selections[i].selection.size(), "\n");
+		for (auto sel : mApp->selections[i].selection) {
 			file->Write("  ");
-			file->WriteInt(mApp->selections[i].selection[j], "\n");
+			file->Write(sel, "\n");
 		}
 		//file->Write("\n");
 	}
@@ -1377,45 +1379,45 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	for (int i = 0; i < sh.nbVertex; i++) {
 		prg->SetProgress(0.33*((double)i / (double)sh.nbVertex));
 		file->Write("  ");
-		file->WriteInt(i + 1, " ");
-		file->WriteDouble(vertices3[i].x, " ");
-		file->WriteDouble(vertices3[i].y, " ");
-		file->WriteDouble(vertices3[i].z, "\n");
+		file->Write(i + 1, " ");
+		file->Write(vertices3[i].x, " ");
+		file->Write(vertices3[i].y, " ");
+		file->Write(vertices3[i].z, "\n");
 	}
 	file->Write("}\n");
 
 	//leaks
 	prg->SetMessage("Writing leaks...");
 	file->Write("leaks {\n");
-	file->Write("  nbLeak:"); file->WriteInt((!crashSave && !saveSelected) ? MIN(*nbLeakSave,LEAKCACHESIZE) : 0, "\n");
+	file->Write("  nbLeak:"); file->Write((!crashSave && !saveSelected) ? MIN(*nbLeakSave,LEAKCACHESIZE) : 0, "\n");
 	for (int i = 0; (i <  MIN(*nbLeakSave, LEAKCACHESIZE)) && (!crashSave && !saveSelected); i++) {
 
 		file->Write("  ");
-		file->WriteInt(i, " ");
-		file->WriteDouble((leakCacheSave + i)->pos.x, " ");
-		file->WriteDouble((leakCacheSave + i)->pos.y, " ");
-		file->WriteDouble((leakCacheSave + i)->pos.z, " ");
+		file->Write(i, " ");
+		file->Write((leakCacheSave + i)->pos.x, " ");
+		file->Write((leakCacheSave + i)->pos.y, " ");
+		file->Write((leakCacheSave + i)->pos.z, " ");
 
-		file->WriteDouble((leakCacheSave + i)->dir.x, " ");
-		file->WriteDouble((leakCacheSave + i)->dir.y, " ");
-		file->WriteDouble((leakCacheSave + i)->dir.z, "\n");
+		file->Write((leakCacheSave + i)->dir.x, " ");
+		file->Write((leakCacheSave + i)->dir.y, " ");
+		file->Write((leakCacheSave + i)->dir.z, "\n");
 	}
 	file->Write("}\n");
 
 	//hit cache (lines and dots)
 	prg->SetMessage("Writing hit cache...");
 	file->Write("hits {\n");
-	file->Write("  nbHHit:"); file->WriteInt((!crashSave && !saveSelected) ? HITCACHESIZE : 0, "\n");
+	file->Write("  nbHHit:"); file->Write((!crashSave && !saveSelected) ? HITCACHESIZE : 0, "\n");
 	for (int i = 0; (i < HITCACHESIZE) && (!crashSave && !saveSelected); i++) {
 
 		file->Write("  ");
-		file->WriteInt(i, " ");
-		file->WriteDouble((hitCacheSave + i)->pos.x, " ");
-		file->WriteDouble((hitCacheSave + i)->pos.y, " ");
-		file->WriteDouble((hitCacheSave + i)->pos.z, " ");
-		file->WriteDouble((hitCacheSave + i)->dF, " ");
-		file->WriteDouble((hitCacheSave + i)->dP, " ");
-		file->WriteInt((hitCacheSave + i)->type, "\n");
+		file->Write(i, " ");
+		file->Write((hitCacheSave + i)->pos.x, " ");
+		file->Write((hitCacheSave + i)->pos.y, " ");
+		file->Write((hitCacheSave + i)->pos.z, " ");
+		file->Write((hitCacheSave + i)->dF, " ");
+		file->Write((hitCacheSave + i)->dP, " ");
+		file->Write((hitCacheSave + i)->type, "\n");
 	}
 	file->Write("}\n");
 
@@ -1436,12 +1438,12 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	char tmp[256];
 	file->Write("{textures}\n");
 
-	file->Write("minHit_MC:"); file->WriteLLong(texCMin_MC, "\n");
-	file->Write("maxHit_MC:"); file->WriteLLong(texCMax_MC, "\n");
-	file->Write("minHit_flux:"); file->WriteDouble(texCMin_flux, "\n");
-	file->Write("maxHit_flux:"); file->WriteDouble(texCMax_flux, "\n");
-	file->Write("minHit_power:"); file->WriteDouble(texCMin_power, "\n");
-	file->Write("maxHit_power:"); file->WriteDouble(texCMax_power, "\n");
+	file->Write("minHit_MC:"); file->Write(texCMin_MC, "\n");
+	file->Write("maxHit_MC:"); file->Write(texCMax_MC, "\n");
+	file->Write("minHit_flux:"); file->Write(texCMin_flux, "\n");
+	file->Write("maxHit_flux:"); file->Write(texCMax_flux, "\n");
+	file->Write("minHit_power:"); file->Write(texCMin_power, "\n");
+	file->Write("maxHit_power:"); file->Write(texCMax_power, "\n");
 
 	//Selections
 	//SaveSelections();
@@ -1463,14 +1465,14 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 			//char tmp[256];
 			sprintf(tmp, "texture_facet %d {\n", i + 1);
 			file->Write(tmp);
-			file->Write("width:"); file->WriteInt(f->sh.texWidth); file->Write(" height:"); file->WriteInt(f->sh.texHeight); file->Write("\n");
+			file->Write("width:"); file->Write(f->sh.texWidth); file->Write(" height:"); file->Write(f->sh.texHeight); file->Write("\n");
 			for (iy = 0; iy < (f->sh.texHeight); iy++) {
 				for (ix = 0; ix < (f->sh.texWidth); ix++) {
 					int index = iy*(f->sh.texWidth) + ix;
-					file->WriteLLong((!crashSave && !saveSelected) ? *(hits_MC + index) : 0, "\t");
-					file->WriteDouble(f->GetMeshArea(index), "\t");
-					file->WriteDouble((!crashSave && !saveSelected) ? *(hits_flux + index)*f->GetMeshArea(index) : 0, "\t");
-					file->WriteDouble((!crashSave && !saveSelected) ? *(hits_power + index)*f->GetMeshArea(index) : 0, "\t");
+					file->Write((!crashSave && !saveSelected) ? *(hits_MC + index) : 0, "\t");
+					file->Write(f->GetMeshArea(index), "\t");
+					file->Write((!crashSave && !saveSelected) ? *(hits_flux + index)*f->GetMeshArea(index) : 0, "\t");
+					file->Write((!crashSave && !saveSelected) ? *(hits_power + index)*f->GetMeshArea(index) : 0, "\t");
 				}
 				file->Write("\n");
 			}
@@ -1587,17 +1589,16 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 
 	file->ReadKeyword("selections"); file->ReadKeyword("{");
 	for (int i = 0; i < nbS; i++) {
-		ASELECTION s;
+		SelectionGroup s;
 		char tmpName[256];
 		strcpy(tmpName, file->ReadString());
 		s.name = _strdup(tmpName);
-		s.nbSel = file->ReadInt();
-		s.selection = (int *)malloc((s.nbSel)*sizeof(int));
+		int nbSel = file->ReadInt();
 
-		for (int j = 0; j < s.nbSel; j++) {
-			s.selection[j] = file->ReadInt();
+		for (int j = 0; j < nbSel; j++) {
+			s.selection.push_back(file->ReadInt());
 		}
-		mApp->AddSelection(s.name, s);
+		mApp->AddSelection(s);
 	}
 	file->ReadKeyword("}");
 
@@ -1630,7 +1631,7 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 		vertices3[i].x = file->ReadDouble();
 		vertices3[i].y = file->ReadDouble();
 		vertices3[i].z = file->ReadDouble();
-		vertices3[i].selected = FALSE;
+		vertices3[i].selected = false;
 	}
 	file->ReadKeyword("}");
 	prg->SetMessage("Reading leaks and hits...");
@@ -1703,7 +1704,7 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 	prg->SetMessage("Initalizing geometry and building mesh...");
 	InitializeGeometry();
 	//AdjustProfile();
-	//isLoaded = TRUE; //InitializeGeometry() already sets it to TRUE
+	//isLoaded = true; //InitializeGeometry() already sets it to true
 	UpdateName(file);
 
 	// Update mesh
@@ -1782,7 +1783,7 @@ void SynradGeometry::LoadSpectrumSYN(FileReader *file, Dataport *dpHit) { //spec
 	ReleaseDataport(dpHit);
 	SAFE_FREE(spectrumFacet);
 }
-void SynradGeometry::SaveProfileSYN(FileWriter *file, Dataport *dpHit, int super, BOOL saveSelected, BOOL crashSave) {
+void SynradGeometry::SaveProfileSYN(FileWriter *file, Dataport *dpHit, int super, bool saveSelected, bool crashSave) {
 	//Profiles
 
 	BYTE *buffer;
@@ -1794,10 +1795,10 @@ void SynradGeometry::SaveProfileSYN(FileWriter *file, Dataport *dpHit, int super
 	for (int i = 0; i < sh.nbFacet; i++)
 		if ((!saveSelected && !crashSave) && facets[i]->sh.isProfile)
 			profileFacet[nbProfile++] = i;
-	file->Write(" number: "); file->WriteInt(nbProfile, "\n");
+	file->Write(" number: "); file->Write(nbProfile, "\n");
 	file->Write(" facets: ");
 	for (int i = 0; i < nbProfile; i++)  //doesn't execute when crashSave or saveSelected...
-		file->WriteInt(profileFacet[i], "\t");
+		file->Write(profileFacet[i], "\t");
 	file->Write("\n");
 	for (int j = 0; j < PROFILE_SIZE; j++) {
 		for (int i = 0; i < nbProfile; i++) { //doesn't execute when crashSave or saveSelected...
@@ -1809,9 +1810,9 @@ void SynradGeometry::SaveProfileSYN(FileWriter *file, Dataport *dpHit, int super
 			double *profilePtr_power;
 			if (!crashSave) profilePtr_power = (double *)(buffer + f->sh.hitOffset + sizeof(SHHITS) + PROFILE_SIZE*(sizeof(llong) + sizeof(double)));
 
-			file->WriteLLong((!crashSave) ? profilePtr_MC[j] : 0); file->Write("\t");
-			file->WriteDouble((!crashSave) ? profilePtr_flux[j] : 0); file->Write("\t");
-			file->WriteDouble((!crashSave) ? profilePtr_power[j] : 0); file->Write("\t");
+			file->Write((!crashSave) ? profilePtr_MC[j] : 0); file->Write("\t");
+			file->Write((!crashSave) ? profilePtr_flux[j] : 0); file->Write("\t");
+			file->Write((!crashSave) ? profilePtr_power[j] : 0); file->Write("\t");
 		}
 		file->Write("\n");
 	}
@@ -1819,7 +1820,7 @@ void SynradGeometry::SaveProfileSYN(FileWriter *file, Dataport *dpHit, int super
 	SAFE_FREE(profileFacet);
 }
 
-void SynradGeometry::SaveSpectrumSYN(FileWriter *file, Dataport *dpHit, int super, BOOL saveSelected, BOOL crashSave) {
+void SynradGeometry::SaveSpectrumSYN(FileWriter *file, Dataport *dpHit, int super, bool saveSelected, bool crashSave) {
 	//Spectrums
 
 	BYTE *buffer;
@@ -1831,10 +1832,10 @@ void SynradGeometry::SaveSpectrumSYN(FileWriter *file, Dataport *dpHit, int supe
 	for (int i = 0; i < sh.nbFacet; i++)
 		if ((!saveSelected && !crashSave) && facets[i]->sh.hasSpectrum)
 			spectrumFacet[nbSpectrum++] = i;
-	file->Write(" number: "); file->WriteInt(nbSpectrum, "\n");
+	file->Write(" number: "); file->Write(nbSpectrum, "\n");
 	file->Write(" facets: ");
 	for (int i = 0; i < nbSpectrum; i++)   //doesn't execute when crashSave or saveSelected...
-		file->WriteInt(spectrumFacet[i], "\t");
+		file->Write(spectrumFacet[i], "\t");
 	file->Write("\n");
 	for (int j = 0; j < SPECTRUM_SIZE; j++) {
 		for (int i = 0; i < nbSpectrum; i++) {  //doesn't execute when crashSave or saveSelected...
@@ -1849,8 +1850,8 @@ void SynradGeometry::SaveSpectrumSYN(FileWriter *file, Dataport *dpHit, int supe
 			if (!crashSave) shSpectrum_powerwise = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize
 				+ textureSize + directionSize + SPECTRUM_SIZE*sizeof(double)));
 
-			file->WriteDouble((!crashSave) ? shSpectrum_fluxwise[j] : 0); file->Write("\t");
-			file->WriteDouble((!crashSave) ? shSpectrum_powerwise[j] : 0); file->Write("\t");
+			file->Write((!crashSave) ? shSpectrum_fluxwise[j] : 0); file->Write("\t");
+			file->Write((!crashSave) ? shSpectrum_powerwise[j] : 0); file->Write("\t");
 		}
 		file->Write("\n");
 	}
@@ -1859,10 +1860,10 @@ void SynradGeometry::SaveSpectrumSYN(FileWriter *file, Dataport *dpHit, int supe
 }
 
 //Temporary placeholders
-void SynradGeometry::SaveXML_geometry(pugi::xml_node saveDoc, Worker *work, GLProgress *prg, BOOL saveSelected){}
-BOOL SynradGeometry::SaveXML_simustate(pugi::xml_node saveDoc, Worker *work, BYTE *buffer, SHGHITS *gHits, int nbLeakSave, int nbHHitSave,
-	LEAK *leakCache, HIT *hitCache, GLProgress *prg, BOOL saveSelected){
-	return FALSE;
+void SynradGeometry::SaveXML_geometry(pugi::xml_node saveDoc, Worker *work, GLProgress *prg, bool saveSelected){}
+bool SynradGeometry::SaveXML_simustate(pugi::xml_node saveDoc, Worker *work, BYTE *buffer, SHGHITS *gHits, int nbLeakSave, int nbHHitSave,
+	LEAK *leakCache, HIT *hitCache, GLProgress *prg, bool saveSelected){
+	return false;
 }
 void SynradGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg){
 	//mApp->ClearAllSelections();
@@ -1880,7 +1881,7 @@ void SynradGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgre
 		vertices3[idx].x = vertex.attribute("x").as_double();
 		vertices3[idx].y = vertex.attribute("y").as_double();
 		vertices3[idx].z = vertex.attribute("z").as_double();
-		vertices3[idx].selected = FALSE;
+		vertices3[idx].selected = false;
 		idx++;
 
 	}
@@ -1899,7 +1900,7 @@ void SynradGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgre
 
 	//Parameters (needs to precede facets)
 	xml_node simuParamNode = loadXML.child("SynradSimuSettings");
-	BOOL isSynradFile = (simuParamNode != NULL); //if no "SynradSimuSettings" node, it's a Molflow XML file
+	bool isSynradFile = (simuParamNode != NULL); //if no "SynradSimuSettings" node, it's a Molflow XML file
 
 	if (isSynradFile) {
 		//Nothing yet...
@@ -1933,14 +1934,12 @@ void SynradGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgre
 	//int nbS = selNode.select_nodes("Selection").size();
 
 	for (xml_node sNode : selNode.children("Selection")) {
-		ASELECTION s;
+		SelectionGroup s;
 		s.name = _strdup(sNode.attribute("name").as_string());
-		s.nbSel = sNode.select_nodes("selItem").size();
-		s.selection = (int *)malloc((s.nbSel)*sizeof(int));
-		idx = 0;
+		s.selection.reserve(sNode.select_nodes("selItem").size());
 		for (xml_node iNode : sNode.children("selItem"))
-			s.selection[idx++] = iNode.attribute("facet").as_int();
-		mApp->AddSelection(s.name, s);
+			s.selection.push_back(iNode.attribute("facet").as_llong());
+		mApp->AddSelection(s);
 	}
 
 	xml_node viewNode = interfNode.child("Views");
@@ -1973,7 +1972,7 @@ void SynradGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgre
 
 	InitializeGeometry(); //Includes Buildgllist
 
-	//isLoaded = TRUE; //InitializeGeometry() already sets it to TRUE
+	//isLoaded = true; //InitializeGeometry() already sets it to true
 
 	// Update mesh
 	progressDlg->SetMessage("Building mesh...");
@@ -1992,7 +1991,7 @@ void SynradGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgre
 		f->tRatio = f->sh.texWidthD / nU;
 	}
 }
-void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, BOOL newStr){
+void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, bool newStr){
 	//mApp->ClearAllSelections();
 	//mApp->ClearAllViews();
 	//mApp->ClearFormula();
@@ -2022,7 +2021,7 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 		vertices3[idx].x = vertex.attribute("x").as_double();
 		vertices3[idx].y = vertex.attribute("y").as_double();
 		vertices3[idx].z = vertex.attribute("z").as_double();
-		vertices3[idx].selected = FALSE;
+		vertices3[idx].selected = false;
 		idx++;
 	}
 
@@ -2040,7 +2039,7 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 
 	//Parameters (needs to precede facets)
 	xml_node simuParamNode = loadXML.child("SynradSimuSettings");
-	BOOL isSynradFile = (simuParamNode != NULL); //if no "SynradSimuSettings" node, it's a Molflow XML file
+	bool isSynradFile = (simuParamNode != NULL); //if no "SynradSimuSettings" node, it's a Molflow XML file
 
 	if (isSynradFile) {
 		//Nothing yet...
@@ -2057,7 +2056,7 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 		}
 		facets[idx] = new Facet(nbIndex);
 		facets[idx]->LoadXML(facetNode, sh.nbVertex + nbNewVertex, isSynradFile, sh.nbVertex);
-		facets[idx]->selected = TRUE;
+		facets[idx]->selected = true;
 
 
 		if (newStr) {
@@ -2081,14 +2080,12 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 	//int nbS = selNode.select_nodes("Selection").size();
 
 	for (xml_node sNode : selNode.children("Selection")) {
-		ASELECTION s;
+		SelectionGroup s;
 		s.name = _strdup(sNode.attribute("name").as_string());
-		s.nbSel = sNode.select_nodes("selItem").size();
-		s.selection = (int *)malloc((s.nbSel)*sizeof(int));
-		idx = 0;
+		size_t nbSel = sNode.select_nodes("selItem").size();
 		for (xml_node iNode : sNode.children("selItem"))
-			s.selection[idx++] = iNode.attribute("facet").as_int() + sh.nbFacet; //offset selection numbers
-		mApp->AddSelection(s.name, s);
+			s.selection.push_back(iNode.attribute("facet").as_int() + sh.nbFacet); //offset selection numbers
+		mApp->AddSelection(s);
 	}
 
 	xml_node viewNode = interfNode.child("Views");
@@ -2128,7 +2125,7 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 	if (newStr) sh.nbSuper += nbNewSuper;
 	else if (sh.nbSuper < structId + nbNewSuper) sh.nbSuper = structId + nbNewSuper;
 	InitializeGeometry(); //Includes Buildgllist
-	//isLoaded = TRUE; //InitializeGeometry() already sets it to TRUE
+	//isLoaded = true; //InitializeGeometry() already sets it to true
 
 }
-BOOL SynradGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit, Worker *work, GLProgress *progressDlg){ return FALSE; }
+bool SynradGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit, Worker *work, GLProgress *progressDlg){ return false; }

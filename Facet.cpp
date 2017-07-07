@@ -48,13 +48,13 @@ extern SynRad*mApp;
 #endif
 
 static int colorMap[65536];
-static BOOL colorInited = FALSE;
+static bool colorInited = false;
 
 // -----------------------------------------------------------
 
 Facet::Facet(int nbIndex) {
 
-	indices = (int *)malloc(nbIndex * sizeof(int));                    // Ref to Geometry Vector3d
+	indices = (size_t *)malloc(nbIndex * sizeof(size_t));                    // Ref to Geometry Vector3d
 	vertices2 = (Vector2d *)malloc(nbIndex * sizeof(Vector2d));      // Local U,V coordinates
 	memset(vertices2, 0, nbIndex * sizeof(Vector2d));
 
@@ -63,13 +63,13 @@ Facet::Facet(int nbIndex) {
 
 	sh.sticking = 0.0;
 	sh.opacity = 1.0;
-	sh.doScattering = FALSE;
+	sh.doScattering = false;
 	sh.rmsRoughness = 100.0E-9; //100nm
 	sh.autoCorrLength = 100 * 100E-9; //tau=autoCorr/RMS=100
 
 	sh.reflectType = REF_MIRROR;
 	sh.profileType = REC_NONE;
-	sh.hasSpectrum = FALSE;
+	sh.hasSpectrum = false;
 	sh.texWidth = 0;
 	sh.texHeight = 0;
 	sh.texWidthD = 0.0;
@@ -77,22 +77,22 @@ Facet::Facet(int nbIndex) {
 	sh.center.x = 0.0;
 	sh.center.y = 0.0;
 	sh.center.z = 0.0;
-	sh.is2sided = FALSE;
-	sh.isProfile = FALSE;
-	//sh.isOpaque = TRUE;
-	sh.isTextured = FALSE;
+	sh.is2sided = false;
+	sh.isProfile = false;
+	//sh.isOpaque = true;
+	sh.isTextured = false;
 	sh.sign = 0.0;
-	sh.countAbs = FALSE;
-	sh.countRefl = FALSE;
-	sh.countTrans = FALSE;
-	sh.countDirection = FALSE;
+	sh.countAbs = false;
+	sh.countRefl = false;
+	sh.countTrans = false;
+	sh.countDirection = false;
 	sh.superIdx = 0;
 	sh.superDest = 0;
 	sh.teleportDest = 0;
-	sh.isVolatile = FALSE;
+	sh.isVolatile = false;
 
-	textureVisible = TRUE;
-	volumeVisible = TRUE;
+	textureVisible = true;
+	volumeVisible = true;
 
 	texDimW = 0;
 	texDimH = 0;
@@ -103,14 +103,14 @@ Facet::Facet(int nbIndex) {
 	cellPropertiesIds = NULL;
 	meshvector = NULL;
 	meshvectorsize = 0;
-	hasMesh = FALSE;
+	hasMesh = false;
 	//nbElem = 0;
 	selectedElem.u = 0;
 	selectedElem.v = 0;
 	selectedElem.width = 0;
 	selectedElem.height = 0;
 	dirCache = NULL;
-	textureError = FALSE;
+	textureError = false;
 
 	// Init the colormap at the first facet construction
 	for (int i = 0; i < 65536 && !colorInited; i++) {
@@ -135,15 +135,15 @@ Facet::Facet(int nbIndex) {
 
 	}
 	colorMap[65535] = 0xFFFFFF; // Saturation color
-	colorInited = TRUE;
+	colorInited = true;
 
 	glTex = 0;
 	glList = 0;
 	glElem = 0;
 	glSelElem = 0;
-	selected = FALSE;
-	visible = (BOOL *)malloc(nbIndex * sizeof(BOOL));
-	memset(visible, 0xFF, nbIndex * sizeof(BOOL));
+	selected = false;
+	visible = (bool *)malloc(nbIndex * sizeof(bool));
+	memset(visible, 0xFF, nbIndex * sizeof(bool));
 
 }
 
@@ -294,20 +294,20 @@ void Facet::LoadTXT(FileReader *file) {
 		sh.opacity = 0.0;
 		if (IS_ZERO(o + 1.0)) {
 			//sh.profileType = REC_PRESSUREU;
-			sh.is2sided = TRUE;
+			sh.is2sided = true;
 		}
 		if (IS_ZERO(o + 2.0))
 			//sh.profileType = REC_ANGULAR;
 			if (IS_ZERO(o + 4.0)) {
 				//sh.profileType = REC_PRESSUREU;
-				sh.is2sided = FALSE;
+				sh.is2sided = false;
 			}
 
 	}
 	else {
 		if (o >= 1.0000001) {
 			sh.opacity = o - 1.0;
-			sh.is2sided = TRUE;
+			sh.is2sided = true;
 		}
 		else
 			sh.opacity = o;
@@ -352,7 +352,7 @@ void Facet::LoadTXT(FileReader *file) {
 
 }
 
-void Facet::LoadXML(xml_node f, int nbVertex, BOOL isSynradFile, int vertexOffset) {
+void Facet::LoadXML(xml_node f, int nbVertex, bool isSynradFile, int vertexOffset) {
 	int idx = 0;
 	for (xml_node indice : f.child("Indices").children("Indice")) {
 		indices[idx] = indice.attribute("vertex").as_int() + vertexOffset;
@@ -394,38 +394,38 @@ void Facet::LoadXML(xml_node f, int nbVertex, BOOL isSynradFile, int vertexOffse
 void Facet::SaveTXT(FileWriter *file) {
 
 	if (!sh.superDest)
-		file->WriteDouble(sh.sticking, "\n");
+		file->Write(sh.sticking, "\n");
 	else {
-		file->WriteDouble((double)sh.superDest, "\n");
+		file->Write((double)sh.superDest, "\n");
 		sh.opacity = 0.0;
 	}
 
 	if (sh.is2sided)
-		file->WriteDouble(sh.opacity + 1.0, "\n");
+		file->Write(sh.opacity + 1.0, "\n");
 	else
-		file->WriteDouble(sh.opacity, "\n");
+		file->Write(sh.opacity, "\n");
 
-	file->WriteDouble(sh.area, "\n");
+	file->Write(sh.area, "\n");
 
-	file->WriteDouble(0.0, "\n"); //no desorption
-	file->WriteDouble(0.0, "\n"); //nbHit
-	file->WriteDouble(0.0, "\n"); //nbAbsorbed
+	file->Write(0.0, "\n"); //no desorption
+	file->Write(0.0, "\n"); //nbHit
+	file->Write(0.0, "\n"); //nbAbsorbed
 
-	file->WriteDouble(0.0, "\n"); //no desorption
+	file->Write(0.0, "\n"); //no desorption
 
 	switch (sh.reflectType) {
 	case REF_DIFFUSE:
-		file->WriteDouble(0.0, "\n");
+		file->Write(0.0, "\n");
 		break;
 	case REF_MIRROR:
-		file->WriteDouble(1.0, "\n");
+		file->Write(1.0, "\n");
 		break;
 	default:
-		file->WriteDouble((double)(sh.reflectType), "\n");
+		file->Write((double)(sh.reflectType), "\n");
 		break;
 	}
 
-	file->WriteDouble(0.0, "\n"); // Unused
+	file->Write(0.0, "\n"); // Unused
 }
 
 // -----------------------------------------------------------
@@ -436,46 +436,46 @@ char tmp[256];
 
 sprintf(tmp,"facet %d {\n",idx+1);
 file->Write(tmp);
-file->Write("  nbIndex:");file->WriteInt(sh.nbIndex,"\n");
+file->Write("  nbIndex:");file->Write(sh.nbIndex,"\n");
 file->Write("  indices:\n");
 for(int i=0;i<sh.nbIndex;i++) {
 file->Write("    ");
-file->WriteInt(indices[i]+1,"\n");
+file->Write(indices[i]+1,"\n");
 }
 //file->Write("\n");
-file->Write("  sticking:");file->WriteDouble(sh.sticking,"\n");
-file->Write("  opacity:");file->WriteDouble(sh.opacity,"\n");
-file->Write("  desorbType:");file->WriteInt(0,"\n");
-file->Write("  desorbTypeN:");file->WriteDouble(0.0,"\n");
-file->Write("  reflectType:");file->WriteInt(sh.reflectType,"\n");
-file->Write("  profileType:");file->WriteInt(REC_NONE,"\n");
-file->Write("  superDest:");file->WriteInt(sh.superDest,"\n");
-file->Write("  superIdx:");file->WriteInt(sh.superIdx,"\n");
-file->Write("  is2sided:");file->WriteInt(sh.is2sided,"\n");
-//file->Write("  area:");file->WriteDouble(sh.area,"\n");
-file->Write("  mesh:");file->WriteInt( FALSE ,"\n");
-file->Write("  outgassing:");file->WriteDouble(0.0 ,"\n");
-file->Write("  texDimX:");file->WriteDouble(0,"\n");
-file->Write("  texDimY:");file->WriteDouble(0,"\n");
-file->Write("  countDes:");file->WriteInt(0,"\n");
-file->Write("  countAbs:");file->WriteInt(sh.countAbs,"\n");
-file->Write("  countRefl:");file->WriteInt(sh.countRefl,"\n");
-file->Write("  countTrans:");file->WriteInt(sh.countTrans,"\n");
-file->Write("  acMode:");file->WriteInt(0,"\n");
-file->Write("  nbAbs:");file->WriteLLong(0,"\n");
-file->Write("  nbDes:");file->WriteLLong(0,"\n");
-file->Write("  nbHit:");file->WriteLLong(0,"\n");
+file->Write("  sticking:");file->Write(sh.sticking,"\n");
+file->Write("  opacity:");file->Write(sh.opacity,"\n");
+file->Write("  desorbType:");file->Write(0,"\n");
+file->Write("  desorbTypeN:");file->Write(0.0,"\n");
+file->Write("  reflectType:");file->Write(sh.reflectType,"\n");
+file->Write("  profileType:");file->Write(REC_NONE,"\n");
+file->Write("  superDest:");file->Write(sh.superDest,"\n");
+file->Write("  superIdx:");file->Write(sh.superIdx,"\n");
+file->Write("  is2sided:");file->Write(sh.is2sided,"\n");
+//file->Write("  area:");file->Write(sh.area,"\n");
+file->Write("  mesh:");file->Write( false ,"\n");
+file->Write("  outgassing:");file->Write(0.0 ,"\n");
+file->Write("  texDimX:");file->Write(0,"\n");
+file->Write("  texDimY:");file->Write(0,"\n");
+file->Write("  countDes:");file->Write(0,"\n");
+file->Write("  countAbs:");file->Write(sh.countAbs,"\n");
+file->Write("  countRefl:");file->Write(sh.countRefl,"\n");
+file->Write("  countTrans:");file->Write(sh.countTrans,"\n");
+file->Write("  acMode:");file->Write(0,"\n");
+file->Write("  nbAbs:");file->Write(0,"\n");
+file->Write("  nbDes:");file->Write(0,"\n");
+file->Write("  nbHit:");file->Write(0,"\n");
 
 // Version 2
-file->Write("  temperature:");file->WriteDouble(293.15,"\n");
-file->Write("  countDirection:");file->WriteInt(sh.countDirection,"\n");
+file->Write("  temperature:");file->Write(293.15,"\n");
+file->Write("  countDirection:");file->Write(sh.countDirection,"\n");
 
 // Version 4
-file->Write("  textureVisible:");file->WriteInt(textureVisible,"\n");
-file->Write("  volumeVisible:");file->WriteInt(volumeVisible,"\n");
+file->Write("  textureVisible:");file->Write(textureVisible,"\n");
+file->Write("  volumeVisible:");file->Write(volumeVisible,"\n");
 
 // Version 5
-file->Write("  teleportDest:");file->WriteInt(sh.teleportDest,"\n");
+file->Write("  teleportDest:");file->Write(sh.teleportDest,"\n");
 
 file->Write("}\n");
 }
@@ -527,14 +527,14 @@ size_t Facet::GetTexRamSize() {
 
 
 
-size_t Facet::GetTexRamSizeForRatio(double ratio, BOOL useMesh, BOOL countDir) {
+size_t Facet::GetTexRamSizeForRatio(double ratio, bool useMesh, bool countDir) {
 
 	double nU = sh.U.Norme();
 	double nV = sh.V.Norme();
 	double width = nU*ratio;
 	double height = nV*ratio;
 
-	BOOL dimOK = (width*height > 0.0000001);
+	bool dimOK = (width*height > 0.0000001);
 
 	if (dimOK) {
 		int iwidth = (int)ceil(width);
@@ -620,7 +620,7 @@ double Facet::GetSmooth(const int &i, const int &j, llong *texBuffer, const floa
 // -----------------------------------------------------------
 #define LOG10(x) log10f((float)x)
 
-void Facet::BuildTexture(double *texBuffer, double min, double max, double no_scans, BOOL useColorMap, BOOL doLog, BOOL normalize) {
+void Facet::BuildTexture(double *texBuffer, double min, double max, double no_scans, bool useColorMap, bool doLog, bool normalize) {
 	min = min*no_scans;
 	max = max*no_scans;
 	size_t size = sh.texWidth*sh.texHeight;
@@ -648,7 +648,7 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 			}
 		}
 		else {
-			doLog = FALSE;
+			doLog = false;
 			min = 0;
 		}
 
@@ -674,7 +674,7 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 
 			for (int j = -1; j <= sh.texHeight; j++) {
 				for (int i = -1; i <= sh.texWidth; i++) {
-					BOOL doSmooth = (i < 0) || (i >= sh.texWidth) ||
+					bool doSmooth = (i < 0) || (i >= sh.texWidth) ||
 						(j < 0) || (j >= sh.texHeight) ||
 						GetMeshArea(i + j*sh.texWidth) == 0.0f;
 					if (doSmooth) {
@@ -702,8 +702,8 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 				0,                   // No Mipmap
 				0,					// X offset
 				0,					// Y offset
-				texDimW,             // Width
-				texDimH,             // Height
+				(int)texDimW,             // Width
+				(int)texDimH,             // Height
 				GL_RGBA,             // Format RGBA
 				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
 				buff32              // Data
@@ -715,8 +715,8 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 				GL_TEXTURE_2D,       // Type
 				0,                   // No Mipmap
 				GL_RGBA,             // Format RGBA
-				texDimW,             // Width
-				texDimH,             // Height
+				(int)texDimW,             // Width
+				(int)texDimH,             // Height
 				0,                   // Border
 				GL_RGBA,             // Format RGBA
 				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
@@ -743,7 +743,7 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 			}
 		}
 		else {
-			doLog = FALSE;
+			doLog = false;
 			min = 0;
 		}
 
@@ -770,7 +770,7 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 
 			for (int j = -1; j <= sh.texHeight; j++) {
 				for (int i = -1; i <= sh.texWidth; i++) {
-					BOOL doSmooth = (i < 0) || (i >= sh.texWidth) ||
+					bool doSmooth = (i < 0) || (i >= sh.texWidth) ||
 						(j < 0) || (j >= sh.texHeight) ||
 						GetMeshArea(i + j*sh.texWidth) == 0.0f;
 					if (doSmooth) {
@@ -798,8 +798,8 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 				0,                   // No Mipmap
 				0,					// X offset
 				0,					// Y offset
-				texDimW,             // Width
-				texDimH,             // Height
+				(int)texDimW,             // Width
+				(int)texDimH,             // Height
 				GL_LUMINANCE,         // Format RGBA
 				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
 				buff8                // Data
@@ -811,8 +811,8 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 				GL_TEXTURE_2D,       // Type
 				0,                   // No Mipmap
 				GL_LUMINANCE,         // Format RGBA
-				texDimW,             // Width
-				texDimH,             // Height
+				(int)texDimW,             // Width
+				(int)texDimH,             // Height
 				0,                   // Border
 				GL_LUMINANCE,         // Format RGBA
 				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
@@ -837,7 +837,7 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 	GLToolkit::CheckGLErrors("Facet::BuildTexture()");
 }
 
-void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMap, BOOL doLog) {
+void Facet::BuildTexture(llong *texBuffer, llong min, llong max, bool useColorMap, bool doLog) {
 
 	size_t size = sh.texWidth*sh.texHeight;
 	size_t tSize = texDimW*texDimH;
@@ -864,7 +864,7 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 			}
 		}
 		else {
-			doLog = FALSE;
+			doLog = false;
 			min = 0;
 		}
 
@@ -890,7 +890,7 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 
 			for (int j = -1; j <= sh.texHeight; j++) {
 				for (int i = -1; i <= sh.texWidth; i++) {
-					BOOL doSmooth = (i < 0) || (i >= sh.texWidth) ||
+					bool doSmooth = (i < 0) || (i >= sh.texWidth) ||
 						(j < 0) || (j >= sh.texHeight) ||
 						GetMeshArea(i + j*sh.texWidth) == 0.0f;
 					if (doSmooth) {
@@ -922,8 +922,8 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 				0,                   // No Mipmap
 				0,					// X offset
 				0,					// Y offset
-				texDimW,             // Width
-				texDimH,             // Height
+				(int)texDimW,             // Width
+				(int)texDimH,             // Height
 				GL_RGBA,             // Format RGBA
 				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
 				buff32              // Data
@@ -936,8 +936,8 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 				0,                   // No Mipmap
 
 				GL_RGBA,             // Format RGBA
-				texDimW,             // Width
-				texDimH,             // Height
+				(int)texDimW,             // Width
+				(int)texDimH,             // Height
 				0,                   // Border
 
 				GL_RGBA,             // Format RGBA
@@ -966,7 +966,7 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 			}
 		}
 		else {
-			doLog = FALSE;
+			doLog = false;
 			min = 0;
 		}
 
@@ -993,7 +993,7 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 
 			for (int j = -1; j <= sh.texHeight; j++) {
 				for (int i = -1; i <= sh.texWidth; i++) {
-					BOOL doSmooth = (i < 0) || (i >= sh.texWidth) ||
+					bool doSmooth = (i < 0) || (i >= sh.texWidth) ||
 						(j < 0) || (j >= sh.texHeight) ||
 						GetMeshArea(i + j*sh.texWidth) == 0.0;
 					if (doSmooth) {
@@ -1020,8 +1020,8 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 				0,                   // No Mipmap
 				0,					// X offset
 				0,					// Y offset
-				texDimW,             // Width
-				texDimH,             // Height
+				(int)texDimW,             // Width
+				(int)texDimH,             // Height
 				GL_LUMINANCE,         // Format RGBA
 				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
 				buff8                // Data
@@ -1033,8 +1033,8 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 				GL_TEXTURE_2D,       // Type
 				0,                   // No Mipmap
 				GL_LUMINANCE,         // Format RGBA
-				texDimW,             // Width
-				texDimH,             // Height
+				(int)texDimW,             // Width
+				(int)texDimH,             // Height
 				0,                   // Border
 				GL_LUMINANCE,         // Format RGBA
 				GL_UNSIGNED_BYTE,    // 8 Bit/pixel
@@ -1049,7 +1049,7 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, BOOL useColorMa
 }
 
 
-BOOL Facet::IsCoplanarAndEqual(Facet *f, double threshold) {
+bool Facet::IsCoplanarAndEqual(Facet *f, double threshold) {
 
 	// Detect if 2 facets are in the same plane (orientation preserving)
 	// and have same parameters (used by collapse)
@@ -1068,7 +1068,7 @@ BOOL Facet::IsCoplanarAndEqual(Facet *f, double threshold) {
 
 // -----------------------------------------------------------
 
-void Facet::Copy(Facet *f, BOOL copyMesh) {
+void Facet::CopyFacetProperties(Facet *f, bool copyMesh) {
 
 	sh.sticking = f->sh.sticking;
 	sh.opacity = f->sh.opacity;
@@ -1104,49 +1104,49 @@ void Facet::Copy(Facet *f, BOOL copyMesh) {
 	this->UpdateFlags();
 }
 
-void Facet::SaveSYN(FileWriter *file, const std::vector<Material> &materials, int idx, BOOL crashSave) {
+void Facet::SaveSYN(FileWriter *file, const std::vector<Material> &materials, int idx, bool crashSave) {
 
 	char tmp[256];
 
 	sprintf(tmp, "facet %d {\n", idx + 1);
 	file->Write(tmp);
-	file->Write("  nbIndex:"); file->WriteInt(sh.nbIndex, "\n");
+	file->Write("  nbIndex:"); file->Write(sh.nbIndex, "\n");
 	file->Write("  indices:\n");
 	for (int i = 0; i < sh.nbIndex; i++) {
 		file->Write("    ");
-		file->WriteInt(indices[i] + 1, "\n");
+		file->Write(indices[i] + 1, "\n");
 	}
-	file->Write("  reflectType:"); file->WriteInt(sh.reflectType, "\n");
-	file->Write("  sticking:"); file->WriteDouble(sh.sticking, "\n");
+	file->Write("  reflectType:"); file->Write(sh.reflectType, "\n");
+	file->Write("  sticking:"); file->Write(sh.sticking, "\n");
 
 	if (sh.reflectType >= 10) { //material reflection
 		file->Write("  materialName:"); file->Write(materials[sh.reflectType - 10].name + "\n");
 	}
 
-	file->Write("  doScattering:"); file->WriteInt(sh.doScattering, "\n");
-	file->Write("  rmsRoughness:"); file->WriteDouble(sh.rmsRoughness, "\n");
-	file->Write("  autoCorrLength:"); file->WriteDouble(sh.autoCorrLength, "\n");
+	file->Write("  doScattering:"); file->Write(sh.doScattering, "\n");
+	file->Write("  rmsRoughness:"); file->Write(sh.rmsRoughness, "\n");
+	file->Write("  autoCorrLength:"); file->Write(sh.autoCorrLength, "\n");
 
-	file->Write("  opacity:"); file->WriteDouble(sh.opacity, "\n");
-	file->Write("  profileType:"); file->WriteInt(sh.profileType, "\n");
-	file->Write("  hasSpectrum:"); file->WriteInt(sh.hasSpectrum, "\n");
-	file->Write("  superDest:"); file->WriteInt(sh.superDest, "\n");
-	file->Write("  superIdx:"); file->WriteInt(sh.superIdx, "\n");
-	file->Write("  is2sided:"); file->WriteInt(sh.is2sided, "\n");
-	file->Write("  mesh:"); file->WriteInt((cellPropertiesIds != NULL), "\n");
-	file->Write("  texDimX:"); file->WriteDouble(sh.texWidthD, "\n");
-	file->Write("  texDimY:"); file->WriteDouble(sh.texHeightD, "\n");
-	file->Write("  countAbs:"); file->WriteInt(sh.countAbs, "\n");
-	file->Write("  countRefl:"); file->WriteInt(sh.countRefl, "\n");
-	file->Write("  countTrans:"); file->WriteInt(sh.countTrans, "\n");
-	file->Write("  nbAbs:"); file->WriteLLong(counterCache.nbAbsorbed, "\n");
-	file->Write("  nbHit:"); file->WriteLLong(counterCache.nbHit, "\n");
-	file->Write("  fluxAbs:"); file->WriteDouble(counterCache.fluxAbs, "\n");
-	file->Write("  powerAbs:"); file->WriteDouble(counterCache.powerAbs, "\n");
-	file->Write("  countDirection:"); file->WriteInt(sh.countDirection, "\n");
-	file->Write("  textureVisible:"); file->WriteInt(textureVisible, "\n");
-	file->Write("  volumeVisible:"); file->WriteInt(volumeVisible, "\n");
-	file->Write("  teleportDest:"); file->WriteInt(sh.teleportDest, "\n");
+	file->Write("  opacity:"); file->Write(sh.opacity, "\n");
+	file->Write("  profileType:"); file->Write(sh.profileType, "\n");
+	file->Write("  hasSpectrum:"); file->Write(sh.hasSpectrum, "\n");
+	file->Write("  superDest:"); file->Write(sh.superDest, "\n");
+	file->Write("  superIdx:"); file->Write(sh.superIdx, "\n");
+	file->Write("  is2sided:"); file->Write(sh.is2sided, "\n");
+	file->Write("  mesh:"); file->Write((cellPropertiesIds != NULL), "\n");
+	file->Write("  texDimX:"); file->Write(sh.texWidthD, "\n");
+	file->Write("  texDimY:"); file->Write(sh.texHeightD, "\n");
+	file->Write("  countAbs:"); file->Write(sh.countAbs, "\n");
+	file->Write("  countRefl:"); file->Write(sh.countRefl, "\n");
+	file->Write("  countTrans:"); file->Write(sh.countTrans, "\n");
+	file->Write("  nbAbs:"); file->Write(counterCache.nbAbsorbed, "\n");
+	file->Write("  nbHit:"); file->Write(counterCache.nbHit, "\n");
+	file->Write("  fluxAbs:"); file->Write(counterCache.fluxAbs, "\n");
+	file->Write("  powerAbs:"); file->Write(counterCache.powerAbs, "\n");
+	file->Write("  countDirection:"); file->Write(sh.countDirection, "\n");
+	file->Write("  textureVisible:"); file->Write(textureVisible, "\n");
+	file->Write("  volumeVisible:"); file->Write(volumeVisible, "\n");
+	file->Write("  teleportDest:"); file->Write(sh.teleportDest, "\n");
 
 	file->Write("}\n");
 }
@@ -1170,7 +1170,7 @@ void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, in
 			sh.reflectType = 9; //Invalid material, unless we find it below
 			for (size_t i = 0; i < materials.size(); i++) {
 				if (materials[i].name == matName) {
-					sh.reflectType = 10 + i;
+					sh.reflectType = 10 + (int)i;
 					break;
 				}
 			}
@@ -1203,10 +1203,10 @@ void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, in
 			else { //invalid material
 				sh.reflectType = 9; //invalid material
 			}
-			sh.doScattering = TRUE;
+			sh.doScattering = true;
 		}
 		else { //diffuse or mirror reflection
-			sh.doScattering = FALSE;
+			sh.doScattering = false;
 		}
 	}
 	file->ReadKeyword("profileType"); file->ReadKeyword(":");

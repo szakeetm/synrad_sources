@@ -35,7 +35,7 @@ void DistributionND::AddPair(const double& x, const std::vector<double>& insertV
 }
 
 std::vector<double> DistributionND::GetYValues(const double& x) {
-	return InterpolateVector(x, values, TRUE, FALSE); //linear interpolation, limited to bounds
+	return InterpolateVector(x, values, true, false); //linear interpolation, limited to bounds
 }
 
 double DistributionND::GetXValue(const size_t& index) {

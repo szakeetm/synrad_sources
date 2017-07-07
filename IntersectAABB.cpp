@@ -32,16 +32,16 @@
 
 // Temporary for intersection
 extern  double    intMinLgth;
-extern  BOOL      intFound;
+extern  bool      intFound;
 extern  Vector3d  intD;
 extern  Vector3d  intZ;
 extern  int       intNbTHits;
 extern  double    iRx;
 extern  double    iRy;
 extern  double    iRz;
-extern  BOOL      nullRx;
-extern  BOOL      nullRy;
-extern  BOOL      nullRz;
+extern  bool      nullRx;
+extern  bool      nullRy;
+extern  bool      nullRz;
 extern  Vector3d *rayPos;
 extern  Vector3d *rayDir;
 extern  FACET   **iFacet;
@@ -49,7 +49,7 @@ extern  FACET    *fLast;
 extern  double    tNear;
 extern  double    tFar;
 extern  double    it1, it2;
-extern  BOOL      AABBHit;
+extern  bool      AABBHit;
 
 
 
@@ -57,7 +57,7 @@ void ProfileFacet(FACET *f, const double &dF, const double &dP, const double &E)
 
 	int pos;
 
-	f->hitted = TRUE;
+	f->hitted = true;
 
 	switch (f->sh.profileType) {
 
@@ -96,13 +96,13 @@ void ProfileFacet(FACET *f, const double &dF, const double &dP, const double &E)
 	}
 }
 
-BOOL Intersect(Vector3d *rPos, Vector3d *rDir,  // Source ray (rayDir vector must be normalized)
+bool Intersect(Vector3d *rPos, Vector3d *rDir,  // Source ray (rayDir vector must be normalized)
 	double *dist,                   // Distance to collision point
 	FACET **iFact, FACET *last) {    // Collided facet, previous collision
 
 	int i, j;
 	intMinLgth = 1e100;
-	intFound = FALSE;
+	intFound = false;
 	intNbTHits = 0;
 	rayPos = rPos;
 	rayDir = rDir;

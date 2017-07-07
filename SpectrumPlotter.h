@@ -40,7 +40,7 @@ public:
   void Display(Worker *w);
   void SetScale();
   void Refresh();
-  void Update(float appTime,BOOL force=FALSE);
+  void Update(float appTime,bool force=false);
   void Reset();
 
   // Implementation

@@ -24,7 +24,25 @@
 #include "File.h"
 #include "PugiXML/pugixml.hpp"
 #include "Distributions.h"
-#include "Geometry.h"
+//#include "Geometry.h"
+
+class CellProperties;
+
+struct NeighborFacet {
+	size_t id;
+	double angleDiff;
+};
+
+class CellProperties {
+public:
+	Vector2d* points;
+	size_t nbPoints;
+	float   area;     // Area of element
+	float   uCenter;  // Center coordinates
+	float   vCenter;  // Center coordinates
+					  //int     elemId;   // Element index (MESH array)
+					  //int full;
+};
 
 class Facet {
 
@@ -32,17 +50,17 @@ public:
 
   typedef struct {
   
-    int nbV;
-    int nbF;
+	size_t nbV;
+	size_t nbF;
     Facet **facets;
 
   } FACETGROUP;
 
   typedef struct {
-    int u;
-    int v;
-    int width;
-    int height;
+	  size_t u;
+	  size_t v;
+	  size_t width;
+	  size_t height;
   } BOX;
 
   // Constructor/Desctructor/Initialisation
@@ -52,12 +70,11 @@ public:
   // Shared struct
   SHFACET sh;
 
-  int      *indices;      // Indices (Reference to geometry vertex)
+  size_t      *indices;      // Indices (Reference to geometry vertex)
   Vector2d *vertices2;    // Vertices (2D plane space, UV coordinates)
   int     *cellPropertiesIds;      // -1 if full element, -2 if outside polygon, otherwise index in meshvector
   CellProperties* meshvector;
   size_t meshvectorsize;
-  //size_t       nbElem;       // Number of mesh elem
 
   // Normalized plane equation (ax + by + cz + d = 0)
   double a;
@@ -65,20 +82,19 @@ public:
   double c;
   double d;
   double err;          // planeity error
-  int texDimH;         // Texture dimension (a power of 2)
-  int texDimW;         // Texture dimension (a power of 2)
+  size_t texDimH;         // Texture dimension (a power of 2)
+  size_t texDimW;         // Texture dimension (a power of 2)
   double tRatio;       // Texture sample per unit
-  BOOL	textureVisible; //Draw the texture?
-  BOOL  collinear;      //All vertices are on a line (non-simple)
-  BOOL	volumeVisible;	//Draw volume?
- // SHELEM *mesh;        // Element mesh
-  BOOL    hasMesh;     // Has texture
+  bool	textureVisible; //Draw the texture?
+  bool  collinear;      //All vertices are on a line (non-simple)
+  bool	volumeVisible;	//Draw volume?
+  bool    hasMesh;     // Has texture
   VHIT   *dirCache;    // Direction field cache
-  BOOL textureError;   // Disable rendering if the texture has an error
+  bool textureError;   // Disable rendering if the texture has an error
 
   // GUI stuff
-  BOOL  *visible;         // Edge visible flag
-  BOOL   selected;        // Selected flag
+  bool  *visible;         // Edge visible flag
+  bool   selected;        // Selected flag
   BOX    selectedElem;    // Selected mesh element
   GLint  glElem;          // Surface elements boundaries
   GLint  glSelElem;       // Selected surface elements boundaries
@@ -93,36 +109,37 @@ public:
 
   //Facet methods
 
-  BOOL  IsTXTLinkFacet();
+  bool  IsTXTLinkFacet();
   Vector3d GetRealCenter();
   void  LoadTXT(FileReader *file);
   void  SaveTXT(FileWriter *file);
   void  LoadGEO(FileReader *file,int version,int nbVertex);
   //void  SaveGEO(FileWriter *file,int idx);
   void  LoadSYN(FileReader *file, const std::vector<Material> &materials, int version, int nbVertex);
-  void  SaveSYN(FileWriter *file, const std::vector<Material> &materials, int idx,BOOL crashSave=FALSE);
-  void  LoadXML(pugi::xml_node f, int nbVertex, BOOL isMolflowFile, int vertexOffset);
-  BOOL  IsCoplanarAndEqual(Facet *f,double threshold);
-  int   GetIndex(int idx);
-  void  Copy(Facet *f,BOOL copyMesh=FALSE);
+  void  SaveSYN(FileWriter *file, const std::vector<Material> &materials, int idx,bool crashSave=false);
+  void  LoadXML(pugi::xml_node f, int nbVertex, bool isMolflowFile, int vertexOffset);
+  bool  IsCoplanarAndEqual(Facet *f,double threshold);
+  size_t   GetIndex(int idx);
+  size_t   GetIndex(size_t idx);
+  void  CopyFacetProperties(Facet *f,bool copyMesh=false);
   void  SwapNormal();
   void  Explode(FACETGROUP *group);
-  void  FillVertexArray(Vector3d *v);
+  void  FillVertexArray(InterfaceVertex *v);
   void  BuildMeshList();
   void  InitVisibleEdge();
-  BOOL  SetTexture(double width,double height,BOOL useMesh);
+  bool  SetTexture(double width,double height,bool useMesh);
   size_t GetGeometrySize();
   size_t GetHitsSize();
-  size_t GetTexSwapSize(BOOL useColormap);
+  size_t GetTexSwapSize(bool useColormap);
   size_t GetTexRamSize();
-  size_t GetTexSwapSizeForRatio(double ratio,BOOL useColor);
-  size_t GetTexRamSizeForRatio(double ratio,BOOL useMesh,BOOL countDir);
+  size_t GetTexSwapSizeForRatio(double ratio,bool useColor);
+  size_t GetTexRamSizeForRatio(double ratio,bool useMesh,bool countDir);
   size_t GetNbCellForRatio(double ratio);
   size_t GetNbCell();
   void  UpdateFlags();
-  void  BuildTexture(double *texBuffer,double min,double max,double no_scans,BOOL useColorMap,BOOL doLog,BOOL normalize=TRUE);
-  void  BuildTexture(llong *texBuffer,llong min,llong max,BOOL useColorMap,BOOL doLog);
-  BOOL  BuildMesh();
+  void  BuildTexture(double *texBuffer,double min,double max,double no_scans,bool useColorMap,bool doLog,bool normalize=true);
+  void  BuildTexture(llong *texBuffer,llong min,llong max,bool useColorMap,bool doLog);
+  bool  BuildMesh();
   void  BuildSelElemList();
   int   RestoreDeviceObjects();
   int   InvalidateDeviceObjects();
@@ -132,12 +149,12 @@ public:
   void  glVertex2u(double u,double v);
   void  ShiftVertex();
   void  RenderSelectedElem();
-  void  SelectElem(int u,int v,int width,int height);
+  void  SelectElem(size_t u, size_t v, size_t width, size_t height);
   void  UnselectElem();
-  float GetMeshArea(int index, BOOL correct2sides = FALSE);
-  size_t GetMeshNbPoint(int index);
-  Vector2d GetMeshPoint(int index,int pointId);
-  Vector2d GetMeshCenter(int index);
+  float GetMeshArea(size_t index, bool correct2sides = false);
+  size_t GetMeshNbPoint(size_t index);
+  Vector2d GetMeshPoint(size_t index, size_t pointId);
+  Vector2d GetMeshCenter(size_t index);
   double GetArea();
 };
 
@@ -145,7 +162,7 @@ class DeletedFacet {
 public:
 	Facet *f;
 	size_t ori_pos;
-	BOOL replaceOri;
+	bool replaceOri;
 };
 
 #endif /* FACETH */

@@ -47,20 +47,22 @@ public:
   // Return a handle to the currently loaded geometry
   Geometry *GetGeometry();
   SynradGeometry* GetSynradGeometry();
+
   void AddMaterial(std::string *fileName);
-  void LoadGeometry(char *fileName, BOOL insert=FALSE, BOOL newStr=FALSE);// Loads or inserts a geometry (throws Error)
-  //void InsertGeometry(BOOL newStr,char *fileName); // Inserts a new geometry (throws Error)
+  void LoadGeometry(char *fileName, bool insert=false, bool newStr=false);// Loads or inserts a geometry (throws Error)
+  //void InsertGeometry(bool newStr,char *fileName); // Inserts a new geometry (throws Error)
   void LoadTexturesSYN(FileReader* f,int version);  // Load a textures(throws Error)
   void RebuildTextures();
+
   void ImportCSV(FileReader *file, std::vector<std::vector<double>> &table);
   
   // Save a geometry (throws Error)
-  void SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm=TRUE,BOOL saveSelected=FALSE,BOOL autoSave=FALSE,BOOL crashSave=FALSE);
+  void SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm=true,bool saveSelected=false,bool autoSave=false,bool crashSave=false);
 
   // Export textures (throws Error)
-  BOOL IsDpInitialized();
-  void ExportTextures(char *fileName,int grouping,int mode,BOOL askConfirm=TRUE,BOOL saveSelected=FALSE);
-  void ExportRegionPoints(char *fileName,GLProgress *prg,int regionId,int exportFrequency,BOOL doFullScan);
+  bool IsDpInitialized();
+  void ExportTextures(char *fileName,int grouping,int mode,bool askConfirm=true,bool saveSelected=false);
+  //void ExportRegionPoints(char *fileName,GLProgress *prg,int regionId,int exportFrequency,bool doFullScan);
   void ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr);
 
   // Return/Set the current filename
@@ -68,17 +70,18 @@ public:
   char *GetShortFileName();
   char *GetShortFileName(char* longFileName);
   void  SetFileName(char *fileName);
-  void SetProcNumber(int n);// Set number of processes [1..32] (throws Error)
-  int GetProcNumber();  // Get number of processes
+
+  void SetProcNumber(size_t n);// Set number of processes [1..32] (throws Error)
+  size_t GetProcNumber();  // Get number of processes
   void SetMaxDesorption(llong max);// Set the number of maximum desorption
-  DWORD GetPID(int prIdx);// Get PID
+  DWORD GetPID(size_t prIdx);// Get PID
   void ResetStatsAndHits(float appTime);
   void Reload();    // Reload simulation (throws Error)
   void RealReload();
   void ChangeSimuParams();
   void StartStop(float appTime,int mode);    // Switch running/stopped
   void Stop_Public();// Switch running/stopped
-  void Exit(); // Free all allocated resource
+  //void Exit(); // Free all allocated resource
   void KillAll();// Kill all sub processes
   void Update(float appTime);// Get hit counts for sub process
   void SendHits();// Send total and facet hit counts to subprocesses
@@ -86,12 +89,12 @@ public:
   void SetHitCache(HIT *buffer,size_t *nb, Dataport *dpHit);  // Set HHit
   void GetProcStatus(int *states,char **status);// Get process status
   BYTE *GetHits(); // Access to dataport (HIT)
-  void  ReleaseHits();
+  void ReleaseHits();
   void ClearRegions();
   void RemoveRegion(int index);
   void AddRegion(const char *fileName,int position=-1); //load region (position==-1: add as new region)
   void RecalcRegion(int regionId);
-  void SaveRegion(char *fileName,int position,BOOL overwrite=FALSE);
+  void SaveRegion(char *fileName,int position,bool overwrite=false);
 
 
   // Global simulation parameters
@@ -103,7 +106,7 @@ public:
   double totalPower;        // Total desorbed power
   size_t  desorptionLimit;     // Number of desoprtion before halting
   double distTraveledTotal; // Total distance traveled by particles (for mean free path calc.)
-  BOOL   running;           // Started/Stopped state
+  bool   running;           // Started/Stopped state
   float  startTime;         // Start time
   float  stopTime;          // Stop time
   float  simuTime;          // Total simulation time
@@ -111,19 +114,19 @@ public:
   size_t    nbTrajPoints;       // number of all points in trajectory
   double no_scans;           // = nbDesorption/nbTrajPoints. Stored separately for saving/loading
   int    generation_mode;   //fluxwise or powerwise
-  BOOL   lowFluxMode;
+  bool   lowFluxMode;
   double lowFluxCutoff;
-  BOOL   newReflectionModel;
+  bool   newReflectionModel;
   std::vector<Region_full> regions;
   std::vector<Material> materials;
   std::vector<std::vector<double>> psi_distr;
   std::vector<std::vector<double>> chi_distr;
   char fullFileName[512]; // Current loaded file
 
-  BOOL needsReload;
-  BOOL abortRequested;
+  bool needsReload;
+  bool abortRequested;
 
-  BOOL calcAC; //Not used in Synrad, kept for ResetStatsAndHits function shared with Molflow
+  bool calcAC; //Not used in Synrad, kept for ResetStatsAndHits function shared with Molflow
 
   // Caches
   HIT  hitCache[HITCACHESIZE];
@@ -134,10 +137,10 @@ public:
 private:
 
   // Process management
-  int    nbProcess;
+  size_t    nbProcess;
   DWORD  pID[MAX_PROCESS];
   DWORD  pid;
-  BOOL   allDone;
+  bool   allDone;
 
   // Geometry handle
   SynradGeometry *geom;
@@ -151,15 +154,15 @@ private:
   char      materialsDpName[32];
 
   // Methods
-  BOOL ExecuteAndWait(int command, int waitState, int param=0);
-  BOOL Wait(int waitState, LoadStatus *statusWindow);
+  bool ExecuteAndWait(int command, int waitState, size_t param=0);
+  bool Wait(int waitState, LoadStatus *statusWindow);
   void ResetWorkerStats();
-  void ClearHits(BOOL noReload);
+  void ClearHits(bool noReload);
   char *GetErrorDetails();
   void ThrowSubProcError(char *message=NULL);
   void Start();
   void Stop();
-  void OneStep();
+  //void OneStep();
   void InnerStop(float appTime);
 
 };

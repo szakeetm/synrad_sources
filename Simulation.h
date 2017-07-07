@@ -42,7 +42,7 @@ typedef struct {
   double    *hits_power; //absorbed SR power
   double	 fullSizeInc; // 1/Texture FULL element area
   double   *inc;        // reciprocial of element area
-  BOOL     *largeEnough; //cells that are NOT too small for autoscaling
+  bool     *largeEnough; //cells that are NOT too small for autoscaling
   VHIT     *direction; // Direction field recording (average)
   //char     *fullElem;  // Direction field recording (only on full element) (WHY???)
   llong    *profile_hits;   // MC hits
@@ -61,8 +61,8 @@ typedef struct {
   double ih;
 
   // Temporary var (used in FillHit for hit recording)
-  BOOL   hitted;
-  BOOL   ready;         // Volatile state
+  bool   hitted;
+  bool   ready;         // Volatile state
   int    textureSize;   // Texture size (in bytes)
   int    profileSize;   // profile size (in bytes)
   int    directionSize; // direction field size (in bytes)
@@ -141,10 +141,10 @@ typedef struct {
   size_t profTotalSize;  // Profile total size
   size_t dirTotalSize;   // Direction field total size
   size_t spectrumTotalSize; //Spectrums total size
-  BOOL loadOK;        // Load OK flag
-  BOOL lastUpdateOK;  // Last hit update timeout
-  BOOL hasVolatile;   // Contains volatile facet
-  //BOOL hasDirection;  // Contains direction field
+  bool loadOK;        // Load OK flag
+  bool lastUpdateOK;  // Last hit update timeout
+  bool hasVolatile;   // Contains volatile facet
+  //bool hasDirection;  // Contains direction field
 
   gsl_rng *gen; //rnd gen stuff
 
@@ -159,7 +159,7 @@ typedef struct {
   double   distTraveledSinceUpdate;
 
   double oriRatio;
-  BOOL newReflectionModel;
+  bool newReflectionModel;
 
   SHMODE mode; //Low flux, generation mode, photon cache display
 
@@ -179,35 +179,35 @@ void RecordHitOnTexture(FACET *f,double dF,double dP);
 void RecordDirectionVector(FACET *f);
 void InitSimulation();
 void ClearSimulation();
-void SetState(int state, const char *status, BOOL changeState = TRUE, BOOL changeStatus = TRUE);
+void SetState(int state, const char *status, bool changeState = true, bool changeStatus = true);
 void SetErrorSub(const char *msg);
-BOOL LoadSimulation(Dataport *loader);
-BOOL UpdateSimuParams(Dataport *loader);
-BOOL StartSimulation();
+bool LoadSimulation(Dataport *loader);
+bool UpdateSimuParams(Dataport *loader);
+bool StartSimulation();
 void ResetSimulation();
-BOOL SimulationRun();
-BOOL SimulationMCStep(int nbStep);
-double GetStickingProbability(FACET * collidedFacet, const double & theta, std::vector<double>& materialReflProbabilities, BOOL & complexScattering);
+bool SimulationRun();
+bool SimulationMCStep(int nbStep);
+double GetStickingProbability(FACET * collidedFacet, const double & theta, std::vector<double>& materialReflProbabilities, bool & complexScattering);
 
-BOOL DoOldRegularReflection(FACET * collidedFacet, double stickingProbability, double theta = 0.0, double phi = 0.0,
+bool DoOldRegularReflection(FACET * collidedFacet, double stickingProbability, double theta = 0.0, double phi = 0.0,
 	Vector3d N_rotated = Vector3d(0, 0, 0), Vector3d nU_rotated = Vector3d(0, 0, 0), Vector3d nV_rotated = Vector3d(0, 0, 0));
-BOOL DoLowFluxReflection(FACET * collidedFacet, double stickingProbability, double theta = 0.0, double phi = 0.0,
+bool DoLowFluxReflection(FACET * collidedFacet, double stickingProbability, double theta = 0.0, double phi = 0.0,
 	Vector3d N_rotated = Vector3d(0, 0, 0), Vector3d nU_rotated = Vector3d(0, 0, 0), Vector3d nV_rotated = Vector3d(0, 0, 0)); //old or new model
-int GetHardHitType(const double& stickingProbability, const std::vector<double>& materialReflProbabilities, const BOOL& complexScattering);
+int GetHardHitType(const double& stickingProbability, const std::vector<double>& materialReflProbabilities, const bool& complexScattering);
 void PerturbateSurface(double & sigmaRatio, FACET * collidedFacet, Vector3d & nU_rotated, Vector3d & nV_rotated, Vector3d & N_rotated);
 void GetDirComponents(Vector3d & nU_rotated, Vector3d & nV_rotated, Vector3d & N_rotated, double & u, double & v, double & n);
 void RecordHit(const int &type,const double &dF,const double &dP);
 void RecordLeakPos();
-BOOL StartFromSource();
+bool StartFromSource();
 void ComputeSourceArea();
 //int PerformBounce_new(FACET *iFacet,double sigmaRatio=0.0,double theta=0.0,double phi=0.0,
 //	Vector3d N_rotated=Vector3d(0,0,0),Vector3d nU_rotated=Vector3d(0,0,0),Vector3d nV_rotated=Vector3d(0,0,0),double thetaOffset=0.0,double phiOffset=0.0, double randomAngle=0.0, int reflType=1);
 void PerformBounce_new(FACET *iFacet, const double &theta, const double &phi, const int &reflType);
-BOOL PerformBounce_old(FACET * iFacet, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated);
-BOOL VerifiedSpecularReflection(FACET * iFacet, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated);
+bool PerformBounce_old(FACET * iFacet, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated);
+bool VerifiedSpecularReflection(FACET * iFacet, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated);
 void Stick(FACET *collidedFacet);
 void PerformTeleport(FACET *iFacet);
-void PolarToCartesian(FACET *iFacet,double theta,double phi,BOOL reverse,double rotateUV=0.0);
+void PolarToCartesian(FACET *iFacet,double theta,double phi,bool reverse,double rotateUV=0.0);
 
 void CartesianToPolar(FACET *iFacet,double *theta,double *phi);
 void UpdateHits(Dataport *dpHit,int prIdx,DWORD timeout);
@@ -218,11 +218,11 @@ int FindBestCuttingPlane(struct AABBNODE *node,int *left,int *right);
 void ComputeBB(struct AABBNODE *node);
 void DestroyAABB(struct AABBNODE *node);
 void IntersectTree(struct AABBNODE *node);
-BOOL Intersect(Vector3d *rayPos,Vector3d *rayDir,double *dist,FACET **iFact,FACET *last);
-BOOL RaySphereIntersect(Vector3d *center, double radius, Vector3d *rPos, Vector3d *rDir, double *dist);
-BOOL Visible(Vector3d *c1,Vector3d *c2,FACET *f1,FACET *f2);
+bool Intersect(Vector3d *rayPos,Vector3d *rayDir,double *dist,FACET **iFact,FACET *last);
+bool RaySphereIntersect(Vector3d *center, double radius, Vector3d *rPos, Vector3d *rDir, double *dist);
+bool Visible(Vector3d *c1,Vector3d *c2,FACET *f1,FACET *f2);
 void ProfileFacet(FACET *f,const double &dF,const double &dP,const double &E);
-BOOL IsInFacet(FACET *f,const double &u,const double &v);
+bool IsInFacet(FACET *f,const double &u,const double &v);
 double GetTick();
 size_t   GetHitsSize();
 

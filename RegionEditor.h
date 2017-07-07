@@ -13,6 +13,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
+#ifndef _REGIONEDITORH_
+#define _REGIONEDITORH_
 
 #include "GLApp/GLWindow.h"
 #include "GLApp/GLButton.h"
@@ -23,9 +25,8 @@ GNU General Public License for more details.
 #include "GLApp/GLGradient.h"
 #include "GLApp\GLFileBox.h"
 
-#ifndef _REGIONEDITORH_
-#define _REGIONEDITORH_
 
+class Worker;
 class Region_full;
 
 class RegionEditor : public GLWindow {

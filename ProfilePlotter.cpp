@@ -35,7 +35,7 @@ ProfilePlotter::ProfilePlotter() :GLWindow() {
 	int hD = 400;
 
 	SetTitle("Profile plotter");
-	SetIconfiable(TRUE);
+	SetIconfiable(true);
 	nbView = 0;
 	worker = NULL;
 	lastUpdate = 0.0f;
@@ -52,10 +52,10 @@ ProfilePlotter::ProfilePlotter() :GLWindow() {
 
 	chart = new GLChart(0);
 	chart->SetBorder(BORDER_BEVEL_IN);
-	chart->GetY1Axis()->SetGridVisible(TRUE);
-	chart->GetXAxis()->SetGridVisible(TRUE);
-	chart->GetY1Axis()->SetAutoScale(TRUE);
-	chart->GetY2Axis()->SetAutoScale(TRUE);
+	chart->GetY1Axis()->SetGridVisible(true);
+	chart->GetXAxis()->SetGridVisible(true);
+	chart->GetY1Axis()->SetAutoScale(true);
+	chart->GetY2Axis()->SetAutoScale(true);
 	chart->GetY1Axis()->SetAnnotation(VALUE_ANNO);
 	chart->GetXAxis()->SetAnnotation(VALUE_ANNO);
 	Add(chart);
@@ -76,19 +76,19 @@ ProfilePlotter::ProfilePlotter() :GLWindow() {
 	Add(resetButton);
 
 	profCombo = new GLCombo(0);
-	profCombo->SetEditable(TRUE);
+	profCombo->SetEditable(true);
 	Add(profCombo);
 
 	logToggle = new GLToggle(0, "Log Y scale");
-	logToggle->SetState(FALSE);
+	logToggle->SetState(false);
 	Add(logToggle);
 
 	normToggle = new GLToggle(0, "Normalize");
-	normToggle->SetState(FALSE);
+	normToggle->SetState(false);
 	Add(normToggle);
 
 	formulaText = new GLTextField(0, "");
-	formulaText->SetEditable(TRUE);
+	formulaText->SetEditable(true);
 	Add(formulaText);
 
 	formulaBtn = new GLButton(0, "-> Plot");
@@ -100,7 +100,7 @@ ProfilePlotter::ProfilePlotter() :GLWindow() {
 	int xD = (wS - wD) / 2;
 	int yD = (hS - hD) / 2;
 	SetBounds(xD, yD, wD, hD);
-	SetResizable(TRUE);
+	SetResizable(true);
 	SetMinimumSize(wD, 220);
 
 	RestoreDeviceObjects();
@@ -169,11 +169,11 @@ void ProfilePlotter::Display(Worker *w) {
 
 	worker = w;
 	Refresh();
-	SetVisible(TRUE);
+	SetVisible(true);
 
 }
 
-void ProfilePlotter::Update(float appTime, BOOL force) {
+void ProfilePlotter::Update(float appTime, bool force) {
 
 	if (!IsVisible() || IsIconic()) return;
 
@@ -222,7 +222,7 @@ void ProfilePlotter::plot() {
 	GLDataView *v;
 
 	// Check that view is not already added
-	BOOL found = FALSE;
+	bool found = false;
 	int i = 0;
 	while (i < nbView && !found) {
 		found = (views[i]->userData1 == -1);
@@ -251,7 +251,7 @@ void ProfilePlotter::plot() {
 		double y;
 		var->value = x;
 		parser->Evaluate(&y);
-		v->Add(x, y, FALSE);
+		v->Add(x, y, false);
 	}
 	v->CommitChange();
 
@@ -291,15 +291,15 @@ void ProfilePlotter::refreshViews() {
 			case 0: //linear no normalization
 				if (mode == 0) { //mc hits
 					for (int j = 0; j < PROFILE_SIZE; j++)
-						v->Add((double)j, (double)profilePtr_MC[j], FALSE);
+						v->Add((double)j, (double)profilePtr_MC[j], false);
 				}
 				else if (mode == 1) { //flux
 					for (int j = 0; j < PROFILE_SIZE; j++)
-						v->Add((double)j, profilePtr_flux[j] / worker->no_scans / elemArea, FALSE);
+						v->Add((double)j, profilePtr_flux[j] / worker->no_scans / elemArea, false);
 				}
 				else if (mode == 2) { //power
 					for (int j = 0; j < PROFILE_SIZE; j++)
-						v->Add((double)j, profilePtr_power[j] / worker->no_scans / elemArea, FALSE);
+						v->Add((double)j, profilePtr_power[j] / worker->no_scans / elemArea, false);
 				}
 				break;
 
@@ -310,7 +310,7 @@ void ProfilePlotter::refreshViews() {
 						if (profilePtr_MC[j] > max_MC) max_MC = profilePtr_MC[j];
 					if (max_MC > 0)
 						for (int j = 0; j < PROFILE_SIZE; j++)
-							v->Add((double)j, ((double)profilePtr_MC[j] / (double)max_MC), FALSE);
+							v->Add((double)j, ((double)profilePtr_MC[j] / (double)max_MC), false);
 				}
 				else if (mode == 1) { //flux
 					max_flux = 0.0;
@@ -318,7 +318,7 @@ void ProfilePlotter::refreshViews() {
 						if (profilePtr_flux[j] > max_flux) max_flux = profilePtr_flux[j];
 					if (max_flux > 0.0)
 						for (int j = 0; j < PROFILE_SIZE; j++)
-							v->Add((double)j, profilePtr_flux[j] / max_flux, FALSE);
+							v->Add((double)j, profilePtr_flux[j] / max_flux, false);
 				}
 				else if (mode == 2) { //power
 					max_power = 0.0;
@@ -326,7 +326,7 @@ void ProfilePlotter::refreshViews() {
 						if (profilePtr_power[j] > max_power) max_power = profilePtr_power[j];
 					if (max_power > 0.0)
 						for (int j = 0; j < PROFILE_SIZE; j++)
-							v->Add((double)j, profilePtr_power[j] / max_power, FALSE);
+							v->Add((double)j, profilePtr_power[j] / max_power, false);
 				}
 				break;
 			}
@@ -343,14 +343,14 @@ void ProfilePlotter::refreshViews() {
 					if (f->sh.isVolatile) {
 						SHHITS *fCount = (SHHITS *)(buffer + f->sh.hitOffset);
 						double z = geom->GetVertex(f->indices[0])->z;
-						v->Add(z, (double)(fCount->nbAbsorbed) / nbDes, FALSE);
+						v->Add(z, (double)(fCount->nbAbsorbed) / nbDes, false);
 					}
 				}
 				// Last
 				Facet *f = geom->GetFacet(28);
 				SHHITS *fCount = (SHHITS *)(buffer + f->sh.hitOffset);
 				double fnbAbs = (double)fCount->nbAbsorbed;
-				v->Add(1000.0, fnbAbs / nbDes, FALSE);
+				v->Add(1000.0, fnbAbs / nbDes, false);
 				v->CommitChange();
 			}
 		}
@@ -367,7 +367,7 @@ void ProfilePlotter::addView(int facet, int mode) {
 	Geometry *geom = worker->GetGeometry();
 
 	// Check that view is not already added
-	BOOL found = FALSE;
+	bool found = false;
 	int i = 0;
 	while (i < nbView && !found) {
 		found = (views[i]->userData1 == facet && views[i]->userData2 == mode);
@@ -398,7 +398,7 @@ void ProfilePlotter::remView(int facet, int mode) {
 
 	Geometry *geom = worker->GetGeometry();
 
-	BOOL found = FALSE;
+	bool found = false;
 	int i = 0;
 	while (i < nbView && !found) {
 		found = (views[i]->userData1 == facet && views[i]->userData2 == mode);
@@ -429,18 +429,18 @@ void ProfilePlotter::ProcessMessage(GLComponent *src, int message) {
 	switch (message) {
 	case MSG_BUTTON:
 		if (src == dismissButton) {
-			SetVisible(FALSE);
+			SetVisible(false);
 		}
 		else if (src == selButton) {
 			int idx = profCombo->GetSelectedIndex();
 			if (idx >= 0) {
 				geom->UnselectAll();
 				int facetId = (int)((double)profCombo->GetUserValueAt(idx) / 3.0);
-				geom->GetFacet(facetId)->selected = TRUE;
-				mApp->UpdateFacetParams(TRUE);
+				geom->GetFacet(facetId)->selected = true;
+				mApp->UpdateFacetParams(true);
 				geom->UpdateSelection();
 				mApp->facetList->SetSelectedRow(facetId);
-				mApp->facetList->ScrollToVisible(facetId, 1, TRUE);
+				mApp->facetList->ScrollToVisible(facetId, 1, true);
 			}
 		}
 		else if (src == addButton) {
@@ -489,10 +489,10 @@ std::vector<int> ProfilePlotter::GetViews() {
 	return v;
 }
 
-BOOL ProfilePlotter::IsLogScaled() {
+bool ProfilePlotter::IsLogScaled() {
 	return chart->GetY1Axis()->GetScale();
 }
-void ProfilePlotter::SetLogScaled(BOOL logScale) {
+void ProfilePlotter::SetLogScaled(bool logScale) {
 	chart->GetY1Axis()->SetScale(logScale);
 	logToggle->SetState(logScale);
 }

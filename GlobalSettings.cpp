@@ -39,7 +39,7 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	int hD = 525;
 
 	SetTitle("Global Settings");
-	SetIconfiable(TRUE);
+	SetIconfiable(true);
 
 	GLTitledPanel *panel = new GLTitledPanel("View settings");
 	panel->SetBounds(5,2,300,78);
@@ -71,7 +71,7 @@ GlobalSettings::GlobalSettings():GLWindow() {
 
 	cutoffText = new GLTextField(0, "");
 	cutoffText->SetBounds(410, 50, 70, 19);
-	cutoffText->SetEditable(FALSE);
+	cutoffText->SetEditable(false);
 	panel2->Add(cutoffText);
 
 	GLTitledPanel *panel4 = new GLTitledPanel("Program settings");
@@ -92,7 +92,7 @@ GlobalSettings::GlobalSettings():GLWindow() {
 
 	chkCheckForUpdates = new GLToggle(0,"Check for updates at startup");
 	chkCheckForUpdates->SetBounds(315,100,100,19);
-	//chkCheckForUpdates->SetEnabled(FALSE);
+	//chkCheckForUpdates->SetEnabled(false);
 	Add(chkCheckForUpdates);
 
 	chkAutoUpdateFormulas = new GLToggle(0, "Auto update formulas");
@@ -121,12 +121,12 @@ GlobalSettings::GlobalSettings():GLWindow() {
 
 
 	processList = new GLList(0);
-	processList->SetHScrollVisible(TRUE);
+	processList->SetHScrollVisible(true);
 	processList->SetSize(5, MAX_PROCESS + 1);
 	processList->SetColumnWidths((int*)plWidth);
 	processList->SetColumnLabels((char **)plName);
 	processList->SetColumnAligns((int *)plAligns);
-	processList->SetColumnLabelVisible(TRUE);
+	processList->SetColumnLabelVisible(true);
 	processList->SetBounds(10, 195, wD - 20, hD - 305);
 	panel3->Add(processList);
 
@@ -141,7 +141,7 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	panel3->Add(l1);
 
 	nbProcText = new GLTextField(0,"");
-	nbProcText->SetEditable(TRUE);
+	nbProcText->SetEditable(true);
 	nbProcText->SetBounds(135,hD-76,30,19);
 	panel3->Add(nbProcText);
 
@@ -202,7 +202,7 @@ void GlobalSettings::Display(Worker *w) {
 	nbProcText->SetText(tmp);
 	
 	
-	SetVisible(TRUE);
+	SetVisible(true);
 
 }
 
@@ -213,7 +213,7 @@ void GlobalSettings::SMPUpdate() {
 
 	if (!IsVisible() || IsIconic()) return;
 	int nb = worker->GetProcNumber();
-	if (processList->GetNbRow() != (nb + 1)) processList->SetSize(5, nb + 1, TRUE);
+	if (processList->GetNbRow() != (nb + 1)) processList->SetSize(5, nb + 1, true);
 
 	if (time - lastUpdate>333) {
 
@@ -306,7 +306,7 @@ void GlobalSettings::RestartProc() {
 				try {
 					worker->SetProcNumber(nbProc);
 					worker->Reload();
-					mApp->SaveConfig();
+					mApp->SaveConfig(false);
 				} catch(Error &e) {
 					GLMessageBox::Display((char *)e.GetMsg(),"Error",GLDLG_OK,GLDLG_ICONERROR);
 				}
@@ -368,7 +368,7 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 				//if (mApp->AskToReset()) {
 					worker->lowFluxCutoff = cutoffnumber;
 					worker->lowFluxMode = lowFluxToggle->GetState();
-					/*mApp->changedSinceSave = TRUE;
+					/*mApp->changedSinceSave = true;
 					worker->Reload();
 					mApp->UpdateFacetHits();*/
 					worker->ChangeSimuParams();
@@ -378,7 +378,7 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 			if (worker->newReflectionModel != chkNewReflectionModel->GetState()) {
 				if (mApp->AskToReset()) {
 					worker->newReflectionModel = chkNewReflectionModel->GetState();
-					mApp->changedSinceSave = TRUE;
+					mApp->changedSinceSave = true;
 					worker->Reload();
 					mApp->PlaceScatteringControls(worker->newReflectionModel);
 				}

@@ -39,7 +39,7 @@ public:
   // Component method
   void Display(Worker *w);
   void Refresh();
-  void Update(float appTime,BOOL force=FALSE);
+  void Update(float appTime,bool force=false);
   void Reset();
 
   // Implementation
@@ -48,8 +48,8 @@ public:
   void addView(int facet);
   std::vector<int> GetViews();
   void SetViews(std::vector<int> views,int mode);
-  BOOL IsLogScaled();
-  void SetLogScaled(BOOL logScale);
+  bool IsLogScaled();
+  void SetLogScaled(bool logScale);
   void SetWorker(Worker *w);
 
 private:

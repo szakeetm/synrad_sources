@@ -31,7 +31,7 @@ ExportDesorption::ExportDesorption(Geometry *g,Worker *w):GLWindow() {
 	int wD = 500;
 	int hD = 220;
 	fileName = NULL;
-	fileLoaded = FALSE;
+	fileLoaded = false;
 	mode=2; //default mode: use equation
 	conversionDistr = new Distribution2D(1); //placeholder
 
@@ -43,7 +43,7 @@ ExportDesorption::ExportDesorption(Geometry *g,Worker *w):GLWindow() {
 
 	toggle2=new GLToggle(0,"Eta =           * Dose ^");
 	toggle2->SetBounds(10,40,170,18);
-	toggle2->SetState(TRUE);
+	toggle2->SetState(true);
 	Add(toggle2);
 
 	eta0Field = new GLTextField(0,"1");
@@ -108,7 +108,7 @@ void ExportDesorption::ProcessMessage(GLComponent *src,int message) {
 
 		} else if (src==exportButton) {
 			//do checks
-			if (selectedToggle->GetState() && geom->GetNbSelected()==0) {
+			if (selectedToggle->GetState() && geom->GetNbSelectedFacets()==0) {
 				GLMessageBox::Display("No facets selected","Nothing to export",GLDLG_OK,GLDLG_ICONERROR);
 				return;
 			}
@@ -126,9 +126,9 @@ void ExportDesorption::ProcessMessage(GLComponent *src,int message) {
 				return;
 			}
 
-			BOOL meshExists = FALSE;
+			bool meshExists = false;
 			for (int i=0;i<geom->GetNbFacet() && !meshExists;i++) {
-				if (geom->GetFacet(i)->hasMesh) meshExists = TRUE;
+				if (geom->GetFacet(i)->hasMesh) meshExists = true;
 			}
 			if (!meshExists) {
 				GLMessageBox::Display("There are no textures to convert to desorption","Error",GLDLG_OK,GLDLG_ICONERROR);
@@ -150,9 +150,9 @@ void ExportDesorption::ProcessMessage(GLComponent *src,int message) {
 
 			}
 		} else if (src==browseButton) {
-			toggle1->SetState(FALSE);
-			toggle2->SetState(FALSE);
-			toggle3->SetState(TRUE);
+			toggle1->SetState(false);
+			toggle2->SetState(false);
+			toggle3->SetState(true);
 			//load file dialog
 			FILENAME *convFile=GLFileBox::OpenFile(mApp->currentDir,NULL,"Open conversion file","CONV files\0*.conv\0All files\0*.*\0",2);
 			if (!convFile) return;
@@ -213,6 +213,6 @@ int ExportDesorption::LoadConvFile(char *fileName) {
 		sprintf(errMsg,"%s\nFile:%s",e.GetMsg(),fileName);
 		GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
 	}
-	fileLoaded=TRUE;
+	fileLoaded=true;
 	return nbPoints;
 }

@@ -13,6 +13,8 @@
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
 */
+#ifndef _GLOBALSETTINGSH_
+#define _GLOBALSETTINGSH_
 
 #include "GLApp/GLWindow.h"
 #include "GLApp/GLButton.h"
@@ -23,8 +25,8 @@
 #include "GLApp/GLGradient.h"
 #include "Shared.h" //MAX_PROCESS macro
 
-#ifndef _GLOBALSETTINGSH_
-#define _GLOBALSETTINGSH_
+class Worker;
+class GLList;
 
 class GlobalSettings : public GLWindow {
 

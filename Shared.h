@@ -138,13 +138,13 @@ typedef struct {
   int        nbSuper;   // Number of superstructures
   size_t        nbRegion;  //number of magnetic regions
   size_t        nbTrajPoints; //total number of trajectory points (calculated at CopyGeometryBuffer)
-  BOOL       newReflectionModel;
+  bool       newReflectionModel;
   char       name[64];  // (Short file name)
 } SHGEOM; //Shared memory interface with main program
 
 typedef struct {
 	int      generation_mode; //fluxwise or powerwise
-	BOOL	 lowFluxMode;
+	bool	 lowFluxMode;
 	double	 lowFluxCutoff;
 } SHMODE;
 
@@ -162,18 +162,18 @@ typedef struct {
   int    superIdx;       // Super structure index (Indexed from 0)
   int    superDest;      // Super structure destination index (Indexed from 1, 0=>current)
   int	 teleportDest;   // Teleport destination facet id (for periodic boundary condition) (Indexed from 1, 0=>none)
-  BOOL   countAbs;       // Count absoprtion (MC texture)
-  BOOL   countRefl;      // Count reflection (MC texture)
-  BOOL   countTrans;     // Count transparent (MC texture)
-  BOOL   countDirection; // Record avergare direction (MC texture)
-  BOOL   hasSpectrum;    // Calculate energy spectrum (histogram)
+  bool   countAbs;       // Count absoprtion (MC texture)
+  bool   countRefl;      // Count reflection (MC texture)
+  bool   countTrans;     // Count transparent (MC texture)
+  bool   countDirection; // Record avergare direction (MC texture)
+  bool   hasSpectrum;    // Calculate energy spectrum (histogram)
 
   // Flags
-  BOOL   is2sided;     // 2 sided
-  BOOL   isProfile;    // Profile facet
-  //BOOL   isOpaque;     // Opacity != 0
-  BOOL   isTextured;   // texture
-  BOOL   isVolatile;   // Volatile facet (absorbtion facet which does not affect particule trajectory)
+  bool   is2sided;     // 2 sided
+  bool   isProfile;    // Profile facet
+  //bool   isOpaque;     // Opacity != 0
+  bool   isTextured;   // texture
+  bool   isVolatile;   // Volatile facet (absorbtion facet which does not affect particule trajectory)
 
   // Normal vector
   Vector3d    N;    // normalized

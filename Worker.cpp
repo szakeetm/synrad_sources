@@ -61,8 +61,8 @@ Worker::Worker() {
 	desorptionLimit = 0;
 	distTraveledTotal=0.0;
 	lowFluxCutoff = 1E-7;
-	lowFluxMode = FALSE;
-	newReflectionModel = FALSE;
+	lowFluxMode = false;
+	newReflectionModel = false;
 	ResetWorkerStats();
 	geom = new SynradGeometry();
 	regions = std::vector<Region_full>();
@@ -77,8 +77,8 @@ Worker::Worker() {
 	stopTime = 0.0f;
 	simuTime = 0.0f;
 	nbTrajPoints=0;
-	running = FALSE;
-	calcAC = FALSE; //not used, reserved for shared function
+	running = false;
+	calcAC = false; //not used, reserved for shared function
 
 	strcpy(fullFileName,"");
 
@@ -88,7 +88,7 @@ SynradGeometry *Worker::GetSynradGeometry() {
 	return geom;
 }
 
-void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL saveSelected,BOOL autoSave,BOOL crashSave) {
+void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool saveSelected,bool autoSave,bool crashSave) {
 
 	try {
 		if (needsReload&&(!crashSave && !saveSelected)) RealReload();
@@ -98,7 +98,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 		char errMsg[512];
 		sprintf(errMsg,"Error reloading worker. Trying crash save:\n%s",e.GetMsg());
 		GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
-		crashSave=TRUE;
+		crashSave=true;
 	} 
 	char tmp[65536]; //compress.exe command line
 	/*char fileNameWithGeo[2048]; //file name with .geo extension (instead of .geo7z)
@@ -120,14 +120,14 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 	ext++;
 
 	// Read a file
-	BOOL ok = TRUE;
+	bool ok = true;
 	FileWriter *f = NULL;
-	BOOL isTXT = _stricmp(ext,"txt")==0;
-	BOOL isSTR = _stricmp(ext,"str")==0;
-	/*BOOL isGEO = _stricmp(ext,"geo")==0;
-	BOOL isGEO7Z = _stricmp(ext,"geo7z")==0;*/
-	BOOL isSYN = _stricmp(ext,"syn")==0;
-	BOOL isSYN7Z = _stricmp(ext,"syn7z")==0;
+	bool isTXT = _stricmp(ext,"txt")==0;
+	bool isSTR = _stricmp(ext,"str")==0;
+	/*bool isGEO = _stricmp(ext,"geo")==0;
+	bool isGEO7Z = _stricmp(ext,"geo7z")==0;*/
+	bool isSYN = _stricmp(ext,"syn")==0;
+	bool isSYN7Z = _stricmp(ext,"syn7z")==0;
 
 
 	if(isTXT || isSYN || isSYN7Z || isSTR) {
@@ -191,7 +191,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 							regions[i].fileName=tmp;
 						}	
 
-						SaveRegion((char*)regions[i].fileName.c_str(),i,TRUE); //save with forced overwrite
+						SaveRegion((char*)regions[i].fileName.c_str(),i,true); //save with forced overwrite
 					}
 
 					geom->SaveSYN(f,prg,dpHit,saveSelected,leakCache,&leakCacheSize,hitCache,&hitCacheSize,crashSave);
@@ -219,7 +219,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 				sprintf(tmp,"compress.exe \"%s\" Geometry.geo",fileNameWithGeo);
 				int procId = StartProc_background(tmp);
 
-				compressProcessHandle=OpenProcess(PROCESS_ALL_ACCESS, TRUE, procId);
+				compressProcessHandle=OpenProcess(PROCESS_ALL_ACCESS, true, procId);
 				fileName=fileNameWithGeo7z;
 
 
@@ -247,7 +247,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,BOOL askConfirm,BOOL sa
 						sprintf(tmp,"%s \"%s\"",tmp,regions[i].BXYfileName.c_str());
 				}
 				int procId = StartProc(tmp, STARTPROC_BACKGROUND);
-				mApp->compressProcessHandle=OpenProcess(PROCESS_ALL_ACCESS, TRUE, procId);
+				mApp->compressProcessHandle=OpenProcess(PROCESS_ALL_ACCESS, true, procId);
 				fileName=fileNameWithSyn7z;
 			} else {
 				GLMessageBox::Display("compress.exe (part of Synrad) not found.\n Will save as uncompressed SYN file.","Compressor not found",GLDLG_OK,GLDLG_ICONERROR);
@@ -266,7 +266,7 @@ void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double e
 	// Read a file
 
 	FILE *f = NULL;
-	BOOL ok = TRUE;
+	bool ok = true;
 
 	char *ext,*dir;
 
@@ -297,9 +297,9 @@ void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double e
 
 }
 
-void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
+void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 	if (!insert) {
-		needsReload=TRUE;
+		needsReload=true;
 	}
 	else { //insert
 		if (needsReload) RealReload();
@@ -315,7 +315,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 	// Read a file
 	FileReader *f = NULL;
 	GLProgress *progressDlg = new GLProgress("Reading file...","Please wait");
-	progressDlg->SetVisible(TRUE);
+	progressDlg->SetVisible(true);
 	progressDlg->SetProgress(0.0);
 
 	if (!insert) {
@@ -337,7 +337,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 				strcpy(fullFileName, fileName);
 			}
 			else { //insert
-				mApp->changedSinceSave = TRUE;
+				mApp->changedSinceSave = true;
 				geom->InsertTXT(f, progressDlg, newStr);
 				Reload();
 			}
@@ -345,7 +345,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 		} catch(Error &e) {
 			if (!insert) geom->Clear();
 			SAFE_DELETE(f);
-			progressDlg->SetVisible(FALSE);
+			progressDlg->SetVisible(false);
 			SAFE_DELETE(progressDlg);
 			throw e;
 		}
@@ -374,7 +374,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			}
 			if (ret!=GLDLG_CANCEL_U) {
 				progressDlg->SetMessage("Resetting worker...");
-				progressDlg->SetVisible(TRUE);
+				progressDlg->SetVisible(true);
 				ResetWorkerStats();				
 				progressDlg->SetMessage("Reading geometry...");
 				f = new FileReader(fileName);
@@ -384,7 +384,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 					mApp->DisplayCollapseDialog();
 				}
 				else { //insert
-					mApp->changedSinceSave = TRUE;
+					mApp->changedSinceSave = true;
 					geom->InsertSTL(f, progressDlg, scaleFactor, newStr);
 					Reload();
 				}
@@ -393,7 +393,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 		} catch(Error &e) {
 			if (!insert) geom->Clear();
 			SAFE_DELETE(f);
-			progressDlg->SetVisible(FALSE);
+			progressDlg->SetVisible(false);
 			SAFE_DELETE(progressDlg);
 			throw e;
 
@@ -404,7 +404,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 		try {
 			ResetWorkerStats();
 			f = new FileReader(fileName);
-			progressDlg->SetVisible(TRUE);
+			progressDlg->SetVisible(true);
 			geom->LoadSTR(f,progressDlg);
 			SAFE_DELETE(f);
 			strcpy(fullFileName,fileName);
@@ -412,7 +412,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 		catch(Error &e) {
 			if (!insert) geom->Clear();
 			SAFE_DELETE(f);
-			progressDlg->SetVisible(FALSE);
+			progressDlg->SetVisible(false);
 			SAFE_DELETE(progressDlg);
 			throw e;
 		}
@@ -420,7 +420,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 	}
 	else if (ext == "syn" || ext == "syn7z") { //Synrad file
 		int version;
-		progressDlg->SetVisible(TRUE);
+		progressDlg->SetVisible(true);
 		try {
 			if (ext == "syn7z") {
 				//decompress file
@@ -435,7 +435,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			LEAK loaded_leakCache[LEAKCACHESIZE];
 			size_t loaded_nbLeak;
 			HIT hitCache[HITCACHESIZE];
-			size_t loaded_nbHit;
+			//size_t loaded_nbHit;
 			if (!insert) {
 				progressDlg->SetMessage("Resetting worker...");
 				ResetWorkerStats();
@@ -460,7 +460,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			if (regionsToLoad.size()>0) {
 				char tmp[256];
 				sprintf(tmp,"This geometry refers to %zd regions. Load them now?",regionsToLoad.size());
-				BOOL loadThem = ( GLMessageBox::Display(tmp,"File load",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONINFO)==GLDLG_OK );
+				bool loadThem = ( GLMessageBox::Display(tmp,"File load",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONINFO)==GLDLG_OK );
 				if (loadThem) {
 					progressDlg->SetMessage("Loading regions");
 					int i = 0;
@@ -502,14 +502,14 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			geom->Clear();
 			SAFE_DELETE(f);
 			
-			progressDlg->SetVisible(FALSE);
+			progressDlg->SetVisible(false);
 			SAFE_DELETE(progressDlg);
 			throw e;
 		}
 	} else if(ext=="geo" || ext=="geo7z") {
 		std::string toOpen;
 		int version;
-		progressDlg->SetVisible(TRUE);
+		progressDlg->SetVisible(true);
 		try {
 			if (ext=="geo7z") {
 				//decompress file
@@ -536,7 +536,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 				strcpy(fullFileName,fileName);
 			}
 			else { //insert
-				mApp->changedSinceSave = TRUE;
+				mApp->changedSinceSave = true;
 				geom->InsertGEO(f,progressDlg,newStr);
 				SAFE_DELETE(f);
 				Reload();
@@ -545,7 +545,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 			if (!insert) geom->Clear();
 			SAFE_DELETE(f);
 			//if (isGEO7Z) remove(tmp2);
-			progressDlg->SetVisible(FALSE);
+			progressDlg->SetVisible(false);
 			SAFE_DELETE(progressDlg);
 			throw e;
 		}
@@ -553,7 +553,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 	else if (ext == "xml" || ext == "zip") { //XML file, optionally in ZIP container
 		xml_document loadXML;
 		xml_parse_result parseResult;
-		progressDlg->SetVisible(TRUE);
+		progressDlg->SetVisible(true);
 		try {
 			if (ext == "zip") { //compressed in ZIP container
 				//decompress file
@@ -564,13 +564,13 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 					throw Error("Can't open ZIP file");
 				}
 				ZIPENTRY ze; GetZipItem(hz, -1, &ze); int numitems = ze.index;
-				BOOL notFoundYet = TRUE;
+				bool notFoundYet = true;
 				for (int i = 0; i < numitems && notFoundYet; i++) { //extract first xml file found in ZIP archive
 					GetZipItem(hz, i, &ze);
 					std::string zipFileName = ze.name;
 
 					if (FileUtils::GetExtension(zipFileName) == "xml") { //if it's an .xml file
-						notFoundYet = FALSE;
+						notFoundYet = false;
 						std::string tmpFileName = "tmp/" + zipFileName;
 						UnzipItem(hz, i, tmpFileName.c_str()); //unzip it to tmp directory
 						CloseZip(hz);
@@ -604,14 +604,14 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 				geom->UpdateName(fileName);
 			}
 			else { //insert
-				mApp->changedSinceSave = TRUE;
+				mApp->changedSinceSave = true;
 				geom->InsertXML(loadXML, this, progressDlg, newStr);
 				Reload();
 			}
 		}
 		catch (Error &e) {
 			if (!insert) geom->Clear();
-			progressDlg->SetVisible(FALSE);
+			progressDlg->SetVisible(false);
 			SAFE_DELETE(progressDlg);
 			throw e;
 		}
@@ -620,7 +620,7 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 		try {
 			ResetWorkerStats();
 			f = new FileReader(fileName);
-			progressDlg->SetVisible(TRUE);
+			progressDlg->SetVisible(true);
 			geom->LoadASE(f,progressDlg);
 			SAFE_DELETE(f);
 			strcpy(fullFileName,fileName);
@@ -628,17 +628,17 @@ void Worker::LoadGeometry(char *fileName, BOOL insert, BOOL newStr) {
 		} catch(Error &e) {
 			if (!insert) geom->Clear();
 			SAFE_DELETE(f);
-			progressDlg->SetVisible(FALSE);
+			progressDlg->SetVisible(false);
 			SAFE_DELETE(progressDlg);
 			throw e;
 		}
 		
 	} else {
-		progressDlg->SetVisible(FALSE);
+		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
 		throw Error("LoadGeometry(): Invalid file extension [Only txt,geo,geo7z,ase,stl or str]");
 	}
-	progressDlg->SetVisible(FALSE);
+	progressDlg->SetVisible(false);
 	SAFE_DELETE(progressDlg);
 }
 
@@ -646,7 +646,7 @@ void Worker::LoadTexturesSYN(FileReader* f,int version) {
 		GLProgress *progressDlg = new GLProgress("Loading texture values", "Please wait");
 		progressDlg->SetProgress(0.0);
 		try {
-			progressDlg->SetVisible(TRUE);
+			progressDlg->SetVisible(true);
 			geom->LoadTextures(f, progressDlg, dpHit, version);
 			RebuildTextures();
 		}
@@ -655,7 +655,7 @@ void Worker::LoadTexturesSYN(FileReader* f,int version) {
 			sprintf(tmp, "Couldn't load some textures. To avoid continuing a partially loaded state, it is recommended to reset the simulation.\n%s", e.GetMsg());
 			GLMessageBox::Display(tmp, "Error while loading textures.", GLDLG_OK, GLDLG_ICONWARNING);
 		}
-		progressDlg->SetVisible(FALSE);
+		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
 }
 
@@ -663,7 +663,7 @@ void Worker::InnerStop(float appTime) {
 
 	stopTime =appTime;
 	simuTime+=appTime-startTime;
-	running  = FALSE;
+	running  = false;
 
 
 }
@@ -694,13 +694,13 @@ void Worker::StartStop(float appTime,int mode) {
 		try {
 			if (needsReload) RealReload();
 			startTime = appTime;
-			running = TRUE;
+			running = true;
 
 			this->mode = mode;
 		
 			Start();
 		} catch(Error &e) {
-			running = FALSE;
+			running = false;
 			GLMessageBox::Display((char *)e.GetMsg(),"Error (Start)",GLDLG_OK,GLDLG_ICONERROR);
 			return;
 		}
@@ -719,19 +719,19 @@ void Worker::RealReload() { //Sharing geometry with workers
 	if(nbProcess==0) return;
 
 	GLProgress *progressDlg = new GLProgress("Asking subprocesses to clear geometry...","Passing Geometry to workers");
-	progressDlg->SetVisible(TRUE);
+	progressDlg->SetVisible(true);
 	progressDlg->SetProgress(0.0);
 
 	// Clear geometry
 	CLOSEDP(dpHit);
 	if (!ExecuteAndWait(COMMAND_CLOSE, PROCESS_READY)) {
-		progressDlg->SetVisible(FALSE);
+		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
 		ThrowSubProcError();
 	}
 
 	if (!geom->IsLoaded()) {
-		progressDlg->SetVisible(FALSE);
+		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
 		return;
 	}
@@ -741,7 +741,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 	size_t loadSize = geom->GetGeometrySize(&regions, &materials, psi_distr, chi_distr);
 	Dataport *loader = CreateDataport(loadDpName,loadSize);
 	if (!loader) {
-		progressDlg->SetVisible(FALSE);
+		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
 		throw Error("Failed to create 'loader' dataport.\nMost probably out of memory.\nReduce number of subprocesses or texture size.");
 	}
@@ -758,7 +758,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 		CLOSEDP(loader);
 
 
-		progressDlg->SetVisible(FALSE);
+		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
 		throw Error("Failed to create 'hits' dataport: out of memory");
 	}
@@ -784,7 +784,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 		GLMessageBox::Display(errMsg,"Warning (Load)",GLDLG_OK,GLDLG_ICONWARNING);
 
 
-		progressDlg->SetVisible(FALSE);
+		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
 		return;
 	}
@@ -800,7 +800,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 		// Geometry not loaded !
 		CLOSEDP(dpHit);
 		CLOSEDP(loader);
-		progressDlg->SetVisible(FALSE);
+		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
 		throw e;
 	}
@@ -808,7 +808,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 	progressDlg->SetMessage("Closing dataport...");
 	CLOSEDP(loader);
 	needsReload=false;
-	progressDlg->SetVisible(FALSE);
+	progressDlg->SetVisible(false);
 	SAFE_DELETE(progressDlg);
 }
 
@@ -817,14 +817,14 @@ void Worker::ChangeSimuParams() { //Send simulation mode changes to subprocesses
 	if (needsReload) RealReload(); //Sync (number of) regions
 
 	GLProgress *progressDlg = new GLProgress("Creating dataport...", "Passing simulation mode to workers");
-	progressDlg->SetVisible(TRUE);
+	progressDlg->SetVisible(true);
 	progressDlg->SetProgress(0.0);
 	
 	// Create the temporary geometry shared structure
-	size_t loadSize = sizeof(SHMODE) + regions.size() * sizeof(BOOL);
+	size_t loadSize = sizeof(SHMODE) + regions.size() * sizeof(bool);
 	Dataport *loader = CreateDataport(loadDpName, loadSize);
 	if (!loader) {
-		progressDlg->SetVisible(FALSE);
+		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
 		throw Error("Failed to create 'loader' dataport.\nMost probably out of memory.\nReduce number of subprocesses or texture size.");
 	}
@@ -841,7 +841,7 @@ void Worker::ChangeSimuParams() { //Send simulation mode changes to subprocesses
 	buffer += sizeof(SHMODE);
 
 	for (size_t i = 0; i < regions.size(); i++) {
-		WRITEBUFFER(regions[i].params.showPhotons, BOOL);
+		WRITEBUFFER(regions[i].params.showPhotons, bool);
 	}
 
 	progressDlg->SetMessage("Releasing dataport...");
@@ -855,14 +855,14 @@ void Worker::ChangeSimuParams() { //Send simulation mode changes to subprocesses
 		sprintf(errMsg, "Failed to send params to sub process:\n%s", GetErrorDetails());
 		GLMessageBox::Display(errMsg, "Warning (Updateparams)", GLDLG_OK, GLDLG_ICONWARNING);
 
-		progressDlg->SetVisible(FALSE);
+		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
 		return;
 	}
 
 	progressDlg->SetMessage("Closing dataport...");
 	CLOSEDP(loader);
-	progressDlg->SetVisible(FALSE);
+	progressDlg->SetVisible(false);
 	SAFE_DELETE(progressDlg);
 
 	//Reset leak and hit cache
@@ -872,7 +872,7 @@ void Worker::ChangeSimuParams() { //Send simulation mode changes to subprocesses
 	SetHitCache(hitCache, &hitCacheSize, dpHit); //will only write hitCacheSize
 }
 
-void Worker::ClearHits(BOOL noReload) {
+void Worker::ClearHits(bool noReload) {
 	try {
 		if (!noReload && needsReload) RealReload();
 	}
@@ -937,7 +937,7 @@ void Worker::ImportCSV(FileReader *file,std::vector<std::vector<double>>& table)
 
 void Worker::AddRegion(const char *fileName,int position) {
 	//if (!geom->IsLoaded()) throw Error("Load geometry first!");
-	needsReload=TRUE;
+	needsReload=true;
 
 	std::string ext = FileUtils::GetExtension(fileName);
 	if(ext=="par" || ext=="PAR" || ext=="param") {
@@ -960,7 +960,7 @@ void Worker::AddRegion(const char *fileName,int position) {
 
 
 void Worker::RecalcRegion(int regionId) {
-	needsReload=TRUE;
+	needsReload=true;
 	try {
 			//Region_full newtraj;
 			//newtraj=regions[regionId]; //copy all except the points
@@ -1005,17 +1005,17 @@ void Worker::AddMaterial(std::string *fileName){
 	FileReader *f=new FileReader(tmp);
 	result.LoadMaterialCSV(f);
 	delete f;
-	int lastindex = fileName->find_last_of(".");
+	size_t lastindex = fileName->find_last_of(".");
 	result.name = fileName->substr(0, lastindex);
 	materials.push_back(result);
 }
 
-void Worker::SaveRegion(char *fileName,int position,BOOL overwrite) {
+void Worker::SaveRegion(char *fileName,int position,bool overwrite) {
 	char tmp[512];
 
 	// Read a file
 	FILE *f = NULL;
-	BOOL ok = TRUE;
+	bool ok = true;
 	if( FileUtils::Exist(fileName) && !overwrite) {
 		sprintf(tmp,"Overwrite existing file ?\n%s",fileName);
 		ok = ( GLMessageBox::Display(tmp,"Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING)==GLDLG_OK );
@@ -1027,7 +1027,7 @@ void Worker::SaveRegion(char *fileName,int position,BOOL overwrite) {
 	}
 }
 
-BOOL EndsWithPar(const char* s)
+bool EndsWithPar(const char* s)
 {
   int ret = 0;
   if (s != NULL)
@@ -1065,7 +1065,7 @@ void Worker::SendHits() {
 			gHits->total.fluxAbs = totalFlux;
 			gHits->total.powerAbs = totalPower;
 
-			int nbFacet = geom->GetNbFacet();
+			size_t nbFacet = geom->GetNbFacet();
 			for (int i = 0; i<nbFacet; i++) {
 				Facet *f = geom->GetFacet(i);
 				memcpy(pBuff + f->sh.hitOffset, &(f->counterCache), sizeof(SHHITS));

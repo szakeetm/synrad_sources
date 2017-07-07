@@ -43,7 +43,7 @@ struct RegionParams {
 
 	int Bx_mode, By_mode, Bz_mode, beta_kind; //switches between constant or file-based magnetic fields
 
-	BOOL enable_ort_polarization, enable_par_polarization;
+	bool enable_ort_polarization, enable_par_polarization;
 	Vector3d nbDistr_MAG; //MAG file points
 	size_t nbDistr_BXY; //BXY file points
 	Vector3d Bx_dir,By_dir,Bz_dir; //direction in which MAG files are oriented (in their second line)
@@ -53,7 +53,7 @@ struct RegionParams {
 	size_t nbPointsToCopy; //passes info about the number of points that needs to be read from the buffer on loading
 	Vector3d startPoint, startDir, B_const, limits;//AABBmin,AABBmax
 	Quadrupole quad_params;
-	BOOL showPhotons; //Whether to include photons from this region in the hit cache
+	bool showPhotons; //Whether to include photons from this region in the hit cache
 };
 
 class Region_mathonly { //Beam trajectory

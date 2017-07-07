@@ -27,7 +27,7 @@
 extern GLApplication *theApp;
 static const char *fileTrajFilters = "CSV files\0*.csv\tTXT files\0*.txt\0All files\0*.*\0";
 static const int   nbTrajFilter = 3;
-BOOL EndsWithParam(const char* s);
+bool EndsWithParam(const char* s);
 
 RegionInfo::RegionInfo(Worker *w) {
 
@@ -102,7 +102,7 @@ RegionInfo::RegionInfo(Worker *w) {
 
   integrateToggle = new GLToggle(0,"Calculate integrals (go through all trajectory points)");
   integrateToggle->SetBounds(10,220,200,18);
-  integrateToggle->SetState(TRUE);
+  integrateToggle->SetState(true);
   Add(integrateToggle);*/
 
   viewPointsButton = new GLButton(0,"View Points");
@@ -132,7 +132,7 @@ RegionInfo::RegionInfo(Worker *w) {
   
 
   pathLabel=new GLTextField(0,"No PAR file loaded");
-  pathLabel->SetEditable(FALSE);
+  pathLabel->SetEditable(false);
   pathLabel->SetBounds(100,10,430,18);
   Add(pathLabel);
 
@@ -273,7 +273,7 @@ void RegionInfo::Update() {
 	return;
 }
 
-BOOL EndsWithParam(const char* s)
+bool EndsWithParam(const char* s)
 {
   int ret = 0;
 

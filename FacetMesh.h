@@ -42,7 +42,7 @@ public:
 
 private:
 
-  BOOL Apply();
+  bool Apply();
   void UpdateSize();
   void UpdateSizeForRatio();
   void UpdateToggle(GLComponent *src);

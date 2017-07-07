@@ -26,6 +26,7 @@ GNU General Public License for more details.
 #include "GLApp/GLFileBox.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLWindowManager.h"
+#include "GLApp/GLMenuBar.h"
 #include "RecoveryDialog.h"
 #include "Facet.h"
 #include "SynradGeometry.h"
@@ -36,6 +37,11 @@ GNU General Public License for more details.
 #include <string>
 #include <io.h>
 //#include <winsparkle.h>
+
+#include "FacetCoordinates.h"
+#include "SmartSelection.h"
+#include "VertexCoordinates.h"
+#include "FormulaEditor.h"
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
 const char *fileSFilters = "SYN files\0*.syn;*.syn7z;\0GEO files\0*.geo;*.geo7z;\0Text files\0*.txt\0All files\0*.*\0";
@@ -48,14 +54,33 @@ int   cSize = 5;
 int   cWidth[] = { 30, 56, 50, 50, 50 };
 char *cName[] = { "#", "Hits", "Flux", "Power", "Abs" };
 
-int appVersion = 1480;
+int appVersion = 1410;
+std::string appId = "Synrad";
 #ifdef _DEBUG
 std::string appName = "SynRad+ development version (Compiled " __DATE__ " " __TIME__ ") DEBUG MODE";
 #else
-std::string appName = "Synrad+ 1.4.8 (" __DATE__ ")";
+std::string appName = "Synrad+ 1.4.10 (" __DATE__ ")";
 #endif
 
 std::vector<string> formulaPrefixes = { "A","D","H",","};
+std::string formulaSyntax =
+	R"(MC Variables: An (Absorption on facet n), Dn (Desorption on facet n), Hn (Hit on facet n)\n"
+	"                 Fn (Flux absorbed on facet n), Pn (Power absorbed on facet n)\n"
+	"                 SUMABS (total absorbed), SUMDES (total desorbed), SUMHIT (total hit)\n"
+	"                 SUMFLUX (total gen. flux), SUMPOWER (total gen. power), SCANS (no. of scans)\n\n"
+	"Area variables: ARn (Area of facet n), ABSAR (total absorption area)\n\n"
+	"Math functions: sin(), cos(), tan(), sinh(), cosh(), tanh()\n"
+	"                   asin(), acos(), atan(), exp(), ln(), pow(x,y)\n"
+	"                   log2(), log10(), inv(), sqrt(), abs()\n\n"
+	"Utils functions: ci95(p,N) 95% confidence interval (p=prob,N=count)\n"
+	"                  sum(prefix,i,j) sum variables ex: sum(F,1,10)=F1+F2+...+F10 \n"
+	"                  sum(prefix,Si) sum of variables on selection group i  ex: sum(F,S1)=all flux on group 1 \n\n"
+	"Constants: Kb (Boltzmann's constant [J.K\270\271]), R (Gas constant [J.K\270\271.mol\270\271])\n"
+	"              Na (Avogadro's number [mol\270\271]), PI\n\n"
+	"Expression example:\n"
+	"  (A1+A45)/(D23+D12)\n"
+	"  sqrt(A1^2+A45^2)*DESAR/SUMDES\n"
+)";
 
 float m_fTime;
 SynRad *mApp;
@@ -107,7 +132,7 @@ INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
 {
 	SynRad *mApp = new SynRad();
 
-	if (!mApp->Create(1024, 800, FALSE)) {
+	if (!mApp->Create(1024, 800, false)) {
 		char *logs = GLToolkit::GetLogs();
 #ifdef WIN
 		if (logs) MessageBox(NULL, logs, "Synrad [Fatal error]", MB_OK);
@@ -148,6 +173,7 @@ SynRad::SynRad()
 	facetDetails = NULL;
 	viewer3DSettings = NULL;
 	textureSettings = NULL;
+	formulaEditor = NULL;
 	globalSettings = NULL;
 	profilePlotter = NULL;
 	texturePlotter = NULL;
@@ -222,7 +248,7 @@ int SynRad::OneTimeSceneInit()
 	
 	/*
 	shortcutPanel = new GLTitledPanel("Shortcuts");
-	shortcutPanel->SetClosable(TRUE);
+	shortcutPanel->SetClosable(true);
 	shortcutPanel->Close();
 	Add(shortcutPanel);
 
@@ -240,7 +266,7 @@ int SynRad::OneTimeSceneInit()
 	simuPanel->Add(modeLabel);
 	
 	modeCombo = new GLCombo(0);
-	modeCombo->SetEditable(TRUE);
+	modeCombo->SetEditable(true);
 	modeCombo->SetSize(2);
 	modeCombo->SetValueAt(0, "Fluxwise");
 	modeCombo->SetValueAt(1, "Powerwise");
@@ -254,7 +280,7 @@ int SynRad::OneTimeSceneInit()
 	simuPanel->Add(doseLabel);
 
 	doseNumber = new GLTextField(0, NULL);
-	doseNumber->SetEditable(FALSE);
+	doseNumber->SetEditable(false);
 	simuPanel->Add(doseNumber);
 
 	//Reflection materials
@@ -293,13 +319,13 @@ int SynRad::OneTimeSceneInit()
 	facetRMSroughnessLabel = new GLLabel("sigma (nm):");
 	facetPanel->Add(facetRMSroughnessLabel);
 	facetRMSroughness = new GLTextField(0, NULL);
-	facetRMSroughness->SetEditable(FALSE);
+	facetRMSroughness->SetEditable(false);
 	facetPanel->Add(facetRMSroughness);
 
 	facetAutoCorrLengthLabel = new GLLabel("T (nm):");
 	facetPanel->Add(facetAutoCorrLengthLabel);
 	facetAutoCorrLength = new GLTextField(0, NULL);
-	facetAutoCorrLength->SetEditable(FALSE);
+	facetAutoCorrLength->SetEditable(false);
 	facetPanel->Add(facetAutoCorrLength);
 
 	facetTPLabel = new GLLabel("Teleport to facet  #");
@@ -310,7 +336,7 @@ int SynRad::OneTimeSceneInit()
 	facetLinkLabel = new GLLabel("Link:");
 	facetPanel->Add(facetLinkLabel);
 	facetSILabel = new GLTextField(0, "");
-	facetSILabel->SetEditable(TRUE);
+	facetSILabel->SetEditable(true);
 
 	facetPanel->Add(facetSILabel);
 
@@ -333,18 +359,18 @@ int SynRad::OneTimeSceneInit()
 	facetPanel->Add(facetSpectrumToggle);
 
 	facetTexBtn = new GLButton(0, "Mesh...");
-	facetTexBtn->SetEnabled(FALSE);
+	facetTexBtn->SetEnabled(false);
 	facetPanel->Add(facetTexBtn);
 
 	facetList = new GLList(0);
 	facetList->SetWorker(&worker);
-	facetList->SetGrid(TRUE);
+	facetList->SetGrid(true);
 	facetList->SetSelectionMode(MULTIPLE_ROW);
 	facetList->SetSize(5, 1);
 	facetList->SetColumnWidths((int*)cWidth);
 	facetList->SetColumnLabels((char **)cName);
-	facetList->SetColumnLabelVisible(TRUE);
-	facetList->Sortable = TRUE;
+	facetList->SetColumnLabelVisible(true);
+	facetList->Sortable = true;
 	Add(facetList);
 
 	
@@ -531,19 +557,20 @@ void SynRad::PlaceComponents() {
 	sy += (simuPanel->GetHeight() + 5);
 
 	// ---------------------------------------------------------
-	int lg = m_screenHeight - (nbFormula * 25 + 23);
+	int lg = m_screenHeight - 23 /*- (nbFormula * 25)*/;
 
 	facetList->SetBounds(sx, sy, 202, lg - sy);
 
 	// ---------------------------------------------------------
 
+	/*
 	for (int i = 0; i < nbFormula; i++) {
-		formulas[i].name->SetBounds(sx, lg + 5, 95, 18);
-		formulas[i].value->SetBounds(sx + 90, lg + 5, 87, 18);
-		formulas[i].setBtn->SetBounds(sx + 182, lg + 5, 20, 18);
-		lg += 25;
+	formulas[i].name->SetBounds(sx, lg + 5, 95, 18);
+	formulas[i].value->SetBounds(sx + 90, lg + 5, 87, 18);
+	formulas[i].setBtn->SetBounds(sx + 182, lg + 5, 20, 18);
+	lg += 25;
 	}
-
+	*/
 }
 
 //-----------------------------------------------------------------------------
@@ -555,32 +582,32 @@ void SynRad::ClearFacetParams()
 {
 	facetPanel->SetTitle("Selected Facet (none)");
 	facetReflType->SetSelectedValue("");
-	facetReflType->SetEditable(FALSE);
+	facetReflType->SetEditable(false);
 	facetSticking->Clear();
-	facetSticking->SetVisible(FALSE);
+	facetSticking->SetVisible(false);
 	facetDoScattering->SetState(0);
-	facetDoScattering->SetEnabled(FALSE);
+	facetDoScattering->SetEnabled(false);
 	facetRMSroughness->Clear();
-	facetRMSroughness->SetEditable(FALSE);
+	facetRMSroughness->SetEditable(false);
 	facetAutoCorrLength->Clear();
-	facetAutoCorrLength->SetEditable(FALSE);
+	facetAutoCorrLength->SetEditable(false);
 	facetTeleport->Clear();
-	facetTeleport->SetEditable(FALSE);
-	facetArea->SetEditable(FALSE);
+	facetTeleport->SetEditable(false);
+	facetArea->SetEditable(false);
 	facetArea->Clear();
 	facetSuperDest->Clear();
-	facetSuperDest->SetEditable(FALSE);
+	facetSuperDest->SetEditable(false);
 	facetSILabel->Clear();
-	facetSILabel->SetEditable(FALSE);
+	facetSILabel->SetEditable(false);
 	facetOpacity->Clear();
-	facetOpacity->SetEditable(FALSE);
+	facetOpacity->SetEditable(false);
 	facetSideType->SetSelectedValue("");
-	facetSideType->SetEditable(FALSE);
+	facetSideType->SetEditable(false);
 
 	facetRecType->SetSelectedValue("");
-	facetRecType->SetEditable(FALSE);
+	facetRecType->SetEditable(false);
 	facetSpectrumToggle->SetState(0);
-	facetSpectrumToggle->SetEnabled(FALSE);
+	facetSpectrumToggle->SetEnabled(false);
 }
 
 //-----------------------------------------------------------------------------
@@ -590,13 +617,13 @@ void SynRad::ClearFacetParams()
 
 void SynRad::ApplyFacetParams() {
 	if (!AskToReset()) return;
-	changedSinceSave = TRUE;
+	changedSinceSave = true;
 	Geometry *geom = worker.GetGeometry();
 	int nbFacet = geom->GetNbFacet();
 
 	//Reflection type and sticking
 	double sticking;
-	BOOL doSticking = FALSE;
+	bool doSticking = false;
 	int reflType = facetReflType->GetSelectedIndex();
 
 	if (reflType == 0 || reflType == 1) { //Diffuse or mirror
@@ -606,10 +633,10 @@ void SynRad::ApplyFacetParams() {
 				UpdateFacetParams();
 				return;
 			}
-			doSticking = TRUE;
+			doSticking = true;
 		}
 		else { //Not a double number
-			if (strcmp(facetSticking->GetText(), "...") == 0) doSticking = FALSE;
+			if (strcmp(facetSticking->GetText(), "...") == 0) doSticking = false;
 			else {
 				GLMessageBox::Display("Invalid sticking number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 				UpdateFacetParams();
@@ -619,13 +646,13 @@ void SynRad::ApplyFacetParams() {
 	}
 
 	//Scattering, roughness, autocorr.length
-	BOOL doScattering = FALSE;
-	BOOL doRoughness = FALSE;
-	BOOL doCorrLength = FALSE;
+	bool doScattering = false;
+	bool doRoughness = false;
+	bool doCorrLength = false;
 	double roughness, corrLength;
 
 	if (facetDoScattering->GetState() < 2) {
-		doScattering = TRUE;
+		doScattering = true;
 		if (facetDoScattering->GetState() == 1) { //Do scattering, read roughness and autocorr.length
 
 			// Roughness
@@ -635,10 +662,10 @@ void SynRad::ApplyFacetParams() {
 					UpdateFacetParams();
 					return;
 				}
-				doRoughness = TRUE;
+				doRoughness = true;
 			}
 			else {
-				if (strcmp(facetRMSroughness->GetText(), "...") == 0) doRoughness = FALSE;
+				if (strcmp(facetRMSroughness->GetText(), "...") == 0) doRoughness = false;
 				else {
 					GLMessageBox::Display("Invalid roughness number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 					UpdateFacetParams();
@@ -653,10 +680,10 @@ void SynRad::ApplyFacetParams() {
 					UpdateFacetParams();
 					return;
 				}
-				doCorrLength = TRUE;
+				doCorrLength = true;
 			}
 			else {
-				if (strcmp(facetAutoCorrLength->GetText(), "...") == 0) doCorrLength = FALSE;
+				if (strcmp(facetAutoCorrLength->GetText(), "...") == 0) doCorrLength = false;
 				else {
 					GLMessageBox::Display("Invalid autocorrelation length", "Error", GLDLG_OK, GLDLG_ICONERROR);
 					UpdateFacetParams();
@@ -669,7 +696,7 @@ void SynRad::ApplyFacetParams() {
 
 	// teleport
 	int teleport;
-	BOOL doTeleport = FALSE;
+	bool doTeleport = false;
 
 	if (facetTeleport->GetNumberInt(&teleport)) {
 		if (teleport<-1 || teleport>nbFacet) {
@@ -684,10 +711,10 @@ void SynRad::ApplyFacetParams() {
 			UpdateFacetParams();
 			return;
 		}
-		doTeleport = TRUE;
+		doTeleport = true;
 	}
 	else {
-		if (strcmp(facetTeleport->GetText(), "...") == 0) doTeleport = FALSE;
+		if (strcmp(facetTeleport->GetText(), "...") == 0) doTeleport = false;
 		else {
 			GLMessageBox::Display("Invalid teleport destination\n(If no teleport: set number to 0)", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			UpdateFacetParams();
@@ -698,17 +725,17 @@ void SynRad::ApplyFacetParams() {
 
 	// opacity
 	double opacity;
-	BOOL doOpacity = FALSE;
+	bool doOpacity = false;
 	if (facetOpacity->GetNumber(&opacity)) {
 		if (opacity<0.0 || opacity>1.0) {
 			GLMessageBox::Display("Opacity must be in the range [0,1]", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			UpdateFacetParams();
 			return;
 		}
-		doOpacity = TRUE;
+		doOpacity = true;
 	}
 	else {
-		if (strcmp(facetOpacity->GetText(), "...") == 0) doOpacity = FALSE;
+		if (strcmp(facetOpacity->GetText(), "...") == 0) doOpacity = false;
 		else {
 			GLMessageBox::Display("Invalid opacity number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			UpdateFacetParams();
@@ -719,10 +746,10 @@ void SynRad::ApplyFacetParams() {
 
 	// Superstructure
 	int superStruct;
-	BOOL doSuperStruct = FALSE;
-	if (sscanf(facetSILabel->GetText(), "%d", &superStruct) > 0 && superStruct > 0 && superStruct <= geom->GetNbStructure()) doSuperStruct = TRUE;
+	bool doSuperStruct = false;
+	if (sscanf(facetSILabel->GetText(), "%d", &superStruct) > 0 && superStruct > 0 && superStruct <= geom->GetNbStructure()) doSuperStruct = true;
 	else {
-		if (strcmp(facetSILabel->GetText(), "...") == 0) doSuperStruct = FALSE;
+		if (strcmp(facetSILabel->GetText(), "...") == 0) doSuperStruct = false;
 		else{
 			GLMessageBox::Display("Invalid superstructre number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			UpdateFacetParams();
@@ -733,9 +760,9 @@ void SynRad::ApplyFacetParams() {
 
 	// Super structure destination (link)
 	int superDest;
-	BOOL doLink = FALSE;
+	bool doLink = false;
 	if (strcmp(facetSuperDest->GetText(), "none") == 0 || strcmp(facetSuperDest->GetText(), "no") == 0 || strcmp(facetSuperDest->GetText(), "0") == 0) {
-		doLink = TRUE;
+		doLink = true;
 		superDest = 0;
 	}
 	else if (sscanf(facetSuperDest->GetText(), "%d", &superDest) > 0) {
@@ -748,9 +775,9 @@ void SynRad::ApplyFacetParams() {
 			return;
 		}
 		else
-			doLink = TRUE;
+			doLink = true;
 	}
-	else if (strcmp(facetSuperDest->GetText(), "...") == 0) doLink = FALSE;
+	else if (strcmp(facetSuperDest->GetText(), "...") == 0) doLink = false;
 	else {
 		GLMessageBox::Display("Invalid superstructure destination", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		return;
@@ -765,7 +792,7 @@ void SynRad::ApplyFacetParams() {
 	// 2sided
 	int is2Sided = facetSideType->GetSelectedIndex();
 
-	BOOL structChanged = FALSE; //if a facet gets into a new structure, we have to re-render the geometry
+	bool structChanged = false; //if a facet gets into a new structure, we have to re-render the geometry
 	// Update facets (local)
 	for (int i = 0; i < nbFacet; i++) {
 		Facet *f = geom->GetFacet(i);
@@ -804,7 +831,7 @@ void SynRad::ApplyFacetParams() {
 			if (doSuperStruct) {
 				if (f->sh.superIdx != (superStruct - 1)) {
 					f->sh.superIdx = superStruct - 1;
-					structChanged = TRUE;
+					structChanged = true;
 				}
 			}
 			if (doLink) {
@@ -829,48 +856,45 @@ void SynRad::ApplyFacetParams() {
 // Desc: Update selected facet parameters.
 //-----------------------------------------------------------------------------
 
-void SynRad::UpdateFacetParams(BOOL updateSelection) {
+void SynRad::UpdateFacetParams(bool updateSelection) {
 
 	char tmp[256];
 	int sel0 = -1;
 
 	// Update params
 	Geometry *geom = worker.GetGeometry();
-	int nbSel = geom->GetNbSelected();
+	int nbSel = geom->GetNbSelectedFacets();
 	if (nbSel > 0) {
 
 		Facet *f0;
 		Facet *f;
 
 		// Get list of selected facet
-		int *selection = (int *)malloc(nbSel*sizeof(int));
-		int count = 0;
-		for (int i = 0; i < geom->GetNbFacet(); i++)
-			if (geom->GetFacet(i)->selected)
-				selection[count++] = i;
+		std::vector<size_t> selectedFacets = geom->GetSelectedFacets();
 
-		sel0 = selection[0];
-		f0 = geom->GetFacet(selection[0]);
+		f0 = geom->GetFacet(selectedFacets[0]);
 
-		double area = f0->sh.area;
+		double f0Area = f0->GetArea();
+		double sumArea = f0Area; //sum facet area
 
-		BOOL reflectTypeE = TRUE;
-		BOOL stickingE = TRUE;
-		BOOL rmsRoughnessE = TRUE;
-		BOOL autoCorrLengthE = TRUE;
-		BOOL teleportE = TRUE;
-		BOOL opacityE = TRUE;
-		BOOL superDestE = TRUE;
-		BOOL superIdxE = TRUE;
-		BOOL recordE = TRUE;
-		BOOL is2sidedE = TRUE;
-		BOOL hasSpectrumE = TRUE;
-		BOOL doScatteringE = TRUE;
-		BOOL isAllRegular = (f0->sh.reflectType < 2); //All facets are (mirror OR diffuse)
-		BOOL isAllDiffuse = (f0->sh.reflectType == 0); //All facets are diffuse (otherwise enable choice for rough surface scattering)
+		bool reflectTypeE = true;
+		bool stickingE = true;
+		bool rmsRoughnessE = true;
+		bool autoCorrLengthE = true;
+		bool teleportE = true;
+		bool opacityE = true;
+		bool superDestE = true;
+		bool superIdxE = true;
+		bool recordE = true;
+		bool is2sidedE = true;
+		bool hasSpectrumE = true;
+		bool doScatteringE = true;
+		bool isAllRegular = (f0->sh.reflectType < 2); //All facets are (mirror OR diffuse)
+		bool isAllDiffuse = (f0->sh.reflectType == 0); //All facets are diffuse (otherwise enable choice for rough surface scattering)
 
-		for (int i = 1; i < count; i++) {
-			f = geom->GetFacet(selection[i]);
+		for (size_t sel = 1; sel < selectedFacets.size(); sel++) {
+			f = geom->GetFacet(selectedFacets[sel]);
+			double fArea = f->GetArea();
 			reflectTypeE = reflectTypeE && (f0->sh.reflectType == f->sh.reflectType);
 			stickingE = stickingE && (abs(f0->sh.sticking - f->sh.sticking) < 1e-7);
 			if (worker.newReflectionModel) { //RMS roughness compare
@@ -891,22 +915,21 @@ void SynRad::UpdateFacetParams(BOOL updateSelection) {
 
 			recordE = recordE && (f0->sh.profileType == f->sh.profileType);
 			hasSpectrumE = hasSpectrumE && (f0->sh.hasSpectrum == f->sh.hasSpectrum);
-			if (f->sh.area > 0) area += f->sh.area;
+			sumArea += fArea;
 		}
 
 		if (nbSel == 1)
-			sprintf(tmp, "Selected Facet (#%d)", selection[0] + 1);
+			sprintf(tmp, "Selected Facet (#%d)", selectedFacets[0] + 1);
 		else
-			sprintf(tmp, "Selected Facet (%d selected)", count);
+			sprintf(tmp, "Selected Facet (%d selected)", selectedFacets.size());
 
 		// Old STR compatibility
-		if (stickingE && f0->sh.superDest) stickingE = FALSE;
+		if (stickingE && f0->sh.superDest) stickingE = false;
 
 		facetPanel->SetTitle(tmp);
-		if (count > 1) facetAreaLabel->SetText("Sum Area (cm\262):");
+		if (selectedFacets.size() > 1) facetAreaLabel->SetText("Sum Area (cm\262):");
 		else facetAreaLabel->SetText("Area (cm\262):");
-		sprintf(tmp, "%g", area);
-		facetArea->SetText(tmp);
+		facetArea->SetText(sumArea);
 
 		if (reflectTypeE) {
 			if (isAllRegular) facetReflType->SetSelectedIndex(f0->sh.reflectType); //Diffuse or Mirror
@@ -931,12 +954,12 @@ void SynRad::UpdateFacetParams(BOOL updateSelection) {
 		facetDoScattering->AllowMixedState(!doScatteringE);
 
 		if (isAllDiffuse) {
-			facetDoScattering->SetEnabled(FALSE);
+			facetDoScattering->SetEnabled(false);
 			facetRMSroughness->SetText("");
 			facetAutoCorrLength->SetText("");
 		}
 		else {
-			facetDoScattering->SetEnabled(TRUE);
+			facetDoScattering->SetEnabled(true);
 			if (rmsRoughnessE) {
 				if (worker.newReflectionModel) { //RMS roughness (nm)
 					facetRMSroughness->SetText(f0->sh.rmsRoughness*1E9);
@@ -978,52 +1001,51 @@ void SynRad::UpdateFacetParams(BOOL updateSelection) {
 		if (updateSelection) {
 			if (nbSel > 1000 || geom->GetNbFacet() > 50000) { //If it would take too much time to look up every selected facet in the list
 				facetList->ReOrder();
-				facetList->SetSelectedRows(selection, nbSel, FALSE);
+				facetList->SetSelectedRows(selectedFacets, false);
 			}
 			else {
-				facetList->SetSelectedRows(selection, nbSel, TRUE);
+				facetList->SetSelectedRows(selectedFacets, true);
 			}
 			facetList->lastRowSel = -1;
 		}
 
-		free(selection);
-
-		facetReflType->SetEditable(TRUE);
+		facetReflType->SetEditable(true);
 		facetSticking->SetVisible(isAllRegular);
 		facetDoScattering->SetEnabled(!isAllDiffuse);
 		facetRMSroughness->SetEditable(!doScatteringE || f0->sh.doScattering);
 		facetAutoCorrLength->SetEditable(!doScatteringE || f0->sh.doScattering);
 
-		facetTeleport->SetEditable(TRUE);
-		facetOpacity->SetEditable(TRUE);
-		facetSuperDest->SetEditable(TRUE);
-		facetSILabel->SetEditable(TRUE);
-		facetSideType->SetEditable(TRUE);
+		facetTeleport->SetEditable(true);
+		facetOpacity->SetEditable(true);
+		facetSuperDest->SetEditable(true);
+		facetSILabel->SetEditable(true);
+		facetSideType->SetEditable(true);
 
-		facetRecType->SetEditable(TRUE);
-		facetSpectrumToggle->SetEnabled(TRUE);
+		facetRecType->SetEditable(true);
+		facetSpectrumToggle->SetEnabled(true);
 
-		facetApplyBtn->SetEnabled(FALSE);
-		menu->GetSubMenu("Facet")->SetEnabled(MENU_FACET_MESH, TRUE);
-		facetTexBtn->SetEnabled(TRUE);
+		facetApplyBtn->SetEnabled(false);
+		menu->GetSubMenu("Facet")->SetEnabled(MENU_FACET_MESH, true);
+		facetTexBtn->SetEnabled(true);
 
 	}
 	else {
 		ClearFacetParams();
-		menu->GetSubMenu("Facet")->SetEnabled(MENU_FACET_MESH, FALSE);
-		facetTexBtn->SetEnabled(FALSE);
+		menu->GetSubMenu("Facet")->SetEnabled(MENU_FACET_MESH, false);
+		facetTexBtn->SetEnabled(false);
 		if (updateSelection) facetList->ClearSelection();
 	}
 
 	if (facetDetails) facetDetails->Update();
 	if (facetCoordinates) facetCoordinates->UpdateFromSelection();
-	if (texturePlotter) texturePlotter->Update(m_fTime, TRUE); //Selected facet change
-	//if( outgassingMap ) outgassingMap->Update(m_fTime,TRUE);
+	if (texturePlotter) texturePlotter->Update(m_fTime, true); //Selected facet change
+	//if( outgassingMap ) outgassingMap->Update(m_fTime,true);
 }
 
 
-BOOL SynRad::EvaluateVariable(VLIST *v, Worker *w, Geometry *geom) {
-	BOOL ok = TRUE;
+bool SynRad::EvaluateVariable(VLIST *v) {
+	bool ok = true;
+	Geometry* geom = worker.GetGeometry();
 	int nbFacet = geom->GetNbFacet();
 	int idx;
 
@@ -1095,15 +1117,15 @@ BOOL SynRad::EvaluateVariable(VLIST *v, Worker *w, Geometry *geom) {
 			else if (_stricmp(v->name, "Na") == 0) {
 				v->value = 6.02214179e23;
 			}
-			else ok = FALSE;
+			else ok = false;
 			return ok;
 }
 
 void SynRad::UpdatePlotters()
 {
-	if (mApp->profilePlotter) mApp->profilePlotter->Update(m_fTime, TRUE);
-	if (mApp->spectrumPlotter) mApp->spectrumPlotter->Update(m_fTime, TRUE);
-	if (mApp->texturePlotter) mApp->texturePlotter->Update(m_fTime, TRUE);
+	if (mApp->profilePlotter) mApp->profilePlotter->Update(m_fTime, true);
+	if (mApp->spectrumPlotter) mApp->spectrumPlotter->Update(m_fTime, true);
+	if (mApp->texturePlotter) mApp->texturePlotter->Update(m_fTime, true);
 }
 
 
@@ -1146,7 +1168,7 @@ int SynRad::FrameMove()
 
 // ----------------------------------------------------------------
 
-void SynRad::UpdateFacetHits(BOOL all) {
+void SynRad::UpdateFacetHits(bool all) {
 	char tmp[256];
 	Geometry *geom = worker.GetGeometry();
 
@@ -1173,7 +1195,7 @@ void SynRad::UpdateFacetHits(BOOL all) {
 					char errMsg[512];
 					sprintf(errMsg, "Synrad::UpdateFacetHits()\nError while updating facet hits. Was looking for facet #%d in list.\nSynrad will now autosave and crash.", i + 1);
 					GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
-					AutoSave(TRUE);
+					AutoSave(true);
 				}
 				Facet *f = geom->GetFacet(facetId);
 				sprintf(tmp, "%d", facetId + 1);
@@ -1264,13 +1286,13 @@ void SynRad::SaveFileAs() {
 
 	GLProgress *progressDlg2 = new GLProgress("Saving file...", "Please wait");
 	progressDlg2->SetProgress(0.0);
-	progressDlg2->SetVisible(TRUE);
+	progressDlg2->SetVisible(true);
 	//GLWindowManager::Repaint();  
 	if (fn) {
 		try {
 			worker.SaveGeometry(fn->fullName, progressDlg2);
 			ResetAutoSaveTimer();
-			changedSinceSave = FALSE;
+			changedSinceSave = false;
 			UpdateCurrentDir(worker.fullFileName);
 			UpdateTitle();
 			AddRecent(worker.fullFileName);
@@ -1283,7 +1305,7 @@ void SynRad::SaveFileAs() {
 		}
 	}
 
-	progressDlg2->SetVisible(FALSE);
+	progressDlg2->SetVisible(false);
 	SAFE_DELETE(progressDlg2);
 }
 */
@@ -1292,7 +1314,7 @@ void SynRad::SaveFileAs() {
 void SynRad::ExportTextures(int grouping, int mode) {
 
 	Geometry *geom = worker.GetGeometry();
-	if (geom->GetNbSelected() == 0) {
+	if (geom->GetNbSelectedFacets() == 0) {
 		GLMessageBox::Display("Empty selection", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		return;
 	}
@@ -1307,7 +1329,7 @@ void SynRad::ExportTextures(int grouping, int mode) {
 	if (fn) {
 
 		try {
-			worker.ExportTextures(fn->fullName, grouping, mode, TRUE, TRUE);
+			worker.ExportTextures(fn->fullName, grouping, mode, true, true);
 			//UpdateCurrentDir(fn->fullName);
 			//UpdateTitle();
 		}
@@ -1327,11 +1349,11 @@ void SynRad::SaveFile() {
 
 		GLProgress *progressDlg2 = new GLProgress("Saving...", "Please wait");
 		progressDlg2->SetProgress(0.5);
-		progressDlg2->SetVisible(TRUE);
+		progressDlg2->SetVisible(true);
 		//GLWindowManager::Repaint();
 
 		try {
-			worker.SaveGeometry(worker.fullFileName, progressDlg2, FALSE);
+			worker.SaveGeometry(worker.fullFileName, progressDlg2, false);
 			ResetAutoSaveTimer();
 		}
 		catch (Error &e) {
@@ -1339,9 +1361,9 @@ void SynRad::SaveFile() {
 			sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), worker.GetFileName());
 			GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
 		}
-		progressDlg2->SetVisible(FALSE);
+		progressDlg2->SetVisible(false);
 		SAFE_DELETE(progressDlg2);
-		changedSinceSave = FALSE;
+		changedSinceSave = false;
 
 	}
 	else SaveFileAs();
@@ -1364,12 +1386,12 @@ void SynRad::LoadFile(char *fName) {
 	}
 
 	GLProgress *progressDlg2 = new GLProgress("Preparing to load file...", "Please wait");
-	progressDlg2->SetVisible(TRUE);
+	progressDlg2->SetVisible(true);
 	progressDlg2->SetProgress(0.0);
 	//GLWindowManager::Repaint();
 
 	if (strlen(fullName) == 0) {
-		progressDlg2->SetVisible(FALSE);
+		progressDlg2->SetVisible(false);
 		SAFE_DELETE(progressDlg2);
 		return;
 	}
@@ -1380,7 +1402,7 @@ void SynRad::LoadFile(char *fName) {
 	else strcpy(shortName, fullName);
 
 	try {
-		ClearFormula();
+		ClearFormulas();
 		ClearAllSelections();
 		ClearAllViews();
 		ClearRegions();
@@ -1393,7 +1415,7 @@ void SynRad::LoadFile(char *fName) {
 		viewer[1]->SetWorker(&worker);
 		viewer[2]->SetWorker(&worker);
 		viewer[3]->SetWorker(&worker);
-		startSimu->SetEnabled(TRUE);
+		startSimu->SetEnabled(true);
 		ClearFacetParams();
 		nbDesStart = worker.nbDesorption;
 		nbHitStart = worker.nbHit;
@@ -1440,16 +1462,16 @@ void SynRad::LoadFile(char *fName) {
 		RemoveRecent(fName);
 
 	}
-	progressDlg2->SetVisible(FALSE);
+	progressDlg2->SetVisible(false);
 	SAFE_DELETE(progressDlg2);
-	changedSinceSave = FALSE;
+	changedSinceSave = false;
 }
 
 //-----------------------------------------------------------------------------
 
-void SynRad::InsertGeometry(BOOL newStr, char *fName) {
+void SynRad::InsertGeometry(bool newStr, char *fName) {
 	if (!AskToReset()) return;
-	ResetSimulation(FALSE);
+	ResetSimulation(false);
 
 	char fullName[512];
 	char shortName[512];
@@ -1465,12 +1487,12 @@ void SynRad::InsertGeometry(BOOL newStr, char *fName) {
 	}
 
 	GLProgress *progressDlg2 = new GLProgress("Loading file...", "Please wait");
-	progressDlg2->SetVisible(TRUE);
+	progressDlg2->SetVisible(true);
 	progressDlg2->SetProgress(0.0);
 	//GLWindowManager::Repaint();
 
 	if (strlen(fullName) == 0) {
-		progressDlg2->SetVisible(FALSE);
+		progressDlg2->SetVisible(false);
 		SAFE_DELETE(progressDlg2);
 		return;
 	}
@@ -1482,10 +1504,10 @@ void SynRad::InsertGeometry(BOOL newStr, char *fName) {
 
 	try {
 
-		worker.LoadGeometry(fullName, TRUE, newStr);
+		worker.LoadGeometry(fullName, true, newStr);
 		Geometry *geom = worker.GetGeometry();
 
-		startSimu->SetEnabled(TRUE);
+		startSimu->SetEnabled(true);
 
 		AddRecent(fullName);
 		geom->viewStruct = -1;
@@ -1500,7 +1522,7 @@ void SynRad::InsertGeometry(BOOL newStr, char *fName) {
 		geom->CheckIsolatedVertex();
 
 		UpdatePlotters();
-		//if(outgassingMap) outgassingMap->Update(m_fTime,TRUE);
+		//if(outgassingMap) outgassingMap->Update(m_fTime,true);
 		if (facetDetails) facetDetails->Update();
 		if (facetCoordinates) facetCoordinates->UpdateFromSelection();
 		if (vertexCoordinates) vertexCoordinates->Update();
@@ -1513,9 +1535,9 @@ void SynRad::InsertGeometry(BOOL newStr, char *fName) {
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
 		RemoveRecent(fName);
 	}
-	progressDlg2->SetVisible(FALSE);
+	progressDlg2->SetVisible(false);
 	SAFE_DELETE(progressDlg2);
-	changedSinceSave = TRUE;
+	changedSinceSave = true;
 }
 
 void SynRad::StartStopSimulation() {
@@ -1526,7 +1548,7 @@ void SynRad::StartStopSimulation() {
 
 	worker.StartStop(m_fTime, 0);
 	UpdatePlotters();
-	if (autoUpdateFormulas) UpdateFormula();
+	if (autoUpdateFormulas && formulaEditor && formulaEditor->IsVisible()) formulaEditor->ReEvaluate();
 
 	// Frame rate measurement
 	lastMeasTime = m_fTime;
@@ -1617,7 +1639,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 				return;
 			}
 			if (!exportDesorption) exportDesorption = new ExportDesorption(geom, &worker);
-			exportDesorption->SetVisible(TRUE);
+			exportDesorption->SetVisible(true);
 			break;
 
 		case MENU_EDIT_TSCALING:
@@ -1683,7 +1705,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		case MENU_REGIONS_REGIONINFO:
 			if ((int)worker.regions.size() > 0) {
 				if (regionInfo == NULL) regionInfo = new RegionInfo(&worker);
-				regionInfo->SetVisible(TRUE);
+				regionInfo->SetVisible(true);
 			}
 			else {
 				GLMessageBox::Display("No regions loaded", "Error", GLDLG_OK, GLDLG_ICONERROR);
@@ -1694,9 +1716,9 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			geom->UnselectAll();
 			for (int i = 0; i < geom->GetNbFacet(); i++)
 				if (geom->GetFacet(i)->sh.sticking != 0.0 && !geom->GetFacet(i)->IsTXTLinkFacet())
-					geom->Select(i);
+					geom->SelectFacet(i);
 			geom->UpdateSelection();
-			UpdateFacetParams(TRUE);
+			UpdateFacetParams(true);
 			break;
 
 		case MENU_FACET_SELECTREFL:
@@ -1704,19 +1726,19 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			for (int i = 0; i < geom->GetNbFacet(); i++) {
 				Facet *f = geom->GetFacet(i);
 				if (f->sh.sticking == 0.0 && f->sh.opacity > 0.0)
-					geom->Select(i);
+					geom->SelectFacet(i);
 			}
 			geom->UpdateSelection();
-			UpdateFacetParams(TRUE);
+			UpdateFacetParams(true);
 			break;
 
 		case MENU_FACET_SELECTVOL:
 			geom->UnselectAll();
 			for (int i = 0; i < geom->GetNbFacet(); i++)
 				if (geom->GetFacet(i)->sh.isVolatile)
-					geom->Select(i);
+					geom->SelectFacet(i);
 			geom->UpdateSelection();
-			UpdateFacetParams(TRUE);
+			UpdateFacetParams(true);
 			break;
 
 
@@ -1724,9 +1746,9 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			geom->UnselectAll();
 			for (int i = 0; i < geom->GetNbFacet(); i++)
 				if (geom->GetFacet(i)->sh.hasSpectrum)
-					geom->Select(i);
+					geom->SelectFacet(i);
 			geom->UpdateSelection();
-			UpdateFacetParams(TRUE);
+			UpdateFacetParams(true);
 			break;
 
 		case MENU_VERTEX_REMOVE:
@@ -1757,7 +1779,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 
 		case MENU_REGIONS_SHOWALL:
 			for (size_t i = 0; i < worker.regions.size(); i++)
-				worker.regions[i].params.showPhotons = TRUE;
+				worker.regions[i].params.showPhotons = true;
 			worker.ChangeSimuParams();
 			for (size_t i = 0; i < worker.regions.size(); i++)
 				ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS+i, worker.regions[i].params.showPhotons);
@@ -1765,7 +1787,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 
 		case MENU_REGIONS_SHOWNONE:
 			for (size_t i = 0; i < worker.regions.size(); i++)
-				worker.regions[i].params.showPhotons = FALSE;
+				worker.regions[i].params.showPhotons = false;
 			worker.ChangeSimuParams();
 			for (size_t i = 0; i < worker.regions.size(); i++)
 				ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS+i, worker.regions[i].params.showPhotons);
@@ -1807,20 +1829,20 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		//TEXT --------------------------------------------------------------------
 	case MSG_TEXT_UPD:
 		if (src == facetSticking) {
-			facetApplyBtn->SetEnabled(TRUE);
+			facetApplyBtn->SetEnabled(true);
 		}
 		else if (src == facetRMSroughness || src == facetAutoCorrLength) {
 			facetDoScattering->SetState(1);
-			facetApplyBtn->SetEnabled(TRUE);
+			facetApplyBtn->SetEnabled(true);
 		}
 		else if (src == facetTeleport) {
-			facetApplyBtn->SetEnabled(TRUE);
+			facetApplyBtn->SetEnabled(true);
 		}
 		else if (src == facetOpacity) {
-			facetApplyBtn->SetEnabled(TRUE);
+			facetApplyBtn->SetEnabled(true);
 		}
 		else if (src == facetSuperDest || src == facetSILabel) {
-			facetApplyBtn->SetEnabled(TRUE);
+			facetApplyBtn->SetEnabled(true);
 		}
 		break;
 
@@ -1834,26 +1856,26 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		//COMBO -------------------------------------------------------------------
 	case MSG_COMBO:
 		if (src == facetReflType) {
-			facetApplyBtn->SetEnabled(TRUE);
-			BOOL isMaterial = facetReflType->GetSelectedIndex() >= 2;
+			facetApplyBtn->SetEnabled(true);
+			bool isMaterial = facetReflType->GetSelectedIndex() >= 2;
 			if (isMaterial) facetSticking->SetText("");
 			facetSticking->SetVisible(!isMaterial);
-			BOOL isDiffuse = facetReflType->GetSelectedIndex() == 0;
+			bool isDiffuse = facetReflType->GetSelectedIndex() == 0;
 			if (isDiffuse) facetDoScattering->SetState(0);  //Diffuse surface overrides rough scattering model
 			facetDoScattering->SetEnabled(!isDiffuse); //Diffuse surface overrides rough scattering model
-			BOOL scatter = (facetDoScattering->GetState() != 0);
+			bool scatter = (facetDoScattering->GetState() != 0);
 			facetRMSroughness->SetEditable(!isDiffuse && scatter);
 			facetAutoCorrLength->SetEditable(!isDiffuse && scatter);
 		}
 		else if (src == facetRecType || src == facetSideType) {
-			facetApplyBtn->SetEnabled(TRUE);
+			facetApplyBtn->SetEnabled(true);
 		}
 		else if (src == modeCombo) {
 			/*if (!AskToReset()) {
 				modeCombo->SetSelectedIndex(worker.generation_mode);
 				return;
 			}
-			changedSinceSave = TRUE;
+			changedSinceSave = true;
 			worker.generation_mode = modeCombo->GetSelectedIndex(); //fluxwise or powerwise
 			// Send to sub process
 			worker.Reload();
@@ -1868,13 +1890,13 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 	case MSG_TOGGLE:
 		// Update viewer flags
 		if (src == facetDoScattering) {
-			BOOL scatter = (facetDoScattering->GetState() != 0);
+			bool scatter = (facetDoScattering->GetState() != 0);
 			facetRMSroughness->SetEditable(scatter);
 			facetAutoCorrLength->SetEditable(scatter);
-			facetApplyBtn->SetEnabled(TRUE);
+			facetApplyBtn->SetEnabled(true);
 		}
 		else if (src == facetSpectrumToggle)
-			facetApplyBtn->SetEnabled(TRUE);
+			facetApplyBtn->SetEnabled(true);
 		else if (src == autoFrameMoveToggle) {
 			autoFrameMove = autoFrameMoveToggle->GetState();
 			forceFrameMoveButton->SetEnabled(!autoFrameMove);
@@ -1885,13 +1907,13 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		//BUTTON ------------------------------------------------------------------
 	case MSG_BUTTON:
 		if (src == startSimu) {
-			changedSinceSave = TRUE;
+			changedSinceSave = true;
 			StartStopSimulation();
 			resetSimu->SetEnabled(!worker.running);
 		}
 		
 		else if (src == facetApplyBtn) {
-			changedSinceSave = TRUE;
+			changedSinceSave = true;
 			ApplyFacetParams();
 		}
 		else if (src == facetDetailsBtn) {
@@ -1905,7 +1927,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		else if (src == facetTexBtn) {
 			if (!facetMesh) facetMesh = new FacetMesh();
 			facetMesh->EditFacet(&worker);
-			changedSinceSave = TRUE;
+			changedSinceSave = true;
 			UpdateFacetParams();
 		}
 		else if (src == showMoreBtn) {
@@ -1915,9 +1937,9 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			viewer3DSettings->Refresh(geom, viewer[curViewer]);
 		}
 		
-		else {
+		/*else {
 			ProcessFormulaButtons(src);
-		}
+		}*/
 		break;
 	}
 }
@@ -1947,8 +1969,8 @@ void SynRad::BuildPipe(double ratio, int steps) {
 		}
 	}
 
-	ResetSimulation(FALSE);
-	ClearFormula();
+	ResetSimulation(false);
+	ClearFormulas();
 	ClearAllSelections();
 	ClearAllViews();
 	ClearRegions();
@@ -1959,7 +1981,7 @@ void SynRad::BuildPipe(double ratio, int steps) {
 	nbHitStart = 0;
 	for (int i = 0; i < MAX_VIEWER; i++)
 		viewer[i]->SetWorker(&worker);
-	startSimu->SetEnabled(TRUE);
+	startSimu->SetEnabled(true);
 	ClearFacetParams();
 	//UpdatePlotters();
 	if (profilePlotter) profilePlotter->Reset();
@@ -1969,13 +1991,6 @@ void SynRad::BuildPipe(double ratio, int steps) {
 	if (facetDetails) facetDetails->Update();
 	if (facetCoordinates) facetCoordinates->UpdateFromSelection();
 	if (vertexCoordinates) vertexCoordinates->Update();
-	if (nbFormula == 0) {
-		GLParser *f = new GLParser();
-		f->SetExpression("A2/SUMDES");
-		f->SetName("Trans. Prob.");
-		f->Parse();
-		AddFormula(f);
-	}
 	UpdateStructMenu();
 	// Send to sub process
 	try { worker.Reload(); }
@@ -1985,7 +2000,7 @@ void SynRad::BuildPipe(double ratio, int steps) {
 	}
 
 	UpdateTitle();
-	changedSinceSave = FALSE;
+	changedSinceSave = false;
 	ResetAutoSaveTimer();
 }
 
@@ -2010,7 +2025,7 @@ void SynRad::RemoveRecentPAR(char *fileName) {
 
 	if (!fileName) return;
 
-	BOOL found = FALSE;
+	bool found = false;
 	int i = 0;
 	while (!found && i < nbRecentPAR) {
 		found = strcmp(fileName, recentPARs[i]) == 0;
@@ -2034,7 +2049,7 @@ void SynRad::RemoveRecentPAR(char *fileName) {
 void SynRad::AddRecentPAR(char *fileName) {
 
 	// Check if already exists
-	BOOL found = FALSE;
+	bool found = false;
 	int i = 0;
 	while (!found && i < nbRecentPAR) {
 		found = strcmp(fileName, recentPARs[i]) == 0;
@@ -2127,8 +2142,10 @@ void SynRad::LoadConfig() {
 		for (int i = 0; i < MAX_VIEWER; i++)
 			viewer[i]->showHiddenVertex = f->ReadInt();
 		f->ReadKeyword("texColormap"); f->ReadKeyword(":");
+		f->ReadKeyword("texColormap"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
-			viewer[i]->showColormap = f->ReadInt();
+			//viewer[i]->showColormap = 
+			f->ReadInt();
 		f->ReadKeyword("translation"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
 			viewer[i]->transStep = f->ReadDouble();
@@ -2235,7 +2252,7 @@ void SynRad::LoadConfig() {
 	f->Write(name);                      \
 	f->Write(":");                       \
 	for(int i=0;i<MAX_VIEWER;i++)        \
-	f->WriteInt(viewer[i]->var," ");   \
+	f->Write(viewer[i]->var," ");   \
 	f->Write("\n");                      \
 }                                      \
 
@@ -2243,12 +2260,12 @@ void SynRad::LoadConfig() {
 	f->Write(name);                      \
 	f->Write(":");                       \
 	for(int i=0;i<MAX_VIEWER;i++)        \
-	f->WriteDouble(viewer[i]->var," ");\
+	f->Write(viewer[i]->var," ");\
 	f->Write("\n");                      \
 }
 
 
-void SynRad::SaveConfig() {
+void SynRad::SaveConfig(bool increaseSessionCount) {
 
 	FileWriter *f = NULL;
 
@@ -2273,23 +2290,24 @@ void SynRad::SaveConfig() {
 		WRITEI("showMesh", showMesh);
 		WRITEI("showHidden", showHidden);
 		WRITEI("showHiddenVertex", showHiddenVertex);
-		WRITEI("texColormap", showColormap);
+		//WRITEI("texColormap", showColormap);
+		f->Write("texColormap:1 1 1 1\n");
 		WRITED("translation", transStep);
 		WRITEI("dispNumLines", dispNumHits);
 		WRITEI("dispNumLeaks", dispNumLeaks);
 		WRITEI("dispNumTraj", dispNumTraj);
 		WRITED("angle", angleStep);
-		f->Write("autoScale:"); f->WriteInt(geom->texAutoScale, "\n");
-		f->Write("texMin_MC:"); f->WriteLLong(geom->texMin_MC, "\n");
-		f->Write("texMax_MC:"); f->WriteLLong(geom->texMax_MC, "\n");
-		f->Write("texMin_flux:"); f->WriteDouble(geom->texMin_flux, "\n");
-		f->Write("texMax_flux:"); f->WriteDouble(geom->texMax_flux, "\n");
-		f->Write("texMin_power:"); f->WriteDouble(geom->texMin_power, "\n");
-		f->Write("texMax_power:"); f->WriteDouble(geom->texMax_power, "\n");
+		f->Write("autoScale:"); f->Write(geom->texAutoScale, "\n");
+		f->Write("texMin_MC:"); f->Write(geom->texMin_MC, "\n");
+		f->Write("texMax_MC:"); f->Write(geom->texMax_MC, "\n");
+		f->Write("texMin_flux:"); f->Write(geom->texMin_flux, "\n");
+		f->Write("texMax_flux:"); f->Write(geom->texMax_flux, "\n");
+		f->Write("texMin_power:"); f->Write(geom->texMin_power, "\n");
+		f->Write("texMax_power:"); f->Write(geom->texMax_power, "\n");
 #ifdef _DEBUG
-		f->Write("processNum:"); f->WriteInt(numCPU, "\n");
+		f->Write("processNum:"); f->Write(numCPU, "\n");
 #else
-		f->Write("processNum:"); f->WriteInt(worker.GetProcNumber(), "\n");
+		f->Write("processNum:"); f->Write(worker.GetProcNumber(), "\n");
 #endif
 		f->Write("recents:{\n");
 		for (int i = 0; i < nbRecent; i++) {
@@ -2307,21 +2325,21 @@ void SynRad::SaveConfig() {
 		f->Write("}\n");
 		f->Write("cdir:\""); f->Write(currentDir); f->Write("\"\n");
 		f->Write("cseldir:\""); f->Write(currentSelDir); f->Write("\"\n");
-		f->Write("autonorme:"); f->WriteInt(geom->GetAutoNorme(), "\n");
-		f->Write("centernorme:"); f->WriteInt(geom->GetCenterNorme(), "\n");
-		f->Write("normeratio:"); f->WriteDouble((double)(geom->GetNormeRatio()), "\n");
+		f->Write("autonorme:"); f->Write(geom->GetAutoNorme(), "\n");
+		f->Write("centernorme:"); f->Write(geom->GetCenterNorme(), "\n");
+		f->Write("normeratio:"); f->Write((double)(geom->GetNormeRatio()), "\n");
 		WRITEI("showDirection", showDir); f->Write("\n");
 		WRITEI("shadeLines", showDir); f->Write("\n");
 		WRITEI("showTP", showDir); f->Write("\n");
-		f->Write("autoSaveFrequency:"); f->WriteDouble(autoSaveFrequency, "\n");
-		f->Write("autoSaveSimuOnly:"); f->WriteInt(autoSaveSimuOnly, "\n");
-		f->Write("checkForUpdates:"); f->WriteInt(checkForUpdates, "\n");
-		f->Write("autoUpdateFormulas:"); f->WriteInt(autoUpdateFormulas, "\n");
-		f->Write("compressSavedFiles:"); f->WriteInt(compressSavedFiles, "\n");
-		f->Write("lowFluxMode:"); f->WriteInt(worker.lowFluxMode, "\n");
-		f->Write("lowFluxCutoff:"); f->WriteDouble(worker.lowFluxCutoff, "\n");
-		f->Write("textureLogScale:"); f->WriteInt(geom->texLogScale, "\n");
-		f->Write("newReflectionModel:"); f->WriteInt(worker.newReflectionModel, "\n");
+		f->Write("autoSaveFrequency:"); f->Write(autoSaveFrequency, "\n");
+		f->Write("autoSaveSimuOnly:"); f->Write(autoSaveSimuOnly, "\n");
+		f->Write("checkForUpdates:"); f->Write(checkForUpdates, "\n");
+		f->Write("autoUpdateFormulas:"); f->Write(autoUpdateFormulas, "\n");
+		f->Write("compressSavedFiles:"); f->Write(compressSavedFiles, "\n");
+		f->Write("lowFluxMode:"); f->Write(worker.lowFluxMode, "\n");
+		f->Write("lowFluxCutoff:"); f->Write(worker.lowFluxCutoff, "\n");
+		f->Write("textureLogScale:"); f->Write(geom->texLogScale, "\n");
+		f->Write("newReflectionModel:"); f->Write(worker.newReflectionModel, "\n");
 		
 		WRITEI("hideLot", hideLot);
 	}
@@ -2338,7 +2356,7 @@ void SynRad::CrashHandler(Error *e) {
 	sprintf(tmp, "Well, that's emberassing. Synrad crashed and will exit now.\nBefore that, an autosave will be attempted.\nHere is the error info:\n\n%s", (char *)e->GetMsg());
 	GLMessageBox::Display(tmp, "Main crash handler", GLDLG_OK, GLDGL_ICONDEAD);
 	try {
-		AutoSave(TRUE); //crashSave
+		AutoSave(true); //crashSave
 		GLMessageBox::Display("Good news, autosave worked!", "Main crash handler", GLDLG_OK, GLDGL_ICONDEAD);
 	}
 	catch (Error &e) {
@@ -2376,12 +2394,12 @@ void SynRad::LoadParam(char *fName, int position) {
 	}
 
 	GLProgress *progressDlg2 = new GLProgress("Preparing to load file...", "Please wait");
-	progressDlg2->SetVisible(TRUE);
+	progressDlg2->SetVisible(true);
 	progressDlg2->SetProgress(0.0);
 	//GLWindowManager::Repaint();
 
 	if (files.size() == 0) { //Nothing selected
-		progressDlg2->SetVisible(FALSE);
+		progressDlg2->SetVisible(false);
 		SAFE_DELETE(progressDlg2);
 		return;
 	}
@@ -2401,9 +2419,9 @@ void SynRad::LoadParam(char *fName, int position) {
 		}
 		if (regionInfo) regionInfo->Update();
 	}
-	progressDlg2->SetVisible(FALSE);
+	progressDlg2->SetVisible(false);
 	SAFE_DELETE(progressDlg2);
-	changedSinceSave = FALSE;
+	changedSinceSave = false;
 	worker.GetGeometry()->RecalcBoundingBox(); //recalculate bounding box
 	RebuildPARMenus();
 }
@@ -2411,10 +2429,10 @@ void SynRad::LoadParam(char *fName, int position) {
 void SynRad::ClearRegions(){
 	if (!AskToReset()) return;
 	worker.ClearRegions();
-	changedSinceSave = TRUE;
+	changedSinceSave = true;
 	worker.Reload();
 	if (regionInfo) {
-		regionInfo->SetVisible(FALSE);
+		regionInfo->SetVisible(false);
 		SAFE_DELETE(regionInfo);
 	}
 	worker.GetGeometry()->RecalcBoundingBox(); //recalculate bounding box
@@ -2424,11 +2442,11 @@ void SynRad::ClearRegions(){
 void SynRad::RemoveRegion(int index){
 	if (!AskToReset()) return;
 	if (regionEditor != NULL && (index <= regionEditor->GetRegionId())) { //Editing a region that changes
-		regionEditor->SetVisible(FALSE);
+		regionEditor->SetVisible(false);
 		SAFE_DELETE(regionEditor);
 	}
 	worker.RemoveRegion(index);
-	changedSinceSave = TRUE;
+	changedSinceSave = true;
 	worker.Reload();
 	if (regionInfo) regionInfo->Update();
 	RebuildPARMenus();
@@ -2468,7 +2486,7 @@ void SynRad::NewRegion(){
 	regionEditor->Display(&worker, (int)worker.regions.size() - 1);
 }
 
-/*BOOL EndsWithParam(const char* s)
+/*bool EndsWithParam(const char* s)
 {
 int ret = 0;
 
@@ -2499,7 +2517,7 @@ void SynRad::UpdateRecentPARMenu(){
 		m->Add(recentPARs[i], MENU_REGIONS_LOADRECENT + i);
 }
 
-void SynRad::PlaceScatteringControls(BOOL newReflectionMode) {
+void SynRad::PlaceScatteringControls(bool newReflectionMode) {
 	facetRMSroughnessLabel->SetText(newReflectionMode ? "sigma (nm):" : "Roughness ratio:");
 	facetPanel->SetCompBounds(facetRMSroughness, newReflectionMode?65:100, 55, newReflectionMode?45:70, 18);
 	facetAutoCorrLengthLabel->SetVisible(newReflectionMode);

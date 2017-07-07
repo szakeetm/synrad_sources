@@ -34,7 +34,7 @@ SpectrumPlotter::SpectrumPlotter():GLWindow() {
 	int hD = 350;
 
 	SetTitle("Spectrum plotter");
-	SetIconfiable(TRUE);
+	SetIconfiable(true);
 	nbView = 0;
 	worker = NULL;
 	lastUpdate = 0.0f;
@@ -51,10 +51,10 @@ SpectrumPlotter::SpectrumPlotter():GLWindow() {
 
 	chart = new GLChart(0);
 	chart->SetBorder(BORDER_BEVEL_IN);
-	chart->GetY1Axis()->SetGridVisible(TRUE);
-	chart->GetXAxis()->SetGridVisible(TRUE);
-	chart->GetY1Axis()->SetAutoScale(TRUE);
-	chart->GetY2Axis()->SetAutoScale(TRUE);
+	chart->GetY1Axis()->SetGridVisible(true);
+	chart->GetXAxis()->SetGridVisible(true);
+	chart->GetY1Axis()->SetAutoScale(true);
+	chart->GetY2Axis()->SetAutoScale(true);
 	chart->GetY1Axis()->SetAnnotation(VALUE_ANNO);
 	chart->GetXAxis()->SetAnnotation(VALUE_ANNO);
 	chart->GetXAxis()->SetScale(LOG_SCALE); //logarithmic X scale
@@ -78,15 +78,15 @@ SpectrumPlotter::SpectrumPlotter():GLWindow() {
 	Add(resetButton);
 
 	specCombo = new GLCombo(0);
-	specCombo->SetEditable(TRUE);
+	specCombo->SetEditable(true);
 	Add(specCombo);
 
 	logToggle = new GLToggle(0,"Log Y scale");
-	logToggle->SetState(TRUE);
+	logToggle->SetState(true);
 	Add(logToggle);
 
 	normToggle = new GLToggle(0,"Normalize");
-	normToggle->SetState(TRUE);
+	normToggle->SetState(true);
 	Add(normToggle);
 
 	// Center dialog
@@ -95,7 +95,7 @@ SpectrumPlotter::SpectrumPlotter():GLWindow() {
 	int xD = (wS-wD)/2;
 	int yD = (hS-hD)/2;
 	SetBounds(xD,yD,wD,hD);
-	SetResizable(TRUE);
+	SetResizable(true);
 	SetMinimumSize(wD,220);
 
 	RestoreDeviceObjects();
@@ -161,11 +161,11 @@ void SpectrumPlotter::Display(Worker *w) {
 
 	worker = w;
 	Refresh();
-	SetVisible(TRUE);
+	SetVisible(true);
 	SetScale();
 }
 
-void SpectrumPlotter::Update(float appTime,BOOL force) {
+void SpectrumPlotter::Update(float appTime,bool force) {
 
 	if(!IsVisible() || IsIconic()) return;  
 
@@ -215,10 +215,10 @@ void SpectrumPlotter::refreshViews() {
 			case 0: //no normalization
 				if (mode==0) { //flux
 					for(int j=0;j<PROFILE_SIZE;j++)
-						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+(0.5+j)*delta),shSpectrum_fluxwise[j]/worker->no_scans,FALSE); //0.5: point should be center of bin
+						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+(0.5+j)*delta),shSpectrum_fluxwise[j]/worker->no_scans,false); //0.5: point should be center of bin
 				} else if (mode==1) { //power
 					for(int j=0;j<PROFILE_SIZE;j++)
-						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+(0.5+j)*delta),shSpectrum_powerwise[j]/worker->no_scans,FALSE);
+						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+(0.5+j)*delta),shSpectrum_powerwise[j]/worker->no_scans,false);
 				}
 				break;
 			case 1: //normalize max. value to 1
@@ -228,14 +228,14 @@ void SpectrumPlotter::refreshViews() {
 						if (shSpectrum_fluxwise[j]>max_flux) max_flux=shSpectrum_fluxwise[j];
 					if (max_flux>0.0)
 						for(int j=0;j<PROFILE_SIZE;j++)
-							v->Add(exp(log(chart->GetXAxis()->GetMinimum()) + (0.5 + j)*delta), shSpectrum_fluxwise[j] / max_flux, FALSE);
+							v->Add(exp(log(chart->GetXAxis()->GetMinimum()) + (0.5 + j)*delta), shSpectrum_fluxwise[j] / max_flux, false);
 				} else if (mode==1) { //power
 					max_power=0.0;
 					for(int j=0;j<PROFILE_SIZE;j++)
 						if (shSpectrum_powerwise[j]>max_power) max_power=shSpectrum_powerwise[j];
 					if (max_power>0.0)
 						for(int j=0;j<PROFILE_SIZE;j++)
-							v->Add(exp(log(chart->GetXAxis()->GetMinimum()) + (0.5 + j)*delta), shSpectrum_powerwise[j] / max_power, FALSE);
+							v->Add(exp(log(chart->GetXAxis()->GetMinimum()) + (0.5 + j)*delta), shSpectrum_powerwise[j] / max_power, false);
 				}
 				break;
 			}
@@ -255,7 +255,7 @@ void SpectrumPlotter::addView(int facet,int mode) {
 	Geometry *geom = worker->GetGeometry();
 
 	// Check that view is not already added
-	BOOL found = FALSE;
+	bool found = false;
 	int i = 0; 
 	while(i<nbView && !found) {
 		found = (views[i]->userData1 == facet && views[i]->userData2 == mode);
@@ -286,7 +286,7 @@ void SpectrumPlotter::remView(int facet,int mode) {
 
 	Geometry *geom = worker->GetGeometry();
 
-	BOOL found = FALSE;
+	bool found = false;
 	int i = 0; 
 	while(i<nbView && !found) {
 		found = (views[i]->userData1 == facet && views[i]->userData2 == mode);
@@ -317,17 +317,17 @@ void SpectrumPlotter::ProcessMessage(GLComponent *src,int message) {
 	switch(message) {
 	case MSG_BUTTON:
 		if(src==dismissButton) {
-			SetVisible(FALSE);
+			SetVisible(false);
 		} else if(src==selButton) {
 			int idx = specCombo->GetSelectedIndex();
 			if (idx>=0) {
 				geom->UnselectAll();
 				int facetId=(int)((double)specCombo->GetUserValueAt(idx)/2.0);
-				geom->GetFacet(facetId)->selected = TRUE;
-				mApp->UpdateFacetParams(TRUE);
+				geom->GetFacet(facetId)->selected = true;
+				mApp->UpdateFacetParams(true);
 				geom->UpdateSelection();
 				mApp->facetList->SetSelectedRow(facetId);
-				mApp->facetList->ScrollToVisible(facetId,1,TRUE);
+				mApp->facetList->ScrollToVisible(facetId,1,true);
 			}
 		} else if(src==addButton) {
 			int idx = specCombo->GetSelectedIndex();

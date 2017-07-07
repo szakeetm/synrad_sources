@@ -49,7 +49,7 @@ SIMULATION *sHandle;
 // -------------------------------------------------------
 
 #ifdef WIN
-BOOL usePerfCounter;         // Performance counter usage
+bool usePerfCounter;         // Performance counter usage
 LARGE_INTEGER perfTickStart; // First tick
 double perfTicksPerSec;      // Performance counter (number of tick per second)
 #endif
@@ -163,7 +163,7 @@ double Norme(Vector3d *v) {
 
 
 
-BOOL LoadSimulation(Dataport *loader) {
+bool LoadSimulation(Dataport *loader) {
 
 	int i,j,idx;
 	BYTE *buffer,*bufferAfterMaterials;
@@ -176,14 +176,14 @@ BOOL LoadSimulation(Dataport *loader) {
 
 	t0 = GetTick();
 
-	sHandle->loadOK = FALSE;
+	sHandle->loadOK = false;
 	SetState(PROCESS_STARTING, "Clearing previous simulation");
 	try {
 		ClearSimulation();
 	}
 	catch (...) {
 		SetErrorSub("Error clearing geometry");
-		return FALSE;
+		return false;
 	}
 	/* //Mutex not necessary: by the time the COMMAND_LOAD is issued the interface releases the handle, concurrent reading is safe and it's only destroyed by the interface when all processes are ready loading
 	//Result: faster, parallel loading
@@ -191,7 +191,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	SetState(PROCESS_STARTING, "Waiting for 'loader' dataport access...");
 	if( !AccessDataportTimed(loader,40000) ) {
 		SetErrorSub("Failed to connect to DP");
-		return FALSE;
+		return false;
 	}
 	*/
 
@@ -204,12 +204,12 @@ BOOL LoadSimulation(Dataport *loader) {
 	if(shGeom->nbSuper>MAX_STRUCT) {
 		ReleaseDataport(loader);
 		SetErrorSub("Too many structures");
-		return FALSE;
+		return false;
 	}
 	if(shGeom->nbSuper<=0) {
 		ReleaseDataport(loader);
 		SetErrorSub("No structures");
-		return FALSE;
+		return false;
 	}
 
 	sHandle->newReflectionModel = shGeom->newReflectionModel;
@@ -289,7 +289,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	}
 	catch (...) {
 		SetErrorSub("Error loading regions");
-		return FALSE;
+		return false;
 	}
 
 	//Load materials
@@ -297,7 +297,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	sHandle->nbMaterials = READBUFFER(size_t); //copying number of materials
 	for (size_t i = 0; i<sHandle->nbMaterials; i++) { //going through all materials
 		Material newMaterial;
-		newMaterial.hasBackscattering = READBUFFER(BOOL);
+		newMaterial.hasBackscattering = READBUFFER(bool);
 		size_t angleValsSize = READBUFFER(size_t); //copying number of angles (columns)
 		size_t energyValsSize = READBUFFER(size_t); //copying number of energies (rows)
 		newMaterial.angleVals.reserve(angleValsSize);
@@ -334,7 +334,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	}
 	catch (...) {
 		SetErrorSub("Error loading materials");
-		return FALSE;
+		return false;
 	}
 
 	try {
@@ -368,7 +368,7 @@ BOOL LoadSimulation(Dataport *loader) {
 	} 
 	catch (...) {
 		SetErrorSub("Error loading distributions");
-		return FALSE;
+		return false;
 	}
 
 	bufferAfterMaterials=buffer;
@@ -409,7 +409,7 @@ BOOL LoadSimulation(Dataport *loader) {
 		FACET *f = (FACET *)malloc(sizeof(FACET));
 		if (!f) {
 			SetErrorSub("Not enough memory to load facets");
-			return FALSE;
+			return false;
 		}
 		memset(f,0,sizeof(FACET));
 		memcpy(&(f->sh),shFacet,sizeof(SHFACET));
@@ -427,7 +427,7 @@ BOOL LoadSimulation(Dataport *loader) {
 			// Link or volatile facet, overides facet settings
 			// Must be full opaque and 0 sticking
 			// (see SimulationMC.c::PerformBounce)
-			//f->sh.isOpaque = TRUE;
+			//f->sh.isOpaque = true;
 			f->sh.opacity = 1.0;
 			f->sh.sticking = 0.0;
 			if( (f->sh.superDest-1) >= sHandle->nbSuper || f->sh.superDest<0 ) {
@@ -436,7 +436,7 @@ BOOL LoadSimulation(Dataport *loader) {
 				ReleaseDataport(loader);
 				sprintf(err,"Invalid structure (wrong link on F#%d)",i+1);
 				SetErrorSub(err);
-				return FALSE;
+				return false;
 			}
 		}
 
@@ -449,7 +449,7 @@ BOOL LoadSimulation(Dataport *loader) {
 		f->vertices2 = (Vector2d *)malloc(f->sh.nbIndex * sizeof(Vector2d));
 		if (!f->vertices2) {
 			SetErrorSub("Not enough memory to load vertices");
-			return FALSE;
+			return false;
 		}
 		memcpy(f->vertices2,buffer,f->sh.nbIndex * sizeof(Vector2d));
 		buffer+=f->sh.nbIndex*sizeof(Vector2d);
@@ -466,11 +466,11 @@ BOOL LoadSimulation(Dataport *loader) {
 			memset(f->hits_power,0,nbE*sizeof(double));
 
 			f->inc = (double*)malloc(f->textureSize);
-			f->largeEnough = (BOOL *)malloc(sizeof(BOOL)*nbE);
+			f->largeEnough = (bool *)malloc(sizeof(bool)*nbE);
 			//f->fullElem = (char *)malloc(nbE);
 			if (!(f->inc && f->largeEnough/* && f->fullElem*/)) {
 				SetErrorSub("Not enough memory to load");
-				return FALSE;
+				return false;
 			}
 			f->fullSizeInc=(float)1E30;
 			for(j=0;j<nbE;j++) {
@@ -494,6 +494,8 @@ BOOL LoadSimulation(Dataport *loader) {
 			f->rw = Norme(&(f->sh.U)) * f->iw;
 			f->rh = Norme(&(f->sh.V)) * f->ih;
 		}
+		else f->textureSize = 0;
+
 		if(f->sh.isProfile) {
 			f->profileSize = PROFILE_SIZE*(sizeof(llong)+2*sizeof(double));
 
@@ -508,12 +510,16 @@ BOOL LoadSimulation(Dataport *loader) {
 
 			sHandle->profTotalSize += f->profileSize; 
 		}
+		else f->profileSize = 0;
+
 		if(f->sh.countDirection) {
 			f->directionSize = f->sh.texWidth*f->sh.texHeight*sizeof(VHIT);
 			f->direction = (VHIT *)malloc(f->directionSize);
 			memset(f->direction,0,f->directionSize);
 			sHandle->dirTotalSize += f->directionSize;
 		}
+		else f->directionSize = 0;
+
 		if(f->sh.hasSpectrum) {
 			f->spectrumSize = 2*sizeof(double)*SPECTRUM_SIZE;
 			double min_energy,max_energy;
@@ -528,6 +534,7 @@ BOOL LoadSimulation(Dataport *loader) {
 			f->spectrum_powerwise = new Histogram(min_energy,max_energy,SPECTRUM_SIZE,true);
 			sHandle->spectrumTotalSize += f->spectrumSize;
 		}
+		else f->spectrumSize = 0;
 
 	}
 
@@ -541,13 +548,13 @@ BOOL LoadSimulation(Dataport *loader) {
 	ComputeSourceArea();
 	seed = GetSeed();
 	rseed( seed );
-
+	 
 	//--- GSL random init ---
 	gsl_rng_env_setup();                          // Read variable environnement
 	const gsl_rng_type* type = gsl_rng_default;   // Default algorithm 'twister'
 	sHandle->gen = gsl_rng_alloc(type);          // Rand generator allocation
 
-	sHandle->loadOK = TRUE;
+	sHandle->loadOK = true;
 	t1 = GetTick();
 	printf("  Load %s successful\n",sHandle->name);
 	printf("  Geometry: %d vertex %d facets\n",sHandle->nbVertex,sHandle->totalFacet);
@@ -564,15 +571,15 @@ BOOL LoadSimulation(Dataport *loader) {
 	printf("  Total     : %zd bytes\n",GetHitsSize());
 	printf("  Seed: %u\n",seed);
 	printf("  Loading time: %.3f ms\n",(t1-t0)*1000.0);
-	return TRUE;
+	return true;
 
 }
 
-BOOL UpdateSimuParams(Dataport *loader) {
+bool UpdateSimuParams(Dataport *loader) {
 	// Connect the dataport
 	if (!AccessDataportTimed(loader, 2000)) {
 		SetErrorSub("Failed to connect to DP");
-		return FALSE;
+		return false;
 	}
 	BYTE* buffer = (BYTE *)loader->buff;
 	
@@ -583,7 +590,7 @@ BOOL UpdateSimuParams(Dataport *loader) {
 	buffer += sizeof(SHMODE);
 
 	for (size_t i = 0; i < sHandle->nbRegion; i++) {
-		sHandle->regions[i].params.showPhotons = READBUFFER(BOOL);
+		sHandle->regions[i].params.showPhotons = READBUFFER(bool);
 	}
 
 	ReleaseDataport(loader);
@@ -595,7 +602,7 @@ BOOL UpdateSimuParams(Dataport *loader) {
 	sHandle->leakCacheSize = 0;
 	//memset(sHandle->leakCache, 0, sizeof(LEAK)*LEAKCACHESIZE); //No need to reset, will gradually overwrite
 
-	return TRUE;
+	return true;
 }
 
 void UpdateHits(Dataport *dpHit,int prIdx,DWORD timeout) {
@@ -610,7 +617,7 @@ size_t GetHitsSize() {
 }
 
 void ResetTmpCounters() {
-	SetState(NULL, "Resetting local cache...", FALSE, TRUE);
+	SetState(NULL, "Resetting local cache...", false, true);
 
 	memset(&sHandle->tmpCount, 0, sizeof(SHHITS));
 
@@ -626,7 +633,7 @@ void ResetTmpCounters() {
 			f->counter.powerAbs=0.0;
 			f->counter.nbHit=0;
 			f->counter.nbAbsorbed=0;
-			f->hitted = FALSE;
+			f->hitted = false;
 			int textureElemNb=f->sh.texHeight*f->sh.texWidth;
 			if( f->hits_MC ) memset(f->hits_MC,0,textureElemNb*sizeof(llong));
 			if( f->hits_flux ) memset(f->hits_flux,0,textureElemNb*sizeof(double));
@@ -651,10 +658,10 @@ void ResetSimulation() {
 
 }
 
-BOOL StartSimulation() {
+bool StartSimulation() {
 	if (sHandle->regions.size()==0) {
 		SetErrorSub("No regions");
-		return FALSE;
+		return false;
 	}
 	
 	//Check for invalid material (ID==9) passed from the interface
@@ -665,7 +672,7 @@ BOOL StartSimulation() {
 				char tmp[32];
 				sprintf(tmp, "Invalid material on Facet %d.", f + 1);
 				SetErrorSub(tmp);
-				return FALSE;
+				return false;
 			}
 		}
 	}
@@ -702,12 +709,12 @@ void RecordLeakPos() {
 
 // -------------------------------------------------------
 
-BOOL SimulationRun() {
+bool SimulationRun() {
 
 	// 1s step
 	double t0,t1;
 	int    nbStep=1;
-	BOOL   goOn;
+	bool   goOn;
 
 	if( sHandle->stepPerSec==0.0 ) {
 		

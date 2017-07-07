@@ -84,8 +84,8 @@ FacetDetails::FacetDetails():GLWindow() {
 	worker = NULL;
 
 	SetTitle("Facets details");
-	SetIconfiable(TRUE);
-	SetResizable(TRUE);
+	SetIconfiable(true);
+	SetResizable(true);
 	SetMinimumSize(502,200);
 
 	checkAllButton = new GLButton(0,"Check All");
@@ -98,85 +98,85 @@ FacetDetails::FacetDetails():GLWindow() {
 	Add(dismissButton);
 
 	facetListD = new GLList(0);
-	facetListD->SetColumnLabelVisible(TRUE);
-	facetListD->SetGrid(TRUE);
+	facetListD->SetColumnLabelVisible(true);
+	facetListD->SetGrid(true);
 	Add(facetListD);
 
 	sPanel = new GLTitledPanel("Show column");
-	sPanel->SetClosable(TRUE);
+	sPanel->SetClosable(true);
 	Add(sPanel);
 
 	show[0] = new GLToggle(0,"#");
-	show[0]->SetState(TRUE);  // Always visible (not displayed)
+	show[0]->SetState(true);  // Always visible (not displayed)
 
 	show[1] = new GLToggle(1,"Sticking");
-	show[1]->SetState(TRUE);
+	show[1]->SetState(true);
 	sPanel->Add(show[1]);
 	show[2] = new GLToggle(2,"Opacity");
-	show[2]->SetState(TRUE);
+	show[2]->SetState(true);
 	sPanel->Add(show[2]);
 	show[3] = new GLToggle(3,"Structure");
-	show[3]->SetState(TRUE);
+	show[3]->SetState(true);
 	sPanel->Add(show[3]);
 	show[4] = new GLToggle(4,"Link");
-	show[4]->SetState(TRUE);
+	show[4]->SetState(true);
 	sPanel->Add(show[4]);
 	show[5] = new GLToggle(5,"Reflection");
-	show[5]->SetState(TRUE);
+	show[5]->SetState(true);
 	sPanel->Add(show[5]);
 	show[6] = new GLToggle(6,"Roughness");
-	show[6]->SetState(TRUE);
+	show[6]->SetState(true);
 	sPanel->Add(show[6]);
 	show[7] = new GLToggle(7, "AutoCorr");
-	show[7]->SetState(TRUE);
+	show[7]->SetState(true);
 	sPanel->Add(show[7]);
 	show[8] = new GLToggle(8,"2 Sided");
-	show[8]->SetState(TRUE);
+	show[8]->SetState(true);
 	sPanel->Add(show[8]);
 	show[9] = new GLToggle(9,"Vertex nb");
-	show[9]->SetState(TRUE);
+	show[9]->SetState(true);
 	sPanel->Add(show[9]);
 	show[10] = new GLToggle(10,"Area");
-	show[10]->SetState(TRUE);
+	show[10]->SetState(true);
 	sPanel->Add(show[10]);
 
 	show[11] = new GLToggle(11,"2D Box");
-	show[11]->SetState(TRUE);
+	show[11]->SetState(true);
 	sPanel->Add(show[11]);
 	show[12] = new GLToggle(12,"Texture UV");
-	show[12]->SetState(TRUE);
+	show[12]->SetState(true);
 	sPanel->Add(show[12]);
 
 	show[13] = new GLToggle(13,"Sample/cm");
-	show[13]->SetState(TRUE);
+	show[13]->SetState(true);
 	sPanel->Add(show[13]);
 	show[14] = new GLToggle(14,"Count mode");
-	show[14]->SetState(TRUE);
+	show[14]->SetState(true);
 	sPanel->Add(show[14]);
 	show[15] = new GLToggle(14,"Memory");
-	show[15]->SetState(TRUE);
+	show[15]->SetState(true);
 	sPanel->Add(show[15]);
 	show[16] = new GLToggle(16,"Planarity");
-	show[16]->SetState(TRUE);
+	show[16]->SetState(true);
 	sPanel->Add(show[16]);
 	show[17] = new GLToggle(17,"Profile");
-	show[17]->SetState(TRUE);
+	show[17]->SetState(true);
 	sPanel->Add(show[17]);
 	show[18] = new GLToggle(18,"Spectrum");
-	show[18]->SetState(TRUE);
+	show[18]->SetState(true);
 	sPanel->Add(show[18]);
 	show[19] = new GLToggle(19,"Hits");
-	show[19]->SetState(TRUE);
+	show[19]->SetState(true);
 	sPanel->Add(show[19]);
 	show[20] = new GLToggle(20,"Abs.");
-	show[20]->SetState(TRUE);
+	show[20]->SetState(true);
 	sPanel->Add(show[20]);
 
 	show[21] = new GLToggle(21,"Flux");
-	show[21]->SetState(TRUE);
+	show[21]->SetState(true);
 	sPanel->Add(show[21]);
 	show[22] = new GLToggle(22,"Power");
-	show[22]->SetState(TRUE);
+	show[22]->SetState(true);
 	sPanel->Add(show[22]);
 
 	// Center dialog
@@ -334,7 +334,7 @@ void FacetDetails::UpdateTable() {
 
 	Geometry *s = worker->GetGeometry();
 	int nbFacet = s->GetNbFacet();
-	int nbS = s->GetNbSelected();
+	int nbS = s->GetNbSelectedFacets();
 	static char ret[256];
 	strcpy(ret,"");
 
@@ -416,7 +416,7 @@ void FacetDetails::Update() {
 	if(!IsVisible()) return;
 
 	Geometry *s = worker->GetGeometry();
-	int nbS = s->GetNbSelected();
+	int nbS = s->GetNbSelectedFacets();
 
 	if(nbS==0) {
 		facetListD->Clear();
@@ -432,7 +432,7 @@ void FacetDetails::Update() {
 void FacetDetails::Display(Worker *w) {
 
 	worker = w;
-	SetVisible(TRUE);
+	SetVisible(true);
 	Update();
 
 }
@@ -445,12 +445,12 @@ void FacetDetails::ProcessMessage(GLComponent *src,int message) {
 
 	case MSG_BUTTON:
 		if(src==dismissButton) {
-			SetVisible(FALSE);
+			SetVisible(false);
 		} else if (src==checkAllButton) {
-			for(int i=0;i<NB_FDCOLUMN;i++) show[i]->SetState(TRUE);
+			for(int i=0;i<NB_FDCOLUMN;i++) show[i]->SetState(true);
 			UpdateTable();
 		} else if (src==uncheckAllButton) {
-			for(int i=0;i<NB_FDCOLUMN;i++) show[i]->SetState(FALSE);
+			for(int i=0;i<NB_FDCOLUMN;i++) show[i]->SetState(false);
 			UpdateTable();
 		}	else if (src==updateButton) {
 			UpdateTable();

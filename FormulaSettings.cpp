@@ -71,7 +71,7 @@ FormulaSettings::FormulaSettings():GLWindow() {
   Add(applyButton);
 
   deleteButton = new GLButton(0,"Delete");
-  deleteButton->SetEnabled(FALSE);
+  deleteButton->SetEnabled(false);
   deleteButton->SetBounds(wD-200,hD-43,95,19);
   Add(deleteButton);
 

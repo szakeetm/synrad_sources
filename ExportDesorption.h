@@ -39,7 +39,7 @@ private:
   GLTextField *eta0Field;
   GLTextField *alphaField;
   GLToggle *toggle1,*toggle2,*toggle3,*selectedToggle;
-  BOOL fileLoaded;
+  bool fileLoaded;
 
   Distribution2D *conversionDistr;
   double eta0,alpha;

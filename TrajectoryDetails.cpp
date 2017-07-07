@@ -106,8 +106,8 @@ TrajectoryDetails::TrajectoryDetails() :GLWindow() {
 	worker = NULL;
 
 	SetTitle("Trajectory Points");
-	SetIconfiable(TRUE);
-	SetResizable(TRUE);
+	SetIconfiable(true);
+	SetResizable(true);
 	SetMinimumSize(600, 300);
 
 
@@ -120,8 +120,8 @@ TrajectoryDetails::TrajectoryDetails() :GLWindow() {
 	Add(dismissButton);
 
 	pointList = new GLList(0);
-	pointList->SetColumnLabelVisible(TRUE);
-	pointList->SetGrid(TRUE);
+	pointList->SetColumnLabelVisible(true);
+	pointList->SetGrid(true);
 	Add(pointList);
 
 	everyLabel = new GLLabel("Display every");
@@ -134,13 +134,13 @@ TrajectoryDetails::TrajectoryDetails() :GLWindow() {
 	Add(nbPointLabel);
 
 	sPanel = new GLTitledPanel("Show column");
-	sPanel->SetClosable(TRUE);
+	sPanel->SetClosable(true);
 	sPanel->Close();
 	Add(sPanel);
 
 	for (int i = 1; i < NB_TPCOLUMN; i++) {
 		show[i - 1] = new GLToggle(0, allColumn[i].name);
-		show[i - 1]->SetState(TRUE);
+		show[i - 1]->SetState(true);
 		sPanel->Add(show[i - 1]);
 	}
 
@@ -398,7 +398,7 @@ void TrajectoryDetails::UpdateTable() {
 
 	GLProgress *updatePrg = new GLProgress("Updating table...", "Please wait");
 	updatePrg->SetProgress(0.0);
-	updatePrg->SetVisible(TRUE);
+	updatePrg->SetVisible(true);
 
 	//creating distributions
 	Distribution2D K_1_3_distribution = Generate_K_Distribution(1.0 / 3.0);
@@ -452,7 +452,7 @@ void TrajectoryDetails::UpdateTable() {
 		for (int j = 0; j < nbCol; j++)
 			pointList->SetValueAt(j, (int)((double)pointId / (double)freq), FormatCell(pointId, shown[j], &photon));
 	}
-	updatePrg->SetVisible(FALSE);
+	updatePrg->SetVisible(false);
 	SAFE_FREE(updatePrg);
 }
 
@@ -488,7 +488,7 @@ void TrajectoryDetails::Display(Worker *w, int regionId) {
 	sprintf(tmp, "th point (%d of the %d in total)", (int)((double)worker->regions[displayedRegion].Points.size() / (double)freq),(int)(worker->regions[displayedRegion].Points.size()));
 	nbPointLabel->SetText(tmp);
 	regionCombo->SetSelectedIndex(regionId);
-	SetVisible(TRUE);
+	SetVisible(true);
 	Update();
 
 }
@@ -501,14 +501,14 @@ void TrajectoryDetails::ProcessMessage(GLComponent *src, int message) {
 
 	case MSG_BUTTON:
 		if (src == dismissButton) {
-			SetVisible(FALSE);
+			SetVisible(false);
 		}
 		else if (src == checkAllButton) {
-			for (int i = 0; i < NB_TPCOLUMN - 1; i++) show[i]->SetState(TRUE);
+			for (int i = 0; i < NB_TPCOLUMN - 1; i++) show[i]->SetState(true);
 			//UpdateTable();
 		}
 		else if (src == uncheckAllButton) {
-			for (int i = 0; i < NB_TPCOLUMN - 1; i++) show[i]->SetState(FALSE);
+			for (int i = 0; i < NB_TPCOLUMN - 1; i++) show[i]->SetState(false);
 			//UpdateTable();
 		}
 		else if (src == updateButton) {
@@ -540,7 +540,7 @@ void TrajectoryDetails::ProcessMessage(GLComponent *src, int message) {
 		break;
 
 	case MSG_LIST:
-		worker->regions[displayedRegion].selectedPoint = pointList->GetSelectedRow(TRUE);
+		worker->regions[displayedRegion].selectedPoint = pointList->GetSelectedRow(true);
 		break;
 	case MSG_TEXT_UPD:{
 		int freq_temp;
@@ -563,5 +563,5 @@ int TrajectoryDetails::GetRegionId() {
 
 void TrajectoryDetails::SelectPoint(int idx) {
 	pointList->SetSelectedRow((int)((double)idx / (double)freq));
-	pointList->ScrollToVisible((int)((double)idx / (double)freq), 0, FALSE);
+	pointList->ScrollToVisible((int)((double)idx / (double)freq), 0, false);
 }

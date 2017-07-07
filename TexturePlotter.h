@@ -16,15 +16,19 @@
   GNU General Public License for more details.
 */
 
-#include "GLApp/GLWindow.h"
-#include "GLApp/GLButton.h"
-#include "GLApp/GLList.h"
-#include "GLApp/GLCombo.h"
-#include "Geometry.h"
-#include "GeometryViewer.h"
-
 #ifndef _TEXTUREPLOTTERH_
 #define _TEXTUREPLOTTERH_
+
+#include "GLApp/GLWindow.h"
+class GLButton;
+class GLList;
+class GLCombo;
+class GLLabel;
+class GLToggle;
+class Geometry;
+class GeometryViewer;
+class Worker;
+class Facet;
 
 class TexturePlotter : public GLWindow {
 
@@ -35,7 +39,7 @@ public:
 
   // Component methods
   void Display(Worker *w);
-  void Update(float appTime,BOOL force = FALSE);
+  void Update(float appTime,bool force = false);
 
   // Implementation
   void ProcessMessage(GLComponent *src,int message);

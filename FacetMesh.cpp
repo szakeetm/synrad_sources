@@ -46,7 +46,7 @@ FacetMesh::FacetMesh():GLWindow() {
 
 	uLength = new GLTextField(0,"");
 	uLength->SetBounds(60,30,70,18);
-	uLength->SetEditable(FALSE);
+	uLength->SetEditable(false);
 	Add(uLength);
 
 	GLLabel *l2 = new GLLabel("\202 length");
@@ -55,7 +55,7 @@ FacetMesh::FacetMesh():GLWindow() {
 
 	vLength = new GLTextField(0,"");
 	vLength->SetBounds(190,30,70,18);
-	vLength->SetEditable(FALSE);
+	vLength->SetEditable(false);
 	Add(vLength);
 
 	GLTitledPanel *aPanel = new GLTitledPanel("Mesh properties");
@@ -64,34 +64,34 @@ FacetMesh::FacetMesh():GLWindow() {
 
 	enableBtn = new GLToggle(0,"Enable");
 	enableBtn->SetBounds(10,80,55,18);
-	enableBtn->SetState(FALSE);
+	enableBtn->SetState(false);
 	Add(enableBtn);
 
 	boundaryBtn = new GLToggle(0,"Boundary correction");
 	boundaryBtn->SetBounds(10,100,100,18);
-	boundaryBtn->SetEnabled(FALSE);
+	boundaryBtn->SetEnabled(false);
 	boundaryBtn->SetTextColor(110,110,110);
-	boundaryBtn->SetState(TRUE);
+	boundaryBtn->SetState(true);
 	Add(boundaryBtn);
 
 	recordAbsBtn = new GLToggle(0,"Count absorption");
 	recordAbsBtn->SetBounds(10,150,100,18);
-	recordAbsBtn->SetState(FALSE);
+	recordAbsBtn->SetState(false);
 	Add(recordAbsBtn);
 
 	recordReflBtn = new GLToggle(0,"Count reflection");
 	recordReflBtn->SetBounds(120,130,110,18);
-	recordReflBtn->SetState(FALSE);
+	recordReflBtn->SetState(false);
 	Add(recordReflBtn);
 
 	recordTransBtn = new GLToggle(0,"Count transparent pass");
 	recordTransBtn->SetBounds(120,150,110,18);
-	recordTransBtn->SetState(FALSE);
+	recordTransBtn->SetState(false);
 	Add(recordTransBtn);
 
 	recordDirBtn = new GLToggle(0,"Record direction");
 	recordDirBtn->SetBounds(120,170,110,18);
-	recordDirBtn->SetState(FALSE);
+	recordDirBtn->SetState(false);
 	Add(recordDirBtn);
 
 	GLLabel *l5 = new GLLabel("Resolution (Sample/cm)");
@@ -108,13 +108,13 @@ FacetMesh::FacetMesh():GLWindow() {
 
 	showTexture = new GLToggle(0,"Show texture");
 	showTexture->SetBounds(10,215,55,18);
-	showTexture->SetState(TRUE);
+	showTexture->SetState(true);
 	Add(showTexture);
 
 	showVolume = new GLToggle(0,"Show volume");
 	showVolume->SetBounds(100,215,55,18);
-	showVolume->SetState(TRUE);
-	showVolume->SetVisible(TRUE); //not working yet
+	showVolume->SetState(true);
+	showVolume->SetVisible(true); //not working yet
 	Add(showVolume);
 
 	quickApply = new GLButton(0,"Apply View");  //Apply View Settings without stopping the simulation
@@ -170,9 +170,9 @@ void FacetMesh::UpdateSize() {
 
 		llong ram = 0;
 		llong cell = 0;
-		int nbFacet = geom->GetNbFacet();
+		size_t nbFacet = geom->GetNbFacet();
 
-			for(int i=0;i<nbFacet;i++) {
+			for(size_t i=0;i<nbFacet;i++) {
 				Facet *f = geom->GetFacet(i);
 				cell += (llong)f->GetNbCell();
 				ram += (llong)f->GetTexRamSize();
@@ -196,8 +196,8 @@ void FacetMesh::UpdateSizeForRatio() {
 
 	double ratio;
 	char tmp[64];
-	BOOL boundMap = boundaryBtn->GetState();
-	BOOL recordDir = recordDirBtn->GetState();
+	bool boundMap = boundaryBtn->GetState();
+	bool recordDir = recordDirBtn->GetState();
 
 	if( !enableBtn->GetState() ) {
 		ramText->SetText(FormatMemory(0));
@@ -213,9 +213,9 @@ void FacetMesh::UpdateSizeForRatio() {
 
 	llong ram = 0;
 	llong cell = 0;
-	int nbFacet = geom->GetNbFacet();
+	size_t nbFacet = geom->GetNbFacet();
 
-		for(int i=0;i<nbFacet;i++) {
+		for(size_t i=0;i<nbFacet;i++) {
 			Facet *f = geom->GetFacet(i);
 			if(f->selected) {
 				cell += (llong)f->GetNbCellForRatio(ratio);
@@ -247,21 +247,21 @@ void FacetMesh::EditFacet(Worker *w) {
 	worker = w;
 	geom   = w->GetGeometry();
 
-	int nbS=0;
-	int nbF=geom->GetNbFacet();
-	int sel=0;
-	BOOL allEnabled = TRUE;
-	BOOL allBound = TRUE;
-	BOOL ratioE = TRUE;
-	BOOL allCountAbs = TRUE;
-	BOOL allCountRefl = TRUE;
-	BOOL allCountTrans = TRUE;
-	BOOL allCountDir = TRUE;
-	BOOL allTexVisible = TRUE;
-	BOOL allVolVisible = TRUE;
+	size_t nbS=0;
+	size_t nbF=geom->GetNbFacet();
+	size_t sel=0;
+	bool allEnabled = true;
+	bool allBound = true;
+	bool ratioE = true;
+	bool allCountAbs = true;
+	bool allCountRefl = true;
+	bool allCountTrans = true;
+	bool allCountDir = true;
+	bool allTexVisible = true;
+	bool allVolVisible = true;
 	double tRatio = 1e100;
 
-	for(int i=0;i<nbF;i++) {
+	for(size_t i=0;i<nbF;i++) {
 
 		Facet *f = geom->GetFacet(i);
 		if( f->selected ) {
@@ -289,14 +289,14 @@ void FacetMesh::EditFacet(Worker *w) {
 
 	if( nbS==1 ) {
 		Facet *f = geom->GetFacet(sel);
-		sprintf(tmp,"Facet Info (#%d)",sel+1);
+		sprintf(tmp,"Facet Info (#%zd)",sel+1);
 		iPanel->SetTitle(tmp);
 		sprintf(tmp,"%g",maxU);
 		uLength->SetText(tmp);
 		sprintf(tmp,"%g",maxV);
 		vLength->SetText(tmp);
 	} else {
-		sprintf(tmp,"Facet Info (%d selected)",nbS);
+		sprintf(tmp,"Facet Info (%zd selected)",nbS);
 		iPanel->SetTitle(tmp);
 		sprintf(tmp,"%g (MAX)",maxU);
 		uLength->SetText(tmp);
@@ -306,7 +306,7 @@ void FacetMesh::EditFacet(Worker *w) {
 
 	enableBtn->SetState(allEnabled);
 	//boundaryBtn->SetState(allBound);
-	boundaryBtn->SetState(TRUE);
+	boundaryBtn->SetState(true);
 	recordAbsBtn->SetState(allCountAbs);
 	recordReflBtn->SetState(allCountRefl);
 	recordTransBtn->SetState(allCountTrans);
@@ -329,12 +329,12 @@ void FacetMesh::EditFacet(Worker *w) {
 
 //-----------------------------------------------------------------------------
 
-BOOL FacetMesh::Apply() {
+bool FacetMesh::Apply() {
 	extern GLApplication *theApp;
 	SynRad *mApp = (SynRad *)theApp;
-	if (!mApp->AskToReset(worker)) return FALSE;
-	BOOL boundMap = boundaryBtn->GetState();
-	double nbSelected = (double)geom->GetNbSelected();
+	if (!mApp->AskToReset(worker)) return false;
+	bool boundMap = boundaryBtn->GetState();
+	double nbSelected = (double)geom->GetNbSelectedFacets();
 	double nbPerformed = 0.0;
 
 	if( enableBtn->GetState() ) {
@@ -344,18 +344,18 @@ BOOL FacetMesh::Apply() {
 			!recordReflBtn->GetState() && !recordTransBtn->GetState() && 
 			!recordDirBtn->GetState() ) {
 				GLMessageBox::Display("Please select counting mode","Error",GLDLG_OK,GLDLG_ICONERROR);
-				return FALSE;
+				return false;
 		}
 
 		// Auto resolution
 		double ratio;
 		if( sscanf(resolutionText->GetText(),"%lf",&ratio)==0 ) {
 			GLMessageBox::Display("Invalid number format for sample/cm","Error",GLDLG_OK,GLDLG_ICONERROR);
-			return FALSE;
+			return false;
 		}
 
 		progressDlg = new GLProgress("Applying mesh settings","Please wait");
-		progressDlg->SetVisible(TRUE);
+		progressDlg->SetVisible(true);
 		progressDlg->SetProgress(0.0);
 		int count=0;
 		for(int i=0;i<geom->GetNbFacet();i++) {
@@ -373,9 +373,9 @@ BOOL FacetMesh::Apply() {
 					char errMsg[512];
 					sprintf(errMsg,"Error setting textures:\n%s",e.GetMsg());
 					GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
-					progressDlg->SetVisible(FALSE);
+					progressDlg->SetVisible(false);
 					SAFE_DELETE(progressDlg);
-					return FALSE;
+					return false;
 				}
 				nbPerformed+=1.0;
 				progressDlg->SetProgress(nbPerformed/nbSelected);
@@ -386,7 +386,7 @@ BOOL FacetMesh::Apply() {
 	} else {
 		// Disable texture
 		progressDlg = new GLProgress("Applying mesh settings","Please wait");
-		progressDlg->SetVisible(TRUE);
+		progressDlg->SetVisible(true);
 		progressDlg->SetProgress(0.0);
 
 
@@ -394,7 +394,7 @@ BOOL FacetMesh::Apply() {
 
 			Facet *f = geom->GetFacet(i);
 			if( f->selected ) {
-				geom->SetFacetTexture(i,0.0,FALSE);
+				geom->SetFacetTexture(i,0.0,false);
 				f->textureVisible = showTexture->GetState();
 				f->volumeVisible = showVolume->GetState();
 				nbPerformed+=1.0;
@@ -411,9 +411,9 @@ BOOL FacetMesh::Apply() {
 	} catch(Error &e) {
 		GLMessageBox::Display((char *)e.GetMsg(),"Error reloading worker",GLDLG_OK,GLDLG_ICONERROR);
 	}
-	progressDlg->SetVisible(FALSE);
+	progressDlg->SetVisible(false);
 	SAFE_DELETE(progressDlg);
-	return TRUE;
+	return true;
 
 }
 
@@ -422,7 +422,7 @@ void FacetMesh::QuickApply() {
 	//Apply view settings without stopping the simulation
 
 
-	double nbSelected = (double)geom->GetNbSelected();
+	double nbSelected = (double)geom->GetNbSelectedFacets();
 	double nbPerformed = 0.0;
 
 	for(int i=0;i<geom->GetNbFacet();i++) {
@@ -448,17 +448,17 @@ void FacetMesh::UpdateToggle(GLComponent *src) {
 	if(src==enableBtn) {
 		//boundaryBtn->SetState(enableBtn->GetState());
 	} else if(src==recordAbsBtn ) {
-		enableBtn->SetState(TRUE);
-		boundaryBtn->SetState(TRUE);
+		enableBtn->SetState(true);
+		boundaryBtn->SetState(true);
 	} else if(src==recordReflBtn ) {
-		enableBtn->SetState(TRUE);
-		boundaryBtn->SetState(TRUE);
+		enableBtn->SetState(true);
+		boundaryBtn->SetState(true);
 	} else if(src==recordTransBtn ) {
-		enableBtn->SetState(TRUE);
-		boundaryBtn->SetState(TRUE);
+		enableBtn->SetState(true);
+		boundaryBtn->SetState(true);
 	} else if(src==recordDirBtn ) {
-		enableBtn->SetState(TRUE);
-		boundaryBtn->SetState(TRUE);
+		enableBtn->SetState(true);
+		boundaryBtn->SetState(true);
 	}
 	UpdateSizeForRatio();
 }
@@ -485,13 +485,13 @@ void FacetMesh::ProcessMessage(GLComponent *src,int message) {
 		} else if (src==quickApply) {
 
 			progressDlg = new GLProgress("Applying view settings","Please wait");
-			progressDlg->SetVisible(TRUE);
+			progressDlg->SetVisible(true);
 			progressDlg->SetProgress(0.5);
 
 			QuickApply();
 			GLWindow::ProcessMessage(NULL,MSG_CLOSE);
 
-			progressDlg->SetVisible(FALSE);
+			progressDlg->SetVisible(false);
 			SAFE_DELETE(progressDlg);
 
 		} 
@@ -499,7 +499,7 @@ void FacetMesh::ProcessMessage(GLComponent *src,int message) {
 
 		// -------------------------------------------------------------
 	case MSG_TEXT_UPD:
-		enableBtn->SetState(TRUE);
+		enableBtn->SetState(true);
 		UpdateSizeForRatio();
 		break;
 

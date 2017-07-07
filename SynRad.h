@@ -38,23 +38,23 @@ public:
     SynRad();
 
 	void LoadFile(char *fName = NULL);
-	void InsertGeometry(BOOL newStr, char *fName = NULL);
+	void InsertGeometry(bool newStr, char *fName = NULL);
 	void SaveFile();
 
     // Util functions
-	//void SendHeartBeat(BOOL forced=FALSE);
+	//void SendHeartBeat(bool forced=false);
     //void SetParam(GLTextField *txt,double value);
     void PlaceComponents();
 	void LoadParam(char *fName=NULL,int position=-1);
 	//void ExportDes(bool selectedOnly);
     void ClearFacetParams();
-    void UpdateFacetParams(BOOL updateSelection=FALSE);
+    void UpdateFacetParams(bool updateSelection=false);
     void ApplyFacetParams();
     void StartStopSimulation();
-    void SaveConfig();
+    void SaveConfig(bool increaseSessionCount = false);
     void LoadConfig();
 	
-    void UpdateFacetHits(BOOL all=FALSE);
+    void UpdateFacetHits(bool all=false);
 
 	void QuickPipe();
 
@@ -70,7 +70,9 @@ public:
     void AddRecentPAR(char *fileName);
     void RemoveRecentPAR(char *fileName);
 	void UpdateRecentPARMenu();
-	void PlaceScatteringControls(BOOL newReflectionMode);
+	void PlaceScatteringControls(bool newReflectionMode);
+
+	bool EvaluateVariable(VLIST * v);
 
     // Components
 
@@ -138,6 +140,5 @@ protected:
     int  InvalidateDeviceObjects();
 	int  FrameMove();
     void ProcessMessage(GLComponent *src,int message);
-	BOOL EvaluateVariable(VLIST * v, Worker * w, Geometry * geom);
 };
 

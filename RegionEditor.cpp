@@ -94,6 +94,7 @@ RegionEditor::RegionEditor():GLWindow() {
 	startDirDefinitionCombo->SetSize(2);
 	startDirDefinitionCombo->SetValueAt(0, "By vector:");
 	startDirDefinitionCombo->SetValueAt(1, "By angle:");
+	startDirDefinitionCombo->SetSelectedIndex(0); //Default
 
 	label8 = new GLLabel("Beam start direction:");
 	beamPanel->SetCompBounds(label8, 8, 53, 103, 13);
@@ -643,7 +644,7 @@ void RegionEditor::Display(Worker *w,int Id) {
 	FillValues();
 	EnableDisableControls(NULL);
 
-	SetVisible(TRUE);
+	SetVisible(true);
 }
 
 int RegionEditor::GetRegionId()
@@ -804,7 +805,7 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 	GLWindow::ProcessMessage(src,message);
 }
 void RegionEditor::EnableDisableControls(GLComponent* src) {
-	BOOL defineByAngle=(startDirDefinitionCombo->GetSelectedIndex()==0);
+	bool defineByAngle=(startDirDefinitionCombo->GetSelectedIndex()==0);
 	theta0text->SetEditable(defineByAngle);
 	alpha0text->SetEditable(defineByAngle);
 	startDirXtext->SetEditable(!defineByAngle);
@@ -812,7 +813,7 @@ void RegionEditor::EnableDisableControls(GLComponent* src) {
 	startDirZtext->SetEditable(!defineByAngle);
 
 	/*
-	BOOL useMAGfile=(BxtypeCombo->GetSelectedIndex()!=0);
+	bool useMAGfile=(BxtypeCombo->GetSelectedIndex()!=0);
 	constBXtext->SetEditable(!useMAGfile);
 	MAGfileXtext->SetEditable(useMAGfile);
 	magxBrowseButton->SetEnabled(useMAGfile);
@@ -840,11 +841,11 @@ void RegionEditor::EnableDisableControls(GLComponent* src) {
 		std::vector<GLButton*> editButtons = { magxEditButton , magyEditButton, magzEditButton };
 		
 		std::vector<int> allCompModes = { B_MODE_QUADRUPOLE,B_MODE_ANALYTIC,B_MODE_ROTATING_DIPOLE };
-		BOOL setAllComponents = Contains(allCompModes, ((GLCombo*)src)->GetSelectedIndex()+1);
+		bool setAllComponents = Contains(allCompModes, ((GLCombo*)src)->GetSelectedIndex()+1);
 		
 		for (size_t i = 0; i < 3; i++) {
 			int compMode = ((GLCombo*)combos[i])->GetSelectedIndex() + 1;
-			BOOL useMagFile = (compMode != B_MODE_CONSTANT);
+			bool useMagFile = (compMode != B_MODE_CONSTANT);
 			
 			((GLCombo*)combos[i])->SetEditable(!setAllComponents || src==combos[i]);
 			constFields[i]->SetEditable((!setAllComponents || src == combos[i]) && !useMagFile);
@@ -854,8 +855,8 @@ void RegionEditor::EnableDisableControls(GLComponent* src) {
 		}
 	}
 
-	BOOL useIdealBeam=idealBeamToggle->GetState();
-	BOOL useBXYfile=(constantBXYtoggle->GetState()==0);
+	bool useIdealBeam=idealBeamToggle->GetState();
+	bool useBXYfile=(constantBXYtoggle->GetState()==0);
 
 	energySpreadText->SetEditable(!useIdealBeam);
 
@@ -874,16 +875,15 @@ void RegionEditor::EnableDisableControls(GLComponent* src) {
 	etaText->SetEditable(!useIdealBeam && !useBXYfile);
 	etaPrimeText->SetEditable(!useIdealBeam && !useBXYfile);			
 
-	BOOL limitAngle=limitAngleToggle->GetState();
+	bool limitAngle=limitAngleToggle->GetState();
 	psiMaxXtext->SetEditable(limitAngle);
 	psiMaxYtext->SetEditable(limitAngle);
 
-	enableParPolarizationToggle->SetEnabled(FALSE);
-	enableOrtPolarizationToggle->SetEnabled(FALSE);
+	enableParPolarizationToggle->SetEnabled(false);
+	enableOrtPolarizationToggle->SetEnabled(false);
 }
 
 void RegionEditor::FillValues() {
-	char tmp[512];
 	startPointXtext->SetText(cr->params.startPoint.x);
 	startPointYtext->SetText(cr->params.startPoint.y);
 	startPointZtext->SetText(cr->params.startPoint.z);

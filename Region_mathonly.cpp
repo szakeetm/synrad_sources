@@ -60,8 +60,8 @@ Vector3d Region_mathonly::B(int pointId, const Vector3d &offset) {
 			*result_ptr[i]=0.0;
 			ratio=Ls_*2*PI/(*Bperiod_ptr[i]);
 			for (int j=0;j<distr_ptr[i]->size;j++) { //loop through orders
-				*result_ptr[i]+=distr_ptr[i]->valuesX[j]*pow(sin(((double)j+1.0)*ratio),j+1);
-				*result_ptr[i]+=distr_ptr[i]->valuesY[j]*pow(cos(((double)j+1.0)*ratio),j+1);
+				*result_ptr[i]+=distr_ptr[i]->valuesX[j]*pow(sin((double)(j+1)*ratio),j+1);
+				*result_ptr[i]+=distr_ptr[i]->valuesY[j]*pow(cos((double)(j+1)*ratio),j+1);
 			}
 			break;
 		case B_MODE_QUADRUPOLE: //mode 4
@@ -81,8 +81,8 @@ Vector3d Region_mathonly::B(int pointId, const Vector3d &offset) {
 			*result_ptr[i]=0.0;
 			ratio=Ls_*2*PI/(*Bperiod_ptr[i]);
 			for (int j=0;j<distr_ptr[i]->size;j++) { //loop through orders (sinX+sin^2X+...)
-				*result_ptr[i]+=distr_ptr[i]->valuesX[j]*sin((double)j*ratio)*cos(PI*(*Bphase_ptr[i])/(*Bperiod_ptr[i]));
-				*result_ptr[i]+=distr_ptr[i]->valuesY[j]*cos((double)j*ratio)*sin(PI*(*Bphase_ptr[i])/(*Bperiod_ptr[i]));
+				*result_ptr[i]+=distr_ptr[i]->valuesX[j]*sin((double)(j+1)*ratio)*cos(PI*(*Bphase_ptr[i])/(*Bperiod_ptr[i]));
+				*result_ptr[i]+=distr_ptr[i]->valuesY[j]*cos((double)(j+1)*ratio)*sin(PI*(*Bphase_ptr[i])/(*Bperiod_ptr[i]));
 			}
 			break;
 		case B_MODE_ROTATING_DIPOLE: //rotating dipole field ( see S. Duncan's presentation on generation of 20MeV circ.pol. photons 
@@ -117,7 +117,7 @@ Region_mathonly::Region_mathonly(){
 	params.psimaxX_rad= params.psimaxY_rad=PI;
 	params.Bx_mode= params.By_mode= params.Bz_mode=B_MODE_CONSTANT;
 	params.B_const=Vector3d(0,0,0);
-	params.showPhotons = TRUE;
+	params.showPhotons = true;
 }
 
 

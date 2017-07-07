@@ -175,7 +175,7 @@ void Region_full::CalcPointProperties(int pointId) {
 	}
 }
 
-bool Region_full::isOutsideBoundaries(Vector3d a,BOOL recalcDirs){
+bool Region_full::isOutsideBoundaries(Vector3d a,bool recalcDirs){
 	static double xDir=(params.limits.x>params.startPoint.x)?1.0:-1.0;
 	static double yDir=(params.limits.y>params.startPoint.y)?1.0:-1.0;
 	static double zDir=(params.limits.z>params.startPoint.z)?1.0:-1.0;
@@ -373,7 +373,7 @@ Region_full::Region_full():Region_mathonly(){
 	//emittance=eta=etaprime=energy_spread=betax=betay=0.0;
 	//coupling=100.0;
 	selectedPoint=-1;
-	isLoaded=FALSE;
+	isLoaded=false;
 	//object placeholders until MAG files are loaded
 
 	/*Bx_distr = new Distribution2D(1);
@@ -401,7 +401,7 @@ Region_full::Region_full():Region_mathonly(){
 	coupling=100.0;
 	energy_low=10;
 	energy_hi=1e6;
-	enable_ort_polarization=enable_par_polarization=TRUE;
+	enable_ort_polarization=enable_par_polarization=true;
 	psimaxX=psimaxY=PI;
 	Bx_mode=By_mode=Bz_mode=B_MODE_CONSTANT;
 	B_const=Vector3d(0,0,0);
@@ -527,7 +527,7 @@ void Region_full::SelectTrajPoint(int x,int y,int regionId) {
 	int *allYe = (int *)malloc(Points.size() * sizeof(int));
 
 	// Transform points to screen coordinates
-	BOOL *ok = (BOOL *)malloc(Points.size()*sizeof(BOOL));
+	bool *ok = (bool *)malloc(Points.size()*sizeof(bool));
 	for(i=0;i<(int)Points.size();i++)
 		ok[i] = GLToolkit::Get2DScreenCoord((float)Points[i].position.x,(float)Points[i].position.y,(float)Points[i].position.z,allXe+i,allYe+i);
 
@@ -829,48 +829,48 @@ int Region_full::LoadBXY(const std::string& fileName)
 }
 
 void Region_full::SaveParam(FileWriter *file) {
-	file->Write("param_file_version:");file->WriteInt(PARAMVERSION,"\n");
-	file->Write("startPos_cm:");file->WriteDouble(params.startPoint.x);file->WriteDouble(params.startPoint.y);file->WriteDouble(params.startPoint.z,"\n");
-	file->Write("startDir_cm:");file->WriteDouble(params.startDir.x);file->WriteDouble(params.startDir.y);file->WriteDouble(params.startDir.z,"\n");
-	file->Write("dL_cm:");file->WriteDouble(params.dL_cm,"\n");
-	file->Write("boundaries_cm:");file->WriteDouble(params.limits.x);file->WriteDouble(params.limits.y);file->WriteDouble(params.limits.z,"\n");
-	file->Write("particleMass_GeV:");file->WriteDouble(params.particleMass_GeV,"\n");
-	file->Write("beamEnergy_GeV:");file->WriteDouble(params.E_GeV,"\n");
-	file->Write("beamCurrent_mA:");file->WriteDouble(params.current_mA,"\n");
-	file->Write("emittance_cm:");file->WriteDouble(params.emittance_cm,"\n");
-	file->Write("energy_spread_percent:"); file->WriteDouble(params.energy_spread_percent, "\n");
-	file->Write("coupling_percent:");file->WriteDouble(params.coupling_percent,"\n");
+	file->Write("param_file_version:");file->Write(PARAMVERSION,"\n");
+	file->Write("startPos_cm:");file->Write(params.startPoint.x);file->Write(params.startPoint.y);file->Write(params.startPoint.z,"\n");
+	file->Write("startDir_cm:");file->Write(params.startDir.x);file->Write(params.startDir.y);file->Write(params.startDir.z,"\n");
+	file->Write("dL_cm:");file->Write(params.dL_cm,"\n");
+	file->Write("boundaries_cm:");file->Write(params.limits.x);file->Write(params.limits.y);file->Write(params.limits.z,"\n");
+	file->Write("particleMass_GeV:");file->Write(params.particleMass_GeV,"\n");
+	file->Write("beamEnergy_GeV:");file->Write(params.E_GeV,"\n");
+	file->Write("beamCurrent_mA:");file->Write(params.current_mA,"\n");
+	file->Write("emittance_cm:");file->Write(params.emittance_cm,"\n");
+	file->Write("energy_spread_percent:"); file->Write(params.energy_spread_percent, "\n");
+	file->Write("coupling_percent:");file->Write(params.coupling_percent,"\n");
 	if (params.emittance_cm!=0.0) { //non-ideal beam
-		file->Write("const_beta_x_cm:");file->WriteDouble(params.betax_const_cm,"\n");
+		file->Write("const_beta_x_cm:");file->Write(params.betax_const_cm,"\n");
 		if (params.betax_const_cm<0.0) {//use BXY file
 			file->Write("BXYfileName:\"");file->Write(FileUtils::GetFilename(BXYfileName).c_str());file->Write("\"\n"); //truncate path
 		} else {//constants
-			file->Write("const_beta_y_cm:");file->WriteDouble(params.betay_const_cm,"\n");
-			file->Write("const_eta_x_cm:");file->WriteDouble(params.eta_x_const_cm,"\n");
-			file->Write("const_eta_x_prime:");file->WriteDouble(params.eta_x_prime_const,"\n");
+			file->Write("const_beta_y_cm:");file->Write(params.betay_const_cm,"\n");
+			file->Write("const_eta_x_cm:");file->Write(params.eta_x_const_cm,"\n");
+			file->Write("const_eta_x_prime:");file->Write(params.eta_x_prime_const,"\n");
 		}
 	}
-	file->Write("E_min_eV:");file->WriteDouble(params.energy_low_eV,"\n");
-	file->Write("E_max_eV:");file->WriteDouble(params.energy_hi_eV,"\n");
-	file->Write("enable_par_polarization:");file->WriteInt(params.enable_par_polarization,"\n");
-	file->Write("enable_ort_polarization:");file->WriteInt(params.enable_ort_polarization,"\n");
-	file->Write("psiMax_X_Y_rad:");file->WriteDouble(params.psimaxX_rad);file->WriteDouble(params.psimaxY_rad,"\n");
+	file->Write("E_min_eV:");file->Write(params.energy_low_eV,"\n");
+	file->Write("E_max_eV:");file->Write(params.energy_hi_eV,"\n");
+	file->Write("enable_par_polarization:");file->Write(params.enable_par_polarization,"\n");
+	file->Write("enable_ort_polarization:");file->Write(params.enable_ort_polarization,"\n");
+	file->Write("psiMax_X_Y_rad:");file->Write(params.psimaxX_rad);file->Write(params.psimaxY_rad,"\n");
 	
-	file->Write("Bx_mode:");file->WriteInt(params.Bx_mode,"\n");
+	file->Write("Bx_mode:");file->Write(params.Bx_mode,"\n");
 	if (params.Bx_mode==B_MODE_CONSTANT) {
-		file->Write("Bx_const_Tesla:");file->WriteDouble(params.B_const.x,"\n");
+		file->Write("Bx_const_Tesla:");file->Write(params.B_const.x,"\n");
 	} else {
 		file->Write("Bx_fileName:\"");file->Write(FileUtils::GetFilename(MAGXfileName).c_str());file->Write("\"\n"); //truncate path
 	}
-	file->Write("By_mode:");file->WriteInt(params.By_mode,"\n");
+	file->Write("By_mode:");file->Write(params.By_mode,"\n");
 	if (params.By_mode==B_MODE_CONSTANT) {
-		file->Write("By_const_Tesla:");file->WriteDouble(params.B_const.y,"\n");
+		file->Write("By_const_Tesla:");file->Write(params.B_const.y,"\n");
 	} else {
 		file->Write("By_fileName:\""); file->Write(FileUtils::GetFilename(MAGYfileName).c_str()); file->Write("\"\n"); //truncate path
 	}
-	file->Write("Bz_mode:");file->WriteInt(params.Bz_mode,"\n");
+	file->Write("Bz_mode:");file->Write(params.Bz_mode,"\n");
 	if (params.Bz_mode==B_MODE_CONSTANT) {
-		file->Write("Bz_const_Tesla:");file->WriteDouble(params.B_const.z,"\n");
+		file->Write("Bz_const_Tesla:");file->Write(params.B_const.z,"\n");
 	} else {
 		file->Write("Bz_fileName:\""); file->Write(FileUtils::GetFilename(MAGZfileName).c_str()); file->Write("\"\n"); //truncate path
 	}

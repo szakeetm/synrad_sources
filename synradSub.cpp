@@ -48,8 +48,8 @@ static char      loadDpName[32];
 static char      hitsDpName[32];
 static char      materialsDpName[32];
 
-BOOL end = FALSE;
-BOOL IsProcessRunning(DWORD pid);
+bool end = false;
+bool IsProcessRunning(DWORD pid);
 
 
 void GetState() {
@@ -69,14 +69,14 @@ void GetState() {
 	if (!IsProcessRunning(hostProcessId)) {
 		printf("Host synrad.exe (process id %d) not running. Closing.",hostProcessId);
 		SetErrorSub("Host synrad.exe not running. Closing subprocess.");
-		end = TRUE;
+		end = true;
 	}
 
   } else {
 	  printf("Subprocess couldn't connect to Synrad.\n");
 	  SetErrorSub("No connection to main program. Closing subprocess.");
 	  Sleep(5000);
-	  end = TRUE;
+	  end = true;
   }
 }
 
@@ -88,7 +88,7 @@ int GetLocalState() {
 
 // -------------------------------------------------
 
-void SetState(int state,const char *status, BOOL changeState, BOOL changeStatus) {
+void SetState(int state,const char *status, bool changeState, bool changeStatus) {
 
 	prState = state;
 	printf("\n setstate %d \n",state);
@@ -189,7 +189,7 @@ void Load() {
 
 }
 
-BOOL UpdateParams() {
+bool UpdateParams() {
 
 	Dataport *loader;
 	long hSize;
@@ -200,24 +200,24 @@ BOOL UpdateParams() {
 		char err[512];
 		sprintf(err, "Failed to connect to 'loader' dataport %s (%d Bytes)", loadDpName, prParam);
 		SetErrorSub(err);
-		return FALSE;
+		return false;
 	}
 
 	printf("Connected to %s\n", loadDpName);
 
 	if (!UpdateSimuParams(loader)) {
 		CLOSEDP(loader);
-		return FALSE;
+		return false;
 	}
 	CLOSEDP(loader);
-	return TRUE;
+	return true;
 }
 
 // -------------------------------------------------
 
 int main(int argc,char* argv[])
 {
-  BOOL eos = FALSE;
+  bool eos = false;
 
   if(argc!=3) {
     printf("Usage: synradSub peerId index\n");
@@ -297,7 +297,7 @@ int main(int argc,char* argv[])
 
       case COMMAND_EXIT:
         printf("COMMAND: EXIT (%d,%I64d)\n",prParam,prParam2);
-        end = TRUE;
+        end = true;
         break;
 
       case COMMAND_CLOSE:
@@ -336,9 +336,9 @@ int main(int argc,char* argv[])
 
 }
 
-BOOL IsProcessRunning(DWORD pid)
+bool IsProcessRunning(DWORD pid)
 {
-	HANDLE process = OpenProcess(SYNCHRONIZE, FALSE, pid);
+	HANDLE process = OpenProcess(SYNCHRONIZE, false, pid);
 	DWORD ret = WaitForSingleObject(process, 0);
 	CloseHandle(process);
 	return ret == WAIT_TIMEOUT;

@@ -38,17 +38,17 @@ TexturePlotter::TexturePlotter():GLWindow() {
 	strcpy(currentDir,".");
 
 	SetTitle("Texture plotter");
-	SetResizable(TRUE);
-	SetIconfiable(TRUE);
+	SetResizable(true);
+	SetIconfiable(true);
 	SetMinimumSize(wD,hD);
 
 	mapList = new GLList(0);
-	mapList->SetColumnLabelVisible(TRUE);
-	mapList->SetRowLabelVisible(TRUE);
-	mapList->SetAutoColumnLabel(TRUE);
-	mapList->SetAutoRowLabel(TRUE);
+	mapList->SetColumnLabelVisible(true);
+	mapList->SetRowLabelVisible(true);
+	mapList->SetAutoColumnLabel(true);
+	mapList->SetAutoRowLabel(true);
 	mapList->SetRowLabelMargin(20);
-	mapList->SetGrid(TRUE);
+	mapList->SetGrid(true);
 	mapList->SetSelectionMode(BOX_CELL);
 	mapList->SetCornerLabel("\202\\\201");
 	Add(mapList);
@@ -80,7 +80,7 @@ TexturePlotter::TexturePlotter():GLWindow() {
 	Add(cancelButton);
 
 	autoSizeOnUpdate = new GLToggle(0,"Autosize on every update");
-	autoSizeOnUpdate->SetState(TRUE);
+	autoSizeOnUpdate->SetState(true);
 	Add(autoSizeOnUpdate);
 
 	// Center dialog
@@ -143,7 +143,7 @@ void TexturePlotter::GetSelected() {
 
 // --------------------------------------------------------------------
 
-void TexturePlotter::Update(float appTime,BOOL force) {
+void TexturePlotter::Update(float appTime,bool force) {
 
 	if(!IsVisible()) return;
 
@@ -319,7 +319,7 @@ void TexturePlotter::Display(Worker *w) {
 
 	worker = w;
 	UpdateTable();
-	SetVisible(TRUE);
+	SetVisible(true);
 
 }
 
@@ -341,7 +341,7 @@ void TexturePlotter::SaveFile() {
 
 	if( fn ) {
 
-		int u,v,wu,wv;
+		size_t u,v,wu,wv;
 		if( !mapList->GetSelectionBox(&u,&v,&wu,&wv) ) {
 			u=0;
 			v=0;
@@ -393,7 +393,7 @@ void TexturePlotter::ProcessMessage(GLComponent *src,int message) {
 		} else if (src==saveButton) {
 			SaveFile();
 		} else if (src==maxButton) {
-			int u,v,wu,wv;
+			size_t u,v,wu,wv;
 			mapList->SetSelectedCell(maxX,maxY);
 			if( mapList->GetSelectionBox(&v,&u,&wv,&wu) )
 				selFacet->SelectElem(u,v,wu,wv);
@@ -402,7 +402,7 @@ void TexturePlotter::ProcessMessage(GLComponent *src,int message) {
 
 	case MSG_LIST:
 		if(src==mapList) {
-			int u,v,wu,wv;
+			size_t u,v,wu,wv;
 			if( mapList->GetSelectionBox(&v,&u,&wv,&wu) )
 				selFacet->SelectElem(u,v,wu,wv);
 		}
@@ -411,7 +411,7 @@ void TexturePlotter::ProcessMessage(GLComponent *src,int message) {
 	case MSG_COMBO:
 		if(src==viewCombo) {
 			UpdateTable();
-			maxButton->SetEnabled(TRUE);
+			maxButton->SetEnabled(true);
 			//maxButton->SetEnabled(viewCombo->GetSelectedIndex()!=2);
 		}
 		break;

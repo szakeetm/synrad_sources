@@ -34,7 +34,7 @@ public:
 	void CalculateTrajectory(int max_steps);
 	Trajectory_Point OneStep(int pointId); //moves the beam by dL length from the i-th calculated point
 	void CalcPointProperties(int pointId); //calculates magnetic field, sigma values, etc. for a trajectory point
-	bool isOutsideBoundaries(Vector3d a,BOOL recalcDirs);
+	bool isOutsideBoundaries(Vector3d a,bool recalcDirs);
 	void LoadPAR(FileReader *file);
 	void LoadParam(FileReader *f);
 	Distribution2D LoadMAGFile(FileReader *file,Vector3d *dir,double *period,double *phase,int mode);

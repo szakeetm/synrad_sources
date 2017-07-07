@@ -8,7 +8,7 @@
 extern Distribution2D /*polarization_distribution,*/integral_N_photons, integral_SR_power/*,g1h2_distribution*/;
 
 GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int generation_mode,
-	std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr, BOOL recalc) { //Generates a photon from point number 'pointId'
+	std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr, bool recalc) { //Generates a photon from point number 'pointId'
 
 	/* interpolation between source points removed, wasn't useful and slowed things down
 	//Interpolate source point
@@ -132,9 +132,9 @@ GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int gener
 	//debug start
 	size_t numSamples = 500000;
 	FileWriter *fileOut = new FileWriter("histout.csv");
-	fileOut->WriteDouble(generated_energy,"\n");
+	fileOut->Write(generated_energy,"\n");
 	for (size_t i = 0; i < numSamples; i++)
-	fileOut->WriteDouble(find_psi(generated_energy, Sqr(current_region->gamma), f_times_g1h2,
+	fileOut->Write(find_psi(generated_energy, Sqr(current_region->gamma), f_times_g1h2,
 	current_region->enable_par_polarization, current_region->enable_ort_polarization),"\n");
 	delete(fileOut);
 	throw Error("blabla");

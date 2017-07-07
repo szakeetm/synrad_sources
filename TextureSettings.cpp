@@ -23,7 +23,7 @@
 #include "GLApp/GLToolkit.h"
 #include "GLApp/MathTools.h" //FormatMemory
 #include "GLApp/GLMessageBox.h"
-
+#include "GLApp/GLCombo.h"
 
 // --------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ TextureSettings::TextureSettings():GLWindow() {
   int hD = 230;
 
   SetTitle("Texture Scaling");
-  SetIconfiable(TRUE);
+  SetIconfiable(true);
 
   GLTitledPanel *panel = new GLTitledPanel("Texture Range");
   panel->SetBounds(5,2,315,98);
@@ -45,7 +45,7 @@ TextureSettings::TextureSettings():GLWindow() {
 
   texMinText = new GLTextField(0,"");
   texMinText->SetBounds(60,20,85,19);
-  texMinText->SetEditable(TRUE);
+  texMinText->SetEditable(true);
   Add(texMinText);
 
   GLLabel *l2 = new GLLabel("Max");
@@ -54,7 +54,7 @@ TextureSettings::TextureSettings():GLWindow() {
 
   texMaxText = new GLTextField(0,"");
   texMaxText->SetBounds(60,45,85,19);
-  texMaxText->SetEditable(TRUE);
+  texMaxText->SetEditable(true);
   Add(texMaxText);
 
   setCurrentButton = new GLButton(0,"Set to current");
@@ -81,7 +81,7 @@ TextureSettings::TextureSettings():GLWindow() {
   Add(l3);
 
   swapText = new GLTextField(0,"");
-  swapText->SetEditable(FALSE);
+  swapText->SetEditable(false);
   swapText->SetBounds(260,45,50,18);
   Add(swapText);
 
@@ -114,7 +114,7 @@ TextureSettings::TextureSettings():GLWindow() {
   Add(panel3);
 
   gradient = new GLGradient(0);
-  gradient->SetMouseCursor(TRUE);
+  gradient->SetMouseCursor(true);
   gradient->SetBounds(10,117,420,40);
   Add(gradient);
 
@@ -207,8 +207,8 @@ void TextureSettings::Update() {
 	else if (geom->textureMode==TEXTURE_MODE_FLUX) gradient->SetMinMax(geom->texCMin_flux,geom->texCMax_flux);
 	else if (geom->textureMode==TEXTURE_MODE_POWER) gradient->SetMinMax(geom->texCMin_power,geom->texCMax_power);
   }
-  colormapBtn->SetState(viewers[0]->showColormap);
-  gradient->SetType( viewers[0]->showColormap?GRADIENT_COLOR:GRADIENT_BW );
+  colormapBtn->SetState(geom->texColormap);
+  gradient->SetType( geom->texColormap?GRADIENT_COLOR:GRADIENT_BW );
   modeCombo->SetSelectedIndex(geom->textureMode);
   UpdateSize();
 
@@ -225,7 +225,7 @@ void TextureSettings::Display(Worker *w,GeometryViewer **v) {
 	  GLMessageBox::Display("No geometry loaded.","No geometry",GLDLG_OK,GLDLG_ICONERROR);
 	  return;
   }
-  SetVisible(TRUE);
+  SetVisible(true);
   Update();
 
   char tmp[64];
@@ -299,7 +299,7 @@ void TextureSettings::ProcessMessage(GLComponent *src,int message) {
 		}
 		texMinText->SetText(texCMinText->GetText());
 		texMaxText->SetText(texCMaxText->GetText());
-		texAutoScale->SetState(FALSE);
+		texAutoScale->SetState(false);
 		geom->texAutoScale=false;
 		try {
 				worker->Update(0.0f);
@@ -312,7 +312,7 @@ void TextureSettings::ProcessMessage(GLComponent *src,int message) {
 
     case MSG_TOGGLE:
     if (src==colormapBtn) {
-      for(int i=0;i<MAX_VIEWER;i++) viewers[i]->showColormap = colormapBtn->GetState();
+      //for(int i=0;i<MAX_VIEWER;i++) viewers[i]->showColormap = colormapBtn->GetState();
       geom->texColormap = colormapBtn->GetState();
       worker->Update(0.0f);
       Update();

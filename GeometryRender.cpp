@@ -30,7 +30,7 @@
 
 extern SynRad *mApp;
 
-void SynradGeometry::BuildFacetTextures(BYTE *hits, BOOL renderRegularTexture, BOOL renderDirectionTexture) {
+void SynradGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, bool renderDirectionTexture) {
 
 	SHGHITS *shGHit = (SHGHITS *)hits;
 	Worker *worker = &(mApp->worker);
@@ -52,7 +52,7 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, BOOL renderRegularTexture, B
 	for (int i = 0; i < sh.nbFacet; i++) {
 		int time = SDL_GetTicks();
 		if (!prg->IsVisible() && ((time - startTime) > 500)) {
-			prg->SetVisible(TRUE);
+			prg->SetVisible(true);
 		}
 		prg->SetProgress((double)i / (double)sh.nbFacet);
 		Facet *f = facets[i];
@@ -76,11 +76,11 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, BOOL renderRegularTexture, B
 						"into smaller parts. (Use Facet/Explode... command)", i + 1, f->sh.texHeight, f->sh.texWidth, max_t);
 					GLMessageBox::Display(tmp, "OpenGL Error", GLDLG_OK, GLDLG_ICONWARNING);
 				}
-				f->textureError = TRUE;
+				f->textureError = true;
 				return;
 			}
 			else {
-				f->textureError = FALSE;
+				f->textureError = false;
 			}
 
 		   // Retrieve texture from shared memory (every seconds)
@@ -115,6 +115,6 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, BOOL renderRegularTexture, B
 		}
 
 	}
-	prg->SetVisible(FALSE);
+	prg->SetVisible(false);
 	SAFE_DELETE(prg);
 }
