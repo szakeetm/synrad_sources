@@ -36,6 +36,7 @@ GNU General Public License for more details.
 #include <vector>
 #include <string>
 #include <io.h>
+#include <numeric> //std::iota
 //#include <winsparkle.h>
 
 #include "FacetCoordinates.h"
@@ -1053,10 +1054,6 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 				ok = (idx <= nbFacet);
 				if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.nbAbsorbed;
 			}
-			else if ((idx = GetVariable(v->name, "D")) > 0) {
-				ok = (idx <= nbFacet);
-				if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.nbDesorbed;
-			}
 			else if ((idx = GetVariable(v->name, "H")) > 0) {
 				ok = (idx <= nbFacet);
 				if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.nbHit;
@@ -1068,9 +1065,6 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 			else if ((idx = GetVariable(v->name, "P")) > 0) {
 				ok = (idx <= nbFacet);
 				if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.powerAbs / worker.no_scans;
-			}
-			else if ((idx = GetVariable(v->name, "_A")) > 0) {
-				ok = (idx <= nbFacet);
 			}
 			else if ((idx = GetVariable(v->name, "AR")) > 0) {
 				ok = (idx <= nbFacet);
@@ -1116,6 +1110,80 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 			}
 			else if (_stricmp(v->name, "Na") == 0) {
 				v->value = 6.02214179e23;
+			}
+			else if ((beginsWith(v->name, "SUM(")) /*|| (beginsWith(v->name, "AVG("))*/ && endsWith(v->name, ")")) {
+				//bool avgMode = beginsWith(v->name, "AVG("); //else SUM mode
+				std::string inside = v->name; inside.erase(0, 4); inside.erase(inside.size() - 1, 1);
+				std::vector<std::string> tokens = SplitString(inside, ',');
+				if (!Contains({ 2,3 }, tokens.size()))
+					return false;
+				/*if (avgMode) {
+					if (!Contains({ "P","DEN","Z" }, tokens[0]))
+						return false;
+				}*/
+				else {
+					if (!Contains({ "H","A","F","P","AR" }, tokens[0]))
+						return false;
+				}
+				std::vector<size_t> facetsToSum;
+				if (tokens.size() == 3) { // Like SUM(H,3,6) = H3 + H4 + H5 + H6
+					size_t startId, endId, pos;
+					try {
+						startId = std::stol(tokens[1], &pos); if (pos != tokens[1].size() || startId > geom->GetNbFacet() || startId == 0) return false;
+						endId = std::stol(tokens[2], &pos); if (pos != tokens[2].size() || endId > geom->GetNbFacet() || endId == 0) return false;
+					}
+					catch (...) {
+						return false;
+					}
+					if (!(startId < endId)) return false;
+					facetsToSum = std::vector<size_t>(endId - startId + 1);
+					std::iota(facetsToSum.begin(), facetsToSum.end(), startId - 1);
+				}
+				else { //Selection group
+					if (!beginsWith(tokens[1], "S")) return false;
+					std::string selIdString = tokens[1]; selIdString.erase(0, 1);
+					if (selIdString == "EL") { //Current selections
+						facetsToSum = geom->GetSelectedFacets();
+					}
+					else {
+						size_t selGroupId, pos;
+						try {
+							selGroupId = std::stol(selIdString, &pos); if (pos != selIdString.size() || selGroupId > selections.size() || selGroupId == 0) return false;
+						}
+						catch (...) {
+							return false;
+						}
+						facetsToSum = selections[selGroupId - 1].selection;
+					}
+				}
+				llong sumLL = 0;
+				double sumD = 0.0;
+				double sumArea = 0.0; //We average by area
+				for (auto sel : facetsToSum) {
+					if (tokens[0] == "H") {
+						sumLL += geom->GetFacet(sel)->counterCache.nbHit;
+					}
+					else if (tokens[0] == "D") {
+						sumLL += geom->GetFacet(sel)->counterCache.nbDesorbed;
+					}
+					else if (tokens[0] == "A") {
+						sumLL += geom->GetFacet(sel)->counterCache.nbAbsorbed;
+					}
+					else if (tokens[0] == "AR") {
+						sumArea += geom->GetFacet(sel)->GetArea();
+					}
+					else if (tokens[0] == "F") {
+						sumD += geom->GetFacet(sel)->counterCache.fluxAbs /*/ worker.no_scans*/;
+					}
+					else if (tokens[0] == "P") {
+						sumD += geom->GetFacet(sel)->counterCache.powerAbs/* / worker.no_scans*/;
+					}
+					else return false;
+				}
+				//if (avgMode) v->value = sumD * worker.GetMoleculesPerTP(worker.displayedMoment)*1E4 / sumArea;
+				/*else*/ if (tokens[0] == "AR") v->value = sumArea;
+				else if (Contains({ "F","P" }, tokens[0])) v->value = sumD / worker.no_scans;
+				else v->value = (double)sumLL;
 			}
 			else ok = false;
 			return ok;
@@ -2141,7 +2209,6 @@ void SynRad::LoadConfig() {
 		f->ReadKeyword("showHiddenVertex"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
 			viewer[i]->showHiddenVertex = f->ReadInt();
-		f->ReadKeyword("texColormap"); f->ReadKeyword(":");
 		f->ReadKeyword("texColormap"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
 			//viewer[i]->showColormap = 

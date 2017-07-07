@@ -159,6 +159,7 @@ private:
   void ResetWorkerStats();
   void ClearHits(bool noReload);
   char *GetErrorDetails();
+  void ThrowSubProcError(std::string message);
   void ThrowSubProcError(char *message=NULL);
   void Start();
   void Stop();

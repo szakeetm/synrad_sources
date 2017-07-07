@@ -665,9 +665,11 @@ bool StartFromSource() {
 	} while (!validEnergy && retries < 5);
 
 	if (!validEnergy) {
-		char tmp[128];
-		sprintf(tmp, "Can't generate a photon within region %d's energy limits.", regionId + 1);
+		char tmp[1024];
+		sprintf(tmp, "Region %d point %d: can't generate within energy limits (%geV .. %geV)", regionId + 1, pointIdLocal + 1,
+			sourceRegion->params.energy_low_eV , sourceRegion->params.energy_hi_eV);
 		SetErrorSub(tmp);
+		return false;
 	}
 
 	//sHandle->distTraveledCurrentParticle=0.0;

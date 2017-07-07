@@ -96,8 +96,8 @@ void SetState(int state,const char *status, bool changeState, bool changeStatus)
 		SHCONTROL *master = (SHCONTROL *)dpControl->buff;
 		if (changeState) master->states[prIdx] = state;
 		if (changeStatus) {
-			strncpy(master->statusStr[prIdx], status, 63);
-			master->statusStr[prIdx][63] = 0;
+			strncpy(master->statusStr[prIdx], status, 127);
+			master->statusStr[prIdx][127] = 0;
 		}
 		ReleaseDataport(dpControl);
 	}
@@ -284,7 +284,7 @@ int main(int argc,char* argv[])
         printf("COMMAND: PAUSE (%d,%I64d)\n",prParam,prParam2);
         if( !sHandle->lastUpdateOK ) {
           // Last update not successful, retry with a longer tomeout
-          if(dpHit) UpdateHits(dpHit,prIdx,60000);
+			if (dpHit && (GetLocalState() != PROCESS_ERROR)) UpdateHits(dpHit,prIdx,60000);
         }
         SetReady();
         break;
@@ -309,8 +309,8 @@ int main(int argc,char* argv[])
 
       case PROCESS_RUN:
         SetStatus(GetSimuStatus()); //update hits only
-        eos = SimulationRun();                // Run during 1 sec
-        if(dpHit) UpdateHits(dpHit,prIdx,20); // Update hit with 20ms timeout. If fails, probably an other subprocess is updating, so we'll keep calculating and try it later (latest when the simulation is stopped).
+        eos = SimulationRun();      // Run during 1 sec
+        if(dpHit && (GetLocalState()!=PROCESS_ERROR)) UpdateHits(dpHit,prIdx,20); // Update hit with 20ms timeout. If fails, probably an other subprocess is updating, so we'll keep calculating and try it later (latest when the simulation is stopped).
         if(eos) {
           if( GetLocalState()!=PROCESS_ERROR ) {
             // Max desorption reached

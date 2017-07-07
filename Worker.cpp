@@ -724,10 +724,11 @@ void Worker::RealReload() { //Sharing geometry with workers
 
 	// Clear geometry
 	CLOSEDP(dpHit);
+	std::string lastError;
 	if (!ExecuteAndWait(COMMAND_CLOSE, PROCESS_READY)) {
 		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
-		ThrowSubProcError();
+		ThrowSubProcError(lastError);
 	}
 
 	if (!geom->IsLoaded()) {
@@ -777,12 +778,12 @@ void Worker::RealReload() { //Sharing geometry with workers
 
 	// Load geometry
 	progressDlg->SetMessage("Waiting for subprocesses to load geometry...");
+	std::string errorMsg;
 	if( !ExecuteAndWait(COMMAND_LOAD,PROCESS_READY,loadSize) ) {
 		CLOSEDP(loader);
 		char errMsg[1024];
 		sprintf(errMsg,"Failed to send geometry to sub process:\n%s",GetErrorDetails());
 		GLMessageBox::Display(errMsg,"Warning (Load)",GLDLG_OK,GLDLG_ICONWARNING);
-
 
 		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
