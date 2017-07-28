@@ -112,7 +112,7 @@ void CartesianToPolar(FACET *iFacet, double *theta, double *phi) {
 	double u = Dot(sHandle->pDir, iFacet->sh.nU);
 	double v = Dot(sHandle->pDir, iFacet->sh.nV);
 	double n = Dot(sHandle->pDir, iFacet->sh.N);
-	SATURATE(n, -1.0, 1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
+	Saturate(n, -1.0, 1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
 
 	// (u,v,n) -> (theta,phi)
 	double rho = sqrt(v*v + u*u);
@@ -171,7 +171,7 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 		gHits->leakCache[(leakIndex + gHits->lastLeakIndex) % LEAKCACHESIZE] = sHandle->leakCache[leakIndex];
 	gHits->nbLeakTotal += sHandle->nbLeakSinceUpdate;
 	gHits->lastLeakIndex = (gHits->lastLeakIndex + sHandle->leakCacheSize) % LEAKCACHESIZE;
-	gHits->leakCacheSize = MIN(LEAKCACHESIZE, gHits->leakCacheSize + sHandle->leakCacheSize);
+	gHits->leakCacheSize = Min(LEAKCACHESIZE, gHits->leakCacheSize + sHandle->leakCacheSize);
 
 	// HHit (Only prIdx 0)
 	if (prIdx == 0) {
@@ -186,7 +186,7 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 				gHits->hitCache[gHits->lastHitIndex].type = HIT_LAST; //Penup (border between blocks of consecutive hits in the hit cache)
 			}
 
-			gHits->hitCacheSize = MIN(HITCACHESIZE, gHits->hitCacheSize + sHandle->hitCacheSize);
+			gHits->hitCacheSize = Min(HITCACHESIZE, gHits->hitCacheSize + sHandle->hitCacheSize);
 		}
 	}
 
@@ -486,16 +486,18 @@ bool SimulationMCStep(int nbStep) {
 									if (u < 0.0) phi = PI - phi;  // Angle to U
 										
 									double stickingProbability;
+									std::vector<double> materialReflProbabilities;
+									bool complexScattering;
 									if (collidedFacet->sh.reflectType < 2) {
 										stickingProbability = collidedFacet->sh.sticking;
+										complexScattering = false;
 									}
 									else {
-										std::vector<double> materialReflProbabilities;
-										bool complexScattering;
 										stickingProbability = GetStickingProbability(collidedFacet, theta, materialReflProbabilities, complexScattering);
 									}
 									if (!sHandle->mode.lowFluxMode) {
-										reflected = DoOldRegularReflection(collidedFacet, stickingProbability, theta, phi, N_rotated, nU_rotated, nV_rotated);
+										reflected = DoOldRegularReflection(collidedFacet, stickingProbability, materialReflProbabilities,
+											complexScattering, theta, phi, N_rotated, nU_rotated, nV_rotated);
 									}
 									else {
 										reflected = DoLowFluxReflection(collidedFacet, stickingProbability, theta, phi, N_rotated, nU_rotated, nV_rotated);
@@ -581,7 +583,7 @@ void GetDirComponents(Vector3d& nU_rotated, Vector3d& nV_rotated, Vector3d& N_ro
 	u = Dot(sHandle->pDir, nU_rotated);
 	v = Dot(sHandle->pDir, nV_rotated);
 	n = Dot(sHandle->pDir, N_rotated);
-	SATURATE(n, -1.0, 1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
+	Saturate(n, -1.0, 1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
 }
 
 
@@ -606,19 +608,32 @@ bool DoLowFluxReflection(FACET* collidedFacet, double stickingProbability, doubl
 			return true;
 		}
 		else {
-			return PerformBounce_old(collidedFacet, theta, phi, N_rotated, nU_rotated, nV_rotated);
+			return PerformBounce_old(collidedFacet, REFL_FORWARD, theta, phi, N_rotated, nU_rotated, nV_rotated);
 		}
 	}
 }
 
-bool DoOldRegularReflection(FACET* collidedFacet, double stickingProbability, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated) {
-	if (rnd() < stickingProbability) {
-		Stick(collidedFacet);
-		return StartFromSource(); //false if maxdesorption reached
-	}
-	else { //not sticking, bounce
-		return PerformBounce_old(collidedFacet, theta, phi, N_rotated, nU_rotated, nV_rotated);
-	}
+bool DoOldRegularReflection(FACET* collidedFacet, double stickingProbability, const std::vector<double>& materialReflProbabilities, 
+	const bool& complexScattering, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated) {
+		int reflType;
+		if (complexScattering) {
+			reflType = GetHardHitType(stickingProbability, materialReflProbabilities, true);
+			if (reflType == REFL_ABSORB) {
+				Stick(collidedFacet);
+				return StartFromSource(); //false if maxdesorption reached
+			} else return PerformBounce_old(collidedFacet, reflType, theta, phi, N_rotated, nU_rotated, nV_rotated);
+		}
+		else { //reflect or absorb
+			if (rnd() < stickingProbability) {
+				Stick(collidedFacet);
+				return StartFromSource(); //false if maxdesorption reached
+			}
+			else {
+				reflType = REFL_FORWARD;
+				return PerformBounce_old(collidedFacet, reflType, theta, phi, N_rotated, nU_rotated, nV_rotated);
+			}
+		}
+		
 }
 
 // -------------------------------------------------------------
@@ -656,15 +671,17 @@ bool StartFromSource() {
 	
 	size_t retries = 0;bool validEnergy;GenPhoton photon;
 	do {
-		photon = GeneratePhoton(pointIdLocal, sourceRegion, sHandle->mode.generation_mode, sHandle->psi_distr, sHandle->chi_distr, sHandle->tmpCount.nbDesorbed == 0);
+		photon = GeneratePhoton(pointIdLocal, sourceRegion, sHandle->mode.generation_mode,
+			sHandle->psi_distro, sHandle->chi_distros[sourceRegion->params.polarizationCompIndex],
+			sHandle->parallel_polarization, sHandle->tmpCount.nbDesorbed == 0);
 		validEnergy = (photon.energy >= sourceRegion->params.energy_low_eV && photon.energy <= sourceRegion->params.energy_hi_eV);
-		if (!validEnergy) {
+		if (!validEnergy && photon.energy>0.0) {
 			retries++;
 			pointIdLocal = (int)(rnd()*sourceRegion->Points.size());
 		}
-	} while (!validEnergy && retries < 5);
+	} while (!validEnergy && photon.energy>0.0 && retries < 5);
 
-	if (!validEnergy) {
+	if (!validEnergy && photon.energy>0.0) {
 		char tmp[1024];
 		sprintf(tmp, "Region %d point %d: can't generate within energy limits (%geV .. %geV)", regionId + 1, pointIdLocal + 1,
 			sourceRegion->params.energy_low_eV , sourceRegion->params.energy_hi_eV);
@@ -790,7 +807,7 @@ void PerformBounce_new(FACET *iFacet, const double &inTheta, const double &inPhi
 	if (iFacet->hits_MC && iFacet->sh.countRefl) RecordHitOnTexture(iFacet, sHandle->dF, sHandle->dP);
 }
 
-bool PerformBounce_old(FACET *iFacet, double theta, double phi,
+bool PerformBounce_old(FACET *iFacet, int reflType, double theta, double phi,
 	Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated) {
 
 	double inPhi, inTheta;
@@ -800,7 +817,8 @@ bool PerformBounce_old(FACET *iFacet, double theta, double phi,
 		//See docs/theta_gen.png for further details on angular distribution generation
 		PolarToCartesian(iFacet, acos(sqrt(rnd())), rnd()*2.0*PI, false);
 	} else { //Mirror reflection, optionally with surface perturbation
-		if (!VerifiedSpecularReflection(iFacet, theta, phi,
+		if (iFacet->sh.reflectType == REF_MIRROR) reflType = REFL_FORWARD;
+		if (!VerifiedSpecularReflection(iFacet, reflType, theta, phi,
 			N_rotated, nU_rotated, nV_rotated)) {
 			return false;
 		}
@@ -813,26 +831,42 @@ bool PerformBounce_old(FACET *iFacet, double theta, double phi,
 	return true;
 }
 
-bool VerifiedSpecularReflection(FACET *iFacet, double theta, double phi,
+bool VerifiedSpecularReflection(FACET *iFacet, int reflType, double inTheta, double inPhi,
 	Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated) {
 	//Specular reflection that returns false if going against surface
+	double outTheta, outPhi;
 
 	Vector3d N_facet = Vector3d(iFacet->sh.N.x, iFacet->sh.N.y, iFacet->sh.N.z);
 
 	Vector3d newDir;
 	double u, v, n;
 
-	theta = PI - theta; //perform reflection
+	switch (reflType) {
+	case 1: //forward scattering
+		outTheta = PI - inTheta;
+		outPhi = inPhi;
+		break;
+	case 2: //diffuse scattering
+		outTheta = acos(sqrt(rnd()));
+		outPhi = rnd()*2.0*PI;
+		break;
+	case 3: //back scattering
+		outTheta = PI - inTheta;
+		outPhi = PI + inPhi;
+		break;
+	} //end switch (transparent pass treated at the Intersect() routine
 
-	u = sin(theta)*cos(phi);
-	v = sin(theta)*sin(phi);
-	n = cos(theta);
+	u = sin(outTheta)*cos(outPhi);
+	v = sin(outTheta)*sin(outPhi);
+	n = cos(outTheta);
 
 	newDir = Vector3d(u*nU_rotated.x + v*nV_rotated.x + n*N_rotated.x,
 		u*nU_rotated.y + v*nV_rotated.y + n*N_rotated.y,
 		u*nU_rotated.z + v*nV_rotated.z + n*N_rotated.z);
 
-	if ((Dot(newDir,N_facet) > 0) != (theta < PI / 2)) {
+	if ((Dot(newDir,N_facet) > 0) != (inTheta > PI / 2)) {
+		//inTheta > PI/2: ray coming from normal side
+		//Dot(newDir,N_facet)>0: ray leaving towards normal side
 		return false; //if reflection would go against the surface, generate new angles
 	}
 

@@ -60,11 +60,13 @@ public:
 	void BuildPipe(double L, double R, double s, int step);
 	void LoadProfileSYN(FileReader *file, Dataport *dpHit);
 	void LoadSpectrumSYN(FileReader *file, Dataport *dpHit);
-	size_t GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials, std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr);
+	size_t GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials, 
+		std::vector<std::vector<double>> &psi_distro, std::vector<std::vector<std::vector<double>>> &chi_distros,
+		const std::vector<std::vector<double>>& parallel_polarization);
 	DWORD GetHitsSize();
 	void CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *regions, std::vector<Material> *materials,
-		std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr, int generation_mode, bool lowFluxMode, double lowFluxCutoff,
-		bool newReflectionModel);
+		std::vector<std::vector<double>> &psi_distro, const std::vector<std::vector<std::vector<double>>> &chi_distros,
+		const std::vector<std::vector<double>> &parallel_polarization, int generation_mode, bool lowFluxMode, double lowFluxCutoff, bool newReflectionModel);
 #pragma endregion
 
 

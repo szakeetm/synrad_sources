@@ -14,6 +14,7 @@
 #include <vector>
 #include <string>
 #include <math.h>
+#include <tuple>
 
 Distribution2D K_1_3_distribution = Generate_K_Distribution(1.0 / 3.0);
 Distribution2D K_2_3_distribution = Generate_K_Distribution(2.0 / 3.0);
@@ -60,7 +61,7 @@ Distribution2D::Distribution2D() {
 	size = 1;
 }
 
-Distribution2D::Distribution2D(int N){
+Distribution2D::Distribution2D(size_t N){
 	if (!(N > 0) && (N < 10000000)) N = 1; //don't create 0 size distributions
 	valuesX = (double*)malloc(N*sizeof(double));
 	valuesY = (double*)malloc(N*sizeof(double));
@@ -103,14 +104,22 @@ Distribution2D& Distribution2D::operator= (const Distribution2D &copy_src) {
 	return *this;
 }
 
-double Distribution2D::InterpolateY(const double &x) {
+double Distribution2D::InterpolateY(const double &x, const bool& extrapolate) {
 	int inferior_index, superior_index;
 	double slope, overshoot;
 
 	//for (superior_index = 0; valuesX[superior_index] < x && superior_index < size; superior_index++); //To replace by binary search
 	inferior_index = my_binary_search(x, valuesX, size);
-	if (inferior_index == size - 1) inferior_index--; //not found, x too large
-	if (inferior_index == -1)    inferior_index++; //not found, x too small
+	if (inferior_index == size - 1) {
+		if (!extrapolate) return valuesY[size - 1];
+		inferior_index--; //not found, x too large
+	}
+	if (inferior_index == -1) {
+		if (!extrapolate) return valuesY[0];
+		inferior_index++; //not found, x too small
+	}
+
+	//Interpolate / extrapolate:
 	superior_index = inferior_index + 1;
 
 	double diffX = valuesX[superior_index] - valuesX[inferior_index];
@@ -121,14 +130,21 @@ double Distribution2D::InterpolateY(const double &x) {
 	return valuesY[inferior_index] + slope*overshoot;
 }
 
-double Distribution2D::InterpolateX(const double &y) {
+double Distribution2D::InterpolateX(const double &y, const bool& extrapolate) {
 	int inferior_index, superior_index;
 	double slope, overshoot;
 
-	//for (superior_index = 0; valuesY[superior_index] < y && superior_index < size; superior_index++); //To replace by binary search
 	inferior_index = my_binary_search(y, valuesY, size);
-	if (inferior_index == size - 1) return valuesX[size - 1]; //not found, y too large
-	if (inferior_index == -1)    return valuesX[0]; //not found, y too small
+	if (inferior_index == size - 1) {
+		if (!extrapolate) return valuesX[size - 1]; //not found, y too large
+		inferior_index--;
+	}
+	if (inferior_index == -1) {
+		if (!extrapolate) return valuesX[0]; //not found, y too small
+		inferior_index++;
+	}
+
+	//Interpolate/extrapolate
 	superior_index = inferior_index + 1;
 
 	double diffX = valuesX[superior_index] - valuesX[inferior_index];
@@ -235,28 +251,28 @@ Distribution2D Generate_Integral(double log_min, double log_max, int mode){
 	{ according to the real distribution, see fig. 2 ref. G.K. Green for instance }
 	*/
 
-	//log_min: log(ratio of minimal energy / critical energy)
-	//log_max: log(ratio of maximal energy / critical energy)
+	//Scale X: log(ratio of energy / critical energy), goes from -10 to +2
+	//Scale Y: CDF (integral) of SR spectrum (flux or power) from log(E/E_crit)=-10 to X, goes from 0 to 1
 
 	double delta, exp_delta, interval_dN, sum_photons, sum_power, mean_photons, x_lower, x_middle, x_higher;
 
 	int i;
 	Distribution2D result(NUMBER_OF_INTEGR_VALUES);
 
-	delta = (log_max - log_min) / NUMBER_OF_INTEGR_VALUES;
-	sum_photons = sum_power = /*result.sum_photons = result.sum_energy =*/ 0.0;
+	delta = (log_max - log_min) / (double)NUMBER_OF_INTEGR_VALUES;
+	sum_photons = sum_power =  0.0;
 
 	for (i = 0; i < NUMBER_OF_INTEGR_VALUES; i++) {
-		x_lower = exp(log_min + i*delta); //lower energy
-		x_higher = exp(log_min + (i + 1.0)*delta); //higher energy
-		exp_delta = x_higher - x_lower; //actual energy range for the next index
+		x_lower = exp(log_min + i*delta);          //lower energy of bin, in units of E_crit
+		x_higher = exp(log_min + (i + 1.0)*delta); //higher energy of bin, in units of E_crit
+		exp_delta = x_higher - x_lower;            //bin energy range, in units of E_crit
 
-		x_middle = (x_lower + x_higher) / 2.0;
+		x_middle = (x_lower + x_higher) / 2.0;     //average energy of bin
 		mean_photons = (SYNRAD_FAST(x_lower) + SYNRAD_FAST(x_higher)) / 2.0;
 
 		interval_dN = mean_photons*exp_delta; //number of photons for the actual interval, different averaging
-		sum_photons += interval_dN; //flux increment
-		sum_power += interval_dN*x_middle; //number of photons * average energy: energy of the interval
+		sum_photons += interval_dN; //total integrated flux from log(E/E_crit)=-10 to this interval
+		sum_power += interval_dN*x_middle; //total integrated power from log(E/E_crit)=-10 to this interval (number of photons * average energy: energy of the interval)
 		result.valuesX[i] = log(x_middle);
 		if (mode == INTEGRAL_MODE_N_PHOTONS) result.valuesY[i] = sum_photons; //used to be log(sum_flux)
 		else if (mode == INTEGRAL_MODE_SR_POWER) result.valuesY[i] = sum_power; //used to be log(sum_power)
@@ -325,10 +341,10 @@ return F_parallel/(F_parallel+F_orthogonal);
 }
 */
 
-/*double find_psi(double lambda_ratios,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization){
+/*double find_psi_and_polarization(double lambda_ratios,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization){
 //vertical
 
-//ported from FINDPRCS.PAS: function find_psi(x,maxangle:realt1):realt1;
+//ported from FINDPRCS.PAS: function find_psi_and_polarization(x,maxangle:realt1):realt1;
 
 //{ Derived from procedure find_polarization ... }
 
@@ -369,7 +385,9 @@ seed=rnd()*factor_psi*local_polarization_integral.valuesY[NUMBER_OF_DISTRO_VALUE
 return local_polarization_integral.InterpolateX(seed);
 }*/
 
-double find_psi(double lambda_ratios, std::vector<std::vector<double>> &psi_distro){
+std::tuple<double,double> find_psi_and_polarization(const double& lambda_ratios, const std::vector<std::vector<double>> &psi_distro,
+	const std::vector<std::vector<double>> &parallel_polarization, const size_t& polarizationComponent) {
+	
 	//returns gamma*psi
 	double lambda_relative = log10(lambda_ratios);
 	double lambda_index = (lambda_relative + 10) / 0.1; //digitized for -10..+2 with delta=0.01
@@ -395,8 +413,8 @@ double find_psi(double lambda_ratios, std::vector<std::vector<double>> &psi_dist
 	{
 		// calculate the midpoint for roughly equal partition
 		int imid = (imin + imax) / 2;
-		interpolated_CDF_lower = WEIGH(psi_distro[lambda_lower_index][imid], psi_distro[lambda_lower_index + 1][imid], lambda_overshoot);
-		interpolated_CDF_higher = WEIGH(psi_distro[lambda_lower_index][imid + 1], psi_distro[lambda_lower_index + 1][imid + 1], lambda_overshoot);
+		interpolated_CDF_lower = Weigh(psi_distro[lambda_lower_index][imid], psi_distro[lambda_lower_index + 1][imid], lambda_overshoot);
+		interpolated_CDF_higher = Weigh(psi_distro[lambda_lower_index][imid + 1], psi_distro[lambda_lower_index + 1][imid + 1], lambda_overshoot);
 		if (imid == size - 1 || (interpolated_CDF_lower < lookup && lookup < interpolated_CDF_higher)) {
 			// key found at index imid
 			foundAngle = imid + 1; //will be lowered by 1
@@ -415,7 +433,18 @@ double find_psi(double lambda_ratios, std::vector<std::vector<double>> &psi_dist
 	//double previous_interpolated_CDF = psi_distro[lambda_lower_index][psi_lower_index] + lambda_overshoot*(psi_distro[lambda_lower_index + 1][psi_lower_index] - psi_distro[lambda_lower_index][psi_lower_index]);
 	double psi_overshoot = (lookup - interpolated_CDF_lower) / (interpolated_CDF_higher - interpolated_CDF_lower);
 	double psi = (((double)psi_lower_index + psi_overshoot)*0.005) * (4.0 / pow(lambda_ratios, 0.35)); //psi_relative=1 corresponds to psi=4/lambda_ratios^0.35
-	return psi;
+	
+	double polarization;
+	if (polarizationComponent == 0) {
+		polarization = 1.0;
+	}
+	else {
+		double polarization_pdf_lower = Weigh(parallel_polarization[lambda_lower_index][psi_lower_index], parallel_polarization[lambda_lower_index + 1][psi_lower_index], lambda_overshoot);
+		double polarization_pdf_higher = Weigh(parallel_polarization[lambda_lower_index][psi_lower_index + 1], parallel_polarization[lambda_lower_index + 1][psi_lower_index + 1], lambda_overshoot);
+		polarization = Weigh(polarization_pdf_lower, polarization_pdf_higher, psi_overshoot);
+		if (polarizationComponent == 2) polarization = 1.0 - polarization; //orthogonal component
+	}
+	return std::tie(psi,polarization);
 	//return 0.15;
 }
 
@@ -550,9 +579,9 @@ double seed = rnd()*local_polarization_integral.valuesY[NUMBER_OF_DISTRO_VALUES 
 return local_polarization_integral.InterpolateX(seed);
 }
 */
-double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_distro) {
+double find_chi(const double& psi, const double& gamma, const std::vector<std::vector<double>> &chi_distro) {
 
-	double psi_index, chi_lower, chi_higher, chi_higher2, chi;
+	double psi_index, chi_lower, chi_higher, chi;
 	double psi_relative = log10(abs(psi)*(gamma / 10000.0)); //distributions are digitized for gamma=10000, and sampled logarithmically
 	if (psi_relative < -7.0) {
 		psi_index = 0; //use lowest angle
@@ -571,7 +600,7 @@ double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_
 	do { //to replace by binary search
 	previous_interpolated_CDF = interpolated_CDF;
 	foundAngle++;
-	interpolated_CDF = WEIGH(chi_distro[foundAngle][psi_lower_index], chi_distro[foundAngle][psi_lower_index + 1], psi_overshoot);
+	interpolated_CDF = Weigh(chi_distro[foundAngle][psi_lower_index], chi_distro[foundAngle][psi_lower_index + 1], psi_overshoot);
 	} while (interpolated_CDF < lookup);*/
 
 	//Binary search
@@ -584,8 +613,8 @@ double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_
 	{
 		// calculate the midpoint for roughly equal partition
 		int imid = (imin + imax) / 2;
-		interpolated_CDF_lower = WEIGH(chi_distro[imid][psi_lower_index], chi_distro[imid][psi_lower_index + 1], psi_overshoot);
-		interpolated_CDF_higher = WEIGH(chi_distro[imid + 1][psi_lower_index], chi_distro[imid + 1][psi_lower_index + 1], psi_overshoot);
+		interpolated_CDF_lower = Weigh(chi_distro[imid][psi_lower_index], chi_distro[imid][psi_lower_index + 1], psi_overshoot);
+		interpolated_CDF_higher = Weigh(chi_distro[imid + 1][psi_lower_index], chi_distro[imid + 1][psi_lower_index + 1], psi_overshoot);
 		if (imid == size - 1 || (interpolated_CDF_lower < lookup && lookup < interpolated_CDF_higher)) {
 			// key found at index imid
 			foundAngle = imid + 1; //will be lowered by 1
@@ -601,20 +630,18 @@ double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_
 	}
 	//TO DO: Treat not found errors
 
-
-	//TO DO: Treat not found errors
 	int chi_lower_index = foundAngle - 1;
 
 	double next_interpolated_CDF;
 	if (foundAngle == chi_distro.size() - 1) next_interpolated_CDF = 1.0;
-	else next_interpolated_CDF = WEIGH(chi_distro[chi_lower_index + 2][psi_lower_index], chi_distro[chi_lower_index + 2][psi_lower_index + 1], psi_overshoot);
+	else next_interpolated_CDF = Weigh(chi_distro[chi_lower_index + 2][psi_lower_index], chi_distro[chi_lower_index + 2][psi_lower_index + 1], psi_overshoot);
 	//double chi_overshoot = (log10(lookup)-log10(previous_interpolated_CDF))/ (log10(interpolated_CDF) - log10(previous_interpolated_CDF));
 	//double chi_overshoot = (lookup - previous_interpolated_CDF) / (interpolated_CDF - previous_interpolated_CDF); //linear scale
 
 	if (chi_lower_index == 0) {
 		chi_lower = 0;
 		chi_higher = 1.0964782E-7;
-		chi = WEIGH(chi_lower, chi_higher, rnd()) / (gamma / 10000.0);
+		chi = Weigh(chi_lower, chi_higher, rnd()) / (gamma / 10000.0);
 		//chi = 0;
 	}
 	else {
@@ -625,21 +652,9 @@ double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_
 		double FA = interpolated_CDF_lower;
 		double FB = interpolated_CDF_higher;
 		double FC = next_interpolated_CDF;
-
-		//inverse 2nd degree polynomial interpolation
-		double V = lookup;
-		double amb = a - b;
-		double amc = a - c;
-		double bmc = b - c;
-		double amb_amc = amb*amc;
-		double amc_bmc = amc*bmc;
-		chi = (FA / (amb)-(a*FA) / (amb_amc)-(b*FA) / (amb_amc)-FB / (amb)+(a*FB) / (amb_amc)+(b*FB) / (amb_amc)+(a*FB) / (amc_bmc)+(b*	FB) / (amc_bmc)-(a*FC) / (amc_bmc)
-			-(b*FC) / (amc_bmc)-sqrt(Sqr(-(FA / (amb)) + (a*FA) / (amb_amc)+(b*FA) / (amb_amc)+FB / (amb)-(a*FB) / (amb_amc)-(b*FB) / (amb_amc)-(a*FB) / (amc_bmc)-(b*FB)
-			/ (amc_bmc)+(a*FC) / (amc_bmc)+(b*FC) / (amc_bmc)) - 4 * (-(FA / (amb_amc)) + FB / (amb_amc)+FB / (amc_bmc)-FC / (amc_bmc))*(-FA + (a*FA) / (amb)-(a*b*FA)
-			/ (amb_amc)-(a*FB) / (amb)+(a*b*FB) / (amb_amc)+(a*b*FB) / (amc_bmc)-(a*b*FC) / (amc_bmc)+V))) / (2 * (-(FA / (amb_amc)) + FB / (amb_amc)+FB / (amc_bmc)-FC / (amc_bmc)));
-
-		//inverse linear interpolation
-		//chi = WEIGH(a, b,rnd());
+		
+		chi = InverseQuadraticInterpolation(lookup, a, b, c, FA, FB, FC);
+		//chi = Weigh(a, b,rnd()); //inverse linear interpolation
 
 	}
 	return chi;
@@ -667,16 +682,16 @@ double SYNGEN1(double log_x_min, double log_x_max, int mode) {
 
 	double generated_energy;
 	if (mode == SYNGEN_MODE_FLUXWISE) {
-		double flux_min = integral_N_photons.InterpolateY(MAX(LOWER_LIMIT, log_x_min));
-		double flux_max = integral_N_photons.InterpolateY(MIN(UPPER_LIMIT, log_x_max));
-		double generated_flux = WEIGH(flux_min, flux_max, rnd()); //uniform distribution between flux_min and flux_max
-		generated_energy = exp(integral_N_photons.InterpolateX(generated_flux));
+		double flux_min = integral_N_photons.InterpolateY(log_x_min,false);
+		double flux_max = integral_N_photons.InterpolateY(log_x_max,false);
+		double generated_flux = Weigh(flux_min, flux_max, rnd()); //uniform distribution between flux_min and flux_max
+		generated_energy = exp(integral_N_photons.InterpolateX(generated_flux,false));
 	}
 	else if (mode == SYNGEN_MODE_POWERWISE) {
-		double power_min = integral_SR_power.InterpolateY(MAX(LOWER_LIMIT, log_x_min));
-		double power_max = integral_SR_power.InterpolateY(MIN(UPPER_LIMIT, log_x_max));
-		double generated_power = WEIGH(power_min, power_max, rnd()); //uniform distribution between flux_min and flux_max
-		generated_energy = exp(integral_SR_power.InterpolateX(generated_power));
+		double power_min = integral_SR_power.InterpolateY(log_x_min, false);
+		double power_max = integral_SR_power.InterpolateY(log_x_max, false);
+		double generated_power = Weigh(power_min, power_max, rnd()); //uniform distribution between flux_min and flux_max
+		generated_energy = exp(integral_SR_power.InterpolateX(generated_power,false));
 	}
 	return generated_energy;
 }
@@ -740,7 +755,6 @@ double SYNRAD_FAST(const double &x) {
 	}
 	else return 0.0;
 }
-
 
 void Material::LoadMaterialCSV(FileReader *file){
 	bool angleInit = true;
@@ -811,16 +825,14 @@ std::vector<double> Material::Interpolate(const double &energy, const double &an
 
 	std::vector<double> interpRefl;
 	for (size_t comp = 0; comp < reflVals[energyLowerIndex][angleLowerIndex].size(); comp++) {
-		double interpolatedReflForLowerAngle = WEIGH(reflVals[energyLowerIndex][angleLowerIndex][comp], reflVals[energyLowerIndex + 1][angleLowerIndex][comp], energyOvershoot / energyDelta);
-		double interpolatedReflForHigherAngle = WEIGH(reflVals[energyLowerIndex][angleLowerIndex + 1][comp], reflVals[energyLowerIndex + 1][angleLowerIndex + 1][comp], energyOvershoot / energyDelta);
-		double refl = WEIGH(interpolatedReflForLowerAngle, interpolatedReflForHigherAngle, angleOvershoot / angleDelta);
-		SATURATE(refl, 0.0, 1.0);
+		double interpolatedReflForLowerAngle = Weigh(reflVals[energyLowerIndex][angleLowerIndex][comp], reflVals[energyLowerIndex + 1][angleLowerIndex][comp], energyOvershoot / energyDelta);
+		double interpolatedReflForHigherAngle = Weigh(reflVals[energyLowerIndex][angleLowerIndex + 1][comp], reflVals[energyLowerIndex + 1][angleLowerIndex + 1][comp], energyOvershoot / energyDelta);
+		double refl = Weigh(interpolatedReflForLowerAngle, interpolatedReflForHigherAngle, angleOvershoot / angleDelta);
+		Saturate(refl, 0.0, 1.0);
 		interpRefl.push_back(refl);
 	}
 	return interpRefl;
 }
-
-
 
 int Material::GetReflectionType(const double &energy, const double &angle, double const &rnd) {
 	std::vector<double> components = Interpolate(energy, angle);

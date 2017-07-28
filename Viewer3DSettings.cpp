@@ -231,7 +231,8 @@ void Viewer3DSettings::ProcessMessage(GLComponent *src,int message) {
     } else if (src==applyButton) {
 
       double tstep,astep,nratio;
-	  int dnh,dnl,dnt,lotofFacets;
+	  size_t dnh, dnl, dnt;
+		int lotofFacets;
 	  //int dnh;
 
       if( !traStepText->GetNumber(&tstep) ) {
@@ -242,15 +243,15 @@ void Viewer3DSettings::ProcessMessage(GLComponent *src,int message) {
         GLMessageBox::Display("Invalid angle step value","Error",GLDLG_OK,GLDLG_ICONERROR);
         return;
       }
-	  if(( !dispNumHits->GetNumberInt(&dnh)||dnh<1||dnh>2048 )) {
+	  if(( !dispNumHits->GetNumberSize(&dnh)||dnh<1||dnh>2048 )) {
         GLMessageBox::Display("Invalid number of displayed hits.\nMust be between 1 and 2048.","Error",GLDLG_OK,GLDLG_ICONERROR);
         return;
       }
-	  if(( !dispNumLeaks->GetNumberInt(&dnl)||dnl<1||dnl>2048 )) {
+	  if(( !dispNumLeaks->GetNumberSize(&dnl)||dnl<1||dnl>2048 )) {
         GLMessageBox::Display("Invalid number of displayed leaks.\nMust be between 1 and 2048.","Error",GLDLG_OK,GLDLG_ICONERROR);
         return;
       }
-	  if(( !dispNumTraj->GetNumberInt(&dnt)||dnt<9||dnt>10000 )) {
+	  if(( !dispNumTraj->GetNumberSize(&dnt)||dnt<9||dnt>10000 )) {
         GLMessageBox::Display("Invalid number of displayed trajectory points.\nMust be between 10 and 10000.","Error",GLDLG_OK,GLDLG_ICONERROR);
         return;
       }

@@ -739,7 +739,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 
 	progressDlg->SetMessage("Creating dataport...");
 	// Create the temporary geometry shared structure
-	size_t loadSize = geom->GetGeometrySize(&regions, &materials, psi_distr, chi_distr);
+	size_t loadSize = geom->GetGeometrySize(&regions, &materials, psi_distro, chi_distros, parallel_polarization);
 	Dataport *loader = CreateDataport(loadDpName,loadSize);
 	if (!loader) {
 		progressDlg->SetVisible(false);
@@ -749,7 +749,8 @@ void Worker::RealReload() { //Sharing geometry with workers
 	progressDlg->SetMessage("Accessing dataport...");
 	AccessDataportTimed(loader,3000+nbProcess*(int)((double)loadSize/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");
-	geom->CopyGeometryBuffer((BYTE *)loader->buff,&regions,&materials,psi_distr,chi_distr,generation_mode,lowFluxMode,lowFluxCutoff,newReflectionModel);
+	geom->CopyGeometryBuffer((BYTE *)loader->buff,&regions,&materials,psi_distro,chi_distros,
+		parallel_polarization,generation_mode,lowFluxMode,lowFluxCutoff,newReflectionModel);
 	progressDlg->SetMessage("Releasing dataport...");
 	ReleaseDataport(loader);
 
@@ -924,8 +925,8 @@ void Worker::GetProcStatus(int *states,char **status) {
 
 }
 
-void Worker::ImportCSV(FileReader *file,std::vector<std::vector<double>>& table){
-	table = std::vector<std::vector<double>>(); //reset table
+std::vector<std::vector<double>> Worker::ImportCSV(FileReader *file){
+	std::vector<std::vector<double>> table;
 	do {
 		std::vector<double> currentRow;
 		do {
@@ -934,6 +935,7 @@ void Worker::ImportCSV(FileReader *file,std::vector<std::vector<double>>& table)
 		} while (!file->IsEol());
 		table.push_back(currentRow);
 	} while (!file->IsEof());
+	return table;
 }
 
 void Worker::AddRegion(const char *fileName,int position) {

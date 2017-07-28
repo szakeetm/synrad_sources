@@ -65,7 +65,7 @@ void ProfileFacet(FACET *f, const double &dF, const double &dP, const double &E)
 		double dot = abs(Dot(f->sh.N, *rayDir));
 		double theta = acos(dot);              // Angle to normal (0 to PI/2)
 		int grad = (int)(((double)PROFILE_SIZE)*(theta) / (PI / 2)); // To Grad
-		SATURATE(grad, 0, PROFILE_SIZE - 1);
+		Saturate(grad, 0, PROFILE_SIZE - 1);
 		f->profile_hits[grad]++;
 		f->profile_flux[grad] += dF;
 		f->profile_power[grad] += dP;
@@ -74,7 +74,7 @@ void ProfileFacet(FACET *f, const double &dF, const double &dP, const double &E)
 
 	case REC_PRESSUREU:
 		pos = (int)((f->colU)*(double)PROFILE_SIZE);
-		SATURATE(pos, 0, PROFILE_SIZE - 1);
+		Saturate(pos, 0, PROFILE_SIZE - 1);
 		f->profile_hits[pos]++;
 		f->profile_flux[pos] += dF;
 		f->profile_power[pos] += dP;
@@ -82,7 +82,7 @@ void ProfileFacet(FACET *f, const double &dF, const double &dP, const double &E)
 
 	case REC_PRESSUREV:
 		pos = (int)((f->colV)*(double)PROFILE_SIZE);
-		SATURATE(pos, 0, PROFILE_SIZE - 1);
+		Saturate(pos, 0, PROFILE_SIZE - 1);
 		f->profile_hits[pos]++;
 		f->profile_flux[pos] += dF;
 		f->profile_power[pos] += dP;
@@ -100,7 +100,7 @@ bool Intersect(Vector3d *rPos, Vector3d *rDir,  // Source ray (rayDir vector mus
 	double *dist,                   // Distance to collision point
 	FACET **iFact, FACET *last) {    // Collided facet, previous collision
 
-	int i, j;
+	int i;
 	intMinLgth = 1e100;
 	intFound = false;
 	intNbTHits = 0;

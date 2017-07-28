@@ -33,8 +33,6 @@ GNU General Public License for more details.
 #include <sstream>
 #include "PugiXML\pugixml.hpp"
 using namespace pugi;
-#define MAX(x,y) (((x)<(y))?(y):(x))
-#define MIN(x,y) (((x)<(y))?(x):(y))
 
 // Colormap stuff
 extern COLORREF rainbowCol[];
@@ -128,7 +126,7 @@ Facet::Facet(int nbIndex) {
 		b2 = (double)((rainbowCol[colId + 1] >> 0) & 0xFF);
 
 		double rr = (double)(i - colId * 8192) / 8192.0;
-		SATURATE(rr, 0.0, 1.0);
+		Saturate(rr, 0.0, 1.0);
 		colorMap[i] = (COLORREF)((int)(r1 + (r2 - r1)*rr) +
 			(int)(g1 + (g2 - g1)*rr) * 256 +
 			(int)(b1 + (b2 - b1)*rr) * 65536);
@@ -292,13 +290,13 @@ void Facet::LoadTXT(FileReader *file) {
 	if (o < 0.0) {
 
 		sh.opacity = 0.0;
-		if (IS_ZERO(o + 1.0)) {
+		if (IsZero(o + 1.0)) {
 			//sh.profileType = REC_PRESSUREU;
 			sh.is2sided = true;
 		}
-		if (IS_ZERO(o + 2.0))
+		if (IsZero(o + 2.0))
 			//sh.profileType = REC_ANGULAR;
-			if (IS_ZERO(o + 4.0)) {
+			if (IsZero(o + 4.0)) {
 				//sh.profileType = REC_PRESSUREU;
 				sh.is2sided = false;
 			}
@@ -664,7 +662,7 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 				else {
 					val = (int)((texBuffer[idx] - min)*scaleFactor + 0.5f);
 				}
-				SATURATE(val, 0, 65535);
+				Saturate(val, 0, 65535);
 				buff32[(i + 1) + (j + 1)*texDimW] = colorMap[val];
 				if (texBuffer[idx] == 0.0f) buff32[(i + 1) + (j + 1)*texDimW] = (COLORREF)(65535 + 256 + 1); //show unset value as white
 			}
@@ -684,7 +682,7 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 						else {
 							val = (int)((GetSmooth(i, j, texBuffer, 1.0f) - min)*scaleFactor + 0.5f);
 						}
-						SATURATE(val, 0, 65535);
+						Saturate(val, 0, 65535);
 						buff32[(i + 1) + (j + 1)*texDimW] = colorMap[val];
 					}
 				}
@@ -761,7 +759,7 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 				else {
 					val = (int)((texBuffer[idx] - min)*scaleFactor + 0.5f);
 				}
-				SATURATE(val, 0, 255);
+				Saturate(val, 0, 255);
 				buff8[(i + 1) + (j + 1)*texDimW] = val;
 			}
 		}
@@ -780,7 +778,7 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 						else {
 							val = (int)((GetSmooth(i, j, texBuffer, 1.0f) - min)*scaleFactor + 0.5f);
 						}
-						SATURATE(val, 0, 255);
+						Saturate(val, 0, 255);
 						buff8[(i + 1) + (j + 1)*texDimW] = val;
 					}
 				}
@@ -880,7 +878,7 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, bool useColorMa
 				else {
 					val = (int)((texBuffer[idx] - min)*scaleFactor + 0.5f);
 				}
-				SATURATE(val, 0, 65535);
+				Saturate(val, 0, 65535);
 				buff32[(i + 1) + (j + 1)*texDimW] = colorMap[val];
 				if (texBuffer[idx] == 0.0f) buff32[(i + 1) + (j + 1)*texDimW] = (COLORREF)(65535 + 256 + 1); //show unset value as white
 			}
@@ -900,7 +898,7 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, bool useColorMa
 						else {
 							val = (int)((GetSmooth(i, j, texBuffer, 1.0f) - min)*scaleFactor + 0.5f);
 						}
-						SATURATE(val, 0, 65535);
+						Saturate(val, 0, 65535);
 						buff32[(i + 1) + (j + 1)*texDimW] = colorMap[val];
 					}
 				}
@@ -984,7 +982,7 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, bool useColorMa
 				else {
 					val = (int)((texBuffer[idx] - min)*scaleFactor + 0.5f);
 				}
-				SATURATE(val, 0, 255);
+				Saturate(val, 0, 255);
 				buff8[(i + 1) + (j + 1)*texDimW] = val;
 			}
 		}
@@ -1003,7 +1001,7 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, bool useColorMa
 						else {
 							val = (int)((GetSmooth(i, j, texBuffer, 1.0f) - min)*scaleFactor + 0.5f);
 						}
-						SATURATE(val, 0, 255);
+						Saturate(val, 0, 255);
 						buff8[(i + 1) + (j + 1)*texDimW] = val;
 					}
 				}

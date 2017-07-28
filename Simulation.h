@@ -131,8 +131,9 @@ typedef struct {
 
   std::vector<Region_mathonly> regions;// Regions
   std::vector<Material> materials;//materials
-  std::vector<std::vector<double>> psi_distr;
-  std::vector<std::vector<double>> chi_distr;
+  std::vector<std::vector<double>> psi_distro;
+  std::vector<std::vector<std::vector<double>>> chi_distros;
+  std::vector<std::vector<double>> parallel_polarization;
 
   FACET *lastHit;     // Last hitted facet
   //int sourceArea;  // Number of trajectory points
@@ -189,7 +190,8 @@ bool SimulationRun();
 bool SimulationMCStep(int nbStep);
 double GetStickingProbability(FACET * collidedFacet, const double & theta, std::vector<double>& materialReflProbabilities, bool & complexScattering);
 
-bool DoOldRegularReflection(FACET * collidedFacet, double stickingProbability, double theta = 0.0, double phi = 0.0,
+bool DoOldRegularReflection(FACET * collidedFacet, double stickingProbability, const std::vector<double>& materialReflProbabilities,
+	const bool& complexScattering, double theta = 0.0, double phi = 0.0,
 	Vector3d N_rotated = Vector3d(0, 0, 0), Vector3d nU_rotated = Vector3d(0, 0, 0), Vector3d nV_rotated = Vector3d(0, 0, 0));
 bool DoLowFluxReflection(FACET * collidedFacet, double stickingProbability, double theta = 0.0, double phi = 0.0,
 	Vector3d N_rotated = Vector3d(0, 0, 0), Vector3d nU_rotated = Vector3d(0, 0, 0), Vector3d nV_rotated = Vector3d(0, 0, 0)); //old or new model
@@ -203,8 +205,8 @@ void ComputeSourceArea();
 //int PerformBounce_new(FACET *iFacet,double sigmaRatio=0.0,double theta=0.0,double phi=0.0,
 //	Vector3d N_rotated=Vector3d(0,0,0),Vector3d nU_rotated=Vector3d(0,0,0),Vector3d nV_rotated=Vector3d(0,0,0),double thetaOffset=0.0,double phiOffset=0.0, double randomAngle=0.0, int reflType=1);
 void PerformBounce_new(FACET *iFacet, const double &theta, const double &phi, const int &reflType);
-bool PerformBounce_old(FACET * iFacet, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated);
-bool VerifiedSpecularReflection(FACET * iFacet, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated);
+bool PerformBounce_old(FACET * iFacet, int reflType, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated);
+bool VerifiedSpecularReflection(FACET * iFacet, int reflType, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated);
 void Stick(FACET *collidedFacet);
 void PerformTeleport(FACET *iFacet);
 void PolarToCartesian(FACET *iFacet,double theta,double phi,bool reverse,double rotateUV=0.0);

@@ -427,7 +427,7 @@ RegionEditor::RegionEditor():GLWindow() {
 	photonGenPanel->SetCompBounds(enableParPolarizationToggle, 276, 50, 60, 17);
 	photonGenPanel->Add(enableParPolarizationToggle);
 
-	label59 = new GLLabel("Generated photon energy:");
+	label59 = new GLLabel("Generated photon polarization:");
 	photonGenPanel->SetCompBounds(label59, 8, 51, 131, 13);
 	photonGenPanel->Add(label59);
 
@@ -879,8 +879,8 @@ void RegionEditor::EnableDisableControls(GLComponent* src) {
 	psiMaxXtext->SetEditable(limitAngle);
 	psiMaxYtext->SetEditable(limitAngle);
 
-	enableParPolarizationToggle->SetEnabled(false);
-	enableOrtPolarizationToggle->SetEnabled(false);
+	//enableParPolarizationToggle->SetEnabled(false);
+	//enableOrtPolarizationToggle->SetEnabled(false);
 }
 
 void RegionEditor::FillValues() {
@@ -1126,6 +1126,15 @@ void RegionEditor::ApplyChanges() {
 	EmaxText->GetNumber(&cr->params.energy_hi_eV);
 	cr->params.enable_ort_polarization=enableOrtPolarizationToggle->GetState();
 	cr->params.enable_par_polarization=enableParPolarizationToggle->GetState();
+	
+	//Polarization component selection
+	if (cr->params.enable_par_polarization && cr->params.enable_ort_polarization)
+		cr->params.polarizationCompIndex = 0; //Full polarization
+	else if (cr->params.enable_par_polarization)
+		cr->params.polarizationCompIndex = 1; //Parallel polarization
+	else
+		cr->params.polarizationCompIndex = 2; //Orthogonal polarization
+
 	if (limitAngleToggle->GetState()) { //limit angle
 		psiMaxXtext->GetNumber(&cr->params.psimaxX_rad);
 		psiMaxYtext->GetNumber(&cr->params.psimaxY_rad);

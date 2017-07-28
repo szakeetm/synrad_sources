@@ -55,32 +55,38 @@ int   cSize = 5;
 int   cWidth[] = { 30, 56, 50, 50, 50 };
 char *cName[] = { "#", "Hits", "Flux", "Power", "Abs" };
 
-int appVersion = 1410;
+int appVersion = 1412;
 std::string appId = "Synrad";
 #ifdef _DEBUG
 std::string appName = "SynRad+ development version (Compiled " __DATE__ " " __TIME__ ") DEBUG MODE";
 #else
-std::string appName = "Synrad+ 1.4.10 (" __DATE__ ")";
+std::string appName = "Synrad+ 1.4.12 (" __DATE__ ")";
 #endif
 
 std::vector<string> formulaPrefixes = { "A","D","H",","};
 std::string formulaSyntax =
-	R"(MC Variables: An (Absorption on facet n), Dn (Desorption on facet n), Hn (Hit on facet n)\n"
-	"                 Fn (Flux absorbed on facet n), Pn (Power absorbed on facet n)\n"
-	"                 SUMABS (total absorbed), SUMDES (total desorbed), SUMHIT (total hit)\n"
-	"                 SUMFLUX (total gen. flux), SUMPOWER (total gen. power), SCANS (no. of scans)\n\n"
-	"Area variables: ARn (Area of facet n), ABSAR (total absorption area)\n\n"
-	"Math functions: sin(), cos(), tan(), sinh(), cosh(), tanh()\n"
-	"                   asin(), acos(), atan(), exp(), ln(), pow(x,y)\n"
-	"                   log2(), log10(), inv(), sqrt(), abs()\n\n"
-	"Utils functions: ci95(p,N) 95% confidence interval (p=prob,N=count)\n"
-	"                  sum(prefix,i,j) sum variables ex: sum(F,1,10)=F1+F2+...+F10 \n"
-	"                  sum(prefix,Si) sum of variables on selection group i  ex: sum(F,S1)=all flux on group 1 \n\n"
-	"Constants: Kb (Boltzmann's constant [J.K\270\271]), R (Gas constant [J.K\270\271.mol\270\271])\n"
-	"              Na (Avogadro's number [mol\270\271]), PI\n\n"
-	"Expression example:\n"
-	"  (A1+A45)/(D23+D12)\n"
-	"  sqrt(A1^2+A45^2)*DESAR/SUMDES\n"
+R"(MC Variables: An (Absorption on facet n), Hn (Hit on facet n)
+Fn (Flux absorbed on facet n), Pn (Power absorbed on facet n)
+SUMABS (total absorbed), SUMDES (total desorbed), SUMHIT (total hit)
+SUMFLUX (total gen. flux), SUMPOWER (total gen. power), SCANS (no. of scans)
+
+Area variables: ARn (Area of facet n), ABSAR (total absorption area)
+
+Math functions: sin(), cos(), tan(), sinh(), cosh(), tanh(),
+                   asin(), acos(), atan(), exp(), ln(), pow(x,y)
+                   log2(), log10(), inv(), sqrt(), abs()
+
+Utils functions: ci95(p,N) 95% confidence interval (p=prob,N=count)
+                  SUM(prefix,i,j) sum variables ex: sum(F,1,10)=F1+F2+...+F10
+                  SUM(prefix,Si) sum of variables on selection group i  ex: sum(F,S1)=all flux on group 1
+                  SUM(prefix,SEL) calculates the sum of hits on the current selection. (Works with H,A,F,P,AR)
+
+Constants: Kb (Boltzmann's constant), R (Gas constant)
+             Na (Avogadro's number [mol]), PI
+
+Expression example:
+  (A1+A45)/(D23+D12)
+  sqrt(A1^2+A45^2)*DESAR/SUMDES
 )";
 
 float m_fTime;
@@ -403,22 +409,40 @@ int SynRad::OneTimeSceneInit()
 		sprintf(errMsg, "Failed to load material reflection file:\n%s\n%s", materialPaths[index].c_str(), e.GetMsg());
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
 	}
-
+	
+	FileReader *f;
 	try {
-		FileReader *f = new FileReader("param\\Distributions\\sum_psi_distr_0to4perlambdar_0.35_delta5E-3.csv");
+		worker.chi_distros.resize(3);
+
+		f = new FileReader("param\\Distributions\\sum_psi_distr_0to4perlambdar_0.35_delta5E-3_full_pol.csv");
 		//vertical (psi) distribution for different e_crit/e values
 		//each row is for a logarithm of lambda_ratio, starting from -10 to +2
 		//each column is for a psi angle, starting from 0 going to 1, with a delta of 0.005
 		//where 1 corresponds to 4/lambda_ratio^0.35
-		worker.ImportCSV(f, worker.psi_distr);
+		worker.psi_distro = worker.ImportCSV(f);
 		SAFE_DELETE(f);
-		f = new FileReader("param\\Distributions\\psi_chi_gamma10000_logsampled_-7to0_delta0.02.csv");
+		f = new FileReader("param\\Distributions\\psi_chi_gamma10000_logsampled_-7to0_delta0.02_full_pol.csv");
 		//each column corresponds to a Log10[PSI*(gamma/10000)] value. First column: -99, second column: -7, delta: 0.02, max: 0
 		//each row corresponds to a    Log10[CHI*(gamma/10000)] value. First column: -7,                     delta: 0.02, max: 0
-		worker.ImportCSV(f, worker.chi_distr);
+		worker.chi_distros[0] = worker.ImportCSV(f);
+		SAFE_DELETE(f);
+
+		//Parallel polarization
+		f = new FileReader("param\\Distributions\\psi_chi_gamma10000_logsampled_-7to0_delta0.02_par_pol.csv");
+		worker.chi_distros[1] = worker.ImportCSV(f);
+		SAFE_DELETE(f);
+
+		//Orthogonal polarization
+		f = new FileReader("param\\Distributions\\psi_chi_gamma10000_logsampled_-7to0_delta0.02_ort_pol.csv");
+		worker.chi_distros[2] = worker.ImportCSV(f);
+		SAFE_DELETE(f);
+
+		f = new FileReader("param\\Distributions\\degree_of_parallel_polarization_0to4perlambdar_0.35_delta5E-3.csv");
+		worker.parallel_polarization = worker.ImportCSV(f);
 		SAFE_DELETE(f);
 	}
 	catch (Error &e) {
+		SAFE_DELETE(f);
 		char errMsg[512];
 		sprintf(errMsg, "Failed to load angular distribution file.\nIt should be in the param\\Distributions directory.\n%s",e.GetMsg());
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
@@ -920,9 +944,9 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 		}
 
 		if (nbSel == 1)
-			sprintf(tmp, "Selected Facet (#%d)", selectedFacets[0] + 1);
+			sprintf(tmp, "Selected Facet (#%zd)", selectedFacets[0] + 1);
 		else
-			sprintf(tmp, "Selected Facet (%d selected)", selectedFacets.size());
+			sprintf(tmp, "Selected Facet (%zd selected)", selectedFacets.size());
 
 		// Old STR compatibility
 		if (stickingE && f0->sh.superDest) stickingE = false;
@@ -1204,12 +1228,13 @@ void SynRad::UpdatePlotters()
 //-----------------------------------------------------------------------------
 int SynRad::FrameMove()
 {
-	Interface::FrameMove();
-	char tmp[256];
-	if (globalSettings) globalSettings->SMPUpdate();
 	if (worker.running && ((m_fTime - lastUpdate) >= 1.0f)) {
 		if (textureSettings) textureSettings->Update();
 	}
+	Interface::FrameMove(); //might reset lastupdate
+	char tmp[256];
+	if (globalSettings) globalSettings->SMPUpdate();
+	
 
 	if ((m_fTime - worker.startTime <= 2.0f) && worker.running) {
 		hitNumber->SetText("Starting...");
@@ -1872,14 +1897,14 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		}
 		
 		// Load PAR to... menu
-		else if (src->GetId() >= MENU_REGIONS_LOADTO && src->GetId() < MENU_REGIONS_LOADTO + MIN((int)worker.regions.size(),19)) {
+		else if (src->GetId() >= MENU_REGIONS_LOADTO && src->GetId() < MENU_REGIONS_LOADTO + Min((int)worker.regions.size(),19)) {
 			if (AskToReset()) {
 				if (worker.running) worker.Stop_Public();
 				LoadParam(NULL, src->GetId() - MENU_REGIONS_LOADTO);
 			}
 		}
 		// Remove region menu
-		else if (src->GetId() >= MENU_REGIONS_REMOVE && src->GetId() < MENU_REGIONS_REMOVE + MIN((int)worker.regions.size(), 19)) {
+		else if (src->GetId() >= MENU_REGIONS_REMOVE && src->GetId() < MENU_REGIONS_REMOVE + Min((int)worker.regions.size(), 19)) {
 			if (AskToReset()) {
 				if (worker.running) worker.Stop_Public();
 				RemoveRegion(src->GetId() - MENU_REGIONS_REMOVE);
@@ -1887,7 +1912,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		}
 
 		//View hits menu
-		else if (src->GetId() >= MENU_REGIONS_SHOWHITS && src->GetId() < MENU_REGIONS_SHOWHITS + MIN((int)worker.regions.size(), 19)) {
+		else if (src->GetId() >= MENU_REGIONS_SHOWHITS && src->GetId() < MENU_REGIONS_SHOWHITS + Min((int)worker.regions.size(), 19)) {
 			size_t index = src->GetId() - MENU_REGIONS_SHOWHITS;
 			worker.regions[index].params.showPhotons = !ShowHitsMenu->GetCheck(MENU_REGIONS_SHOWHITS+index);
 			worker.ChangeSimuParams();
@@ -2076,7 +2101,7 @@ void SynRad::RebuildPARMenus() {
 	PARloadToMenu->Clear();
 	PARremoveMenu->Clear();
 	ShowHitsMenu->Clear(); ShowHitsMenu->Add("Show All", MENU_REGIONS_SHOWALL); ShowHitsMenu->Add("Show None", MENU_REGIONS_SHOWNONE); ShowHitsMenu->Add(NULL);
-	for (int i = 0; i < MIN((int)worker.regions.size(),19); i++){
+	for (int i = 0; i < Min((int)worker.regions.size(),19); i++){
 		std::ostringstream tmp;
 		tmp << "Region " << (i + 1);
 		if (worker.regions[i].fileName.length() > 0) {
@@ -2218,10 +2243,10 @@ void SynRad::LoadConfig() {
 			viewer[i]->transStep = f->ReadDouble();
 		f->ReadKeyword("dispNumLines"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
-			viewer[i]->dispNumHits = f->ReadInt();
+			viewer[i]->dispNumHits = f->ReadLLong();
 		f->ReadKeyword("dispNumLeaks"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
-			viewer[i]->dispNumLeaks = f->ReadInt();
+			viewer[i]->dispNumLeaks = f->ReadLLong();
 		f->ReadKeyword("dispNumTraj"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
 			viewer[i]->dispNumTraj = f->ReadInt();

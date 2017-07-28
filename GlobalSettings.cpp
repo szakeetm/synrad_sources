@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
 #include "GLApp/GLInputBox.h"
+#include "GLApp/MathTools.h"
 
 #include "Synrad.h"
 
@@ -172,9 +173,9 @@ GlobalSettings::GlobalSettings():GLWindow() {
 
 	RestoreDeviceObjects();
 
-	lastUpdate = 0.0f;
-	for(int i=0;i<MAX_PROCESS;i++) lastCPUTime[i]=-1.0f;
-	memset(lastCPULoad,0,MAX_PROCESS*sizeof(float));
+	lastUpdate = 0;
+	//for(int i=0;i<MAX_PROCESS;i++) lastCPUTime[i]=-1.0f;
+	//memset(lastCPULoad,0,MAX_PROCESS*sizeof(float));
 }
 
 
@@ -364,7 +365,7 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 				return;
 			}
 
-			if (abs(worker->lowFluxCutoff - cutoffnumber)>1e-10 || worker->lowFluxMode!=lowFluxToggle->GetState()) {
+			if (!IsEqual(worker->lowFluxCutoff , cutoffnumber) || worker->lowFluxMode!=lowFluxToggle->GetState()) {
 				//if (mApp->AskToReset()) {
 					worker->lowFluxCutoff = cutoffnumber;
 					worker->lowFluxMode = lowFluxToggle->GetState();
@@ -375,9 +376,9 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 				//}
 			}
 
-			if (worker->newReflectionModel != chkNewReflectionModel->GetState()) {
+			if (worker->newReflectionModel != (chkNewReflectionModel->GetState()==1)) {
 				if (mApp->AskToReset()) {
-					worker->newReflectionModel = chkNewReflectionModel->GetState();
+					worker->newReflectionModel = (chkNewReflectionModel->GetState() == 1);
 					mApp->changedSinceSave = true;
 					worker->Reload();
 					mApp->PlaceScatteringControls(worker->newReflectionModel);

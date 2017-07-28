@@ -446,8 +446,19 @@ void TrajectoryDetails::UpdateTable() {
 	pointList->SetColumnLabels(tmpName);
 	pointList->SetColumnAligns(tmpAlign);
 
+	//Polarization component selection
+	size_t componentIndex;
+	if (worker->regions[displayedRegion].params.enable_par_polarization && worker->regions[displayedRegion].params.enable_ort_polarization)
+		componentIndex = 0; //Full polarization
+	else if (worker->regions[displayedRegion].params.enable_par_polarization)
+		componentIndex = 1; //Parallel polarization
+	else
+		componentIndex = 2; //Orthogonal polarization
+
 	for (int pointId = 0; pointId < nbPoints; pointId += freq) {
- 		GenPhoton photon = GeneratePhoton(pointId, &worker->regions[displayedRegion], worker->generation_mode, worker->psi_distr, worker->chi_distr,pointId == 0);
+ 		GenPhoton photon = GeneratePhoton(pointId, &worker->regions[displayedRegion], worker->generation_mode,
+			worker->psi_distro, worker->chi_distros[componentIndex], 
+			worker->parallel_polarization, pointId == 0);
 		updatePrg->SetProgress((double)pointId / (double)nbPoints);
 		for (int j = 0; j < nbCol; j++)
 			pointList->SetValueAt(j, (int)((double)pointId / (double)freq), FormatCell(pointId, shown[j], &photon));
@@ -463,7 +474,7 @@ void TrajectoryDetails::Update() {
 	if (!worker) return;
 	if (!IsVisible()) return;
 
-	freq = MAX(1, (int)((double)worker->regions[displayedRegion].Points.size() / 1000.0)); //Update frequency in case number of points changed
+	freq = Max(1, (int)((double)worker->regions[displayedRegion].Points.size() / 1000.0)); //Update frequency in case number of points changed
 	UpdateTable();
 
 }
@@ -474,7 +485,7 @@ void TrajectoryDetails::Display(Worker *w, int regionId) {
 
 	worker = w;
 	displayedRegion = regionId;
-	freq = MAX(1, (int)((double)worker->regions[displayedRegion].Points.size() / 1000.0)); //by default, display around 1000 trajectory points
+	freq = Max(1, (int)((double)worker->regions[displayedRegion].Points.size() / 1000.0)); //by default, display around 1000 trajectory points
 	char tmp[1024];
 
 	regionCombo->SetSize((int)worker->regions.size());

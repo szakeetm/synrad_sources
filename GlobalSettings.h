@@ -51,9 +51,9 @@ private:
   GLTextField *autoSaveText;
   GLTextField *cutoffText;
  
-  float lastUpdate;
-  float lastCPUTime[MAX_PROCESS];
-  float lastCPULoad[MAX_PROCESS];
+  int lastUpdate;
+  //float lastCPUTime[MAX_PROCESS];
+  //float lastCPULoad[MAX_PROCESS];
 
   GLToggle      *chkAntiAliasing;
   GLToggle      *chkWhiteBg;

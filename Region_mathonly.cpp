@@ -28,7 +28,7 @@ Vector3d Region_mathonly::B(int pointId, const Vector3d &offset) {
 		position_along_beam=Points[0].position;
 	} else {
 		//Interpolate point
-		SATURATE(pointId,0,(double)Points.size()-1.00000001); //make sure we stay within limits
+		Saturate(pointId,0,(double)Points.size()-1.00000001); //make sure we stay within limits
 		Trajectory_Point previousPoint=Points[(int)pointId];
 		Trajectory_Point nextPoint=Points[(int)pointId+1];
 		double overshoot=pointId-(int)pointId;
@@ -49,12 +49,12 @@ Vector3d Region_mathonly::B(int pointId, const Vector3d &offset) {
 			*result_ptr[i]=*Bconst_ptr[i];
 			break;
 		case B_MODE_DIRECTION:
-			*result_ptr[i]=distr_ptr[i]->InterpolateY(Ls_);
+			*result_ptr[i]=distr_ptr[i]->InterpolateY(Ls_,false);
 			break;
 		case B_MODE_ALONGBEAM:
 			Ls_=pointId*this->params.dL_cm; //distance along the beam path
 			Ls_-=(int)(Ls_/(*Bperiod_ptr)[i])*(*Bperiod_ptr)[i]; //substract filled periods
-			*result_ptr[i]=distr_ptr[i]->InterpolateY(Ls_);
+			*result_ptr[i]=distr_ptr[i]->InterpolateY(Ls_,false);
 			break;
 		case B_MODE_SINCOS:
 			*result_ptr[i]=0.0;
@@ -114,6 +114,7 @@ Region_mathonly::Region_mathonly(){
 	params.energy_low_eV=10;
 	params.energy_hi_eV=1e6;
 	params.enable_ort_polarization= params.enable_par_polarization=true;
+	params.polarizationCompIndex = 0; //full polarization
 	params.psimaxX_rad= params.psimaxY_rad=PI;
 	params.Bx_mode= params.By_mode= params.Bz_mode=B_MODE_CONSTANT;
 	params.B_const=Vector3d(0,0,0);

@@ -48,7 +48,9 @@ SynradGeometry::SynradGeometry() {
 
 }
 
-size_t SynradGeometry::GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials, std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr) {
+size_t SynradGeometry::GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials,
+	std::vector<std::vector<double>> &psi_distro, std::vector<std::vector<std::vector<double>>> &chi_distros,
+	const std::vector<std::vector<double>>& parallel_polarization ) {
 
 	// Compute number of bytes allocated
 	size_t memoryUsage = 0;
@@ -75,11 +77,16 @@ size_t SynradGeometry::GetGeometrySize(std::vector<Region_full> *regions, std::v
 		memoryUsage += ((*materials)[i].angleVals.size())*(*materials)[i].energyVals.size()*nbComponents*sizeof(double);//copying reflectivity probabilities (cells)
 	}
 
-	memoryUsage += sizeof(size_t); //psi number of rows
-	if (psi_distr.size() > 0) memoryUsage += psi_distr.size()*(sizeof(size_t) + psi_distr[0].size()*sizeof(double));
+	memoryUsage += sizeof(size_t);
 
-	memoryUsage += sizeof(size_t); //chi number of rows
-	if (chi_distr.size() > 0) memoryUsage += chi_distr.size()*(sizeof(size_t) + chi_distr[0].size()*sizeof(double));
+	memoryUsage += sizeof(size_t); //psi number of rows
+	memoryUsage += psi_distro.size()*(sizeof(size_t) + psi_distro[0].size()*sizeof(double));
+
+	memoryUsage += 3*sizeof(size_t); //chi number of rows
+	memoryUsage += 3*chi_distros[0].size()*(sizeof(size_t) + chi_distros[0][0].size()*sizeof(double));
+
+	memoryUsage += sizeof(size_t);
+	memoryUsage += parallel_polarization.size()*(sizeof(size_t) + parallel_polarization[0].size()*sizeof(double));
 
 	memoryUsage += sh.nbVertex * sizeof(Vector3d);
 	
@@ -91,7 +98,8 @@ size_t SynradGeometry::GetGeometrySize(std::vector<Region_full> *regions, std::v
 }
 
 void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *regions, std::vector<Material> *materials,
-	std::vector<std::vector<double>> &psi_distr, std::vector<std::vector<double>> &chi_distr, int generation_mode, bool lowFluxMode, double lowFluxCutoff,
+	std::vector<std::vector<double>> &psi_distro, const std::vector<std::vector<std::vector<double>>> &chi_distros,
+	const std::vector<std::vector<double>> &parallel_polarization, int generation_mode, bool lowFluxMode, double lowFluxCutoff,
 	bool newReflectionModel) {
 
 	// Build shared buffer for geometry (see Shared.h)
@@ -177,24 +185,48 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *
 		}
 	}
 
+	//Calculate distribution buffer size, in case the subprocesses want to skip loading it
+	WRITEBUFFER(
+		sizeof(size_t) //psi number of rows
+		+ 3 * psi_distro.size()*(sizeof(size_t) + psi_distro[0].size() * sizeof(double))
+
+		+ 3 * sizeof(size_t) //chi number of rows
+		+ 3 * chi_distros[0].size()*(sizeof(size_t) + chi_distros[0][0].size() * sizeof(double))
+
+		+ sizeof(size_t)
+		+ parallel_polarization.size()*(sizeof(size_t) + parallel_polarization[0].size() * sizeof(double))
+
+		, size_t);
+
+
 	//psi_distr
-	WRITEBUFFER(psi_distr.size(), size_t); //copying number of rows
-	for (auto row : psi_distr) {
-		WRITEBUFFER(row.size(), size_t); //copying number of values
-		for (auto value : row){
-			WRITEBUFFER(value, double);
+	WRITEBUFFER(psi_distro.size(), size_t); //copying number of rows
+		for (auto row : psi_distro) {
+			WRITEBUFFER(row.size(), size_t); //copying number of values
+			for (auto value : row) {
+				WRITEBUFFER(value, double);
+			}
+		}
+
+	//chi_distr
+	for (size_t i = 0; i < 3; i++) { //3 polarization components
+		WRITEBUFFER(chi_distros[i].size(), size_t); //copying number of rows
+		for (auto row : chi_distros[i]) {
+			WRITEBUFFER(row.size(), size_t); //copying number of values
+			for (auto value : row) {
+				WRITEBUFFER(value, double);
+			}
 		}
 	}
 
-	//chi_distr
-	WRITEBUFFER(chi_distr.size(), size_t); //copying number of rows
-	for (auto row : chi_distr) {
+	//polarization
+	WRITEBUFFER(parallel_polarization.size(), size_t); //copying number of rows
+	for (auto row : parallel_polarization) {
 		WRITEBUFFER(row.size(), size_t); //copying number of values
 		for (auto value : row) {
 			WRITEBUFFER(value, double);
 		}
 	}
-
 
 	memcpy(buffer, vertices3, sizeof(Vector3d)*sh.nbVertex);
 	buffer += sizeof(Vector3d)*sh.nbVertex;
@@ -966,8 +998,8 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 					texHeight_file = f->sh.texHeight;
 				}
 
-				for (iy = 0; iy < (MIN(f->sh.texHeight, texHeight_file)); iy++) { //MIN: If stored texture is larger, don't read extra cells
-					for (ix = 0; ix<(MIN(f->sh.texWidth, texWidth_file)); ix++) { //MIN: If stored texture is larger, don't read extra cells
+				for (iy = 0; iy < (Min(f->sh.texHeight, texHeight_file)); iy++) { //MIN: If stored texture is larger, don't read extra cells
+					for (ix = 0; ix<(Min(f->sh.texWidth, texWidth_file)); ix++) { //MIN: If stored texture is larger, don't read extra cells
 						int index = iy*(f->sh.texWidth) + ix;
 						*(hits_MC + index) = file->ReadLLong();
 						if (version >= 7) file->ReadDouble(); //cell area
@@ -1234,7 +1266,7 @@ void SynradGeometry::SaveDesorption(FILE *file, Dataport *dpHit, bool selectedOn
 							val = dose*eta;
 						}
 						else if (mode == 3) {  //use file
-							double eta = distr->InterpolateY(dose);
+							double eta = distr->InterpolateY(dose,true);
 							val = dose*eta;
 						}
 						sprintf(tmp, "%g", val);
@@ -1300,7 +1332,7 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	file->Write("nbSuper:"); file->Write(sh.nbSuper, "\n");
 	file->Write("nbFormula:"); file->Write((!saveSelected) ? mApp->formulas_n.size() : 0, "\n");
 	file->Write("nbView:"); file->Write(mApp->nbView, "\n");
-	file->Write("nbSelection:"); file->Write((!saveSelected) ? selectedFacets.size() : 0, "\n");
+	file->Write("nbSelection:"); file->Write((!saveSelected) ? mApp->selections.size() : 0, "\n");
 
 	file->Write("nbRegions:"); file->Write((!saveSelected) ? (int)worker->regions.size() : 0, "\n");
 	file->Write("PARfiles {\n");
@@ -1352,7 +1384,7 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	file->Write("}\n");
 
 	file->Write("selections {\n");
-	for (int i = 0; (i < selectedFacets.size()) && !saveSelected; i++) { //don't save selections when exporting part of the geometry (saveSelected)
+	for (size_t i = 0; (i < mApp->selections.size()) && !saveSelected; i++) { //don't save selections when exporting part of the geometry (saveSelected)
 
 		file->Write("  \"");
 		file->Write(mApp->selections[i].name);
@@ -1367,7 +1399,7 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	file->Write("}\n");
 
 	file->Write("structures {\n");
-	for (int i = 0; i < sh.nbSuper; i++) {
+	for (size_t i = 0; i < sh.nbSuper; i++) {
 		file->Write("  \"");
 		file->Write(strName[i]);
 		file->Write("\"\n");
@@ -1376,7 +1408,7 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	//vertices
 	prg->SetMessage("Writing vertices...");
 	file->Write("vertices {\n");
-	for (int i = 0; i < sh.nbVertex; i++) {
+	for (size_t i = 0; i < sh.nbVertex; i++) {
 		prg->SetProgress(0.33*((double)i / (double)sh.nbVertex));
 		file->Write("  ");
 		file->Write(i + 1, " ");
@@ -1389,8 +1421,8 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	//leaks
 	prg->SetMessage("Writing leaks...");
 	file->Write("leaks {\n");
-	file->Write("  nbLeak:"); file->Write((!crashSave && !saveSelected) ? MIN(*nbLeakSave,LEAKCACHESIZE) : 0, "\n");
-	for (int i = 0; (i <  MIN(*nbLeakSave, LEAKCACHESIZE)) && (!crashSave && !saveSelected); i++) {
+	file->Write("  nbLeak:"); file->Write((!crashSave && !saveSelected) ? Min(*nbLeakSave,LEAKCACHESIZE) : 0, "\n");
+	for (int i = 0; (i <  Min(*nbLeakSave, LEAKCACHESIZE)) && (!crashSave && !saveSelected); i++) {
 
 		file->Write("  ");
 		file->Write(i, " ");
@@ -1915,7 +1947,7 @@ void SynradGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgre
 		size_t nbIndex = facetNode.child("Indices").select_nodes("Indice").size();
 		if (nbIndex < 3) {
 			char errMsg[128];
-			sprintf(errMsg, "Facet %d has only %d vertices. ", idx + 1, nbIndex);
+			sprintf(errMsg, "Facet %d has only %zd vertices. ", idx + 1, nbIndex);
 			throw Error(errMsg);
 		}
 

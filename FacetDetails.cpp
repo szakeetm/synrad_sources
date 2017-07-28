@@ -310,10 +310,10 @@ char *FacetDetails::FormatCell(int idx,Facet *f,int mode) {
 		sprintf(ret,f->sh.hasSpectrum==1?"Yes":"No");
 		break;
 	case 19:
-		sprintf(ret,"%d",f->counterCache.nbHit);
+		sprintf(ret,"%zd",f->counterCache.nbHit);
 		break;
 	case 20:
-		sprintf(ret,"%d",f->counterCache.nbAbsorbed);
+		sprintf(ret,"%zd",f->counterCache.nbAbsorbed);
 		break;
 
 	case 21:

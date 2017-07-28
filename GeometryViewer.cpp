@@ -67,12 +67,12 @@ void GeometryViewer::DrawLinesAndHits() {
 		glDisable(GL_CULL_FACE);
 
 		//Determine MAX dF value
-		int count = 0;
+		size_t count = 0;
 
 		double logOpacityMax = -99;
 		double logOpacityMin = 99;
 		if (shadeLines) {
-			while (count < MIN(dispNumHits, mApp->worker.hitCacheSize) && mApp->worker.hitCache[count].type != 0) {
+			while (count < Min(dispNumHits, mApp->worker.hitCacheSize) && mApp->worker.hitCache[count].type != 0) {
 				double logVal;
 				if (work->generation_mode == SYNGEN_MODE_FLUXWISE) {
 					logVal = log10(mApp->worker.hitCache[count].dP);
@@ -86,10 +86,10 @@ void GeometryViewer::DrawLinesAndHits() {
 			}
 		}
 		count = 0;
-		logOpacityMin = MAX(logOpacityMin, logOpacityMax - 6.0); //Span through max. 6 orders of magnitude
+		logOpacityMin = Max(logOpacityMin, logOpacityMax - 6.0); //Span through max. 6 orders of magnitude
 		double opacitySpan = logOpacityMax - logOpacityMin;
 
-		while (count < MIN(dispNumHits, mApp->worker.hitCacheSize) && mApp->worker.hitCache[count].type != 0) {
+		while (count < Min(dispNumHits, mApp->worker.hitCacheSize) && mApp->worker.hitCache[count].type != 0) {
 			//if (count>0&&hitCache[count].type==HIT_DES&&hitCache[count-1].type!=HIT_ABS) __debugbreak(); //desorbed without being absorbed first
 			float lineOpacity;
 
@@ -118,7 +118,7 @@ void GeometryViewer::DrawLinesAndHits() {
 			}
 
 			glBegin(GL_LINE_STRIP);
-			while (count < MIN(dispNumHits, mApp->worker.hitCacheSize) && mApp->worker.hitCache[count].type != HIT_ABS) {
+			while (count < Min(dispNumHits, mApp->worker.hitCacheSize) && mApp->worker.hitCache[count].type != HIT_ABS) {
 
 				//teleport routine
 				if (mApp->worker.hitCache[count].type == HIT_TELEPORT) {
@@ -185,7 +185,7 @@ void GeometryViewer::DrawLinesAndHits() {
 					count++;
 				}
 			}
-			if (count < MIN(dispNumHits, mApp->worker.hitCacheSize) && mApp->worker.hitCache[count].type != 0) {
+			if (count < Min(dispNumHits, mApp->worker.hitCacheSize) && mApp->worker.hitCache[count].type != 0) {
 				//Absorption
 				glVertex3d(mApp->worker.hitCache[count].pos.x, mApp->worker.hitCache[count].pos.y, mApp->worker.hitCache[count].pos.z);
 				count++;
@@ -217,7 +217,7 @@ void GeometryViewer::DrawLinesAndHits() {
 			glColor3f(0.0f, 1.0f, 0.0f);
 		}
 		glBegin(GL_POINTS);
-		for (int i = 0; i < MIN(dispNumHits, mApp->worker.hitCacheSize); i++)
+		for (size_t i = 0; i < Min(dispNumHits, mApp->worker.hitCacheSize); i++)
 			if (mApp->worker.hitCache[i].type == HIT_REF)
 				glVertex3d(mApp->worker.hitCache[i].pos.x, mApp->worker.hitCache[i].pos.y, mApp->worker.hitCache[i].pos.z);
 		glEnd();
@@ -227,7 +227,7 @@ void GeometryViewer::DrawLinesAndHits() {
 		glPointSize(pointSize);
 		glColor3f(0.5f, 1.0f, 1.0f);
 		glBegin(GL_POINTS);
-		for (int i = 0; i < MIN(dispNumHits, mApp->worker.hitCacheSize); i++)
+		for (size_t i = 0; i < Min(dispNumHits, mApp->worker.hitCacheSize); i++)
 			if (mApp->worker.hitCache[i].type == HIT_TRANS)
 				glVertex3d(mApp->worker.hitCache[i].pos.x, mApp->worker.hitCache[i].pos.y, mApp->worker.hitCache[i].pos.z);
 		glEnd();
@@ -243,7 +243,7 @@ void GeometryViewer::DrawLinesAndHits() {
 				glColor3f(1.0f, 0.0f, 1.0f);
 			}
 			glBegin(GL_POINTS);
-			for (int i = 0; i < MIN(dispNumHits, mApp->worker.hitCacheSize); i++)
+			for (size_t i = 0; i < Min(dispNumHits, mApp->worker.hitCacheSize); i++)
 				if (mApp->worker.hitCache[i].type == HIT_TELEPORT)
 					glVertex3d(mApp->worker.hitCache[i].pos.x, mApp->worker.hitCache[i].pos.y, mApp->worker.hitCache[i].pos.z);
 			glEnd();
@@ -253,7 +253,7 @@ void GeometryViewer::DrawLinesAndHits() {
 		glPointSize(pointSize);
 		glColor3f(1.0f, 0.0f, 0.0f);
 		glBegin(GL_POINTS);
-		for (int i = 0; i < MIN(dispNumHits, mApp->worker.hitCacheSize); i++)
+		for (size_t i = 0; i < Min(dispNumHits, mApp->worker.hitCacheSize); i++)
 			if (mApp->worker.hitCache[i].type == HIT_ABS)
 				glVertex3d(mApp->worker.hitCache[i].pos.x, mApp->worker.hitCache[i].pos.y, mApp->worker.hitCache[i].pos.z);
 		glEnd();
@@ -261,7 +261,7 @@ void GeometryViewer::DrawLinesAndHits() {
 		// Des
 		glColor3f(0.3f, 0.3f, 1.0f);
 		glBegin(GL_POINTS);
-		for (int i = 0; i < MIN(dispNumHits, mApp->worker.hitCacheSize); i++)
+		for (size_t i = 0; i < Min(dispNumHits, mApp->worker.hitCacheSize); i++)
 			if (mApp->worker.hitCache[i].type == HIT_DES)
 				glVertex3d(mApp->worker.hitCache[i].pos.x, mApp->worker.hitCache[i].pos.y, mApp->worker.hitCache[i].pos.z);
 		glEnd();

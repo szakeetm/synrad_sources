@@ -44,6 +44,8 @@ struct RegionParams {
 	int Bx_mode, By_mode, Bz_mode, beta_kind; //switches between constant or file-based magnetic fields
 
 	bool enable_ort_polarization, enable_par_polarization;
+	size_t polarizationCompIndex;
+
 	Vector3d nbDistr_MAG; //MAG file points
 	size_t nbDistr_BXY; //BXY file points
 	Vector3d Bx_dir,By_dir,Bz_dir; //direction in which MAG files are oriented (in their second line)

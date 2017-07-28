@@ -235,6 +235,16 @@ void Region_full::LoadPAR(FileReader *file){
 
 	params.enable_par_polarization=(file->ReadInt()==1);
 	params.enable_ort_polarization=(file->ReadInt()==1);
+
+	//Polarization component selection
+	size_t componentIndex;
+	if (params.enable_par_polarization && params.enable_ort_polarization)
+		params.polarizationCompIndex = 0; //Full polarization
+	else if (params.enable_par_polarization)
+		params.polarizationCompIndex = 1; //Parallel polarization
+	else
+		params.polarizationCompIndex = 2; //Orthogonal polarization
+
 	file->JumpComment();
 
 	for (int i=0;i<3;i++) {
@@ -430,7 +440,7 @@ void Region_full::Render(const int& regionId, const int& dispNumTraj, GLMATERIAL
 	glBegin(GL_POINTS);
 	//Region
 	int N=(int)Points.size();
-	int increment=MAX(1,(int)(N/dispNumTraj));
+	int increment=Max(1,(int)(N/dispNumTraj));
 	for (int i=0;i<N;i+=increment) {
 		// Draw dot
 
@@ -765,7 +775,7 @@ int Region_full::LoadBXY(const std::string& fileName)
 			std::vector<double> lineValues{ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 			if (Contains({ 3,5,6,7 },tokens.size())) {
 
-				for (size_t i = 0; i < MIN(tokens.size(), 7); i++) {
+				for (size_t i = 0; i < Min(tokens.size(), (size_t)7); i++) {
 					std::istringstream tmp(tokens[i]);
 					if (!(tmp >> lineValues[i])) {
 						std::ostringstream errMsg;
@@ -969,6 +979,16 @@ void Region_full::LoadParam(FileReader *file){
 	file->ReadKeyword("E_max_eV");file->ReadKeyword(":");params.energy_hi_eV=file->ReadDouble();
 	file->ReadKeyword("enable_par_polarization");file->ReadKeyword(":");params.enable_par_polarization=file->ReadInt();
 	file->ReadKeyword("enable_ort_polarization");file->ReadKeyword(":");params.enable_ort_polarization=file->ReadInt();
+
+	//Polarization component selection
+	size_t componentIndex;
+	if (params.enable_par_polarization && params.enable_ort_polarization)
+		params.polarizationCompIndex = 0; //Full polarization
+	else if (params.enable_par_polarization)
+		params.polarizationCompIndex = 1; //Parallel polarization
+	else
+		params.polarizationCompIndex = 2; //Orthogonal polarization
+
 	(paramVersion>=3)?file->ReadKeyword("psiMax_X_Y_rad"):file->ReadKeyword("psiMax_rad");file->ReadKeyword(":");params.psimaxX_rad=file->ReadDouble();params.psimaxY_rad=file->ReadDouble();
 
 	for (int i=0;i<3;i++) {

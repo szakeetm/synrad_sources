@@ -25,11 +25,11 @@
 #ifndef SHAREDH
 #define SHAREDH
 
-#define SPECTRUM_SIZE 100 //number of histogram bins
-#define PROFILE_SIZE  100 // Size of profile
-#define LEAKCACHESIZE     2048  // Leak history max length
-#define HITCACHESIZE      2048  // Max. displayed number of lines and Porto (OPO)hits.
-#define MAX_PROCESS 32    // Maximum number of process
+#define SPECTRUM_SIZE (size_t)100 //number of histogram bins
+#define PROFILE_SIZE  (size_t)100 // Size of profile
+#define LEAKCACHESIZE     (size_t)2048  // Leak history max length
+#define HITCACHESIZE      (size_t)2048  // Max. displayed number of lines and Porto (OPO)hits.
+#define MAX_PROCESS (size_t)32    // Maximum number of process
 
 typedef struct {
 

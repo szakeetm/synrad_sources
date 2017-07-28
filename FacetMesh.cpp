@@ -267,10 +267,10 @@ void FacetMesh::EditFacet(Worker *w) {
 		if( f->selected ) {
 			double nU = f->sh.U.Norme();
 			double nV = f->sh.V.Norme();
-			maxU = MAX(maxU,nU);
-			maxV = MAX(maxV,nV);
-			minU = MIN(minU,nU);
-			minV = MIN(minV,nV);
+			maxU = Max(maxU,nU);
+			maxV = Max(maxV,nV);
+			minU = Min(minU,nU);
+			minV = Min(minV,nV);
 			sel = i;
 			allEnabled = allEnabled && f->sh.isTextured;
 			allBound = allBound && (f->cellPropertiesIds!=NULL);

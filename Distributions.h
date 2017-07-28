@@ -21,16 +21,16 @@ class FileReader;
 class Distribution2D {
 public:
 	Distribution2D();
-	Distribution2D(int size);
+	Distribution2D(size_t size);
 	Distribution2D::Distribution2D(const Distribution2D &copy_src); //copy constructor
 	Distribution2D& operator= (const Distribution2D & other); //assignment op
 	~Distribution2D();
 	void Resize(size_t N);
-	double InterpolateY(const double &x); //interpolates the Y value corresponding to X (allows extrapolation)
-	double InterpolateX(const double &y); //(no extrapolation, first/last X values are the output limits)
+	double InterpolateY(const double &x,const bool& extrapolate); //interpolates the Y value corresponding to X (allows extrapolation)
+	double InterpolateX(const double &y,const bool& extrapolate); //interpolates the X value corresponding to Y (allows extrapolation)
 	double *valuesX, *valuesY;
 	//int findXindex(const double &x);
-	int size;
+	size_t size;
 	//double sum_energy,sum_photons;
 };
 
@@ -72,10 +72,12 @@ double SYNRAD_FAST(const double &x);
 //double Gi(double x,int order);
 //double H(double x, int order);
 //double calc_polarization_percentage(double energy,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
-//double find_psi(double x,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
+//double find_psi_and_polarization(double x,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
 //double find_chi(double psi,double gamma,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization);
-double find_psi(double psi, std::vector<std::vector<double>> &psi_distro);
-double find_chi(double psi, double gamma, std::vector<std::vector<double>> &chi_distro);
+std::tuple<double,double> find_psi_and_polarization(const double& lambda_ratios,
+
+	const std::vector<std::vector<double>> &psi_distr, const std::vector<std::vector<double>> &parallel_polarization, const size_t& polarizationComponent); //returns psi and parallel polarization ratio
+double find_chi(const double& psi, const double& gamma, const std::vector<std::vector<double>> &chi_distr);
 double SYNGEN1(double x_min, double x_max, int mode);
 
 Distribution2D Generate_K_Distribution(double order);

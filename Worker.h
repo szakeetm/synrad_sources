@@ -54,7 +54,7 @@ public:
   void LoadTexturesSYN(FileReader* f,int version);  // Load a textures(throws Error)
   void RebuildTextures();
 
-  void ImportCSV(FileReader *file, std::vector<std::vector<double>> &table);
+  std::vector<std::vector<double>> ImportCSV(FileReader *file);
   
   // Save a geometry (throws Error)
   void SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm=true,bool saveSelected=false,bool autoSave=false,bool crashSave=false);
@@ -119,8 +119,10 @@ public:
   bool   newReflectionModel;
   std::vector<Region_full> regions;
   std::vector<Material> materials;
-  std::vector<std::vector<double>> psi_distr;
-  std::vector<std::vector<double>> chi_distr;
+  std::vector<std::vector<double>> psi_distro; //psi-energy map for full (par+ort) polarization
+  std::vector<std::vector<double>> parallel_polarization; //ratio of parallel polarization for a given E/E_crit ratio and psi vertical angle
+  std::vector<std::vector<std::vector<double>>> chi_distros; //3 psi-chi    maps for full/parallel/orthogonal polarizations
+  
   char fullFileName[512]; // Current loaded file
 
   bool needsReload;
