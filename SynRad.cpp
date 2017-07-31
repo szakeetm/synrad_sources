@@ -55,12 +55,12 @@ int   cSize = 5;
 int   cWidth[] = { 30, 56, 50, 50, 50 };
 char *cName[] = { "#", "Hits", "Flux", "Power", "Abs" };
 
-int appVersion = 1412;
+int appVersion = 1413;
 std::string appId = "Synrad";
 #ifdef _DEBUG
 std::string appName = "SynRad+ development version (Compiled " __DATE__ " " __TIME__ ") DEBUG MODE";
 #else
-std::string appName = "Synrad+ 1.4.12 (" __DATE__ ")";
+std::string appName = "Synrad+ 1.4.13 (" __DATE__ ")";
 #endif
 
 std::vector<string> formulaPrefixes = { "A","D","H",","};
@@ -88,6 +88,7 @@ Expression example:
   (A1+A45)/(D23+D12)
   sqrt(A1^2+A45^2)*DESAR/SUMDES
 )";
+int formulaSyntaxHeight = 320;
 
 float m_fTime;
 SynRad *mApp;
