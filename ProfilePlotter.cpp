@@ -131,31 +131,31 @@ void ProfilePlotter::Refresh() {
 
 	//Rebuild selection combo box
 	Geometry *geom = worker->GetGeometry();
-	int nb = geom->GetNbFacet();
-	int nbProf = 0;
-	for (int i = 0; i < nb; i++)
+	size_t nb = geom->GetNbFacet();
+	size_t nbProf = 0;
+	for (size_t i = 0; i < nb; i++)
 		if (geom->GetFacet(i)->sh.isProfile) nbProf += 3;
 	profCombo->Clear(); profCombo->SetSelectedIndex(0);
 	if (nbProf) profCombo->SetSize(nbProf);
 	nbProf = 0;
-	for (int i = 0; i < nb; i++) {
+	for (size_t i = 0; i < nb; i++) {
 		Facet *f = geom->GetFacet(i);
 		if (f->sh.isProfile) {
 			char tmp[128];
-			for (int mode = 0; mode < 3; mode++) { //MC hits, flux, power
-				sprintf(tmp, "F#%d %s %s", i + 1, profType[f->sh.profileType], profMode[mode]);
-				profCombo->SetValueAt(nbProf, tmp, i * 3 + mode);
+			for (size_t mode = 0; mode < 3; mode++) { //MC hits, flux, power
+				sprintf(tmp, "F#%zd %s %s", i + 1, profType[f->sh.profileType], profMode[mode]);
+				profCombo->SetValueAt(nbProf, tmp, (int)(i * 3 + mode));
 				profCombo->SetSelectedIndex(0);
 				nbProf++;
 			}
 		}
 	}
 	//Remove profiles that aren't present anymore
-	for (int v = 0; v < nbView; v++) {
+	for (size_t v = 0; v < nbView; v++) {
 		if (views[v]->userData1 >= geom->GetNbFacet() || !geom->GetFacet(views[v]->userData1)->sh.isProfile) {
 			chart->GetY1Axis()->RemoveDataView(views[v]);
 			SAFE_DELETE(views[v]);
-			for (int j = v; j < nbView - 1; j++) views[j] = views[j + 1];
+			for (size_t j = v; j < (int)nbView - 1; j++) views[j] = views[j + 1];
 			nbView--;
 		}
 	}
@@ -337,8 +337,8 @@ void ProfilePlotter::refreshViews() {
 
 				// Volatile profile
 				v->Reset();
-				int nb = geom->GetNbFacet();
-				for (int j = 0; j < nb; j++) {
+				size_t nb = geom->GetNbFacet();
+				for (size_t j = 0; j < nb; j++) {
 					Facet *f = geom->GetFacet(j);
 					if (f->sh.isVolatile) {
 						SHHITS *fCount = (SHHITS *)(buffer + f->sh.hitOffset);

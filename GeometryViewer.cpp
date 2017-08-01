@@ -39,6 +39,7 @@ void GeometryViewer::SetBounds(int x, int y, int width, int height) {
 		coordLab->SetBounds(posX + 162, posY + height - 20, 100, 18);
 		facetSearchState->SetBounds(posX + 10, posY + 10, 90, 19);
 
+		//debugLabel->SetBounds(posX + 10, posY + 35, 90, 19);
 
 		autoBtn->SetBounds(posX + width - 142, posY + height - 22, 19, 19);
 		selBtn->SetBounds(posX + width - 122, posY + height - 22, 19, 19);

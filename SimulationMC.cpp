@@ -130,7 +130,7 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 	llong maxHitsOld_MC;
 	double minHitsOld_flux, minHitsOld_power;
 	double maxHitsOld_flux, maxHitsOld_power;
-	int i, j, s, x, y, nb;
+	size_t i, j, s, x, y;
 #ifdef _DEBUG
 	double t0, t1;
 	t0 = GetTick();
@@ -219,13 +219,13 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 				}
 
 
-				int profileSize = (f->sh.isProfile) ? PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong)) : 0;
+				size_t profileSize = (f->sh.isProfile) ? PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong)) : 0;
 				if (f->sh.isTextured) {
-					int textureElements = f->sh.texHeight*f->sh.texWidth;
+					size_t textureElements = f->sh.texHeight*f->sh.texWidth;
 					llong *shTexture = (llong *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize));
 					for (y = 0; y < f->sh.texHeight; y++) {
 						for (x = 0; x < f->sh.texWidth; x++) {
-							int add = x + y*f->sh.texWidth;
+							size_t add = x + y*f->sh.texWidth;
 							llong val = shTexture[add] + f->hits_MC[add];
 							if (val > gHits->maxHit_MC)	//no cell size check for MC						
 								gHits->maxHit_MC = val;
@@ -238,7 +238,7 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 					double *shTexture2 = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize + textureElements*sizeof(llong)));
 					for (y = 0; y < f->sh.texHeight; y++) {
 						for (x = 0; x < f->sh.texWidth; x++) {
-							int add = x + y*f->sh.texWidth;
+							size_t add = x + y*f->sh.texWidth;
 							double val2 = shTexture2[add] + f->hits_flux[add];
 							if (val2 > gHits->maxHit_flux&& f->largeEnough[add]) {
 								gHits->maxHit_flux = val2;
@@ -251,7 +251,7 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 					double *shTexture3 = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize + textureElements*(sizeof(llong) + sizeof(double))));
 					for (y = 0; y < f->sh.texHeight; y++) {
 						for (x = 0; x < f->sh.texWidth; x++) {
-							int add = x + y*f->sh.texWidth;
+							size_t add = x + y*f->sh.texWidth;
 							double val3 = shTexture3[add] + f->hits_power[add];
 							if (val3 > gHits->maxHit_power&& f->largeEnough[add])
 								gHits->maxHit_power = val3;
@@ -265,7 +265,7 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 					VHIT *shDir = (VHIT *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize + f->textureSize));
 					for (y = 0; y < f->sh.texHeight; y++) {
 						for (x = 0; x < f->sh.texWidth; x++) {
-							int add = x + y*f->sh.texWidth;
+							size_t add = x + y*f->sh.texWidth;
 							shDir[add].dir.x += f->direction[add].dir.x;
 							shDir[add].dir.y += f->direction[add].dir.y;
 							shDir[add].dir.z += f->direction[add].dir.z;
@@ -341,12 +341,12 @@ void PerformTeleport(FACET *iFacet) {
 	else destIndex = iFacet->sh.teleportDest - 1;
 
 	//Look in which superstructure is the destination facet:
-	for (int i = 0; i < sHandle->nbSuper && (!found); i++) {
-		for (int j = 0; j < sHandle->str[i].nbFacet && (!found); j++) {
+	for (size_t i = 0; i < sHandle->nbSuper && (!found); i++) {
+		for (size_t j = 0; j < sHandle->str[i].nbFacet && (!found); j++) {
 			if (destIndex == sHandle->str[i].facets[j]->globalId) {
 				destination = sHandle->str[i].facets[j];
-				sHandle->curStruct = destination->sh.superIdx; //change current superstructure
-				sHandle->teleportedFrom = iFacet->globalId; //memorize where the particle came from
+				sHandle->curStruct = (int)destination->sh.superIdx; //change current superstructure
+				sHandle->teleportedFrom = (int)iFacet->globalId; //memorize where the particle came from
 				found = true;
 			}
 		}
@@ -651,17 +651,17 @@ bool StartFromSource() {
 	}
 
 	//find source point
-	int pointIdGlobal = (int)(rnd()*sHandle->sourceArea);
+	size_t pointIdGlobal = (size_t)(rnd()*(double)sHandle->sourceArea);
 	bool found = false;
-	int regionId;
-	int pointIdLocal;
-	int sum = 0;
+	size_t regionId;
+	size_t pointIdLocal;
+	size_t sum = 0;
 	for (regionId = 0; regionId<sHandle->nbRegion&&!found; regionId++) {
-		if ((pointIdGlobal >= sum) && (pointIdGlobal < (sum + (int)sHandle->regions[regionId].Points.size()))) {
+		if ((pointIdGlobal >= sum) && (pointIdGlobal < (sum + sHandle->regions[regionId].Points.size()))) {
 			pointIdLocal = pointIdGlobal - sum;
 			found = true;
 		}
-		else sum += (int)sHandle->regions[regionId].Points.size();
+		else sum += sHandle->regions[regionId].Points.size();
 	}
 	if (!found) SetErrorSub("No start point found");
 	regionId--;
@@ -677,13 +677,13 @@ bool StartFromSource() {
 		validEnergy = (photon.energy >= sourceRegion->params.energy_low_eV && photon.energy <= sourceRegion->params.energy_hi_eV);
 		if (!validEnergy && photon.energy>0.0) {
 			retries++;
-			pointIdLocal = (int)(rnd()*sourceRegion->Points.size());
+			pointIdLocal = (size_t)(rnd()*(double)sourceRegion->Points.size());
 		}
 	} while (!validEnergy && photon.energy>0.0 && retries < 5);
 
 	if (!validEnergy && photon.energy>0.0) {
 		char tmp[1024];
-		sprintf(tmp, "Region %d point %d: can't generate within energy limits (%geV .. %geV)", regionId + 1, pointIdLocal + 1,
+		sprintf(tmp, "Region %zd point %zd: can't generate within energy limits (%geV .. %geV)", regionId + 1, pointIdLocal + 1,
 			sourceRegion->params.energy_low_eV , sourceRegion->params.energy_hi_eV);
 		SetErrorSub(tmp);
 		return false;
@@ -810,8 +810,6 @@ void PerformBounce_new(FACET *iFacet, const double &inTheta, const double &inPhi
 bool PerformBounce_old(FACET *iFacet, int reflType, double theta, double phi,
 	Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated) {
 
-	double inPhi, inTheta;
-
 	// Relaunch particle
 	if (iFacet->sh.reflectType == REF_DIFFUSE) {
 		//See docs/theta_gen.png for further details on angular distribution generation
@@ -877,18 +875,18 @@ bool VerifiedSpecularReflection(FACET *iFacet, int reflType, double inTheta, dou
 }
 
 void RecordHitOnTexture(FACET *f, double dF, double dP) {
-	int tu = (int)(f->colU * f->sh.texWidthD);
-	int tv = (int)(f->colV * f->sh.texHeightD);
-	int add = tu + tv*f->sh.texWidth;
+	size_t tu = (size_t)(f->colU * f->sh.texWidthD);
+	size_t tv = (size_t)(f->colV * f->sh.texHeightD);
+	size_t add = tu + tv*f->sh.texWidth;
 	f->hits_MC[add]++;
 	f->hits_flux[add] += dF*f->inc[add]; //normalized by area
 	f->hits_power[add] += dP*f->inc[add]; //normalized by area
 }
 
 void RecordDirectionVector(FACET *f) {
-	int tu = (int)(f->colU * f->sh.texWidthD);
-	int tv = (int)(f->colV * f->sh.texHeightD);
-	int add = tu + tv*(f->sh.texWidth);
+	size_t tu = (size_t)(f->colU * f->sh.texWidthD);
+	size_t tv = (size_t)(f->colV * f->sh.texHeightD);
+	size_t add = tu + tv*(f->sh.texWidth);
 
 	f->direction[add].dir.x += sHandle->pDir.x;
 	f->direction[add].dir.y += sHandle->pDir.y;

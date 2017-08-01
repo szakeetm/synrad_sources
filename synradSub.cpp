@@ -40,7 +40,7 @@ static Dataport *dpControl=NULL;
 static Dataport *dpHit=NULL;
 static int       prIdx;
 static int       prState;
-static int       prParam;
+static size_t    prParam;
 static llong     prParam2;
 static DWORD     hostProcessId;
 static char      ctrlDpName[32];
@@ -86,7 +86,7 @@ int GetLocalState() {
   return prState;
 }
 
-// -------------------------------------------------
+
 
 void SetState(int state,const char *status, bool changeState, bool changeStatus) {
 
@@ -101,10 +101,16 @@ void SetState(int state,const char *status, bool changeState, bool changeStatus)
 		}
 		ReleaseDataport(dpControl);
 	}
-
 }
 
-// -------------------------------------------------
+void SetStatus(char *status) {
+	if (AccessDataport(dpControl)) {
+		SHCONTROL *master = (SHCONTROL *)dpControl->buff;
+		strncpy(master->statusStr[prIdx], status, 127);
+		master->statusStr[prIdx][127] = 0;
+		ReleaseDataport(dpControl);
+	}
+}
 
 void SetErrorSub(const char *message) {
 
@@ -141,30 +147,16 @@ void SetReady() {
 
 }
 
-// -------------------------------------------------
-
-void SetStatus(char *message) {
-
-  if( AccessDataport(dpControl) ) {
-    SHCONTROL *master = (SHCONTROL *)dpControl->buff;
-    strcpy(master->statusStr[prIdx],message);
-    ReleaseDataport(dpControl);
-  }
-
-}
-
-// -------------------------------------------------
-
 void Load() {
 
   Dataport *loader;
-  long hSize;
+  size_t hSize;
 
   // Load geometry
   loader = OpenDataport(loadDpName,prParam);
   if( !loader ) {
     char err[512];
-    sprintf(err,"Failed to connect to 'loader' dataport %s (%d Bytes)",loadDpName, prParam);
+    sprintf(err,"Failed to connect to 'loader' dataport %s (%zd Bytes)",loadDpName, prParam);
     SetErrorSub(err);
     return;
   }
@@ -185,20 +177,19 @@ void Load() {
     return;
   }
 
-  printf("Connected to %s (%d bytes)\n",hitsDpName,hSize);
+  printf("Connected to %s (%zd bytes)\n",hitsDpName,hSize);
 
 }
 
 bool UpdateParams() {
 
 	Dataport *loader;
-	long hSize;
 
 	// Load geometry
 	loader = OpenDataport(loadDpName, prParam);
 	if (!loader) {
 		char err[512];
-		sprintf(err, "Failed to connect to 'loader' dataport %s (%d Bytes)", loadDpName, prParam);
+		sprintf(err, "Failed to connect to 'loader' dataport %s (%zd Bytes)", loadDpName, prParam);
 		SetErrorSub(err);
 		return false;
 	}
@@ -252,7 +243,7 @@ int main(int argc,char* argv[])
     switch(prState) {
 
       case COMMAND_LOAD:
-        printf("COMMAND: LOAD (%d,%I64d)\n",prParam,prParam2);
+        printf("COMMAND: LOAD (%zd,%I64d)\n",prParam,prParam2);
         Load();
         if( sHandle->loadOK ) {
           sHandle->desorptionLimit = prParam2; // 0 for endless
@@ -261,14 +252,14 @@ int main(int argc,char* argv[])
         break;
 
 	  case COMMAND_UPDATEPARAMS:
-		  printf("COMMAND: UPDATEPARAMS (%d,%I64d)\n", prParam, prParam2);
+		  printf("COMMAND: UPDATEPARAMS (%zd,%I64d)\n", prParam, prParam2);
 		  if (UpdateParams()) {
 			  SetState(prParam, GetSimuStatus());
 		  }
 		  break;
 
       case COMMAND_START:
-        printf("COMMAND: START (%d,%I64d)\n",prParam,prParam2);
+        printf("COMMAND: START (%zd,%I64d)\n",prParam,prParam2);
         if( sHandle->loadOK ) {
           if( StartSimulation() )
             SetState(PROCESS_RUN,GetSimuStatus());
@@ -281,7 +272,7 @@ int main(int argc,char* argv[])
         break;
 
       case COMMAND_PAUSE:
-        printf("COMMAND: PAUSE (%d,%I64d)\n",prParam,prParam2);
+        printf("COMMAND: PAUSE (%zd,%I64d)\n",prParam,prParam2);
         if( !sHandle->lastUpdateOK ) {
           // Last update not successful, retry with a longer tomeout
 			if (dpHit && (GetLocalState() != PROCESS_ERROR)) UpdateHits(dpHit,prIdx,60000);
@@ -290,18 +281,18 @@ int main(int argc,char* argv[])
         break;
 
       case COMMAND_RESET:
-        printf("COMMAND: RESET (%d,%I64d)\n",prParam,prParam2);
+        printf("COMMAND: RESET (%zd,%I64d)\n",prParam,prParam2);
         ResetSimulation();
         SetReady();
         break;
 
       case COMMAND_EXIT:
-        printf("COMMAND: EXIT (%d,%I64d)\n",prParam,prParam2);
+        printf("COMMAND: EXIT (%zd,%I64d)\n",prParam,prParam2);
         end = true;
         break;
 
       case COMMAND_CLOSE:
-        printf("COMMAND: CLOSE (%d,%I64d)\n",prParam,prParam2);
+        printf("COMMAND: CLOSE (%zd,%I64d)\n",prParam,prParam2);
         ClearSimulation();
         CLOSEDP(dpHit);
         SetReady();

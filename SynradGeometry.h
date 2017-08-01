@@ -63,7 +63,7 @@ public:
 	size_t GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials, 
 		std::vector<std::vector<double>> &psi_distro, std::vector<std::vector<std::vector<double>>> &chi_distros,
 		const std::vector<std::vector<double>>& parallel_polarization);
-	DWORD GetHitsSize();
+	size_t GetHitsSize();
 	void CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *regions, std::vector<Material> *materials,
 		std::vector<std::vector<double>> &psi_distro, const std::vector<std::vector<std::vector<double>>> &chi_distros,
 		const std::vector<std::vector<double>> &parallel_polarization, int generation_mode, bool lowFluxMode, double lowFluxCutoff, bool newReflectionModel);

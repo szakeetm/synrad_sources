@@ -805,7 +805,7 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 	GLWindow::ProcessMessage(src,message);
 }
 void RegionEditor::EnableDisableControls(GLComponent* src) {
-	bool defineByAngle=(startDirDefinitionCombo->GetSelectedIndex()==0);
+	bool defineByAngle=(startDirDefinitionCombo->GetSelectedIndex()==1);
 	theta0text->SetEditable(defineByAngle);
 	alpha0text->SetEditable(defineByAngle);
 	startDirXtext->SetEditable(!defineByAngle);

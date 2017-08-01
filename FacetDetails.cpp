@@ -237,7 +237,7 @@ char *FacetDetails::GetCountStr(Facet *f) {
 
 // -----------------------------------------------------------------
 
-char *FacetDetails::FormatCell(int idx,Facet *f,int mode) {
+char *FacetDetails::FormatCell(size_t idx,Facet *f, size_t mode) {
 
 	Worker *worker=&(mApp->worker);     
 
@@ -255,10 +255,10 @@ char *FacetDetails::FormatCell(int idx,Facet *f,int mode) {
 		sprintf(ret,"%g",f->sh.opacity);
 		break;
 	case 3:
-		sprintf(ret,"%d",f->sh.superIdx);
+		sprintf(ret,"%zd",f->sh.superIdx);
 		break;
 	case 4:
-		sprintf(ret,"%d",f->sh.superDest);
+		sprintf(ret,"%zd",f->sh.superDest);
 		break;
 	case 5:
 		if (f->sh.reflectType == 0) sprintf(ret, "Diffuse");
@@ -275,7 +275,7 @@ char *FacetDetails::FormatCell(int idx,Facet *f,int mode) {
 		sprintf(ret,"%s",ynStr[f->sh.is2sided]);      
 		break;
 	case 9:
-		sprintf(ret,"%d",f->sh.nbIndex);
+		sprintf(ret,"%zd",f->sh.nbIndex);
 		break;
 	case 10:
 		sprintf(ret,"%g",f->sh.area);
@@ -286,7 +286,7 @@ char *FacetDetails::FormatCell(int idx,Facet *f,int mode) {
 		break;
 	case 12:
 		if( f->sh.isTextured ) {
-			sprintf(ret,"%dx%d (%g x %g)",f->sh.texWidth,f->sh.texHeight,f->sh.texWidthD,f->sh.texHeightD);
+			sprintf(ret,"%zdx%zd (%g x %g)",f->sh.texWidth,f->sh.texHeight,f->sh.texWidthD,f->sh.texHeightD);
 		} else {
 			sprintf(ret,"None");
 		}
@@ -333,8 +333,8 @@ char *FacetDetails::FormatCell(int idx,Facet *f,int mode) {
 void FacetDetails::UpdateTable() {
 
 	Geometry *s = worker->GetGeometry();
-	int nbFacet = s->GetNbFacet();
-	int nbS = s->GetNbSelectedFacets();
+	size_t nbFacet = s->GetNbFacet();
+	size_t nbS = s->GetNbSelectedFacets();
 	static char ret[256];
 	strcpy(ret,"");
 
@@ -371,10 +371,10 @@ void FacetDetails::UpdateTable() {
 	facetListD->SetColumnAligns(tmpAlign);
 
 	nbS = 0;
-	for(int i=0;i<nbFacet;i++) {
+	for(size_t i=0;i<nbFacet;i++) {
 		Facet *f = s->GetFacet(i);
 		if(f->selected) {
-			for(int j=0;j<nbCol;j++)
+			for(size_t j=0;j<nbCol;j++)
 				facetListD->SetValueAt(j,nbS,FormatCell(i,f,shown[j]));
 
 			/*
@@ -416,7 +416,7 @@ void FacetDetails::Update() {
 	if(!IsVisible()) return;
 
 	Geometry *s = worker->GetGeometry();
-	int nbS = s->GetNbSelectedFacets();
+	size_t nbS = s->GetNbSelectedFacets();
 
 	if(nbS==0) {
 		facetListD->Clear();

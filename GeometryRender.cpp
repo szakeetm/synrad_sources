@@ -59,8 +59,8 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, b
 
 		int profSize = (f->sh.isProfile) ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0;
 		//int spectrumSize = (f->sh.hasSpectrum)?(SPECTRUM_SIZE*2*sizeof(double)):0;
-		int nbElem = f->sh.texWidth*f->sh.texHeight;
-		int tSize = nbElem * sizeof(double);
+		size_t nbElem = f->sh.texWidth*f->sh.texHeight;
+		size_t tSize = nbElem * sizeof(double);
 
 		if (renderRegularTexture && f->sh.isTextured) {
 
@@ -69,7 +69,7 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, b
 			if (f->sh.texHeight > max_t || f->sh.texWidth > max_t) {
 				if (!f->textureError) {
 					char tmp[1024];
-					sprintf(tmp, "Facet #%d has a texture of %dx%d cells.\n"
+					sprintf(tmp, "Facet #%d has a texture of %zdx%zd cells.\n"
 						"Your video card only supports texture dimensions (width or height) up to %d cells.\n"
 						"Texture rendering has been disabled on this facet, but you can still read texture values\n"
 						"using the Texture Plotter window. Consider using a smaller mesh resolution, or split the facet\n"
@@ -101,7 +101,7 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, b
 		}
 		if (renderDirectionTexture && f->sh.countDirection && f->dirCache) {
 			
-			int dSize = nbElem * sizeof(VHIT);
+			size_t dSize = nbElem * sizeof(VHIT);
 			
 			double iDesorbed = 0.0;
 			if (shGHit->total.nbDesorbed)

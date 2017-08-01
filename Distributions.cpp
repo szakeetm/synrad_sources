@@ -405,7 +405,7 @@ std::tuple<double,double> find_psi_and_polarization(const double& lambda_ratios,
 
 	//Binary search
 	int imin = 0;
-	int size = psi_distro[0].size();
+	int size = (int)psi_distro[0].size();
 	int imax = size;
 	double interpolated_CDF_lower, interpolated_CDF_higher;
 	// continue searching while [imin,imax] is not empty
@@ -605,7 +605,7 @@ double find_chi(const double& psi, const double& gamma, const std::vector<std::v
 
 	//Binary search
 	int imin = 0;
-	int size = chi_distro.size();
+	int size = (int)chi_distro.size();
 	int imax = size;
 	double interpolated_CDF_lower, interpolated_CDF_higher;
 	// continue searching while [imin,imax] is not empty

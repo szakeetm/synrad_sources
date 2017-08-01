@@ -31,7 +31,7 @@ GNU General Public License for more details.
 #include "Facet.h"
 #include "SynradGeometry.h"
 #include "GLApp\MathTools.h"
- //for Remainder
+//for Remainder
 #include "direct.h"
 #include <vector>
 #include <string>
@@ -63,7 +63,7 @@ std::string appName = "SynRad+ development version (Compiled " __DATE__ " " __TI
 std::string appName = "Synrad+ 1.4.13 (" __DATE__ ")";
 #endif
 
-std::vector<string> formulaPrefixes = { "A","D","H",","};
+std::vector<string> formulaPrefixes = { "A","D","H","," };
 std::string formulaSyntax =
 R"(MC Variables: An (Absorption on facet n), Hn (Hit on facet n)
 Fn (Flux absorbed on facet n), Pn (Power absorbed on facet n)
@@ -138,6 +138,7 @@ SynRad *mApp;
 
 INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
 {
+
 	SynRad *mApp = new SynRad();
 
 	if (!mApp->Create(1024, 800, false)) {
@@ -161,6 +162,7 @@ INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
 		mApp->CrashHandler(&e);
 	}
 	delete mApp;
+
 	return 0;
 }
 
@@ -175,7 +177,7 @@ SynRad::SynRad()
 	mApp = this; //to refer to the app as extern variable
 
 	nbRecentPAR = 0;
-	
+
 	//Different Synrad implementation:
 	facetMesh = NULL;
 	facetDetails = NULL;
@@ -185,14 +187,14 @@ SynRad::SynRad()
 	globalSettings = NULL;
 	profilePlotter = NULL;
 	texturePlotter = NULL;
-	
+
 	//Synrad only:
 	regionInfo = NULL;
 	exportDesorption = NULL;
 	trajectoryDetails = NULL;
-	spectrumPlotter = NULL;	
+	spectrumPlotter = NULL;
 	regionEditor = NULL;
-	
+
 	materialPaths = std::vector<std::string>();
 }
 
@@ -205,7 +207,7 @@ int SynRad::OneTimeSceneInit()
 {
 
 	OneTimeSceneInit_shared();
-	
+
 	menu->GetSubMenu("File")->Add("Export DES file (deprecated)", MENU_FILE_EXPORT_DESORP);
 
 	menu->GetSubMenu("File")->Add("Export selected textures");
@@ -234,7 +236,7 @@ int SynRad::OneTimeSceneInit()
 	menu->GetSubMenu("Regions")->Add("Load recent", MENU_REGIONS_LOADRECENT); //Will add recent files after loading config
 	menu->GetSubMenu("Regions")->Add("Remove all", MENU_REGIONS_CLEARALL);
 	menu->GetSubMenu("Regions")->Add(NULL); // Separator
-	
+
 	PARloadToMenu = menu->GetSubMenu("Regions")->Add("Load to");
 	PARremoveMenu = menu->GetSubMenu("Regions")->Add("Remove");
 	menu->GetSubMenu("Regions")->Add(NULL); // Separator
@@ -253,7 +255,7 @@ int SynRad::OneTimeSceneInit()
 
 	showMoreBtn = new GLButton(0, "<< View");
 	togglePanel->Add(showMoreBtn);
-	
+
 	/*
 	shortcutPanel = new GLTitledPanel("Shortcuts");
 	shortcutPanel->SetClosable(true);
@@ -272,7 +274,7 @@ int SynRad::OneTimeSceneInit()
 
 	modeLabel = new GLLabel("Mode");
 	simuPanel->Add(modeLabel);
-	
+
 	modeCombo = new GLCombo(0);
 	modeCombo->SetEditable(true);
 	modeCombo->SetSize(2);
@@ -283,7 +285,7 @@ int SynRad::OneTimeSceneInit()
 
 	/*globalSettingsBtn = new GLButton(0, "<< Sim");
 	simuPanel->Add(globalSettingsBtn);*/
-	
+
 	doseLabel = new GLLabel("Dose");
 	simuPanel->Add(doseLabel);
 
@@ -381,7 +383,7 @@ int SynRad::OneTimeSceneInit()
 	facetList->Sortable = true;
 	Add(facetList);
 
-	
+
 
 	ClearFacetParams();
 	LoadConfig();
@@ -410,7 +412,7 @@ int SynRad::OneTimeSceneInit()
 		sprintf(errMsg, "Failed to load material reflection file:\n%s\n%s", materialPaths[index].c_str(), e.GetMsg());
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
 	}
-	
+
 	FileReader *f;
 	try {
 		worker.chi_distros.resize(3);
@@ -445,7 +447,7 @@ int SynRad::OneTimeSceneInit()
 	catch (Error &e) {
 		SAFE_DELETE(f);
 		char errMsg[512];
-		sprintf(errMsg, "Failed to load angular distribution file.\nIt should be in the param\\Distributions directory.\n%s",e.GetMsg());
+		sprintf(errMsg, "Failed to load angular distribution file.\nIt should be in the param\\Distributions directory.\n%s", e.GetMsg());
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
 	}
 
@@ -463,7 +465,7 @@ int SynRad::OneTimeSceneInit()
 		//win_sparkle_init();
 		//win_sparkle_check_update_with_ui();
 		if (FileUtils::Exist("synrad_updater.exe"))
-			StartProc("synrad_updater.exe",STARTPROC_BACKGROUND);
+			StartProc("synrad_updater.exe", STARTPROC_BACKGROUND);
 		else GLMessageBox::Display("synrad_updater.exe not found. You will not receive updates to Synrad."
 			"\n(You can disable checking for updates in Tools/Global Settings)", "Updater module missing.", GLDLG_OK, GLDLG_ICONINFO);
 	}
@@ -645,7 +647,7 @@ void SynRad::ApplyFacetParams() {
 	if (!AskToReset()) return;
 	changedSinceSave = true;
 	Geometry *geom = worker.GetGeometry();
-	int nbFacet = geom->GetNbFacet();
+	size_t nbFacet = geom->GetNbFacet();
 
 	//Reflection type and sticking
 	double sticking;
@@ -776,7 +778,7 @@ void SynRad::ApplyFacetParams() {
 	if (sscanf(facetSILabel->GetText(), "%d", &superStruct) > 0 && superStruct > 0 && superStruct <= geom->GetNbStructure()) doSuperStruct = true;
 	else {
 		if (strcmp(facetSILabel->GetText(), "...") == 0) doSuperStruct = false;
-		else{
+		else {
 			GLMessageBox::Display("Invalid superstructre number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			UpdateFacetParams();
 			return;
@@ -889,7 +891,7 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 
 	// Update params
 	Geometry *geom = worker.GetGeometry();
-	int nbSel = geom->GetNbSelectedFacets();
+	size_t nbSel = geom->GetNbSelectedFacets();
 	if (nbSel > 0) {
 
 		Facet *f0;
@@ -927,7 +929,7 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 				rmsRoughnessE = rmsRoughnessE && (abs(f0->sh.rmsRoughness - f->sh.rmsRoughness) < 1e-15);
 			}
 			else { //Roughness ratio compare
-				rmsRoughnessE = rmsRoughnessE && (abs(f0->sh.rmsRoughness/f0->sh.autoCorrLength - f->sh.rmsRoughness/f->sh.autoCorrLength) < 1e-10);
+				rmsRoughnessE = rmsRoughnessE && (abs(f0->sh.rmsRoughness / f0->sh.autoCorrLength - f->sh.rmsRoughness / f->sh.autoCorrLength) < 1e-10);
 			}
 			autoCorrLengthE = autoCorrLengthE && (abs(f0->sh.autoCorrLength - f->sh.autoCorrLength) < 1e-15);
 			doScatteringE = doScatteringE && (f0->sh.doScattering == f->sh.doScattering);
@@ -991,7 +993,7 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 					facetRMSroughness->SetText(f0->sh.rmsRoughness*1E9);
 				}
 				else { //Roughness ratio
-					facetRMSroughness->SetText(f0->sh.rmsRoughness/f0->sh.autoCorrLength);
+					facetRMSroughness->SetText(f0->sh.rmsRoughness / f0->sh.autoCorrLength);
 				}
 			}
 			else facetRMSroughness->SetText("..."); //m->nm
@@ -1010,7 +1012,7 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 				facetSuperDest->SetText("no");
 			}
 			else {
-				sprintf(tmp, "%d", f0->sh.superDest);
+				sprintf(tmp, "%zd", f0->sh.superDest);
 				facetSuperDest->SetText(tmp);
 			}
 		}
@@ -1018,7 +1020,7 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 			facetSuperDest->SetText("...");
 		}
 		if (superIdxE) {
-			sprintf(tmp, "%d", f0->sh.superIdx + 1);
+			sprintf(tmp, "%zd", f0->sh.superIdx + 1);
 			facetSILabel->SetText(tmp);
 		}
 		else {
@@ -1072,146 +1074,146 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 bool SynRad::EvaluateVariable(VLIST *v) {
 	bool ok = true;
 	Geometry* geom = worker.GetGeometry();
-	int nbFacet = geom->GetNbFacet();
-	int idx;
+	size_t nbFacet = geom->GetNbFacet();
+	size_t idx;
 
-			if ((idx = GetVariable(v->name, "A")) > 0) {
-				ok = (idx <= nbFacet);
-				if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.nbAbsorbed;
+	if ((idx = GetVariable(v->name, "A")) > 0) {
+		ok = (idx <= nbFacet);
+		if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.nbAbsorbed;
+	}
+	else if ((idx = GetVariable(v->name, "H")) > 0) {
+		ok = (idx <= nbFacet);
+		if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.nbHit;
+	}
+	else if ((idx = GetVariable(v->name, "F")) > 0) {
+		ok = (idx <= nbFacet);
+		if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.fluxAbs / worker.no_scans;
+	}
+	else if ((idx = GetVariable(v->name, "P")) > 0) {
+		ok = (idx <= nbFacet);
+		if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.powerAbs / worker.no_scans;
+	}
+	else if ((idx = GetVariable(v->name, "AR")) > 0) {
+		ok = (idx <= nbFacet);
+		if (ok) v->value = geom->GetFacet(idx - 1)->sh.area;
+	}
+	else if (_stricmp(v->name, "SCANS") == 0) {
+		v->value = worker.no_scans;
+	}
+	else if (_stricmp(v->name, "SUMDES") == 0) {
+		v->value = (double)worker.nbDesorption;
+	}
+	else if (_stricmp(v->name, "SUMABS") == 0) {
+		v->value = (double)worker.nbAbsorption;
+	}
+	else if (_stricmp(v->name, "SUMHIT") == 0) {
+		v->value = (double)worker.nbHit;
+	}
+	else if (_stricmp(v->name, "SUMFLUX") == 0) {
+		v->value = worker.totalFlux / worker.no_scans;
+	}
+	else if (_stricmp(v->name, "SUMPOWER") == 0) {
+		v->value = worker.totalPower / worker.no_scans;
+	}
+	else if (_stricmp(v->name, "MPP") == 0) {
+		v->value = worker.distTraveledTotal / (double)worker.nbDesorption;
+	}
+	else if (_stricmp(v->name, "MFP") == 0) {
+		v->value = worker.distTraveledTotal / (double)worker.nbHit;
+	}
+	else if (_stricmp(v->name, "ABSAR") == 0) {
+		double sumArea = 0.0;
+		for (int i = 0; i < geom->GetNbFacet(); i++) {
+			Facet *f = geom->GetFacet(i);
+			if (f->sh.sticking > 0.0) sumArea += f->sh.area*f->sh.opacity*(f->sh.is2sided ? 2.0 : 1.0);
+		}
+		v->value = sumArea;
+	}
+	else if (_stricmp(v->name, "KB") == 0) {
+		v->value = 1.3806504e-23;
+	}
+	else if (_stricmp(v->name, "R") == 0) {
+		v->value = 8.314472;
+	}
+	else if (_stricmp(v->name, "Na") == 0) {
+		v->value = 6.02214179e23;
+	}
+	else if ((beginsWith(v->name, "SUM(")) /*|| (beginsWith(v->name, "AVG("))*/ && endsWith(v->name, ")")) {
+		//bool avgMode = beginsWith(v->name, "AVG("); //else SUM mode
+		std::string inside = v->name; inside.erase(0, 4); inside.erase(inside.size() - 1, 1);
+		std::vector<std::string> tokens = SplitString(inside, ',');
+		if (!Contains({ 2,3 }, tokens.size()))
+			return false;
+		/*if (avgMode) {
+			if (!Contains({ "P","DEN","Z" }, tokens[0]))
+				return false;
+		}*/
+		else {
+			if (!Contains({ "H","A","F","P","AR" }, tokens[0]))
+				return false;
+		}
+		std::vector<size_t> facetsToSum;
+		if (tokens.size() == 3) { // Like SUM(H,3,6) = H3 + H4 + H5 + H6
+			size_t startId, endId, pos;
+			try {
+				startId = std::stol(tokens[1], &pos); if (pos != tokens[1].size() || startId > geom->GetNbFacet() || startId == 0) return false;
+				endId = std::stol(tokens[2], &pos); if (pos != tokens[2].size() || endId > geom->GetNbFacet() || endId == 0) return false;
 			}
-			else if ((idx = GetVariable(v->name, "H")) > 0) {
-				ok = (idx <= nbFacet);
-				if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.nbHit;
+			catch (...) {
+				return false;
 			}
-			else if ((idx = GetVariable(v->name, "F")) > 0) {
-				ok = (idx <= nbFacet);
-				if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.fluxAbs / worker.no_scans;
+			if (!(startId < endId)) return false;
+			facetsToSum = std::vector<size_t>(endId - startId + 1);
+			std::iota(facetsToSum.begin(), facetsToSum.end(), startId - 1);
+		}
+		else { //Selection group
+			if (!beginsWith(tokens[1], "S")) return false;
+			std::string selIdString = tokens[1]; selIdString.erase(0, 1);
+			if (selIdString == "EL") { //Current selections
+				facetsToSum = geom->GetSelectedFacets();
 			}
-			else if ((idx = GetVariable(v->name, "P")) > 0) {
-				ok = (idx <= nbFacet);
-				if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.powerAbs / worker.no_scans;
-			}
-			else if ((idx = GetVariable(v->name, "AR")) > 0) {
-				ok = (idx <= nbFacet);
-				if (ok) v->value = geom->GetFacet(idx - 1)->sh.area;
-			}
-			else if (_stricmp(v->name, "SCANS") == 0) {
-				v->value = worker.no_scans;
-			}
-			else if (_stricmp(v->name, "SUMDES") == 0) {
-				v->value = (double)worker.nbDesorption;
-			}
-			else if (_stricmp(v->name, "SUMABS") == 0) {
-				v->value = (double)worker.nbAbsorption;
-			}
-			else if (_stricmp(v->name, "SUMHIT") == 0) {
-				v->value = (double)worker.nbHit;
-			}
-			else if (_stricmp(v->name, "SUMFLUX") == 0) {
-				v->value = worker.totalFlux / worker.no_scans;
-			}
-			else if (_stricmp(v->name, "SUMPOWER") == 0) {
-				v->value = worker.totalPower / worker.no_scans;
-			}
-			else if (_stricmp(v->name, "MPP") == 0) {
-				v->value = worker.distTraveledTotal / (double)worker.nbDesorption;
-			}
-			else if (_stricmp(v->name, "MFP") == 0) {
-				v->value = worker.distTraveledTotal / (double)worker.nbHit;
-			}
-			else if (_stricmp(v->name, "ABSAR") == 0) {
-				double sumArea = 0.0;
-				for (int i = 0; i < geom->GetNbFacet(); i++) {
-					Facet *f = geom->GetFacet(i);
-					if (f->sh.sticking > 0.0) sumArea += f->sh.area*f->sh.opacity*(f->sh.is2sided ? 2.0 : 1.0);
+			else {
+				size_t selGroupId, pos;
+				try {
+					selGroupId = std::stol(selIdString, &pos); if (pos != selIdString.size() || selGroupId > selections.size() || selGroupId == 0) return false;
 				}
-				v->value = sumArea;
-			}
-			else if (_stricmp(v->name, "KB") == 0) {
-				v->value = 1.3806504e-23;
-			}
-			else if (_stricmp(v->name, "R") == 0) {
-				v->value = 8.314472;
-			}
-			else if (_stricmp(v->name, "Na") == 0) {
-				v->value = 6.02214179e23;
-			}
-			else if ((beginsWith(v->name, "SUM(")) /*|| (beginsWith(v->name, "AVG("))*/ && endsWith(v->name, ")")) {
-				//bool avgMode = beginsWith(v->name, "AVG("); //else SUM mode
-				std::string inside = v->name; inside.erase(0, 4); inside.erase(inside.size() - 1, 1);
-				std::vector<std::string> tokens = SplitString(inside, ',');
-				if (!Contains({ 2,3 }, tokens.size()))
+				catch (...) {
 					return false;
-				/*if (avgMode) {
-					if (!Contains({ "P","DEN","Z" }, tokens[0]))
-						return false;
-				}*/
-				else {
-					if (!Contains({ "H","A","F","P","AR" }, tokens[0]))
-						return false;
 				}
-				std::vector<size_t> facetsToSum;
-				if (tokens.size() == 3) { // Like SUM(H,3,6) = H3 + H4 + H5 + H6
-					size_t startId, endId, pos;
-					try {
-						startId = std::stol(tokens[1], &pos); if (pos != tokens[1].size() || startId > geom->GetNbFacet() || startId == 0) return false;
-						endId = std::stol(tokens[2], &pos); if (pos != tokens[2].size() || endId > geom->GetNbFacet() || endId == 0) return false;
-					}
-					catch (...) {
-						return false;
-					}
-					if (!(startId < endId)) return false;
-					facetsToSum = std::vector<size_t>(endId - startId + 1);
-					std::iota(facetsToSum.begin(), facetsToSum.end(), startId - 1);
-				}
-				else { //Selection group
-					if (!beginsWith(tokens[1], "S")) return false;
-					std::string selIdString = tokens[1]; selIdString.erase(0, 1);
-					if (selIdString == "EL") { //Current selections
-						facetsToSum = geom->GetSelectedFacets();
-					}
-					else {
-						size_t selGroupId, pos;
-						try {
-							selGroupId = std::stol(selIdString, &pos); if (pos != selIdString.size() || selGroupId > selections.size() || selGroupId == 0) return false;
-						}
-						catch (...) {
-							return false;
-						}
-						facetsToSum = selections[selGroupId - 1].selection;
-					}
-				}
-				llong sumLL = 0;
-				double sumD = 0.0;
-				double sumArea = 0.0; //We average by area
-				for (auto sel : facetsToSum) {
-					if (tokens[0] == "H") {
-						sumLL += geom->GetFacet(sel)->counterCache.nbHit;
-					}
-					else if (tokens[0] == "D") {
-						sumLL += geom->GetFacet(sel)->counterCache.nbDesorbed;
-					}
-					else if (tokens[0] == "A") {
-						sumLL += geom->GetFacet(sel)->counterCache.nbAbsorbed;
-					}
-					else if (tokens[0] == "AR") {
-						sumArea += geom->GetFacet(sel)->GetArea();
-					}
-					else if (tokens[0] == "F") {
-						sumD += geom->GetFacet(sel)->counterCache.fluxAbs /*/ worker.no_scans*/;
-					}
-					else if (tokens[0] == "P") {
-						sumD += geom->GetFacet(sel)->counterCache.powerAbs/* / worker.no_scans*/;
-					}
-					else return false;
-				}
-				//if (avgMode) v->value = sumD * worker.GetMoleculesPerTP(worker.displayedMoment)*1E4 / sumArea;
-				/*else*/ if (tokens[0] == "AR") v->value = sumArea;
-				else if (Contains({ "F","P" }, tokens[0])) v->value = sumD / worker.no_scans;
-				else v->value = (double)sumLL;
+				facetsToSum = selections[selGroupId - 1].selection;
 			}
-			else ok = false;
-			return ok;
+		}
+		llong sumLL = 0;
+		double sumD = 0.0;
+		double sumArea = 0.0; //We average by area
+		for (auto sel : facetsToSum) {
+			if (tokens[0] == "H") {
+				sumLL += geom->GetFacet(sel)->counterCache.nbHit;
+			}
+			else if (tokens[0] == "D") {
+				sumLL += geom->GetFacet(sel)->counterCache.nbDesorbed;
+			}
+			else if (tokens[0] == "A") {
+				sumLL += geom->GetFacet(sel)->counterCache.nbAbsorbed;
+			}
+			else if (tokens[0] == "AR") {
+				sumArea += geom->GetFacet(sel)->GetArea();
+			}
+			else if (tokens[0] == "F") {
+				sumD += geom->GetFacet(sel)->counterCache.fluxAbs /*/ worker.no_scans*/;
+			}
+			else if (tokens[0] == "P") {
+				sumD += geom->GetFacet(sel)->counterCache.powerAbs/* / worker.no_scans*/;
+			}
+			else return false;
+		}
+		//if (avgMode) v->value = sumD * worker.GetMoleculesPerTP(worker.displayedMoment)*1E4 / sumArea;
+		/*else*/ if (tokens[0] == "AR") v->value = sumArea;
+		else if (Contains({ "F","P" }, tokens[0])) v->value = sumD / worker.no_scans;
+		else v->value = (double)sumLL;
+	}
+	else ok = false;
+	return ok;
 }
 
 void SynRad::UpdatePlotters()
@@ -1235,7 +1237,7 @@ int SynRad::FrameMove()
 	Interface::FrameMove(); //might reset lastupdate
 	char tmp[256];
 	if (globalSettings) globalSettings->SMPUpdate();
-	
+
 
 	if ((m_fTime - worker.startTime <= 2.0f) && worker.running) {
 		hitNumber->SetText("Starting...");
@@ -1266,7 +1268,7 @@ void SynRad::UpdateFacetHits(bool all) {
 	char tmp[256];
 	Geometry *geom = worker.GetGeometry();
 
-	try{
+	try {
 		// Facet list
 		if (geom->IsLoaded()) {
 
@@ -1275,7 +1277,7 @@ void SynRad::UpdateFacetHits(bool all) {
 			if (all)
 			{
 				sR = 0;
-				eR = facetList->GetNbRow() - 1;
+				eR = (int)facetList->GetNbRow() - 1;
 			}
 			else
 			{
@@ -1325,7 +1327,7 @@ void SynRad::UpdateFacetHits(bool all) {
 int SynRad::RestoreDeviceObjects()
 {
 	RestoreDeviceObjects_shared();
-	
+
 	//Different SynRad implementations
 	RVALIDATE_DLG(facetMesh);
 	RVALIDATE_DLG(facetDetails);
@@ -1335,7 +1337,7 @@ int SynRad::RestoreDeviceObjects()
 	RVALIDATE_DLG(globalSettings);
 	RVALIDATE_DLG(profilePlotter);
 	RVALIDATE_DLG(texturePlotter);
-	
+
 	//Synrad only
 	RVALIDATE_DLG(regionInfo);
 	RVALIDATE_DLG(exportDesorption);
@@ -1353,7 +1355,7 @@ int SynRad::RestoreDeviceObjects()
 int SynRad::InvalidateDeviceObjects()
 {
 	InvalidateDeviceObjects_shared();
-	
+
 	//Different SynRad implementations
 	IVALIDATE_DLG(facetMesh);
 	IVALIDATE_DLG(facetDetails);
@@ -1363,7 +1365,7 @@ int SynRad::InvalidateDeviceObjects()
 	IVALIDATE_DLG(globalSettings);
 	IVALIDATE_DLG(profilePlotter);
 	IVALIDATE_DLG(texturePlotter);
-	
+
 	//Synrad only
 	IVALIDATE_DLG(regionInfo);
 	IVALIDATE_DLG(exportDesorption);
@@ -1381,7 +1383,7 @@ void SynRad::SaveFileAs() {
 	GLProgress *progressDlg2 = new GLProgress("Saving file...", "Please wait");
 	progressDlg2->SetProgress(0.0);
 	progressDlg2->SetVisible(true);
-	//GLWindowManager::Repaint();  
+	//GLWindowManager::Repaint();
 	if (fn) {
 		try {
 			worker.SaveGeometry(fn->fullName, progressDlg2);
@@ -1439,7 +1441,7 @@ void SynRad::ExportTextures(int grouping, int mode) {
 */
 
 void SynRad::SaveFile() {
-	if (strlen(worker.fullFileName) > 0){
+	if (strlen(worker.fullFileName) > 0) {
 
 		GLProgress *progressDlg2 = new GLProgress("Saving...", "Please wait");
 		progressDlg2->SetProgress(0.5);
@@ -1663,7 +1665,7 @@ void SynRad::StartStopSimulation() {
 void SynRad::ProcessMessage(GLComponent *src, int message)
 {
 	if (ProcessMessage_shared(src, message)) return; //Already processed by common interface
-	
+
 	Geometry *geom = worker.GetGeometry();
 
 	switch (message) {
@@ -1876,7 +1878,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 				worker.regions[i].params.showPhotons = true;
 			worker.ChangeSimuParams();
 			for (size_t i = 0; i < worker.regions.size(); i++)
-				ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS+i, worker.regions[i].params.showPhotons);
+				ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS + i, worker.regions[i].params.showPhotons);
 			break;
 
 		case MENU_REGIONS_SHOWNONE:
@@ -1884,11 +1886,11 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 				worker.regions[i].params.showPhotons = false;
 			worker.ChangeSimuParams();
 			for (size_t i = 0; i < worker.regions.size(); i++)
-				ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS+i, worker.regions[i].params.showPhotons);
+				ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS + i, worker.regions[i].params.showPhotons);
 			break;
 		}
 
-		
+
 		// Load recent PAR menu
 		if (src->GetId() >= MENU_REGIONS_LOADRECENT && src->GetId() < MENU_REGIONS_LOADRECENT + nbRecentPAR) {
 			if (AskToReset()) {
@@ -1896,9 +1898,9 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 				LoadParam(recentPARs[src->GetId() - MENU_REGIONS_LOADRECENT]);
 			}
 		}
-		
+
 		// Load PAR to... menu
-		else if (src->GetId() >= MENU_REGIONS_LOADTO && src->GetId() < MENU_REGIONS_LOADTO + Min((int)worker.regions.size(),19)) {
+		else if (src->GetId() >= MENU_REGIONS_LOADTO && src->GetId() < MENU_REGIONS_LOADTO + Min((int)worker.regions.size(), 19)) {
 			if (AskToReset()) {
 				if (worker.running) worker.Stop_Public();
 				LoadParam(NULL, src->GetId() - MENU_REGIONS_LOADTO);
@@ -1915,9 +1917,9 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		//View hits menu
 		else if (src->GetId() >= MENU_REGIONS_SHOWHITS && src->GetId() < MENU_REGIONS_SHOWHITS + Min((int)worker.regions.size(), 19)) {
 			size_t index = src->GetId() - MENU_REGIONS_SHOWHITS;
-			worker.regions[index].params.showPhotons = !ShowHitsMenu->GetCheck(MENU_REGIONS_SHOWHITS+index);
+			worker.regions[index].params.showPhotons = !ShowHitsMenu->GetCheck(MENU_REGIONS_SHOWHITS + index);
 			worker.ChangeSimuParams();
-			ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS+index, worker.regions[index].params.showPhotons);
+			ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS + index, worker.regions[index].params.showPhotons);
 		}
 
 		//TEXT --------------------------------------------------------------------
@@ -2005,7 +2007,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			StartStopSimulation();
 			resetSimu->SetEnabled(!worker.running);
 		}
-		
+
 		else if (src == facetApplyBtn) {
 			changedSinceSave = true;
 			ApplyFacetParams();
@@ -2030,7 +2032,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			viewer3DSettings->Reposition();
 			viewer3DSettings->Refresh(geom, viewer[curViewer]);
 		}
-		
+
 		/*else {
 			ProcessFormulaButtons(src);
 		}*/
@@ -2102,7 +2104,7 @@ void SynRad::RebuildPARMenus() {
 	PARloadToMenu->Clear();
 	PARremoveMenu->Clear();
 	ShowHitsMenu->Clear(); ShowHitsMenu->Add("Show All", MENU_REGIONS_SHOWALL); ShowHitsMenu->Add("Show None", MENU_REGIONS_SHOWNONE); ShowHitsMenu->Add(NULL);
-	for (int i = 0; i < Min((int)worker.regions.size(),19); i++){
+	for (int i = 0; i < Min((int)worker.regions.size(), 19); i++) {
 		std::ostringstream tmp;
 		tmp << "Region " << (i + 1);
 		if (worker.regions[i].fileName.length() > 0) {
@@ -2111,7 +2113,7 @@ void SynRad::RebuildPARMenus() {
 		PARloadToMenu->Add(tmp.str().c_str(), MENU_REGIONS_LOADTO + i);
 		PARremoveMenu->Add(tmp.str().c_str(), MENU_REGIONS_REMOVE + i);
 		ShowHitsMenu->Add(tmp.str().c_str(), MENU_REGIONS_SHOWHITS + i);
-		ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS+i,worker.regions[i].params.showPhotons);
+		ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS + i, worker.regions[i].params.showPhotons);
 	}
 }
 
@@ -2276,7 +2278,7 @@ void SynRad::LoadConfig() {
 		if (nbProc <= 0) nbProc = 1;
 		f->ReadKeyword("recents"); f->ReadKeyword(":"); f->ReadKeyword("{");
 		w = f->ReadString();
-		while (strcmp(w, "}") != 0 && nbRecent < MAX_RECENT)  {
+		while (strcmp(w, "}") != 0 && nbRecent < MAX_RECENT) {
 			recents[nbRecent] = _strdup(w);
 			nbRecent++;
 			w = f->ReadString();
@@ -2284,7 +2286,7 @@ void SynRad::LoadConfig() {
 
 		f->ReadKeyword("recentPARs"); f->ReadKeyword(":"); f->ReadKeyword("{");
 		w = f->ReadString();
-		while (strcmp(w, "}") != 0 && nbRecentPAR < MAX_RECENT)  {
+		while (strcmp(w, "}") != 0 && nbRecentPAR < MAX_RECENT) {
 			recentPARs[nbRecentPAR] = _strdup(w);
 			nbRecentPAR++;
 			w = f->ReadString();
@@ -2327,6 +2329,7 @@ void SynRad::LoadConfig() {
 		f->ReadKeyword("newReflectionModel"); f->ReadKeyword(":");
 		worker.newReflectionModel = f->ReadInt();
 		PlaceScatteringControls(worker.newReflectionModel);
+		f->ReadKeyword("hideLot"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
 			viewer[i]->hideLot = f->ReadInt();
 	}
@@ -2433,7 +2436,7 @@ void SynRad::SaveConfig(bool increaseSessionCount) {
 		f->Write("lowFluxCutoff:"); f->Write(worker.lowFluxCutoff, "\n");
 		f->Write("textureLogScale:"); f->Write(geom->texLogScale, "\n");
 		f->Write("newReflectionModel:"); f->Write(worker.newReflectionModel, "\n");
-		
+
 		WRITEI("hideLot", hideLot);
 	}
 	catch (Error &err) {
@@ -2519,7 +2522,7 @@ void SynRad::LoadParam(char *fName, int position) {
 	RebuildPARMenus();
 }
 
-void SynRad::ClearRegions(){
+void SynRad::ClearRegions() {
 	if (!AskToReset()) return;
 	worker.ClearRegions();
 	changedSinceSave = true;
@@ -2532,7 +2535,7 @@ void SynRad::ClearRegions(){
 	RebuildPARMenus();
 }
 
-void SynRad::RemoveRegion(int index){
+void SynRad::RemoveRegion(int index) {
 	if (!AskToReset()) return;
 	if (regionEditor != NULL && (index <= regionEditor->GetRegionId())) { //Editing a region that changes
 		regionEditor->SetVisible(false);
@@ -2543,10 +2546,10 @@ void SynRad::RemoveRegion(int index){
 	worker.Reload();
 	if (regionInfo) regionInfo->Update();
 	RebuildPARMenus();
-	
+
 }
 
-void SynRad::NewRegion(){
+void SynRad::NewRegion() {
 	if (!worker.GetGeometry()->IsLoaded()) {
 		GLMessageBox::Display("You have to load a geometry before adding regions.", "Add magnetic region", GLDLG_OK, GLDLG_ICONERROR);
 		return;
@@ -2554,7 +2557,7 @@ void SynRad::NewRegion(){
 	if (worker.running) worker.Stop_Public();
 	FILENAME *fn = GLFileBox::SaveFile(NULL, NULL, "Save Region", "param files\0*.param\0All files\0*.*\0", 2);
 	if (!fn || !fn->fullName) return;
-	if (!(FileUtils::GetExtension(fn->fullName)=="param"))
+	if (!(FileUtils::GetExtension(fn->fullName) == "param"))
 		sprintf(fn->fullName, "%s.param", fn->fullName); //append .param extension
 	try {
 		Region_full newreg;
@@ -2602,7 +2605,7 @@ ret = 1;
 return ret;
 }*/
 
-void SynRad::UpdateRecentPARMenu(){
+void SynRad::UpdateRecentPARMenu() {
 	// Update menu
 	GLMenu *m = menu->GetSubMenu("Regions")->GetSubMenu("Load recent");
 	m->Clear();
@@ -2612,7 +2615,7 @@ void SynRad::UpdateRecentPARMenu(){
 
 void SynRad::PlaceScatteringControls(bool newReflectionMode) {
 	facetRMSroughnessLabel->SetText(newReflectionMode ? "sigma (nm):" : "Roughness ratio:");
-	facetPanel->SetCompBounds(facetRMSroughness, newReflectionMode?65:100, 55, newReflectionMode?45:70, 18);
+	facetPanel->SetCompBounds(facetRMSroughness, newReflectionMode ? 65 : 100, 55, newReflectionMode ? 45 : 70, 18);
 	facetAutoCorrLengthLabel->SetVisible(newReflectionMode);
 	facetAutoCorrLength->SetVisible(newReflectionMode);
 	UpdateFacetParams();

@@ -31,10 +31,10 @@ private:
 public:
 	Histogram(double min,double max,int number_of_bins,bool logscale);
 	~Histogram();
-	double GetCount(int index);
-	double GetFrequency(int index);
+	double GetCount(size_t index);
+	double GetFrequency(size_t index);
 	//double GetNormalized(int index);
-	double GetX(int index);
+	double GetX(size_t index);
 	void Add(const double &x,const double &dY,const double &bandwidth=-1);
 	bool logarithmic;
 	double /*max_count,*/total_count;

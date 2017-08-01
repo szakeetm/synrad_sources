@@ -152,8 +152,8 @@ TextureSettings::TextureSettings():GLWindow() {
 void TextureSettings::UpdateSize() {
 
   DWORD swap = 0;
-  int nbFacet = geom->GetNbFacet();
-  for(int i=0;i<nbFacet;i++) {
+  size_t nbFacet = geom->GetNbFacet();
+  for(size_t i=0;i<nbFacet;i++) {
     Facet *f = geom->GetFacet(i);
     if(f->sh.isTextured) {
       swap += f->GetTexSwapSize(colormapBtn->GetState());

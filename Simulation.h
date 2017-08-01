@@ -63,12 +63,12 @@ typedef struct {
   // Temporary var (used in FillHit for hit recording)
   bool   hitted;
   bool   ready;         // Volatile state
-  int    textureSize;   // Texture size (in bytes)
-  int    profileSize;   // profile size (in bytes)
-  int    directionSize; // direction field size (in bytes)
-  int    spectrumSize;  // spectrum size in bytes
+  size_t    textureSize;   // Texture size (in bytes)
+  size_t    profileSize;   // profile size (in bytes)
+  size_t    directionSize; // direction field size (in bytes)
+  size_t    spectrumSize;  // spectrum size in bytes
 
-  int globalId; //Global index (to identify when superstructures are present)
+  size_t globalId; //Global index (to identify when superstructures are present)
 
 } FACET;
 
@@ -114,17 +114,17 @@ typedef struct {
 
   // Geometry
   char        name[64];         // Global name
-  int         nbVertex;         // Number of vertex
-  int         totalFacet;       // Total number of facet
+  size_t         nbVertex;         // Number of vertex
+  size_t         totalFacet;       // Total number of facet
   Vector3d   *vertices3;        // Vertices
-  int         nbSuper;          // Number of super structure
+  size_t         nbSuper;          // Number of super structure
   size_t         nbRegion;
   size_t         nbMaterials;
   size_t         nbTrajPoints;
-  double      sourceArea;       //number of trajectory points weighed by 1/dL
+  size_t      sourceArea;       //number of trajectory points weighed by 1/dL
   //size_t         nbDistrPoints_MAG;
   size_t         nbDistrPoints_BXY;
-  int         curStruct;        // Current structure
+  size_t         curStruct;        // Current structure
   int			teleportedFrom;
   size_t sourceRegionId;
   SUPERSTRUCT str[MAX_STRUCT];

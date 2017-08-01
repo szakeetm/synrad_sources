@@ -50,7 +50,7 @@ static bool colorInited = false;
 
 // -----------------------------------------------------------
 
-Facet::Facet(int nbIndex) {
+Facet::Facet(size_t nbIndex) {
 
 	indices = (size_t *)malloc(nbIndex * sizeof(size_t));                    // Ref to Geometry Vector3d
 	vertices2 = (Vector2d *)malloc(nbIndex * sizeof(Vector2d));      // Local U,V coordinates
@@ -162,7 +162,7 @@ Facet::~Facet() {
 	SAFE_FREE(meshvector);
 }
 
-void Facet::LoadGEO(FileReader *file, int version, int nbVertex) {
+void Facet::LoadGEO(FileReader *file, int version, size_t nbVertex) {
 
 	file->ReadKeyword("indices"); file->ReadKeyword(":");
 	for (int i = 0; i < sh.nbIndex; i++) {
@@ -571,8 +571,8 @@ double Facet::GetSmooth(const int &i, const int &j, double *texBuffer, const flo
 
 	double W = 0.0;
 	double sum = 0.0;
-	int w = sh.texWidth - 1;
-	int h = sh.texHeight - 1;
+	int w = (int)sh.texWidth - 1;
+	int h = (int)sh.texHeight - 1;
 	int add;
 
 	SUM_NEIGHBOR((i - 1), (j - 1), 1.0);
@@ -594,8 +594,8 @@ double Facet::GetSmooth(const int &i, const int &j, llong *texBuffer, const floa
 
 	float W = 0.0f;
 	float sum = 0.0;
-	int w = sh.texWidth - 1;
-	int h = sh.texHeight - 1;
+	int w = (int)sh.texWidth - 1;
+	int h = (int)sh.texHeight - 1;
 	int add;
 
 	SUM_NEIGHBOR(i - 1, j - 1, 1.0f);
@@ -653,9 +653,9 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 		int *buff32 = (int *)malloc(tSize * 4);
 		if (!buff32) throw Error("Cannot allocate memory for texture buffer");
 		memset(buff32, 0, tSize * 4);
-		for (int j = 0; j < sh.texHeight; j++) {
-			for (int i = 0; i < sh.texWidth; i++) {
-				int idx = i + j*sh.texWidth;
+		for (size_t j = 0; j < sh.texHeight; j++) {
+			for (size_t i = 0; i < sh.texWidth; i++) {
+				size_t idx = i + j*sh.texWidth;
 				if (doLog) {
 					val = (int)((LOG10(texBuffer[idx]) - LOG10(min))*scaleFactor + 0.5f);
 				}
@@ -750,9 +750,9 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 		memset(buff8, 0, tSize * sizeof(unsigned char));
 		float fmin = (float)min;
 
-		for (int j = 0; j < sh.texHeight; j++) {
-			for (int i = 0; i < sh.texWidth; i++) {
-				int idx = i + j*sh.texWidth;
+		for (size_t j = 0; j < sh.texHeight; j++) {
+			for (size_t i = 0; i < sh.texWidth; i++) {
+				size_t idx = i + j*sh.texWidth;
 				if (doLog) {
 					val = (int)((LOG10(texBuffer[idx]) - LOG10(min))*scaleFactor + 0.5f);
 				}
@@ -869,9 +869,9 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, bool useColorMa
 		int *buff32 = (int *)malloc(tSize * 4);
 		if (!buff32) throw Error("Cannot allocate memory for texture buffer");
 		memset(buff32, 0, tSize * 4);
-		for (int j = 0; j < sh.texHeight; j++) {
-			for (int i = 0; i < sh.texWidth; i++) {
-				int idx = i + j*sh.texWidth;
+		for (size_t j = 0; j < sh.texHeight; j++) {
+			for (size_t i = 0; i < sh.texWidth; i++) {
+				size_t idx = i + j*sh.texWidth;
 				if (doLog) {
 					val = (int)((LOG10(texBuffer[idx]) - LOG10(min))*scaleFactor + 0.5f);
 				}
@@ -973,9 +973,9 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, bool useColorMa
 		memset(buff8, 0, tSize * sizeof(unsigned char));
 		float fmin = (float)min;
 
-		for (int j = 0; j < sh.texHeight; j++) {
-			for (int i = 0; i < sh.texWidth; i++) {
-				int idx = i + j*sh.texWidth;
+		for (size_t j = 0; j < sh.texHeight; j++) {
+			for (size_t i = 0; i < sh.texWidth; i++) {
+				size_t idx = i + j*sh.texWidth;
 				if (doLog) {
 					val = (int)((LOG10(texBuffer[idx]) - LOG10(min))*scaleFactor + 0.5f);
 				}

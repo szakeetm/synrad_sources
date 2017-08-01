@@ -46,7 +46,7 @@ public:
   void ProcessMessage(GLComponent *src,int message);
   void SetBounds(int x,int y,int w,int h);
   void SelectPoint(int idx);
-  int GetRegionId();
+  size_t GetRegionId();
 
 private:
 

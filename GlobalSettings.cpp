@@ -132,7 +132,7 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	panel3->Add(processList);
 
 	char tmp[128];
-	sprintf(tmp,"Number of CPU cores:     %d",mApp->numCPU);
+	sprintf(tmp,"Number of CPU cores:     %zd",mApp->numCPU);
 	GLLabel *coreLabel = new GLLabel(tmp);
 	coreLabel->SetBounds(10,hD-99,120,19);
 	panel3->Add(coreLabel);
@@ -198,8 +198,8 @@ void GlobalSettings::Display(Worker *w) {
 	chkCheckForUpdates->SetState(mApp->checkForUpdates);
 	chkCompressSavedFiles->SetState(mApp->compressSavedFiles);
 	
-	int nb = worker->GetProcNumber();
-	sprintf(tmp,"%d",nb);
+	size_t nb = worker->GetProcNumber();
+	sprintf(tmp,"%zd",nb);
 	nbProcText->SetText(tmp);
 	
 	
@@ -210,10 +210,11 @@ void GlobalSettings::Display(Worker *w) {
 // ----------------------------------------------------------------
 
 void GlobalSettings::SMPUpdate() {
+
 	int time = SDL_GetTicks();
 
 	if (!IsVisible() || IsIconic()) return;
-	int nb = worker->GetProcNumber();
+	size_t nb = worker->GetProcNumber();
 	if (processList->GetNbRow() != (nb + 1)) processList->SetSize(5, nb + 1, true);
 
 	if (time - lastUpdate>333) {
@@ -221,10 +222,10 @@ void GlobalSettings::SMPUpdate() {
 	char tmp[512];
 	PROCESS_INFO pInfo;
 	int  states[MAX_PROCESS];
-	char statusStr[MAX_PROCESS][64];
+	std::vector<std::string> statusStrings(MAX_PROCESS);
 
 	memset(states, 0, MAX_PROCESS * sizeof(int));
-	worker->GetProcStatus(states, (char **)statusStr);
+	worker->GetProcStatus(states, statusStrings);
 
 	processList->ResetValues();
 
@@ -278,8 +279,8 @@ void GlobalSettings::SMPUpdate() {
 			*/
 
 			// State/Status
-			_snprintf(tmp, 127, "%s: %s", prStates[states[i]], statusStr[i]);
-			processList->SetValueAt(4, i + 1, tmp);
+			std::stringstream tmp; tmp << prStates[states[i]] << " " << statusStrings[i];
+			processList->SetValueAt(4, i + 1, tmp.str().c_str());
 
 		}
 	}
@@ -365,7 +366,7 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 				return;
 			}
 
-			if (!IsEqual(worker->lowFluxCutoff , cutoffnumber) || worker->lowFluxMode!=lowFluxToggle->GetState()) {
+			if (!IsEqual(worker->lowFluxCutoff , cutoffnumber) || (int)worker->lowFluxMode!=lowFluxToggle->GetState()) {
 				//if (mApp->AskToReset()) {
 					worker->lowFluxCutoff = cutoffnumber;
 					worker->lowFluxMode = lowFluxToggle->GetState();

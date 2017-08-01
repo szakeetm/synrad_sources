@@ -126,7 +126,7 @@ typedef struct {
   
   // Process control
   int    states[MAX_PROCESS];        // Process states/commands
-  int    cmdParam[MAX_PROCESS];      // Command param 1
+  size_t    cmdParam[MAX_PROCESS];      // Command param 1
   llong  cmdParam2[MAX_PROCESS];     // Command param 2
   char   statusStr[MAX_PROCESS][128]; // Status message
 } SHCONTROL;
@@ -135,7 +135,7 @@ typedef struct {
 
   size_t        nbFacet;   // Number of facets (total)
   size_t        nbVertex;  // Number of 3D vertices
-  int        nbSuper;   // Number of superstructures
+  size_t        nbSuper;   // Number of superstructures
   size_t        nbRegion;  //number of magnetic regions
   size_t        nbTrajPoints; //total number of trajectory points (calculated at CopyGeometryBuffer)
   bool       newReflectionModel;
@@ -159,8 +159,8 @@ typedef struct {
   double autoCorrLength; // Autocorrelation length, in meters
   int    reflectType;    // Reflection type. 0=Diffuse, 1=Mirror, 10,11,12... : Material 0, Material 1, Material 2...., 9:invalid 
   int    profileType;    // Profile type
-  int    superIdx;       // Super structure index (Indexed from 0)
-  int    superDest;      // Super structure destination index (Indexed from 1, 0=>current)
+  size_t    superIdx;       // Super structure index (Indexed from 0)
+  size_t    superDest;      // Super structure destination index (Indexed from 1, 0=>current)
   int	 teleportDest;   // Teleport destination facet id (for periodic boundary condition) (Indexed from 1, 0=>none)
   bool   countAbs;       // Count absoprtion (MC texture)
   bool   countRefl;      // Count reflection (MC texture)
@@ -184,7 +184,7 @@ typedef struct {
   Vector3d   center;
 
   // Geometry
-  int    nbIndex;   // Number of index/vertex
+  size_t    nbIndex;   // Number of index/vertex
   double sign;      // Facet vertex rotation (see Facet::DetectOrientation())
 
   // Plane basis (O,U,V) (See Geometry::InitializeGeometry() for info)
@@ -195,12 +195,12 @@ typedef struct {
   Vector3d   nV; // Normalized V
 
   // Hit/Abs/Des/Density recording on 2D texture map
-  int    texWidth;    // Rounded texture resolution (U)
-  int    texHeight;   // Rounded texture resolution (V)
+  size_t    texWidth;    // Rounded texture resolution (U)
+  size_t    texHeight;   // Rounded texture resolution (V)
   double texWidthD;   // Actual texture resolution (U)
   double texHeightD;  // Actual texture resolution (V)
 
-  int   hitOffset;      // Hit address offset for this facet
+  size_t   hitOffset;      // Hit address offset for this facet
 
 } SHFACET;
 

@@ -64,7 +64,7 @@ public:
   } BOX;
 
   // Constructor/Desctructor/Initialisation
-  Facet(int nbIndex);
+  Facet(size_t nbIndex);
   ~Facet();
 
   // Shared struct
@@ -113,7 +113,7 @@ public:
   Vector3d GetRealCenter();
   void  LoadTXT(FileReader *file);
   void  SaveTXT(FileWriter *file);
-  void  LoadGEO(FileReader *file,int version,int nbVertex);
+  void  LoadGEO(FileReader *file,int version, size_t nbVertex);
   //void  SaveGEO(FileWriter *file,int idx);
   void  LoadSYN(FileReader *file, const std::vector<Material> &materials, int version, int nbVertex);
   void  SaveSYN(FileWriter *file, const std::vector<Material> &materials, int idx,bool crashSave=false);

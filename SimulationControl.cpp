@@ -165,7 +165,7 @@ double Norme(Vector3d *v) {
 
 bool LoadSimulation(Dataport *loader) {
 
-	int i, j, idx;
+	size_t i, j, idx;
 	BYTE *buffer, *bufferAfterMaterials;
 	BYTE *areaBuff;
 	BYTE *bufferStart;
@@ -256,19 +256,19 @@ bool LoadSimulation(Dataport *loader) {
 		sHandle->nbDistrPoints_BXY = 0;
 		for (size_t r = 0; r < sHandle->nbRegion; r++) {
 
-			sHandle->regions[r].Bx_distr.Resize(sHandle->regions[r].params.nbDistr_MAG.x);
+			sHandle->regions[r].Bx_distr.Resize((size_t)sHandle->regions[r].params.nbDistr_MAG.x);
 			for (size_t j = 0; j < sHandle->regions[r].params.nbDistr_MAG.x; j++) {
 				sHandle->regions[r].Bx_distr.valuesX[j] = READBUFFER(double);
 				sHandle->regions[r].Bx_distr.valuesY[j] = READBUFFER(double);
 			}
 
-			sHandle->regions[r].By_distr.Resize(sHandle->regions[r].params.nbDistr_MAG.y);
+			sHandle->regions[r].By_distr.Resize((size_t)sHandle->regions[r].params.nbDistr_MAG.y);
 			for (size_t j = 0; j < sHandle->regions[r].params.nbDistr_MAG.y; j++) {
 				sHandle->regions[r].By_distr.valuesX[j] = READBUFFER(double);
 				sHandle->regions[r].By_distr.valuesY[j] = READBUFFER(double);
 			}
 
-			sHandle->regions[r].Bz_distr.Resize(sHandle->regions[r].params.nbDistr_MAG.z);
+			sHandle->regions[r].Bz_distr.Resize((size_t)sHandle->regions[r].params.nbDistr_MAG.z);
 			for (size_t j = 0; j < sHandle->regions[r].params.nbDistr_MAG.z; j++) {
 				sHandle->regions[r].Bz_distr.valuesX[j] = READBUFFER(double);
 				sHandle->regions[r].Bz_distr.valuesY[j] = READBUFFER(double);
@@ -363,7 +363,7 @@ bool LoadSimulation(Dataport *loader) {
 				sHandle->chi_distros[c].reserve(chi_size);
 				for (size_t j = 0; j < chi_size; j++) {
 					std::vector<double> row;
-					int row_size = READBUFFER(size_t);
+					size_t row_size = READBUFFER(size_t);
 					row.reserve(row_size);
 					for (size_t k = 0; k < row_size; k++) {
 						row.push_back(*((double*)buffer)); //cum. distr
@@ -455,7 +455,7 @@ bool LoadSimulation(Dataport *loader) {
 				// Geometry error
 				ClearSimulation();
 				ReleaseDataport(loader);
-				sprintf(err, "Invalid structure (wrong link on F#%d)", i + 1);
+				sprintf(err, "Invalid structure (wrong link on F#%zd)", i + 1);
 				SetErrorSub(err);
 				return false;
 			}
@@ -477,7 +477,7 @@ bool LoadSimulation(Dataport *loader) {
 
 		//Textures
 		if (f->sh.isTextured) {
-			int nbE = f->sh.texWidth*f->sh.texHeight;
+			size_t nbE = f->sh.texWidth*f->sh.texHeight;
 			f->textureSize = nbE*(2 * sizeof(double) + sizeof(llong));
 			f->hits_MC = (llong *)malloc(nbE * sizeof(llong));
 			memset(f->hits_MC, 0, nbE * sizeof(llong));
@@ -579,13 +579,13 @@ bool LoadSimulation(Dataport *loader) {
 	sHandle->loadOK = true;
 	t1 = GetTick();
 	printf("  Load %s successful\n", sHandle->name);
-	printf("  Geometry: %d vertex %d facets\n", sHandle->nbVertex, sHandle->totalFacet);
+	printf("  Geometry: %zd vertex %zd facets\n", sHandle->nbVertex, sHandle->totalFacet);
 	printf("  Region: %zd regions\n", sHandle->nbRegion);
 	printf("  Trajectory points: %zd points\n", sHandle->nbTrajPoints);
 	printf("  Geom size: %d bytes\n", (int)(buffer - bufferStart));
-	printf("  Number of stucture: %d\n", sHandle->nbSuper);
-	printf("  Global Hit: %d bytes\n", sizeof(SHGHITS));
-	printf("  Facet Hit : %d bytes\n", sHandle->totalFacet*(int)sizeof(SHHITS));
+	printf("  Number of stucture: %zd\n", sHandle->nbSuper);
+	printf("  Global Hit: %zd bytes\n", sizeof(SHGHITS));
+	printf("  Facet Hit : %zd bytes\n", sHandle->totalFacet*(int)sizeof(SHHITS));
 	printf("  Texture   : %zd bytes\n", sHandle->textTotalSize);
 	printf("  Profile   : %zd bytes\n", sHandle->profTotalSize);
 	printf("  Direction : %zd bytes\n", sHandle->dirTotalSize);
@@ -656,7 +656,7 @@ void ResetTmpCounters() {
 			f->counter.nbHit = 0;
 			f->counter.nbAbsorbed = 0;
 			f->hitted = false;
-			int textureElemNb = f->sh.texHeight*f->sh.texWidth;
+			size_t textureElemNb = f->sh.texHeight*f->sh.texWidth;
 			if (f->hits_MC) memset(f->hits_MC, 0, textureElemNb * sizeof(llong));
 			if (f->hits_flux) memset(f->hits_flux, 0, textureElemNb * sizeof(double));
 			if (f->hits_power) memset(f->hits_power, 0, textureElemNb * sizeof(double));

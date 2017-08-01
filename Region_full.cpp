@@ -237,7 +237,6 @@ void Region_full::LoadPAR(FileReader *file){
 	params.enable_ort_polarization=(file->ReadInt()==1);
 
 	//Polarization component selection
-	size_t componentIndex;
 	if (params.enable_par_polarization && params.enable_ort_polarization)
 		params.polarizationCompIndex = 0; //Full polarization
 	else if (params.enable_par_polarization)
@@ -523,7 +522,7 @@ void Region_full::Render(const int& regionId, const int& dispNumTraj, GLMATERIAL
 	}
 }
 
-void Region_full::SelectTrajPoint(int x,int y,int regionId) {
+void Region_full::SelectTrajPoint(int x,int y, size_t regionId) {
 
 	int i;
 	if(!isLoaded) return;
@@ -981,7 +980,6 @@ void Region_full::LoadParam(FileReader *file){
 	file->ReadKeyword("enable_ort_polarization");file->ReadKeyword(":");params.enable_ort_polarization=file->ReadInt();
 
 	//Polarization component selection
-	size_t componentIndex;
 	if (params.enable_par_polarization && params.enable_ort_polarization)
 		params.polarizationCompIndex = 0; //Full polarization
 	else if (params.enable_par_polarization)

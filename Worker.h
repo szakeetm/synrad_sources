@@ -87,7 +87,7 @@ public:
   void SendHits();// Send total and facet hit counts to subprocesses
   void SetLeakCache(LEAK *buffer,size_t *nb,Dataport *dpHit);// Set Leak
   void SetHitCache(HIT *buffer,size_t *nb, Dataport *dpHit);  // Set HHit
-  void GetProcStatus(int *states,char **status);// Get process status
+  void GetProcStatus(int *states,std::vector<std::string>& statusStrings);// Get process status
   BYTE *GetHits(); // Access to dataport (HIT)
   void ReleaseHits();
   void ClearRegions();

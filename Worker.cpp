@@ -747,14 +747,14 @@ void Worker::RealReload() { //Sharing geometry with workers
 		throw Error("Failed to create 'loader' dataport.\nMost probably out of memory.\nReduce number of subprocesses or texture size.");
 	}
 	progressDlg->SetMessage("Accessing dataport...");
-	AccessDataportTimed(loader,3000+nbProcess*(int)((double)loadSize/10000.0));
+	AccessDataportTimed(loader,3000+nbProcess*(size_t)((double)loadSize/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");
 	geom->CopyGeometryBuffer((BYTE *)loader->buff,&regions,&materials,psi_distro,chi_distros,
 		parallel_polarization,generation_mode,lowFluxMode,lowFluxCutoff,newReflectionModel);
 	progressDlg->SetMessage("Releasing dataport...");
 	ReleaseDataport(loader);
 
-	int hitSize = geom->GetHitsSize();
+	size_t hitSize = geom->GetHitsSize();
 	dpHit = CreateDataport(hitsDpName,hitSize);
 	if( !dpHit ) {
 		CLOSEDP(loader);
@@ -766,11 +766,11 @@ void Worker::RealReload() { //Sharing geometry with workers
 	}
 
 	// Compute number of max desorption per process
-	if(AccessDataportTimed(dpControl,3000+nbProcess*(int)((double)loadSize/10000.0))) {
+	if(AccessDataportTimed(dpControl,3000+nbProcess*(size_t)((double)loadSize/10000.0))) {
 		SHCONTROL *m = (SHCONTROL *)dpControl->buff;
 		llong common = desorptionLimit / (llong)nbProcess;
-		int remain = (int)(desorptionLimit % (llong)nbProcess);
-		for(int i=0;i<nbProcess;i++) {
+		size_t remain = (desorptionLimit % (llong)nbProcess);
+		for(size_t i=0;i<nbProcess;i++) {
 			m->cmdParam2[i] = common;
 			if(i<remain) m->cmdParam2[i]++;
 		}
@@ -911,18 +911,6 @@ void Worker::Start() {
 
 	if( !ExecuteAndWait(COMMAND_START,PROCESS_RUN,mode) )
 		ThrowSubProcError();
-}
-
-void Worker::GetProcStatus(int *states,char **status) {
-
-	if(nbProcess==0) return;
-
-	AccessDataport(dpControl);
-	SHCONTROL *shMaster = (SHCONTROL *)dpControl->buff;
-	memcpy(states,shMaster->states,MAX_PROCESS*sizeof(int));
-	memcpy(status,shMaster->statusStr,MAX_PROCESS*64);
-	ReleaseDataport(dpControl);
-
 }
 
 std::vector<std::vector<double>> Worker::ImportCSV(FileReader *file){

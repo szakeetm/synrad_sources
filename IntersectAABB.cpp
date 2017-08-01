@@ -55,7 +55,7 @@ extern  bool      AABBHit;
 
 void ProfileFacet(FACET *f, const double &dF, const double &dP, const double &E) {
 
-	int pos;
+	size_t pos;
 
 	f->hitted = true;
 
@@ -64,7 +64,7 @@ void ProfileFacet(FACET *f, const double &dF, const double &dP, const double &E)
 	case REC_ANGULAR: {
 		double dot = abs(Dot(f->sh.N, *rayDir));
 		double theta = acos(dot);              // Angle to normal (0 to PI/2)
-		int grad = (int)(((double)PROFILE_SIZE)*(theta) / (PI / 2)); // To Grad
+		size_t grad = (size_t)(((double)PROFILE_SIZE)*(theta) / (PI / 2)); // To Grad
 		Saturate(grad, 0, PROFILE_SIZE - 1);
 		f->profile_hits[grad]++;
 		f->profile_flux[grad] += dF;
@@ -73,7 +73,7 @@ void ProfileFacet(FACET *f, const double &dF, const double &dP, const double &E)
 	} break;
 
 	case REC_PRESSUREU:
-		pos = (int)((f->colU)*(double)PROFILE_SIZE);
+		pos = (size_t)((f->colU)*(double)PROFILE_SIZE);
 		Saturate(pos, 0, PROFILE_SIZE - 1);
 		f->profile_hits[pos]++;
 		f->profile_flux[pos] += dF;
@@ -81,7 +81,7 @@ void ProfileFacet(FACET *f, const double &dF, const double &dP, const double &E)
 		break;
 
 	case REC_PRESSUREV:
-		pos = (int)((f->colV)*(double)PROFILE_SIZE);
+		pos = (size_t)((f->colV)*(double)PROFILE_SIZE);
 		Saturate(pos, 0, PROFILE_SIZE - 1);
 		f->profile_hits[pos]++;
 		f->profile_flux[pos] += dF;

@@ -120,20 +120,20 @@ void SpectrumPlotter::Refresh() {
 	if(!worker) return;
 
 	Geometry *geom = worker->GetGeometry();
-	int nb = geom->GetNbFacet();
-	int nbSpec = 0;
-	for(int i=0;i<nb;i++)
+	size_t nb = geom->GetNbFacet();
+	size_t nbSpec = 0;
+	for(size_t i=0;i<nb;i++)
 		if(geom->GetFacet(i)->sh.hasSpectrum) nbSpec+=2;
 	specCombo->Clear();
 	if(nbSpec) specCombo->SetSize(nbSpec);
 	nbSpec=0;
-	for(int i=0;i<nb;i++) {
+	for(size_t i=0;i<nb;i++) {
 		Facet *f = geom->GetFacet(i);
 		if(f->sh.hasSpectrum) {
 			char tmp[128];
-			for (int mode=0;mode<2;mode++) { //Flux, power
-				sprintf(tmp,"F#%d %s",i+1,specMode[mode]);
-				specCombo->SetValueAt(nbSpec,tmp,i*2+mode);
+			for (size_t mode=0;mode<2;mode++) { //Flux, power
+				sprintf(tmp,"F#%zd %s",i+1,specMode[mode]);
+				specCombo->SetValueAt(nbSpec,tmp,(int)(i*2+mode));
 				specCombo->SetSelectedIndex(0);
 				nbSpec++;
 			}
@@ -146,7 +146,7 @@ void SpectrumPlotter::Refresh() {
 
 void SpectrumPlotter::SetScale() {
 	if (worker) {
-	if ((int)worker->regions.size()>0) {
+	if (worker->regions.size()>0) {
 		Region_full *traj=&(worker->regions[0]); //scale axis X
 		if (traj->isLoaded) {
 			chart->GetXAxis()->SetMinimum(traj->params.energy_low_eV);
@@ -200,9 +200,9 @@ void SpectrumPlotter::refreshViews() {
 			int mode=v->userData2;
 			v->Reset();
 
-			int profileSize=(f->sh.isProfile)?(PROFILE_SIZE*(sizeof(llong)+2*sizeof(double))):0;
-			int textureSize=(f->sh.isTextured)?(f->sh.texWidth*f->sh.texHeight*(2*sizeof(double)+sizeof(llong))):0;
-			int directionSize=(f->sh.countDirection)?(f->sh.texWidth*f->sh.texHeight*sizeof(VHIT)):0;
+			size_t profileSize=(f->sh.isProfile)?(PROFILE_SIZE*(sizeof(llong)+2*sizeof(double))):0;
+			size_t textureSize=(f->sh.isTextured)?(f->sh.texWidth*f->sh.texHeight*(2*sizeof(double)+sizeof(llong))):0;
+			size_t directionSize=(f->sh.countDirection)?(f->sh.texWidth*f->sh.texHeight*sizeof(VHIT)):0;
 
 			double *shSpectrum_fluxwise = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize 
 				+ textureSize + directionSize));

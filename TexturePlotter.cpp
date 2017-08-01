@@ -128,15 +128,15 @@ void TexturePlotter::GetSelected() {
 
 	Geometry *geom = worker->GetGeometry();
 	selFacet = NULL;
-	int i = 0;
-	int nb = geom->GetNbFacet();
+	size_t i = 0;
+	size_t nb = geom->GetNbFacet();
 	while(!selFacet && i<nb) {
 		if( geom->GetFacet(i)->selected ) selFacet = geom->GetFacet(i);
 		if(!selFacet) i++;
 	}
 
 	char tmp[32];
-	sprintf(tmp,"Texture plotter #%d",i+1);
+	sprintf(tmp,"Texture plotter #%zd",i+1);
 	SetTitle(tmp);
 
 }
@@ -359,7 +359,7 @@ void TexturePlotter::SaveFile() {
 			return;
 		}
 
-		for(int i=u;i<u+wu;i++) {
+		for(size_t i=u;i<u+wu;i++) {
 			for(int j=v;j<v+wv;j++) {
 				char *str = mapList->GetValueAt(j,i);
 				if( str ) fprintf(f,"%s",str);

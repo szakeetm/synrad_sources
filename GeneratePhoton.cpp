@@ -8,7 +8,7 @@
 
 extern Distribution2D /*polarization_distribution,*/integral_N_photons, integral_SR_power/*,g1h2_distribution*/;
 
-GenPhoton GeneratePhoton(int pointId, Region_mathonly *current_region, int generation_mode,
+GenPhoton GeneratePhoton(size_t pointId, Region_mathonly *current_region, int generation_mode,
 	std::vector<std::vector<double>> &psi_distro, std::vector<std::vector<double>> &chi_distro,
 	std::vector<std::vector<double>> &parallel_polarization, bool recalc) { //Generates a photon from point number 'pointId'
 

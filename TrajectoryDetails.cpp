@@ -491,7 +491,7 @@ void TrajectoryDetails::Display(Worker *w, int regionId) {
 	regionCombo->SetSize((int)worker->regions.size());
 	for (size_t r = 0; r < worker->regions.size(); r++){
 
-		sprintf(tmp, "%s %d", "Region", r + 1);
+		sprintf(tmp, "%s %zd", "Region", r + 1);
 		regionCombo->SetValueAt(r, tmp);
 	}
 	sprintf(tmp, "%d", freq);
@@ -568,7 +568,7 @@ void TrajectoryDetails::ProcessMessage(GLComponent *src, int message) {
 	GLWindow::ProcessMessage(src, message);
 }
 
-int TrajectoryDetails::GetRegionId() {
+size_t TrajectoryDetails::GetRegionId() {
 	return displayedRegion;
 }
 

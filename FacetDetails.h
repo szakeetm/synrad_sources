@@ -49,7 +49,7 @@ private:
 
   char *GetCountStr(Facet *f);
   void UpdateTable();
-  char *FormatCell(int idx,Facet *f,int mode);
+  char *FormatCell(size_t idx,Facet *f, size_t mode);
   void PlaceComponents();
 
   Worker      *worker;

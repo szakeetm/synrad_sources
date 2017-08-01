@@ -103,7 +103,7 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *
 	bool newReflectionModel) {
 
 	// Build shared buffer for geometry (see Shared.h)
-	int fOffset = sizeof(SHGHITS);
+	size_t fOffset = sizeof(SHGHITS);
 	SHGEOM *shGeom = (SHGEOM *)buffer;
 	sh.nbRegion = (*regions).size();
 	sh.newReflectionModel = newReflectionModel;
@@ -119,7 +119,7 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *
 	// Build shared buffer for trajectory (see Shared.h)
 	for (size_t i = 0; i < sh.nbRegion; i++) {
 		RegionParams* regparam = (RegionParams*)buffer;
-		(*regions)[i].params.nbDistr_MAG = Vector3d((*regions)[i].Bx_distr.size, (*regions)[i].By_distr.size, (*regions)[i].Bz_distr.size);
+		(*regions)[i].params.nbDistr_MAG = Vector3d((int)(*regions)[i].Bx_distr.size, (int)(*regions)[i].By_distr.size, (int)(*regions)[i].Bz_distr.size);
 		(*regions)[i].params.nbPointsToCopy = (*regions)[i].Points.size();
 		memcpy(regparam, &((*regions)[i].params),sizeof(RegionParams));
 		//reg = regions[i];
@@ -285,12 +285,12 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *
 	}
 }
 
-DWORD SynradGeometry::GetHitsSize() {
+size_t SynradGeometry::GetHitsSize() {
 
 	// Compute number of bytes allocated
-	DWORD memoryUsage = 0;
+	size_t memoryUsage = 0;
 	memoryUsage += sizeof(SHGHITS);
-	for (int i = 0; i < sh.nbFacet; i++) {
+	for (size_t i = 0; i < sh.nbFacet; i++) {
 		memoryUsage += facets[i]->GetHitsSize();
 	}
 
@@ -490,7 +490,7 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 		//mApp->AddFormula(tmpName, tmpExpr); //parse after selection groups are loaded
 		std::vector<string> newFormula;
 		newFormula.push_back(tmpName);
-		mApp->OffsetFormula(tmpExpr, sh.nbFacet); //offset formula
+		mApp->OffsetFormula(tmpExpr, (int)sh.nbFacet); //offset formula
 		newFormula.push_back(tmpExpr);
 		loadFormulas.push_back(newFormula);
 	}
@@ -558,7 +558,7 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 
 	// Read geometry vertices
 	file->ReadKeyword("vertices"); file->ReadKeyword("{");
-	for (int i = *nbVertex; i < (*nbVertex + nbNewVertex); i++) {
+	for (size_t i = *nbVertex; i < (*nbVertex + nbNewVertex); i++) {
 		// Check idx
 		int idx = file->ReadInt();
 		if (idx != i - *nbVertex + 1) throw Error(file->MakeError("Wrong vertex index !"));
@@ -605,7 +605,7 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 
 
 	// Read geometry facets (indexed from 1)
-	for (int i = *nbFacet; i < (*nbFacet + nbNewFacets); i++) {
+	for (size_t i = *nbFacet; i < (*nbFacet + nbNewFacets); i++) {
 		file->ReadKeyword("facet");
 		// Check idx
 		int idx = file->ReadInt();
@@ -613,11 +613,11 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 		file->ReadKeyword("{");
 		file->ReadKeyword("nbIndex");
 		file->ReadKeyword(":");
-		int nb = file->ReadInt();
+		size_t nb = file->ReadInt();
 
 		if (nb < 3) {
 			char errMsg[512];
-			sprintf(errMsg, "Facet %d has only %d vertices. ", i, nb);
+			sprintf(errMsg, "Facet %zd has only %zd vertices. ", i+1, nb);
 			throw Error(errMsg);
 		}
 
@@ -979,15 +979,15 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 				//Now load values
 				file->ReadKeyword("{");
 
-				int ix, iy;
+				size_t ix, iy;
 
-				int profSize = (f->sh.isProfile) ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0;
-				int nbE = f->sh.texHeight*f->sh.texWidth;
+				size_t profSize = (f->sh.isProfile) ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0;
+				size_t nbE = f->sh.texHeight*f->sh.texWidth;
 				llong *hits_MC = (llong *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(SHHITS) + profSize));
 				double *hits_flux = (double *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(SHHITS) + profSize + nbE*sizeof(llong)));
 				double *hits_power = (double *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(SHHITS) + profSize + nbE*(sizeof(llong) + sizeof(double))));
 
-				int texWidth_file, texHeight_file;
+				size_t texWidth_file, texHeight_file;
 				//In case of rounding errors, the file might contain different texture dimensions than expected.
 				if (version >= 8) {
 					file->ReadKeyword("width"); file->ReadKeyword(":"); texWidth_file = file->ReadInt();
@@ -1000,7 +1000,7 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 
 				for (iy = 0; iy < (Min(f->sh.texHeight, texHeight_file)); iy++) { //MIN: If stored texture is larger, don't read extra cells
 					for (ix = 0; ix<(Min(f->sh.texWidth, texWidth_file)); ix++) { //MIN: If stored texture is larger, don't read extra cells
-						int index = iy*(f->sh.texWidth) + ix;
+						size_t index = iy*(f->sh.texWidth) + ix;
 						*(hits_MC + index) = file->ReadLLong();
 						if (version >= 7) file->ReadDouble(); //cell area
 						*(hits_flux + index) = file->ReadDouble();
@@ -1012,7 +1012,7 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 							*(hits_power + index) /= f->GetMeshArea(index);
 						}
 					}
-					for (int ie = 0; ie < texWidth_file - f->sh.texWidth; ie++) {//Executed if file texture is bigger than expected texture
+					for (size_t ie = 0; ie < texWidth_file - f->sh.texWidth; ie++) {//Executed if file texture is bigger than expected texture
 						//Read extra cells from file without doing anything
 						file->ReadLLong();
 						if (version >= 7) file->ReadDouble(); //cell area
@@ -1020,9 +1020,9 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 						file->ReadDouble();
 					}
 				}
-				for (int ie = 0; ie < texHeight_file - f->sh.texHeight; ie++) {//Executed if file texture is bigger than expected texture
+				for (size_t ie = 0; ie < texHeight_file - f->sh.texHeight; ie++) {//Executed if file texture is bigger than expected texture
 					//Read extra cells ffrom file without doing anything
-					for (int iw = 0; iw < texWidth_file; iw++) {
+					for (size_t iw = 0; iw < texWidth_file; iw++) {
 						file->ReadLLong();
 						if (version >= 7) file->ReadDouble(); //cell area
 						file->ReadDouble();
@@ -1142,19 +1142,19 @@ void SynradGeometry::ExportTextures(FILE *file, int grouping, int mode, double n
 				float dCoef = 1.0f;
 				if (!buffer) return;
 				SHGHITS *shGHit = (SHGHITS *)buffer;
-				int w = f->sh.texWidth;
-				int h = f->sh.texHeight;
-				int nbE = w*h;
-				int profSize = (f->sh.isProfile) ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0;
+				size_t w = f->sh.texWidth;
+				size_t h = f->sh.texHeight;
+				size_t nbE = w*h;
+				size_t profSize = (f->sh.isProfile) ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0;
 
 				llong *hits_MC = (llong *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize));
 				double *hits_flux = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize + nbE*sizeof(llong)));
 				double *hits_power = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize + nbE*(sizeof(llong) + sizeof(double))));
 				double norm = 1.0 / no_scans; //normalize values by number of scans (and don't normalize by area...)
 
-				for (int i = 0; i < w; i++) {
-					for (int j = 0; j < h; j++) {
-						int index = i + j*w;
+				for (size_t i = 0; i < w; i++) {
+					for (size_t j = 0; j < h; j++) {
+						size_t index = i + j*w;
 						tmp[0] = out[0] = 0;
 						switch (mode) {
 
@@ -1242,18 +1242,18 @@ void SynradGeometry::SaveDesorption(FILE *file, Dataport *dpHit, bool selectedOn
 				float dCoef = 1.0f;
 				if (!buffer) return;
 
-				int w = f->sh.texWidth;
-				int h = f->sh.texHeight;
-				int textureSize_double = w*h*sizeof(double);
-				int textureSize_llong = w*h*sizeof(llong);
+				size_t w = f->sh.texWidth;
+				size_t h = f->sh.texHeight;
+				size_t textureSize_double = w*h*sizeof(double);
+				size_t textureSize_llong = w*h*sizeof(llong);
 				SHGHITS *shGHit = (SHGHITS *)buffer;
-				int profile_memory = PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong));
-				int profSize = (f->sh.isProfile) ? profile_memory : 0;
+				size_t profile_memory = PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong));
+				size_t profSize = (f->sh.isProfile) ? profile_memory : 0;
 				double *hits_flux = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize + textureSize_llong));
 
 
-				for (int i = 0; i < w; i++) {
-					for (int j = 0; j < h; j++) {
+				for (size_t i = 0; i < w; i++) {
+					for (size_t j = 0; j < h; j++) {
 						double dose = hits_flux[i + j*w] * f->GetMeshArea(i+j*w) / worker->no_scans;
 						double val;
 						if (mode == 1) { //no conversion
@@ -1485,8 +1485,8 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 		prg->SetProgress(((double)i / (double)sh.nbFacet) *0.33 + 0.66);
 		Facet *f = facets[i];
 		if (f->hasMesh) {
-			int profSize = (f->sh.isProfile) ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0;
-			int nbE = f->sh.texHeight*f->sh.texWidth;
+			size_t profSize = (f->sh.isProfile) ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0;
+			size_t nbE = f->sh.texHeight*f->sh.texWidth;
 			llong *hits_MC;
 			if (!crashSave && !saveSelected) hits_MC = (llong *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(SHHITS) + profSize));
 			double *hits_flux;
@@ -1500,7 +1500,7 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 			file->Write("width:"); file->Write(f->sh.texWidth); file->Write(" height:"); file->Write(f->sh.texHeight); file->Write("\n");
 			for (iy = 0; iy < (f->sh.texHeight); iy++) {
 				for (ix = 0; ix < (f->sh.texWidth); ix++) {
-					int index = iy*(f->sh.texWidth) + ix;
+					size_t index = iy*(f->sh.texWidth) + ix;
 					file->Write((!crashSave && !saveSelected) ? *(hits_MC + index) : 0, "\t");
 					file->Write(f->GetMeshArea(index), "\t");
 					file->Write((!crashSave && !saveSelected) ? *(hits_flux + index)*f->GetMeshArea(index) : 0, "\t");
@@ -1741,13 +1741,13 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 
 	// Update mesh
 	prg->SetMessage("Building mesh...");
-	for (int i = 0; i < sh.nbFacet; i++) {
+	for (size_t i = 0; i < sh.nbFacet; i++) {
 		double p = (double)i / (double)sh.nbFacet;
 		prg->SetProgress(p);
 		Facet *f = facets[i];
 		if (!f->SetTexture(f->sh.texWidthD, f->sh.texHeightD, f->hasMesh)) {
 			char errMsg[512];
-			sprintf(errMsg, "Not enough memory to build mesh on Facet %d. ", i + 1);
+			sprintf(errMsg, "Not enough memory to build mesh on Facet %zd. ", i + 1);
 			throw Error(errMsg);
 		}
 		BuildFacetList(f);
@@ -1796,12 +1796,12 @@ void SynradGeometry::LoadSpectrumSYN(FileReader *file, Dataport *dpHit) { //spec
 	for (int i = 0; i < nbSpectrum; i++)
 		spectrumFacet[i] = file->ReadInt();
 
-	for (int j = 0; j < PROFILE_SIZE; j++) {
-		for (int i = 0; i < nbSpectrum; i++) {
+	for (size_t j = 0; j < PROFILE_SIZE; j++) {
+		for (size_t i = 0; i < nbSpectrum; i++) {
 			Facet *f = GetFacet(spectrumFacet[i]);
-			int profileSize = (f->sh.isProfile) ? PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong)) : 0;
-			int textureSize = f->sh.texWidth*f->sh.texHeight*(2 * sizeof(double) + sizeof(llong));
-			int directionSize = f->sh.countDirection*f->sh.texWidth*f->sh.texHeight*sizeof(VHIT);
+			size_t profileSize = (f->sh.isProfile) ? PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong)) : 0;
+			size_t textureSize = f->sh.texWidth*f->sh.texHeight*(2 * sizeof(double) + sizeof(llong));
+			size_t directionSize = f->sh.countDirection*f->sh.texWidth*f->sh.texHeight*sizeof(VHIT);
 			double *shSpectrum_fluxwise = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize
 				+ textureSize + directionSize));
 			double *shSpectrum_powerwise = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize
@@ -1872,9 +1872,9 @@ void SynradGeometry::SaveSpectrumSYN(FileWriter *file, Dataport *dpHit, int supe
 	for (int j = 0; j < SPECTRUM_SIZE; j++) {
 		for (int i = 0; i < nbSpectrum; i++) {  //doesn't execute when crashSave or saveSelected...
 			Facet *f = GetFacet(spectrumFacet[i]);
-			int profileSize = (f->sh.isProfile) ? PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong)) : 0;
-			int textureSize = f->sh.texWidth*f->sh.texHeight*(2 * sizeof(double) + sizeof(llong));
-			int directionSize = f->sh.countDirection*f->sh.texWidth*f->sh.texHeight*sizeof(VHIT);
+			size_t profileSize = (f->sh.isProfile) ? PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong)) : 0;
+			size_t textureSize = f->sh.texWidth*f->sh.texHeight*(2 * sizeof(double) + sizeof(llong));
+			size_t directionSize = f->sh.countDirection*f->sh.texWidth*f->sh.texHeight*sizeof(VHIT);
 			double *shSpectrum_fluxwise;
 			if (!crashSave) shSpectrum_fluxwise = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize
 				+ textureSize + directionSize));
@@ -2034,8 +2034,8 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 
 	xml_node geomNode = loadXML.child("Geometry");
 	//Vertices
-	int nbNewVertex = geomNode.child("Vertices").select_nodes("Vertex").size();
-	int nbNewFacets = geomNode.child("Facets").select_nodes("Facet").size();
+	size_t nbNewVertex = geomNode.child("Vertices").select_nodes("Vertex").size();
+	size_t nbNewFacets = geomNode.child("Facets").select_nodes("Facet").size();
 
 	// reallocate memory
 	facets = (Facet **)realloc(facets, (nbNewFacets + sh.nbFacet) * sizeof(Facet **));
@@ -2048,7 +2048,7 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 	vertices3 = tmp_vertices3;
 
 	// Read geometry vertices
-	int idx = sh.nbVertex;
+	size_t idx = sh.nbVertex;
 	for (xml_node vertex : geomNode.child("Vertices").children("Vertex")) {
 		vertices3[idx].x = vertex.attribute("x").as_double();
 		vertices3[idx].y = vertex.attribute("y").as_double();
@@ -2058,7 +2058,7 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 	}
 
 	//Structures
-	int nbNewSuper = geomNode.child("Structures").select_nodes("Structure").size();
+	size_t nbNewSuper = geomNode.child("Structures").select_nodes("Structure").size();
 	idx = 0;
 	for (xml_node structure : geomNode.child("Structures").children("Structure")) {
 		strName[sh.nbSuper + idx] = _strdup(structure.attribute("name").value());
@@ -2080,10 +2080,10 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 	//Facets
 	idx = sh.nbFacet;
 	for (xml_node facetNode : geomNode.child("Facets").children("Facet")) {
-		int nbIndex = facetNode.child("Indices").select_nodes("Indice").size();
+		size_t nbIndex = facetNode.child("Indices").select_nodes("Indice").size();
 		if (nbIndex < 3) {
 			char errMsg[128];
-			sprintf(errMsg, "Facet %d has only %d vertices. ", idx + 1, nbIndex);
+			sprintf(errMsg, "Facet %zd has only %zd vertices. ", idx + 1, nbIndex);
 			throw Error(errMsg);
 		}
 		facets[idx] = new Facet(nbIndex);

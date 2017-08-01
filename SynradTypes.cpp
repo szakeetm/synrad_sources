@@ -58,15 +58,15 @@ void Histogram::Add(const double &x,const double &dY,const double &bandwidth) {
 	}
 }
 
-double Histogram::GetCount(int index){
+double Histogram::GetCount(size_t index){
 	return counts[index];
 }
 
-double Histogram::GetFrequency(int index){
+double Histogram::GetFrequency(size_t index){
 	return (counts[index]/total_count);
 }
 
-double Histogram::GetX(int index){
+double Histogram::GetX(size_t index){
 	double X;
 	if (!logarithmic) {
 		X=min+index*delta;

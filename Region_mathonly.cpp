@@ -7,7 +7,7 @@
 #include <string>
 
 
-Vector3d Region_mathonly::B(int pointId, const Vector3d &offset) {
+Vector3d Region_mathonly::B(size_t pointId, const Vector3d &offset) {
 	//Calculates the magnetic field at a given point
 	
 	Vector3d result; //return value with the magnetic field vector

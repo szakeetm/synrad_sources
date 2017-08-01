@@ -40,7 +40,7 @@ public:
 	Distribution2D LoadMAGFile(FileReader *file,Vector3d *dir,double *period,double *phase,int mode);
 	int LoadBXY(const std::string& fileName); //Throws error
 	void Render(const int& regionId, const int& dispNumTraj, GLMATERIAL *B_material, const double& vectorLength);
-	void SelectTrajPoint(int x,int y,int regionId);
+	void SelectTrajPoint(int x,int y, size_t regionId);
 	void SaveParam(FileWriter *f);
 	
 };
