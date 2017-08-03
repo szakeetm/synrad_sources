@@ -63,7 +63,7 @@ std::string appName = "SynRad+ development version (Compiled " __DATE__ " " __TI
 std::string appName = "Synrad+ 1.4.13 (" __DATE__ ")";
 #endif
 
-std::vector<string> formulaPrefixes = { "A","D","H","," };
+std::vector<string> formulaPrefixes = { "H","A","F","P","AR","h","a","f","p","ar","," };
 std::string formulaSyntax =
 R"(MC Variables: An (Absorption on facet n), Hn (Hit on facet n)
 Fn (Flux absorbed on facet n), Pn (Power absorbed on facet n)
@@ -1138,7 +1138,7 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 	else if (_stricmp(v->name, "Na") == 0) {
 		v->value = 6.02214179e23;
 	}
-	else if ((beginsWith(v->name, "SUM(")) /*|| (beginsWith(v->name, "AVG("))*/ && endsWith(v->name, ")")) {
+	else if ((beginsWith(v->name, "SUM(") || beginsWith(v->name, "sum(")) /*|| (beginsWith(v->name, "AVG("))*/ && endsWith(v->name, ")")) {
 		//bool avgMode = beginsWith(v->name, "AVG("); //else SUM mode
 		std::string inside = v->name; inside.erase(0, 4); inside.erase(inside.size() - 1, 1);
 		std::vector<std::string> tokens = SplitString(inside, ',');
@@ -1149,7 +1149,7 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 				return false;
 		}*/
 		else {
-			if (!Contains({ "H","A","F","P","AR" }, tokens[0]))
+			if (!Contains({ "H","A","F","P","AR","h","a","f","p","ar" }, tokens[0]))
 				return false;
 		}
 		std::vector<size_t> facetsToSum;
@@ -1167,9 +1167,9 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 			std::iota(facetsToSum.begin(), facetsToSum.end(), startId - 1);
 		}
 		else { //Selection group
-			if (!beginsWith(tokens[1], "S")) return false;
+			if (!(beginsWith(tokens[1], "S") || beginsWith(tokens[1], "s"))) return false;
 			std::string selIdString = tokens[1]; selIdString.erase(0, 1);
-			if (selIdString == "EL") { //Current selections
+			if (Contains({ "EL","el" }, selIdString)) { //Current selections
 				facetsToSum = geom->GetSelectedFacets();
 			}
 			else {
@@ -1187,29 +1187,26 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 		double sumD = 0.0;
 		double sumArea = 0.0; //We average by area
 		for (auto sel : facetsToSum) {
-			if (tokens[0] == "H") {
+			if (Contains({ "H","h" }, tokens[0])) {
 				sumLL += geom->GetFacet(sel)->counterCache.nbHit;
 			}
-			else if (tokens[0] == "D") {
-				sumLL += geom->GetFacet(sel)->counterCache.nbDesorbed;
-			}
-			else if (tokens[0] == "A") {
+			else if (Contains({ "A","a" }, tokens[0])) {
 				sumLL += geom->GetFacet(sel)->counterCache.nbAbsorbed;
 			}
-			else if (tokens[0] == "AR") {
+			else if (Contains({ "AR","ar" }, tokens[0])) {
 				sumArea += geom->GetFacet(sel)->GetArea();
 			}
-			else if (tokens[0] == "F") {
+			else if (Contains({ "F","f" }, tokens[0])) {
 				sumD += geom->GetFacet(sel)->counterCache.fluxAbs /*/ worker.no_scans*/;
 			}
-			else if (tokens[0] == "P") {
+			else if (Contains({ "P","p" }, tokens[0])) {
 				sumD += geom->GetFacet(sel)->counterCache.powerAbs/* / worker.no_scans*/;
 			}
 			else return false;
 		}
 		//if (avgMode) v->value = sumD * worker.GetMoleculesPerTP(worker.displayedMoment)*1E4 / sumArea;
-		/*else*/ if (tokens[0] == "AR") v->value = sumArea;
-		else if (Contains({ "F","P" }, tokens[0])) v->value = sumD / worker.no_scans;
+		/*else*/ if (Contains({ "AR" , "ar"},tokens[0])) v->value = sumArea;
+		else if (Contains({ "F","P","f","p" }, tokens[0])) v->value = sumD / worker.no_scans;
 		else v->value = (double)sumLL;
 	}
 	else ok = false;
