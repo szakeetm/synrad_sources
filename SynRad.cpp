@@ -130,11 +130,9 @@ SynRad *mApp;
 
 #define MENU_FACET_SELECTSPECTRUM 361
 
-//-----------------------------------------------------------------------------
 // Name: WinMain()
 // Desc: Entry point to the program. Initializes everything, and goes into a
 //       message-processing loop. Idle time is used to render the scene.
-//-----------------------------------------------------------------------------
 
 INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
 {
@@ -166,12 +164,9 @@ INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
 	return 0;
 }
 
-
-
-//-----------------------------------------------------------------------------
 // Name: SynRad()
 // Desc: Application constructor. Sets default attributes for the app.
-//-----------------------------------------------------------------------------
+
 SynRad::SynRad()
 {
 	mApp = this; //to refer to the app as extern variable
@@ -198,11 +193,10 @@ SynRad::SynRad()
 	materialPaths = std::vector<std::string>();
 }
 
-//-----------------------------------------------------------------------------
 // Name: OneTimeSceneInit()
 // Desc: Called during initial app startup, this function performs all the
 //       permanent initialization.
-//-----------------------------------------------------------------------------
+
 int SynRad::OneTimeSceneInit()
 {
 
@@ -383,8 +377,6 @@ int SynRad::OneTimeSceneInit()
 	facetList->Sortable = true;
 	Add(facetList);
 
-
-
 	ClearFacetParams();
 	LoadConfig();
 	UpdateRecentMenu();
@@ -472,10 +464,9 @@ int SynRad::OneTimeSceneInit()
 	return GL_OK;
 }
 
-//-----------------------------------------------------------------------------
 // Name: PlaceComponents()
 // Desc: Place components on screen
-//-----------------------------------------------------------------------------
+
 void SynRad::PlaceComponents() {
 
 	int sx = m_screenWidth - 205;
@@ -483,7 +474,7 @@ void SynRad::PlaceComponents() {
 
 	Place3DViewer();
 
-	// ---------------------------------------------------------
+	
 	geomNumber->SetBounds(sx, 3, 202, 18);
 
 	// Viewer settings ----------------------------------------
@@ -552,7 +543,6 @@ void SynRad::PlaceComponents() {
 	facetPanel->SetCompBounds(facetTexBtn, 101, 255, 50, 18);
 	facetPanel->SetCompBounds(facetApplyBtn, 155, 255, 40, 18);
 
-
 	sy += (facetPanel->GetHeight() + 5);
 
 	// Simulation ---------------------------------------------
@@ -584,12 +574,12 @@ void SynRad::PlaceComponents() {
 
 	sy += (simuPanel->GetHeight() + 5);
 
-	// ---------------------------------------------------------
+	
 	int lg = m_screenHeight - 23 /*- (nbFormula * 25)*/;
 
 	facetList->SetBounds(sx, sy, 202, lg - sy);
 
-	// ---------------------------------------------------------
+	
 
 	/*
 	for (int i = 0; i < nbFormula; i++) {
@@ -601,10 +591,8 @@ void SynRad::PlaceComponents() {
 	*/
 }
 
-//-----------------------------------------------------------------------------
 // Name: ClearFacetParams()
 // Desc: Reset selected facet parameters.
-//-----------------------------------------------------------------------------
 
 void SynRad::ClearFacetParams()
 {
@@ -638,10 +626,8 @@ void SynRad::ClearFacetParams()
 	facetSpectrumToggle->SetEnabled(false);
 }
 
-//-----------------------------------------------------------------------------
 // Name: ApplyFacetParams()
 // Desc: Apply facet parameters.
-//-----------------------------------------------------------------------------
 
 void SynRad::ApplyFacetParams() {
 	if (!AskToReset()) return;
@@ -721,7 +707,6 @@ void SynRad::ApplyFacetParams() {
 		}
 	}
 
-
 	// teleport
 	int teleport;
 	bool doTeleport = false;
@@ -750,7 +735,6 @@ void SynRad::ApplyFacetParams() {
 		}
 	}
 
-
 	// opacity
 	double opacity;
 	bool doOpacity = false;
@@ -771,7 +755,6 @@ void SynRad::ApplyFacetParams() {
 		}
 	}
 
-
 	// Superstructure
 	int superStruct;
 	bool doSuperStruct = false;
@@ -784,7 +767,6 @@ void SynRad::ApplyFacetParams() {
 			return;
 		}
 	}
-
 
 	// Super structure destination (link)
 	int superDest;
@@ -879,10 +861,8 @@ void SynRad::ApplyFacetParams() {
 	UpdateFacetParams();
 }
 
-//-----------------------------------------------------------------------------
 // Name: UpdateFacetParams()
 // Desc: Update selected facet parameters.
-//-----------------------------------------------------------------------------
 
 void SynRad::UpdateFacetParams(bool updateSelection) {
 
@@ -1070,7 +1050,6 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 	//if( outgassingMap ) outgassingMap->Update(m_fTime,true);
 }
 
-
 bool SynRad::EvaluateVariable(VLIST *v) {
 	bool ok = true;
 	Geometry* geom = worker.GetGeometry();
@@ -1220,12 +1199,10 @@ void SynRad::UpdatePlotters()
 	if (mApp->texturePlotter) mApp->texturePlotter->Update(m_fTime, true);
 }
 
-
-//-----------------------------------------------------------------------------
 // Name: FrameMove()
 // Desc: Called once per frame, the call is the entry point for animating
 //       the scene.
-//-----------------------------------------------------------------------------
+
 int SynRad::FrameMove()
 {
 	if (worker.running && ((m_fTime - lastUpdate) >= 1.0f)) {
@@ -1234,7 +1211,6 @@ int SynRad::FrameMove()
 	Interface::FrameMove(); //might reset lastupdate
 	char tmp[256];
 	if (globalSettings) globalSettings->SMPUpdate();
-
 
 	if ((m_fTime - worker.startTime <= 2.0f) && worker.running) {
 		hitNumber->SetText("Starting...");
@@ -1259,8 +1235,6 @@ int SynRad::FrameMove()
 	return GL_OK;
 }
 
-// ----------------------------------------------------------------
-
 void SynRad::UpdateFacetHits(bool all) {
 	char tmp[256];
 	Geometry *geom = worker.GetGeometry();
@@ -1268,7 +1242,6 @@ void SynRad::UpdateFacetHits(bool all) {
 	try {
 		// Facet list
 		if (geom->IsLoaded()) {
-
 
 			int sR, eR;
 			if (all)
@@ -1315,12 +1288,9 @@ void SynRad::UpdateFacetHits(bool all) {
 
 }
 
-//-----------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------
 // Name: RestoreDeviceObjects()
 // Desc: Initialize scene objects.
-//-----------------------------------------------------------------------------
+
 int SynRad::RestoreDeviceObjects()
 {
 	RestoreDeviceObjects_shared();
@@ -1344,10 +1314,8 @@ int SynRad::RestoreDeviceObjects()
 	return GL_OK;
 }
 
-//-----------------------------------------------------------------------------
 // Name: InvalidateDeviceObjects()
 // Desc: Free all alocated resource
-//-----------------------------------------------------------------------------
 
 int SynRad::InvalidateDeviceObjects()
 {
@@ -1464,7 +1432,6 @@ void SynRad::SaveFile() {
 
 void SynRad::LoadFile(char *fName) {
 
-
 	char fullName[512];
 	char shortName[512];
 	strcpy(fullName, "");
@@ -1488,7 +1455,6 @@ void SynRad::LoadFile(char *fName) {
 		SAFE_DELETE(progressDlg2);
 		return;
 	}
-
 
 	char *lPart = strrchr(fullName, '\\');
 	if (lPart) strcpy(shortName, lPart + 1);
@@ -1560,8 +1526,6 @@ void SynRad::LoadFile(char *fName) {
 	changedSinceSave = false;
 }
 
-//-----------------------------------------------------------------------------
-
 void SynRad::InsertGeometry(bool newStr, char *fName) {
 	if (!AskToReset()) return;
 	ResetSimulation(false);
@@ -1589,7 +1553,6 @@ void SynRad::InsertGeometry(bool newStr, char *fName) {
 		SAFE_DELETE(progressDlg2);
 		return;
 	}
-
 
 	char *lPart = strrchr(fullName, '\\');
 	if (lPart) strcpy(shortName, lPart + 1);
@@ -1655,10 +1618,9 @@ void SynRad::StartStopSimulation() {
 
 }
 
-//-----------------------------------------------------------------------------
 // Name: EventProc()
 // Desc: Message proc function to handle key and mouse input
-//-----------------------------------------------------------------------------
+
 void SynRad::ProcessMessage(GLComponent *src, int message)
 {
 	if (ProcessMessage_shared(src, message)) return; //Already processed by common interface
@@ -1834,7 +1796,6 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			UpdateFacetParams(true);
 			break;
 
-
 		case MENU_FACET_SELECTSPECTRUM:
 			geom->UnselectAll();
 			for (int i = 0; i < geom->GetNbFacet(); i++)
@@ -1886,7 +1847,6 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 				ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS + i, worker.regions[i].params.showPhotons);
 			break;
 		}
-
 
 		// Load recent PAR menu
 		if (src->GetId() >= MENU_REGIONS_LOADRECENT && src->GetId() < MENU_REGIONS_LOADRECENT + nbRecentPAR) {
@@ -2175,9 +2135,6 @@ void SynRad::AddRecentPAR(char *fileName) {
 	SaveConfig();
 }
 
-
-//-----------------------------------------------------------------------------
-
 void SynRad::LoadConfig() {
 
 	FileReader *f = NULL;
@@ -2336,10 +2293,7 @@ void SynRad::LoadConfig() {
 
 	SAFE_DELETE(f);
 
-
 }
-
-//-----------------------------------------------------------------------------
 
 #define WRITEI(name,var) {             \
 	f->Write(name);                      \
@@ -2356,7 +2310,6 @@ void SynRad::LoadConfig() {
 	f->Write(viewer[i]->var," ");\
 	f->Write("\n");                      \
 }
-
 
 void SynRad::SaveConfig(bool increaseSessionCount) {
 

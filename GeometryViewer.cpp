@@ -269,8 +269,6 @@ void GeometryViewer::DrawLinesAndHits() {
 	}
 }
 
-
-
 /*
 
 void GeometryViewer::DrawBB() {
@@ -338,8 +336,6 @@ DrawBB(node->right);
 
 }
 */
-
-
 
 #define TRANSFORMBB( X,Y,Z )                                                \
 	mv.TransfomVec((float)bbO.X,(float)bbO.Y,(float)bbO.Z,1.0f,&rx,&ry,&rz,&rw);\

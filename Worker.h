@@ -96,7 +96,6 @@ public:
   void RecalcRegion(int regionId);
   void SaveRegion(char *fileName,int position,bool overwrite=false);
 
-
   // Global simulation parameters
   size_t  nbAbsorption;      // Total number of molecules absorbed (64 bit integer)
   size_t  nbDesorption;      // Total number of molecules generated (64 bit integer)

@@ -25,8 +25,6 @@
 #include "GLApp/GLMessageBox.h"
 #include "GLApp/GLCombo.h"
 
-// --------------------------------------------------------------------
-
 TextureSettings::TextureSettings():GLWindow() {
 
   int wD = 450;
@@ -85,7 +83,7 @@ TextureSettings::TextureSettings():GLWindow() {
   swapText->SetBounds(260,45,50,18);
   Add(swapText);
 
-  // ---------------------------------------------------
+  
 
   GLTitledPanel *panel2 = new GLTitledPanel("Current");
   panel2->SetBounds(325,2,120,98);
@@ -107,7 +105,7 @@ TextureSettings::TextureSettings():GLWindow() {
   texCMaxText->SetBounds(370,65,70,19);
   Add(texCMaxText);
 
-  // ---------------------------------------------------
+  
 
   GLTitledPanel *panel3 = new GLTitledPanel("Gradient");
   panel3->SetBounds(5,102,440,65);
@@ -118,9 +116,6 @@ TextureSettings::TextureSettings():GLWindow() {
   gradient->SetBounds(10,117,420,40);
   Add(gradient);
 
-
-  // -------------------
-
   modeCombo = new GLCombo(0);
   modeCombo->SetSize(3);
   modeCombo->SetValueAt(0,"MC Hits");
@@ -129,8 +124,6 @@ TextureSettings::TextureSettings():GLWindow() {
   modeCombo->SetBounds(10,180,100,25);
   modeCombo->SetSelectedIndex(1);
   Add(modeCombo);
-
-
 
   SetBounds(8,30,wD,hD);
 
@@ -147,8 +140,6 @@ TextureSettings::TextureSettings():GLWindow() {
 
 }
 
-// --------------------------------------------------------------------
-
 void TextureSettings::UpdateSize() {
 
   DWORD swap = 0;
@@ -162,8 +153,6 @@ void TextureSettings::UpdateSize() {
   swapText->SetText(FormatMemory(swap));
 
 }
-
-// --------------------------------------------------------------------
 
 void TextureSettings::Update() {
 
@@ -214,8 +203,6 @@ void TextureSettings::Update() {
 
 }
 
-// --------------------------------------------------------------------
-
 void TextureSettings::Display(Worker *w,GeometryViewer **v) {
 
   worker = w;
@@ -241,8 +228,6 @@ void TextureSettings::Display(Worker *w,GeometryViewer **v) {
   texMaxText->SetText(tmp);
 
 }
-
-// --------------------------------------------------------------------
 
 void TextureSettings::ProcessMessage(GLComponent *src,int message) {
 

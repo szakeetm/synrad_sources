@@ -80,10 +80,9 @@ typedef struct {
   double distTraveledTotal;
 } SHGHITS;
 
-// -----------------------------------------------------------------
 // Master control shared memory block  (name: SRDCTRL[masterPID])
 // 
-// -----------------------------------------------------------------
+
 #define PROCESS_STARTING 0   // Loading state
 #define PROCESS_RUN      1   // Running state
 #define PROCESS_READY    2   // Waiting state
@@ -204,7 +203,6 @@ typedef struct {
 
 } SHFACET;
 
-// -----------------------------------------------------------------
 // Mesh shared structure  (name: SRDLOAD[masterPID])
 //
 //  SHELEM

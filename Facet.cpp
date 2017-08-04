@@ -48,8 +48,6 @@ extern SynRad*mApp;
 static int colorMap[65536];
 static bool colorInited = false;
 
-// -----------------------------------------------------------
-
 Facet::Facet(size_t nbIndex) {
 
 	indices = (size_t *)malloc(nbIndex * sizeof(size_t));                    // Ref to Geometry Vector3d
@@ -144,8 +142,6 @@ Facet::Facet(size_t nbIndex) {
 	memset(visible, 0xFF, nbIndex * sizeof(bool));
 
 }
-
-// -----------------------------------------------------------
 
 Facet::~Facet() {
 	SAFE_FREE(indices);
@@ -260,10 +256,6 @@ void Facet::LoadGEO(FileReader *file, int version, size_t nbVertex) {
 
 	UpdateFlags();
 }
-
-
-
-// -----------------------------------------------------------
 
 void Facet::LoadTXT(FileReader *file) {
 
@@ -388,7 +380,6 @@ void Facet::LoadXML(xml_node f, int nbVertex, bool isSynradFile, int vertexOffse
 	UpdateFlags();
 }
 
-
 void Facet::SaveTXT(FileWriter *file) {
 
 	if (!sh.superDest)
@@ -426,7 +417,6 @@ void Facet::SaveTXT(FileWriter *file) {
 	file->Write(0.0, "\n"); // Unused
 }
 
-// -----------------------------------------------------------
 /*
 void Facet::SaveGEO(FileWriter *file,int idx) {
 
@@ -479,7 +469,6 @@ file->Write("}\n");
 }
 */
 
-
 void Facet::UpdateFlags() {
 
 	sh.isProfile = (sh.profileType != REC_NONE);
@@ -510,8 +499,6 @@ size_t Facet::GetHitsSize() {
 
 }
 
-
-
 size_t Facet::GetTexRamSize() {
 	//Values
 	size_t sizePerCell = sizeof(llong)+2*sizeof(double); //hits + flux + power
@@ -522,8 +509,6 @@ size_t Facet::GetTexRamSize() {
 	sizePerMeshElement += 4 * sizeof(Vector2d); //Estimate: most mesh elements have 4 points
 	return sh.texWidth*sh.texHeight*sizePerCell + meshvectorsize*sizePerMeshElement;
 }
-
-
 
 size_t Facet::GetTexRamSizeForRatio(double ratio, bool useMesh, bool countDir) {
 
@@ -555,8 +540,6 @@ size_t Facet::GetTexRamSizeForRatio(double ratio, bool useMesh, bool countDir) {
 
 }
 
-
-
 #define SUM_NEIGHBOR(i,j,we)                      \
 	if( (i)>=0 && (i)<=w && (j)>=0 && (j)<=h ) {    \
 	add = (i)+(j)*sh.texWidth;                    \
@@ -565,7 +548,6 @@ size_t Facet::GetTexRamSizeForRatio(double ratio, bool useMesh, bool countDir) {
 	W=W+we;                                     \
 		}                                             \
 		}
-
 
 double Facet::GetSmooth(const int &i, const int &j, double *texBuffer, const float &scaleF) {
 
@@ -612,10 +594,8 @@ double Facet::GetSmooth(const int &i, const int &j, llong *texBuffer, const floa
 	else
 		return sum / W;
 
-
 }
 
-// -----------------------------------------------------------
 #define LOG10(x) log10f((float)x)
 
 void Facet::BuildTexture(double *texBuffer, double min, double max, double no_scans, bool useColorMap, bool doLog, bool normalize) {
@@ -631,9 +611,9 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 	glBindTexture(GL_TEXTURE_2D, glTex);
 	if (useColorMap) {
 
-		// -------------------------------------------------------
+		
 		// 16 Bit rainbow colormap
-		// -------------------------------------------------------
+		
 
 		// Scale
 		if (min < max) {
@@ -728,9 +708,9 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 	}
 	else {
 
-		// -------------------------------------------------------
+		
 		// 8 bit Luminance
-		// -------------------------------------------------------
+		
 		if (min < max) {
 			if (doLog) {
 				if (min < 1e-20f) min = 1e-20f;
@@ -818,17 +798,6 @@ void Facet::BuildTexture(double *texBuffer, double min, double max, double no_sc
 			);
 		}
 
-
-
-
-
-
-
-
-
-
-
-
 		free(buff8);
 
 	}
@@ -847,9 +816,9 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, bool useColorMa
 	glBindTexture(GL_TEXTURE_2D, glTex);
 	if (useColorMap) {
 
-		// -------------------------------------------------------
+		
 		// 16 Bit rainbow colormap
-		// -------------------------------------------------------
+		
 
 		// Scale
 		if (min < max) {
@@ -905,9 +874,6 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, bool useColorMa
 			}
 		}
 
-
-
-
 		GLint width, height, format;
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
@@ -944,16 +910,15 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, bool useColorMa
 			);
 		}
 
-
 		GLToolkit::CheckGLErrors("Facet::BuildTexture()");
 
 		free(buff32);
 	}
 	else {
 
-		// -------------------------------------------------------
+		
 		// 8 bit Luminance
-		// -------------------------------------------------------
+		
 		if (min < max) {
 			if (doLog) {
 				if (min < 1) min = 1;
@@ -1046,7 +1011,6 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, bool useColorMa
 	GLToolkit::CheckGLErrors("Facet::BuildTexture()");
 }
 
-
 bool Facet::IsCoplanarAndEqual(Facet *f, double threshold) {
 
 	// Detect if 2 facets are in the same plane (orientation preserving)
@@ -1063,8 +1027,6 @@ bool Facet::IsCoplanarAndEqual(Facet *f, double threshold) {
 	//TODO: Add other properties!
 
 }
-
-// -----------------------------------------------------------
 
 void Facet::CopyFacetProperties(Facet *f, bool copyMesh) {
 
@@ -1208,9 +1170,6 @@ void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, in
 		}
 	}
 	file->ReadKeyword("profileType"); file->ReadKeyword(":");
-
-
-
 
 	sh.profileType = file->ReadInt();
 	file->ReadKeyword("hasSpectrum"); file->ReadKeyword(":");

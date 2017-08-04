@@ -39,12 +39,9 @@ extern Distribution2D integral_SR_power;
 extern Distribution2D polarization_distribution;
 //extern Distribution2D g1h2_distribution;
 
-
 void ComputeSourceArea() {
 	sHandle->sourceArea = sHandle->nbTrajPoints;
 }
-
-// -------------------------------------------------------
 
 void PolarToCartesian(FACET *iFacet, double theta, double phi, bool reverse, double rotateUV) {
 
@@ -96,8 +93,6 @@ void PolarToCartesian(FACET *iFacet, double theta, double phi, bool reverse, dou
 	sHandle->pDir.z = u*U.z + v*V.z + n*N.z;
 	//_ASSERTE(Norme(&sHandle->pDir)<=1.0);
 }
-
-// -------------------------------------------------------
 
 void CartesianToPolar(FACET *iFacet, double *theta, double *phi) {
 
@@ -218,7 +213,6 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 						shProfile3[j] += f->profile_power[j];
 				}
 
-
 				size_t profileSize = (f->sh.isProfile) ? PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong)) : 0;
 				if (f->sh.isTextured) {
 					size_t textureElements = f->sh.texHeight*f->sh.texWidth;
@@ -310,14 +304,7 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 
 }
 
-
-
-
-
-
-// -------------------------------------------------------------
 // Compute particle teleport
-// -------------------------------------------------------------
 
 void PerformTeleport(FACET *iFacet) {
 
@@ -364,7 +351,6 @@ void PerformTeleport(FACET *iFacet) {
 	RecordHit(HIT_TELEPORT, sHandle->dF, sHandle->dP);
 	if (iFacet->hits_MC && iFacet->sh.countTrans) RecordHitOnTexture(iFacet, sHandle->dF, sHandle->dP);
 
-
 	// Relaunch particle from new facet
 	CartesianToPolar(iFacet, &inTheta, &inPhi);
 	PolarToCartesian(destination, inTheta, inPhi, false);
@@ -384,9 +370,7 @@ void PerformTeleport(FACET *iFacet) {
 	iFacet->counter.powerAbs += sHandle->dP;//destination->counter.powerAbs+=sHandle->dP;
 }
 
-// -------------------------------------------------------------
 // Perform nbStep simulation steps (a step is a bounce)
-// -------------------------------------------------------------
 
 bool SimulationMCStep(int nbStep) {
 
@@ -586,8 +570,6 @@ void GetDirComponents(Vector3d& nU_rotated, Vector3d& nV_rotated, Vector3d& N_ro
 	Saturate(n, -1.0, 1.0); //sometimes rounding errors do occur, 'acos' function would return no value for theta
 }
 
-
-
 bool DoLowFluxReflection(FACET* collidedFacet, double stickingProbability, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated) {
 	collidedFacet->counter.fluxAbs += sHandle->dF*stickingProbability;
 	collidedFacet->counter.powerAbs += sHandle->dP*stickingProbability;
@@ -636,9 +618,7 @@ bool DoOldRegularReflection(FACET* collidedFacet, double stickingProbability, co
 		
 }
 
-// -------------------------------------------------------------
 // Launch photon from a trajectory point
-// -------------------------------------------------------------
 
 bool StartFromSource() {
 
@@ -729,9 +709,8 @@ bool StartFromSource() {
 
 }
 
-// -------------------------------------------------------------
 // Compute bounce against a facet
-// -------------------------------------------------------------
+
 double TruncatedGaussian(gsl_rng *gen, const double &mean, const double &sigma, const double &lowerBound, const double &upperBound);
 
 void PerformBounce_new(FACET *iFacet, const double &inTheta, const double &inPhi, const int &reflType) {
@@ -823,7 +802,6 @@ bool PerformBounce_old(FACET *iFacet, int reflType, double theta, double phi,
 	}
 	RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
 	sHandle->lastHit = iFacet;
-
 
 	if (iFacet->hits_MC && iFacet->sh.countRefl) RecordHitOnTexture(iFacet, sHandle->dF, sHandle->dP);
 	return true;

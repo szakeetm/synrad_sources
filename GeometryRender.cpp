@@ -16,7 +16,6 @@
   GNU General Public License for more details.
 */
 
-
 #include "Worker.h"
 #include "SynradGeometry.h"
 #include "Facet.h"
@@ -34,7 +33,6 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, b
 
 	SHGHITS *shGHit = (SHGHITS *)hits;
 	Worker *worker = &(mApp->worker);
-
 
 	GLProgress *prg = new GLProgress("Building texture", "Frame update");
 	prg->SetBounds(5, 28, 300, 90);

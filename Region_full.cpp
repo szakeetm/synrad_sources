@@ -554,7 +554,6 @@ void Region_full::SelectTrajPoint(int x,int y, size_t regionId) {
 		}
 	}
 
-
 	selectedPoint=-1;
 
 	if (minDist<250.0) {

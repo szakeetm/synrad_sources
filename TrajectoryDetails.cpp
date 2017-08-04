@@ -97,8 +97,6 @@ static COLUMN allColumn[] = {
 	{ "Photon_Power (W)", 100, ALIGN_CENTER },
 };
 
-// -----------------------------------------------------------------
-
 TrajectoryDetails::TrajectoryDetails() :GLWindow() {
 
 	int wD = 1000;
@@ -109,7 +107,6 @@ TrajectoryDetails::TrajectoryDetails() :GLWindow() {
 	SetIconfiable(true);
 	SetResizable(true);
 	SetMinimumSize(600, 300);
-
 
 	regionCombo = new GLCombo(0);
 	Add(regionCombo);
@@ -160,8 +157,6 @@ TrajectoryDetails::TrajectoryDetails() :GLWindow() {
 
 }
 
-// -----------------------------------------------------------------
-
 void TrajectoryDetails::PlaceComponents() {
 
 	// Show toggle panel
@@ -189,8 +184,6 @@ void TrajectoryDetails::PlaceComponents() {
 	dismissButton->SetBounds(width - 100, height - 45, 90, 19);
 
 }
-
-// -----------------------------------------------------------------
 
 void TrajectoryDetails::SetBounds(int x, int y, int w, int h) {
 
@@ -382,7 +375,6 @@ char *TrajectoryDetails::FormatCell(int idx, int mode, GenPhoton* photon) {
 		sprintf(ret, "%g", photon->SR_power);
 		break;
 
-
 	default:
 		sprintf(ret, "%s", "");
 		break;
@@ -391,8 +383,6 @@ char *TrajectoryDetails::FormatCell(int idx, int mode, GenPhoton* photon) {
 	return ret;
 
 }
-
-// -----------------------------------------------------------------
 
 void TrajectoryDetails::UpdateTable() {
 
@@ -418,14 +408,12 @@ void TrajectoryDetails::UpdateTable() {
 	DWORD seed = (DWORD)((int)(mApp->GetTick()*1000.0)*_getpid());
 	rseed(seed);
 
-
 	static char ret[256];
 	strcpy(ret, "");
 
 	char *tmpName[NB_TPCOLUMN];
 	int  tmpWidth[NB_TPCOLUMN];
 	int  tmpAlign[NB_TPCOLUMN];
-
 
 	int  nbCol = 0;
 
@@ -467,8 +455,6 @@ void TrajectoryDetails::UpdateTable() {
 	SAFE_FREE(updatePrg);
 }
 
-// -----------------------------------------------------------------
-
 void TrajectoryDetails::Update() {
 
 	if (!worker) return;
@@ -478,8 +464,6 @@ void TrajectoryDetails::Update() {
 	UpdateTable();
 
 }
-
-// -----------------------------------------------------------------
 
 void TrajectoryDetails::Display(Worker *w, int regionId) {
 
@@ -503,8 +487,6 @@ void TrajectoryDetails::Display(Worker *w, int regionId) {
 	Update();
 
 }
-
-// -----------------------------------------------------------------
 
 void TrajectoryDetails::ProcessMessage(GLComponent *src, int message) {
 

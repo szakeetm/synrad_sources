@@ -29,10 +29,7 @@ static const int   plWidth[] = { 60,40,70,70,335 };
 static const char *plName[] = { "#","PID","Mem Usage","Mem Peak",/*"CPU",*/"Status" };
 static const int   plAligns[] = { ALIGN_LEFT,ALIGN_LEFT,ALIGN_LEFT,ALIGN_LEFT,ALIGN_LEFT };
 
-
 //HANDLE synradHandle;
-
-// --------------------------------------------------------------------
 
 GlobalSettings::GlobalSettings():GLWindow() {
 
@@ -120,7 +117,6 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	panel3->SetBounds(5,180,wD-10,hD-225);
 	Add(panel3);
 
-
 	processList = new GLList(0);
 	processList->SetHScrollVisible(true);
 	processList->SetSize(5, MAX_PROCESS + 1);
@@ -154,7 +150,7 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	maxButton->SetBounds(wD-195,hD-76,180,19);
 	panel3->Add(maxButton);
 
-	// ---------------------------------------------------
+	
 
 	applyButton = new GLButton(0,"Apply");
 	applyButton->SetBounds(wD-175,hD-43,80,19);
@@ -177,9 +173,6 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	//for(int i=0;i<MAX_PROCESS;i++) lastCPUTime[i]=-1.0f;
 	//memset(lastCPULoad,0,MAX_PROCESS*sizeof(float));
 }
-
-
-// --------------------------------------------------------------------
 
 void GlobalSettings::Display(Worker *w) {
 	worker = w;
@@ -206,8 +199,6 @@ void GlobalSettings::Display(Worker *w) {
 	SetVisible(true);
 
 }
-
-// ----------------------------------------------------------------
 
 void GlobalSettings::SMPUpdate() {
 
@@ -289,7 +280,6 @@ void GlobalSettings::SMPUpdate() {
 	}
 
 }
-// ----------------------------------------------------------------
 
 void GlobalSettings::RestartProc() {
 
@@ -317,7 +307,6 @@ void GlobalSettings::RestartProc() {
 	}
 
 }
-// --------------------------------------------------------------------
 
 void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 

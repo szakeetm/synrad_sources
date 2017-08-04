@@ -16,7 +16,6 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 
-
 #include "Worker.h"
 #include "Facet.h"
 #include "SynradGeometry.h"
@@ -93,7 +92,6 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool sa
 	try {
 		if (needsReload&&(!crashSave && !saveSelected)) RealReload();
 
-
 	} catch (Error &e) {
 		char errMsg[512];
 		sprintf(errMsg,"Error reloading worker. Trying crash save:\n%s",e.GetMsg());
@@ -128,7 +126,6 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool sa
 	bool isGEO7Z = _stricmp(ext,"geo7z")==0;*/
 	bool isSYN = _stricmp(ext,"syn")==0;
 	bool isSYN7Z = _stricmp(ext,"syn7z")==0;
-
 
 	if(isTXT || isSYN || isSYN7Z || isSTR) {
 
@@ -212,8 +209,6 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool sa
 	SAFE_DELETE(f);
 	/*if (ok && isGEO || isGEO7Z) {
 
-
-
 		if (compressSavedFiles) {
 			if (FileUtils::Exist("compress.exe")) { //compress GEO file to GEO7Z using 7-zip launcher "compress.exe"
 				sprintf(tmp,"compress.exe \"%s\" Geometry.geo",fileNameWithGeo);
@@ -221,7 +216,6 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool sa
 
 				compressProcessHandle=OpenProcess(PROCESS_ALL_ACCESS, true, procId);
 				fileName=fileNameWithGeo7z;
-
 
 			} else {
 				GLMessageBox::Display("compress.exe (part of Molfow) not found.\n Will save as uncompressed GEO file.","Compressor not found",GLDLG_OK,GLDLG_ICONERROR);
@@ -261,7 +255,6 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool sa
 }
 
 void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr) {
-
 
 	// Read a file
 
@@ -349,7 +342,6 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 			SAFE_DELETE(progressDlg);
 			throw e;
 		}
-
 
 	} else if(ext=="stl") {
 		try {
@@ -665,10 +657,7 @@ void Worker::InnerStop(float appTime) {
 	simuTime+=appTime-startTime;
 	running  = false;
 
-
 }
-
-// -------------------------------------------------------------
 
 void Worker::StartStop(float appTime,int mode) {
 
@@ -680,13 +669,10 @@ void Worker::StartStop(float appTime,int mode) {
 			Stop();
 			Update(appTime);
 
-
 		} catch(Error &e) {
 			GLMessageBox::Display((char *)e.GetMsg(),"Error (Stop)",GLDLG_OK,GLDLG_ICONERROR);
 
 		}
-
-
 
 	} else {
 
@@ -759,7 +745,6 @@ void Worker::RealReload() { //Sharing geometry with workers
 	if( !dpHit ) {
 		CLOSEDP(loader);
 
-
 		progressDlg->SetVisible(false);
 		SAFE_DELETE(progressDlg);
 		throw Error("Failed to create 'hits' dataport: out of memory");
@@ -796,7 +781,6 @@ void Worker::RealReload() { //Sharing geometry with workers
 	//Send hit counts
 	try {
 		SendHits();
-
 
 	} catch(Error &e) {
 		// Geometry not loaded !
@@ -948,7 +932,6 @@ void Worker::AddRegion(const char *fileName,int position) {
 		throw Error("LoadParam(): Invalid file extension [Only par or param]");
 	}
 }
-
 
 void Worker::RecalcRegion(int regionId) {
 	needsReload=true;

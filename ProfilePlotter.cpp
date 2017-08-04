@@ -360,7 +360,6 @@ void ProfilePlotter::refreshViews() {
 
 }
 
-
 void ProfilePlotter::addView(int facet, int mode) {
 
 	char tmp[128];

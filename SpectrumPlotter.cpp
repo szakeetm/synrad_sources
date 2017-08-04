@@ -248,7 +248,6 @@ void SpectrumPlotter::refreshViews() {
 
 }
 
-
 void SpectrumPlotter::addView(int facet,int mode) {
 
 	char tmp[128];

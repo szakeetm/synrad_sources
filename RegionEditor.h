@@ -25,7 +25,6 @@ GNU General Public License for more details.
 #include "GLApp/GLGradient.h"
 #include "GLApp\GLFileBox.h"
 
-
 class Worker;
 class Region_full;
 

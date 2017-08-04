@@ -31,7 +31,6 @@ class Worker;
 
 class SynradGeometry: public Geometry {
 
-
 #pragma region Geometry.cpp
 private:
 	//void CalculateFacetParam(int facetId); // Facet parameters
@@ -69,11 +68,9 @@ public:
 		const std::vector<std::vector<double>> &parallel_polarization, int generation_mode, bool lowFluxMode, double lowFluxCutoff, bool newReflectionModel);
 #pragma endregion
 
-
 #pragma region GeometryRender.cpp
 	void BuildFacetTextures(BYTE *hits, bool renderRegularTexture, bool renderDirectionTexture);
 #pragma endregion
-
 
 	// Temporary variable (used by LoadXXX)
 	double loaded_totalFlux;

@@ -26,9 +26,7 @@
 #include "GLApp/MathTools.h"
 #include "SynradTypes.h" //Histogram
 
-// -----------------------------------------------------------
 // AABB tree stuff
-// -----------------------------------------------------------
 
 // Temporary for intersection
 extern  double    intMinLgth;
@@ -50,8 +48,6 @@ extern  double    tNear;
 extern  double    tFar;
 extern  double    it1, it2;
 extern  bool      AABBHit;
-
-
 
 void ProfileFacet(FACET *f, const double &dF, const double &dP, const double &E) {
 

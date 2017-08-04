@@ -6,7 +6,6 @@
 #include <vector>
 #include <string>
 
-
 Vector3d Region_mathonly::B(size_t pointId, const Vector3d &offset) {
 	//Calculates the magnetic field at a given point
 	
@@ -120,7 +119,6 @@ Region_mathonly::Region_mathonly(){
 	params.B_const=Vector3d(0,0,0);
 	params.showPhotons = true;
 }
-
 
 Region_mathonly::Region_mathonly(const Region_mathonly &src) {
 	this->params = src.params;

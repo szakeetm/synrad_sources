@@ -3,7 +3,6 @@ File:        ExportDesorption.cpp
 Description: Do the photon dose -> outgassing conversion before exporting
 Program:     SynRad
 
-
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
@@ -65,7 +64,6 @@ ExportDesorption::ExportDesorption(Geometry *g,Worker *w):GLWindow() {
 	fileNameLabel = new GLLabel("No file loaded.");
 	fileNameLabel->SetBounds(60,100,170,18);
 	Add(fileNameLabel);
-
 
 	fileInfoLabel = new GLLabel("");
 	fileInfoLabel->SetBounds(60,125,170,18);

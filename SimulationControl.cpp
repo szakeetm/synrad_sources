@@ -37,16 +37,12 @@ GNU General Public License for more details.
 
 extern void SetErrorSub(const char *message);
 
-// -------------------------------------------------------
 // Global handles
-// -------------------------------------------------------
 
 FACET     **THits;
 SIMULATION *sHandle;
 
-// -------------------------------------------------------
 // Timing stuff
-// -------------------------------------------------------
 
 #ifdef WIN
 bool usePerfCounter;         // Performance counter usage
@@ -54,8 +50,6 @@ LARGE_INTEGER perfTickStart; // First tick
 double perfTicksPerSec;      // Performance counter (number of tick per second)
 #endif
 DWORD tickStart;
-
-// -------------------------------------------------------
 
 void InitSimulation() {
 
@@ -79,8 +73,6 @@ void InitSimulation() {
 #endif
 
 }
-
-// -------------------------------------------------------
 
 void ClearSimulation() {
 
@@ -125,7 +117,6 @@ void ClearSimulation() {
 	memset(sHandle, 0, sizeof(SIMULATION));
 
 }
-// -------------------------------------------------------
 
 DWORD RevertBit(DWORD dw) {
 	DWORD dwIn = dw;
@@ -155,13 +146,9 @@ DWORD GetSeed() {
 
 }
 
-
-
 double Norme(Vector3d *v) {
 	return sqrt(v->x*v->x + v->y*v->y + v->z*v->z);
 }
-
-
 
 bool LoadSimulation(Dataport *loader) {
 
@@ -443,7 +430,6 @@ bool LoadSimulation(Dataport *loader) {
 		sHandle->str[idx].facets[sHandle->str[idx].nbFacet]->globalId = i;
 		sHandle->str[idx].nbFacet++;
 
-
 		if (f->sh.superDest || f->sh.isVolatile) {
 			// Link or volatile facet, overides facet settings
 			// Must be full opaque and 0 sticking
@@ -703,8 +689,6 @@ bool StartSimulation() {
 	return true;
 }
 
-// -------------------------------------------------------
-
 void RecordHit(const int &type, const double &dF, const double &dP) {
 	if (sHandle->regions[sHandle->sourceRegionId].params.showPhotons) {
 		if (sHandle->hitCacheSize < HITCACHESIZE) {
@@ -729,8 +713,6 @@ void RecordLeakPos() {
 	}
 }
 
-// -------------------------------------------------------
-
 bool SimulationRun() {
 
 	// 1s step
@@ -751,7 +733,6 @@ bool SimulationRun() {
 
 	goOn = SimulationMCStep(nbStep);
 
-
 	t1 = GetTick();
 	sHandle->stepPerSec = (double)(nbStep) / (t1 - t0);
 #ifdef _DEBUG
@@ -761,8 +742,6 @@ bool SimulationRun() {
 	return !goOn;
 
 }
-
-// -------------------------------------------------------
 
 double GetTick() {
 

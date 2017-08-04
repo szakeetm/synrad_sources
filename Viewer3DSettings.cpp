@@ -22,7 +22,6 @@
 #include "SynRad.h"
 extern SynRad *mApp;
 
-
 Viewer3DSettings::Viewer3DSettings():GLWindow() {
 
   int wD = 215;

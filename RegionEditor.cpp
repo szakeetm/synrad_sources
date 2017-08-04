@@ -27,8 +27,6 @@ GNU General Public License for more details.
 
 extern GLApplication *theApp;
 
-// --------------------------------------------------------------------
-
 RegionEditor::RegionEditor():GLWindow() {
 
 	int wD = 773;
@@ -629,9 +627,6 @@ RegionEditor::RegionEditor():GLWindow() {
 	RestoreDeviceObjects();
 }
 
-
-// --------------------------------------------------------------------
-
 void RegionEditor::Display(Worker *w,int Id) {
 
 	//set textfields and values here
@@ -651,7 +646,6 @@ int RegionEditor::GetRegionId()
 {
 	return this->regionId;
 }
-
 
 void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 	SynRad *mApp = (SynRad *)theApp;

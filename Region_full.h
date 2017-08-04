@@ -1,7 +1,6 @@
 #ifndef _REGION_FULL_
 #define _REGION_FULL_
 
-
 #include <stdio.h>
 #include <fstream>
 #include "Region_mathonly.h"
@@ -12,8 +11,6 @@
 #include "GLApp\GLToolkit.h"
 #include "GLApp\GLProgress.h"
 //#include "GLApp\GLTypes.h"
-
-
 
 class Region_full : public Region_mathonly { //Beam trajectory
 public:

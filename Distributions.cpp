@@ -289,7 +289,6 @@ Distribution2D Generate_Polarization_Distribution(bool calculate_parallel_polari
 //{ reported in fig. 14, ref. G.K. Green.}
 //{ An accuracy of better than 0.5% is usually obtained.}
 
-
 double energy,delta;
 Distribution2D result(NUMBER_OF_DISTRO_VALUES);
 
@@ -451,9 +450,7 @@ std::tuple<double,double> find_psi_and_polarization(const double& lambda_ratios,
 /*double find_chi(double psi,double gamma_square,double f_times_g1h2,bool calculate_parallel_polarization, bool calculate_orthogonal_polarization) {
 //horizontal
 
-
 //ported from FINDPRCS.PAS - function find_chi(psi:realt1):realt1;
-
 
 //RETURNS ANGLE
 
@@ -472,7 +469,6 @@ delta = 10.0*f_times_g1h2 / NUMBER_OF_DISTRO_VALUES / gamma_square;
 //{ delta:=pi/100.0/gamma_square;}
 //{ delta gives the angular range (for traj.params.gamma*Psi) where the vertical }
 //{ angle of emission, Psi, should be contained (actually, traj.params.gamma*Psi...) }
-
 
 double cos_psi=cos(psi);
 double sin_psi=sin(psi);
@@ -517,9 +513,7 @@ return local_polarization_integral.InterpolateX(seed);
 double find_chi(double psi, double gamma, bool calculate_parallel_polarization, bool calculate_orthogonal_polarization) {
 //horizontal
 
-
 //ported from FINDPRCS.PAS - function find_chi(psi:realt1):realt1;
-
 
 //RETURNS ANGLE
 double delta;
@@ -702,7 +696,6 @@ double SYNRAD_FAST(const double &x) {
 	{ Works as g0ki(x,5/3,1), but about 2.5x faster }
 	*/
 	double Y, Z, A, B, P, Q;
-
 
 	if (x < 6.0) {
 

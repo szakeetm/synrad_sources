@@ -74,9 +74,6 @@ static const char *ynStr[] = {
 	"Yes"
 };
 
-
-// -----------------------------------------------------------------
-
 FacetDetails::FacetDetails():GLWindow() {
 
 	int wD = 502;
@@ -190,8 +187,6 @@ FacetDetails::FacetDetails():GLWindow() {
 
 }
 
-// -----------------------------------------------------------------
-
 void FacetDetails::PlaceComponents() {
 
 	// Show toggle panel
@@ -215,16 +210,12 @@ void FacetDetails::PlaceComponents() {
 
 }
 
-// -----------------------------------------------------------------
-
 void FacetDetails::SetBounds(int x,int y,int w,int h) {
 
 	GLWindow::SetBounds(x,y,w,h);
 	PlaceComponents();
 
 }
-
-// -----------------------------------------------------------------
 
 char *FacetDetails::GetCountStr(Facet *f) {
 	static char ret[128];
@@ -235,8 +226,6 @@ char *FacetDetails::GetCountStr(Facet *f) {
 	return ret;
 }
 
-// -----------------------------------------------------------------
-
 char *FacetDetails::FormatCell(size_t idx,Facet *f, size_t mode) {
 
 	Worker *worker=&(mApp->worker);     
@@ -246,7 +235,7 @@ char *FacetDetails::FormatCell(size_t idx,Facet *f, size_t mode) {
 
 	switch(mode) {
 	case 0:
-		sprintf(ret,"%d",idx+1);
+		sprintf(ret,"%zd",idx+1);
 		break;
 	case 1:
 		sprintf(ret,"%g",f->sh.sticking);
@@ -328,8 +317,6 @@ char *FacetDetails::FormatCell(size_t idx,Facet *f, size_t mode) {
 
 }
 
-// -----------------------------------------------------------------
-
 void FacetDetails::UpdateTable() {
 
 	Geometry *s = worker->GetGeometry();
@@ -347,7 +334,6 @@ void FacetDetails::UpdateTable() {
 	char *tmpName[NB_FDCOLUMN];
 	int  tmpWidth[NB_FDCOLUMN];
 	int  tmpAlign[NB_FDCOLUMN];
-
 
 	int  nbCol = 1;
 	tmpName[0]  = allColumn[0].name;
@@ -408,8 +394,6 @@ void FacetDetails::UpdateTable() {
 	*/
 }
 
-// -----------------------------------------------------------------
-
 void FacetDetails::Update() {
 
 	if(!worker) return;
@@ -427,8 +411,6 @@ void FacetDetails::Update() {
 
 }
 
-// -----------------------------------------------------------------
-
 void FacetDetails::Display(Worker *w) {
 
 	worker = w;
@@ -436,8 +418,6 @@ void FacetDetails::Display(Worker *w) {
 	Update();
 
 }
-
-// -----------------------------------------------------------------
 
 void FacetDetails::ProcessMessage(GLComponent *src,int message) {
 

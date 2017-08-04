@@ -31,9 +31,8 @@
 #include <Process.h> // For _getpid()
 #endif
 
-// -------------------------------------------------
 // Global process variables
-// -------------------------------------------------
+
 #define WAITTIME    100  // Answer in STOP mode
 
 static Dataport *dpControl=NULL;
@@ -50,7 +49,6 @@ static char      materialsDpName[32];
 
 bool end = false;
 bool IsProcessRunning(DWORD pid);
-
 
 void GetState() {
   prState = PROCESS_READY;
@@ -80,13 +78,9 @@ void GetState() {
   }
 }
 
-// -------------------------------------------------
-
 int GetLocalState() {
   return prState;
 }
-
-
 
 void SetState(int state,const char *status, bool changeState, bool changeStatus) {
 
@@ -118,8 +112,6 @@ void SetErrorSub(const char *message) {
   SetState(PROCESS_ERROR,message);
 
 }
-
-// -------------------------------------------------
 
 char *GetSimuStatus() {
 
@@ -203,8 +195,6 @@ bool UpdateParams() {
 	CLOSEDP(loader);
 	return true;
 }
-
-// -------------------------------------------------
 
 int main(int argc,char* argv[])
 {

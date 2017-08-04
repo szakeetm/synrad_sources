@@ -22,7 +22,6 @@ public:
 	Vector3d start_pos, start_dir,B;
 };
 
-
 class Histogram {
 private:
 	int number_of_bins;

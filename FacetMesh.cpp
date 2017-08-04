@@ -27,8 +27,6 @@ GNU General Public License for more details.
  
 #include "SynRad.h"
 
-//-----------------------------------------------------------------------------
-
 FacetMesh::FacetMesh():GLWindow() {
 
 	int wD = 275;
@@ -160,8 +158,6 @@ FacetMesh::FacetMesh():GLWindow() {
 
 }
 
-
-
 void FacetMesh::UpdateSize() {
 
 	char tmp[64];
@@ -233,8 +229,6 @@ void FacetMesh::UpdateSizeForRatio() {
 	cellText->SetText(tmp);
 
 }
-
-//-----------------------------------------------------------------------------
 
 void FacetMesh::EditFacet(Worker *w) {
 
@@ -326,9 +320,6 @@ void FacetMesh::EditFacet(Worker *w) {
 
 }
 
-
-//-----------------------------------------------------------------------------
-
 bool FacetMesh::Apply() {
 	extern GLApplication *theApp;
 	SynRad *mApp = (SynRad *)theApp;
@@ -389,7 +380,6 @@ bool FacetMesh::Apply() {
 		progressDlg->SetVisible(true);
 		progressDlg->SetProgress(0.0);
 
-
 		for(int i=0;i<geom->GetNbFacet();i++) {
 
 			Facet *f = geom->GetFacet(i);
@@ -417,10 +407,8 @@ bool FacetMesh::Apply() {
 
 }
 
-//-----------------------------------------------------------------------------
 void FacetMesh::QuickApply() {
 	//Apply view settings without stopping the simulation
-
 
 	double nbSelected = (double)geom->GetNbSelectedFacets();
 	double nbPerformed = 0.0;
@@ -440,8 +428,6 @@ void FacetMesh::QuickApply() {
 	}
 	geom->BuildGLList();
 }
-
-//-----------------------------------------------------------------------------
 
 void FacetMesh::UpdateToggle(GLComponent *src) {
 
@@ -463,20 +449,17 @@ void FacetMesh::UpdateToggle(GLComponent *src) {
 	UpdateSizeForRatio();
 }
 
-//-----------------------------------------------------------------------------
-
 void FacetMesh::ProcessMessage(GLComponent *src,int message) {
 
 	switch(message) {
 
-		// -------------------------------------------------------------
+		
 	case MSG_BUTTON:
 		if(src==cancelButton) {
 
 			GLWindow::ProcessMessage(NULL,MSG_CLOSE);
 
 		} else if (src==applyButton) {
-
 
 			//if (worker->running) worker->Stop_Public();
 			if( Apply() )
@@ -497,13 +480,13 @@ void FacetMesh::ProcessMessage(GLComponent *src,int message) {
 		} 
 		break;
 
-		// -------------------------------------------------------------
+		
 	case MSG_TEXT_UPD:
 		enableBtn->SetState(true);
 		UpdateSizeForRatio();
 		break;
 
-		// -------------------------------------------------------------
+		
 	case MSG_TOGGLE:
 		UpdateToggle(src);
 		break;

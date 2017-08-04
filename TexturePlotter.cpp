@@ -28,8 +28,6 @@ extern SynRad *mApp;
 static const char *fileFilters = "Text files\0*.txt";
 static const int   nbFilter = sizeof(fileFilters) / (2*sizeof(char *));
 
-// --------------------------------------------------------------------
-
 TexturePlotter::TexturePlotter():GLWindow() {
 
 	int wD = 500;
@@ -61,8 +59,6 @@ TexturePlotter::TexturePlotter():GLWindow() {
 	viewCombo->SetValueAt(1,"SR Flux/cm\262");
 	viewCombo->SetValueAt(2,"SR Power/cm\262");
 	viewCombo->SetValueAt(3,"MC Hits");
-
-
 
 	viewCombo->SetSelectedIndex(1);
 	Add(viewCombo);
@@ -96,8 +92,6 @@ TexturePlotter::TexturePlotter():GLWindow() {
 
 }
 
-// --------------------------------------------------------------------
-
 void TexturePlotter::PlaceComponents() {
 
 	mapList->SetBounds(5,5,width-15,height-80);
@@ -111,16 +105,12 @@ void TexturePlotter::PlaceComponents() {
 
 }
 
-// -----------------------------------------------------------------
-
 void TexturePlotter::SetBounds(int x,int y,int w,int h) {
 
 	GLWindow::SetBounds(x,y,w,h);
 	PlaceComponents();
 
 }
-
-// --------------------------------------------------------------------
 
 void TexturePlotter::GetSelected() {
 
@@ -141,8 +131,6 @@ void TexturePlotter::GetSelected() {
 
 }
 
-// --------------------------------------------------------------------
-
 void TexturePlotter::Update(float appTime,bool force) {
 
 	if(!IsVisible()) return;
@@ -159,8 +147,6 @@ void TexturePlotter::Update(float appTime,bool force) {
 	}
 
 }
-
-// --------------------------------------------------------------------
 
 void TexturePlotter::UpdateTable() {
 
@@ -182,7 +168,6 @@ void TexturePlotter::UpdateTable() {
 		int profile_memory=PROFILE_SIZE*(2*sizeof(double)+sizeof(llong));
 		mapList->SetSize(w,h);
 		mapList->SetAllColumnAlign(ALIGN_CENTER);
-
 
 		int mode = viewCombo->GetSelectedIndex();
 
@@ -231,19 +216,12 @@ void TexturePlotter::UpdateTable() {
 			}
 			break;}
 
-
-
-
 		case 2:  {// Power
-
-
-
 
 			// Lock during update
 			BYTE *buffer = worker->GetHits();
 			try{
 				if(buffer) {
-
 
 					SHGHITS *shGHit = (SHGHITS *)buffer;
 					int profSize = (selFacet->sh.isProfile)?profile_memory:0;
@@ -285,15 +263,12 @@ void TexturePlotter::UpdateTable() {
 					for(int i=0;i<w;i++) {
 						for(int j=0;j<h;j++) {
 
-
 							llong val=hits_MC[i+j*w];
 							if (val>maxValue) {
 								maxValue=(float)val;
 								maxX=i;maxY=j;
 							}
 							sprintf(tmp,"%g",(double)val);
-
-
 
 							mapList->SetValueAt(i,j,tmp);
 						}
@@ -313,8 +288,6 @@ void TexturePlotter::UpdateTable() {
 	if (autoSizeOnUpdate->GetState()) mapList->AutoSizeColumn();
 }
 
-// --------------------------------------------------------------------
-
 void TexturePlotter::Display(Worker *w) {
 
 	worker = w;
@@ -323,15 +296,11 @@ void TexturePlotter::Display(Worker *w) {
 
 }
 
-// --------------------------------------------------------------------
-
 void TexturePlotter::Close() {
 	worker = NULL;
 	if(selFacet) selFacet->UnselectElem();
 	mapList->Clear();
 }
-
-// --------------------------------------------------------------------
 
 void TexturePlotter::SaveFile() {
 
@@ -373,8 +342,6 @@ void TexturePlotter::SaveFile() {
 	}
 
 }
-
-// --------------------------------------------------------------------
 
 void TexturePlotter::ProcessMessage(GLComponent *src,int message) {
 

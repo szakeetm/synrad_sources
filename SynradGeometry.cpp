@@ -198,7 +198,6 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *
 
 		, size_t);
 
-
 	//psi_distr
 	WRITEBUFFER(psi_distro.size(), size_t); //copying number of rows
 		for (auto row : psi_distro) {
@@ -417,8 +416,6 @@ std::vector<std::string> SynradGeometry::InsertSYN(FileReader *file, GLProgress 
 	return result;
 }
 
-
-
 std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t *nbVertex, size_t *nbFacet, InterfaceVertex **vertices3, Facet ***facets, size_t strIdx, bool newStruct) {
 
 	std::vector<std::string> parFileList;
@@ -569,7 +566,6 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 	}
 	file->ReadKeyword("}");
 
-
 	// Read leaks
 	file->ReadKeyword("leaks"); file->ReadKeyword("{");
 	file->ReadKeyword("nbLeak"); file->ReadKeyword(":");
@@ -602,7 +598,6 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 		file->ReadInt();    //type
 	}
 	file->ReadKeyword("}");
-
 
 	// Read geometry facets (indexed from 1)
 	for (size_t i = *nbFacet; i < (*nbFacet + nbNewFacets); i++) {
@@ -638,7 +633,6 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 		}
 	}
 
-
 	*nbVertex += nbNewVertex;
 	*nbFacet += nbNewFacets;
 	if (newStruct) sh.nbSuper += nbNewSuper;
@@ -665,7 +659,6 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 	prg->SetMessage("Clearing current geometry...");
 	Clear();
 	//mApp->ClearFormula();
-
 
 	// Globals
 	char tmp[512];
@@ -1251,7 +1244,6 @@ void SynradGeometry::SaveDesorption(FILE *file, Dataport *dpHit, bool selectedOn
 				size_t profSize = (f->sh.isProfile) ? profile_memory : 0;
 				double *hits_flux = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(SHHITS) + profSize + textureSize_llong));
 
-
 				for (size_t i = 0; i < w; i++) {
 					for (size_t j = 0; j < h; j++) {
 						double dose = hits_flux[i + j*w] * f->GetMeshArea(i+j*w) / worker->no_scans;
@@ -1288,13 +1280,11 @@ void SynradGeometry::SaveDesorption(FILE *file, Dataport *dpHit, bool selectedOn
 
 }
 
-
 void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit, bool saveSelected, LEAK *leakCacheSave,
 	size_t *nbLeakSave, HIT *hitCacheSave, size_t *nbHitSave, bool crashSave) {
 
 	prg->SetMessage("Counting hits...");
 	if (!IsLoaded()) throw Error("Nothing to save !");
-
 
 	// Block dpHit during the whole disc writing
 	if (!crashSave && !saveSelected) AccessDataport(dpHit);
@@ -1304,7 +1294,6 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	if (!crashSave && !saveSelected) buffer = (BYTE *)dpHit->buff;
 	SHGHITS *gHits;
 	if (!crashSave && !saveSelected) gHits = (SHGHITS *)buffer;
-
 
 	double dCoef = 1.0;
 	int ix, iy;
@@ -1993,7 +1982,6 @@ void SynradGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgre
 		mApp->AddView(v.name, v);
 	}
 
-
 	if (isSynradFile) {
 		xml_node formulaNode = interfNode.child("Formulas");
 		for (xml_node newFormula : formulaNode.children("Formula")) {
@@ -2090,7 +2078,6 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 		facets[idx]->LoadXML(facetNode, sh.nbVertex + nbNewVertex, isSynradFile, sh.nbVertex);
 		facets[idx]->selected = true;
 
-
 		if (newStr) {
 			facets[idx]->sh.superIdx += sh.nbSuper; //offset structure
 			if (facets[idx]->sh.superDest>0) facets[idx]->sh.superDest += sh.nbSuper;
@@ -2138,7 +2125,6 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 		v.vBottom = newView.attribute("vBottom").as_double();
 		mApp->AddView(v.name, v);
 	}
-
 
 	sh.nbVertex += nbNewVertex;
 	sh.nbFacet += nbNewFacets; //formulas can refer to newly inserted facets

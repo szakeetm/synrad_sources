@@ -171,9 +171,6 @@ extern SIMULATION *sHandle;
 
 // -- Macros ---------------------------------------------------
 
-
-
-
 // -- Methods ---------------------------------------------------
 
 void RecordHitOnTexture(FACET *f,double dF,double dP);
