@@ -48,12 +48,18 @@ void Region_full::CalculateTrajectory(int max_steps){
 Trajectory_Point Region_full::OneStep(int pointId) {
 	Trajectory_Point* p0 = &(Points[pointId]);
 
-	Vector3d rotation_axis = CrossProduct(p0->direction, p0->rho); //Rotate function will normalize it
+	
 	//Calculate new point
 	Trajectory_Point p;
 	//p.position = Rotate(p0->position, p0->position + p0->rho, rotation_axis, params.dL_cm / p0->rho.Norme());//
 	p.position = p0->position + p0->direction*params.dL_cm;
-	p.direction = Rotate(p0->direction, Vector3d(0,0,0), rotation_axis, params.dL_cm / p0->rho.Norme()).Normalized(); //Renormalize to prevent accumulating rounding errors
+	if (p0->rho.Norme() < 1E30) {
+		Vector3d rotation_axis = CrossProduct(p0->direction, p0->rho); //Rotate function will normalize it
+		p.direction = Rotate(p0->direction, Vector3d(0, 0, 0), rotation_axis, params.dL_cm / p0->rho.Norme()).Normalized(); //Renormalize to prevent accumulating rounding errors
+	}
+	else { //No rotation, since B=0
+		p.direction = p0->direction;
+	}
 	/*
 	p.direction = Rotate(p0->direction, Vector3d(0, 0, 0), rotation_axis, params.dL_cm / p0->rho.Norme());
 	p.position = p0->position + p.direction * (params.dL_cm / p.direction.Norme());
@@ -65,22 +71,23 @@ void Region_full::CalcPointProperties(int pointId) {
 	Trajectory_Point* p = &(Points[pointId]);
 
 	p->B = B(pointId, Vector3d(0, 0, 0)); //local magnetic field
-	if (p->B.Norme() < VERY_SMALL) {//no magnetic field, beam goes in straight line
-		p->rho = Vector3d(0.0, 0.0, 1.0e30); //no rotation
+	double B_parallel = Dot(p->direction, p->B);
+	double B_orthogonal = sqrt(Sqr(p->B.Norme()) - Sqr(B_parallel));
+	
+	double radius;
+	Vector3d lorentz_force_direction;
+	if (B_orthogonal > VERY_SMALL) {
+		radius = params.E_GeV / 0.00299792458 / B_orthogonal;  //Energy in GeV divided by speed of light/1E9 converted to centimeters
+		lorentz_force_direction = CrossProduct(p->direction, p->B).Normalized();
+		if (params.particleMass_GeV<0.0) lorentz_force_direction = -1.0 * lorentz_force_direction;
+		p->rho = lorentz_force_direction * radius;
+		p->critical_energy = p->Critical_Energy(params.gamma);
 	}
 	else {
-		double B_parallel = Dot(p->direction, p->B);
-		double B_orthogonal = sqrt(Sqr(p->B.Norme()) - Sqr(B_parallel));
-		Vector3d lorentz_force_direction = CrossProduct(p->direction, p->B).Normalized();
-		if (params.particleMass_GeV<0.0) lorentz_force_direction = -1.0 * lorentz_force_direction;
-		double radius;
-		if (B_orthogonal>VERY_SMALL)
-			radius = params.E_GeV / 0.00299792458 / B_orthogonal; //in centimeters
-		else radius = 1.0E30;
-		p->rho = lorentz_force_direction * radius;
+		radius = 1.0E30;
+		p->critical_energy = 1E-30;
+		p->rho = Vector3d(1E30, 0, 0); //will rotate around its crossproduct
 	}
-
-	p->critical_energy = p->Critical_Energy(params.gamma);
 
 	//Calculate local base vectors
 	p->Z_local = p->direction.Normalized(); //Z' base vector
@@ -96,7 +103,7 @@ void Region_full::CalcPointProperties(int pointId) {
 			else if (params.beta_kind == 2) coordinate = p->position.y;
 			else if (params.beta_kind == 3) coordinate = p->position.z;
 
-			std::vector<double> betaValues = betaFunctions.GetYValues(coordinate); //interpolation
+			std::vector<double> betaValues = betaFunctions.InterpolateY(coordinate,true); //interpolation
 
 			p->beta_X = betaValues[0];    // [cm]
 			p->beta_Y = betaValues[1];    // [cm]
@@ -327,7 +334,7 @@ void Region_full::LoadPAR(FileReader *file){
 }
 
 Distribution2D Region_full::LoadMAGFile(FileReader *file,Vector3d *dir,double *period,double *phase,int mode){
-	Distribution2D result(1);
+	Distribution2D result;
 	if (mode==B_MODE_QUADRUPOLE) {
 		double quadrX=file->ReadDouble();
 		double quadrY=file->ReadDouble();
@@ -366,10 +373,10 @@ Distribution2D Region_full::LoadMAGFile(FileReader *file,Vector3d *dir,double *p
 		file->JumpComment();
 
 		int N=file->ReadInt();
-		result=Distribution2D(N);
 		for (int i=0;i<N;i++) {
-			result.valuesX[i]=file->ReadDouble();
-			result.valuesY[i]=file->ReadDouble();
+			double x = file->ReadDouble();
+			double y = file->ReadDouble();
+			result.AddPair(x, y);
 			file->JumpComment();
 		}
 	}
@@ -381,7 +388,7 @@ Region_full::Region_full():Region_mathonly(){
 	//generation_mode=SYNGEN_MODE_POWERWISE;
 	//emittance=eta=etaprime=energy_spread=betax=betay=0.0;
 	//coupling=100.0;
-	selectedPoint=-1;
+	selectedPointId=-1;
 	isLoaded=false;
 	//object placeholders until MAG files are loaded
 
@@ -426,7 +433,7 @@ Region_full::~Region_full(){
 	//Already called by region_mathonly's destructor
 }
 
-void Region_full::Render(const int& regionId, const int& dispNumTraj, GLMATERIAL *B_material, const double& vectorLength) {
+void Region_full::Render(const size_t& regionId, const size_t& dispNumTraj, GLMATERIAL *B_material, const double& vectorLength) {
 	if (!mApp->whiteBg) glPointSize(1.0f);
 	else glPointSize(2.0f);
 	//if (antiAliasing) glEnable(GL_POINT_SMOOTH);
@@ -451,7 +458,7 @@ void Region_full::Render(const int& regionId, const int& dispNumTraj, GLMATERIAL
 	glEnd();
 
 	//Selected trajectory point
-	if (selectedPoint!=-1) {
+	if (selectedPointId!=-1) {
 		// Draw dot
 		if (!mApp->whiteBg) glPointSize(6.0f);
 		else glPointSize(7.0f);
@@ -464,7 +471,7 @@ void Region_full::Render(const int& regionId, const int& dispNumTraj, GLMATERIAL
 		glColor3f(1.0f,0.0f,0.0f);
 
 		glBegin(GL_POINTS);
-		glVertex3d(Points[selectedPoint].position.x,Points[selectedPoint].position.y,Points[selectedPoint].position.z);
+		glVertex3d(Points[selectedPointId].position.x,Points[selectedPointId].position.y,Points[selectedPointId].position.z);
 		glEnd();
 
 		GLToolkit::SetMaterial(B_material);
@@ -477,13 +484,13 @@ void Region_full::Render(const int& regionId, const int& dispNumTraj, GLMATERIAL
 		}
 		glLineWidth(0.5f);
 
-		Vector3d O=Points[selectedPoint].position;
+		Vector3d O=Points[selectedPointId].position;
 		/*
-		Vector3d B_local=Points[selectedPoint].B;
+		Vector3d B_local=Points[selectedPointId].B;
 		Vector3d B_local_norm=B_local.Normalized();
-		Vector3d Rho_local=Points[selectedPoint].rho;
+		Vector3d Rho_local=Points[selectedPointId].rho;
 		Vector3d Rho_local_norm=Rho_local.Normalized();
-		Vector3d dir=Points[selectedPoint].direction;
+		Vector3d dir=Points[selectedPointId].direction;
 		double factor=vectorLength;
 		if (B_local.Norme()>0.0) 
 
@@ -506,8 +513,8 @@ void Region_full::Render(const int& regionId, const int& dispNumTraj, GLMATERIAL
 		/*char B_label[128];
 		char Rho_label[128];
 		char dir_label[128];*/
-		sprintf(point_label,"Region %d point #%d   [%g , %g , %g] L= %g",
-			regionId + 1 ,	selectedPoint+1, O.x,O.y,O.z,selectedPoint*params.dL_cm);
+		sprintf(point_label,"Region %zd point #%d   [%g , %g , %g] L= %g",
+			regionId + 1 ,	selectedPointId+1, O.x,O.y,O.z,selectedPointId*params.dL_cm);
 		/*sprintf(B_label,"B (%g Tesla)",B_local.Norme());
 		sprintf(Rho_label,"Rho (%g cm)",Rho_local.Norme());
 		sprintf(dir_label,"Direction");*/
@@ -554,11 +561,11 @@ void Region_full::SelectTrajPoint(int x,int y, size_t regionId) {
 		}
 	}
 
-	selectedPoint=-1;
+	selectedPointId=-1;
 
 	if (minDist<250.0) {
-		selectedPoint=minId;
-		if (mApp->trajectoryDetails && mApp->trajectoryDetails->GetRegionId()==regionId) mApp->trajectoryDetails->SelectPoint(selectedPoint);
+		selectedPointId=minId;
+		if (mApp->trajectoryDetails && mApp->trajectoryDetails->GetRegionId()==regionId) mApp->trajectoryDetails->SelectPoint(selectedPointId);
 	}
 
 	free(allXe);
@@ -632,7 +639,7 @@ Region_full::Region_full(const Region_full &src) {
 	this->psimaxX=src.params.psimaxX_rad;
 	this->psimaxY=src.params.psimaxY_rad;
 	this->quad=src.params.quad; //write assignment operator...
-	this->selectedPoint=src.selectedPoint;
+	this->selectedPointId=src.selectedPointId;
 	this->startDir=Vector3d(src.params.startDir.x,src.params.startDir.y,src.params.startDir.z);
 	this->startPoint=Vector3d(src.params.startPoint.x,src.params.startPoint.y,src.params.startPoint.z);
 	//this->teta0=src.teta0;
@@ -714,7 +721,7 @@ Region_full& Region_full::operator=(const Region_full &src) {
 	this->psimaxX=src.params.psimaxX_rad;
 	this->psimaxY=src.params.psimaxY_rad;
 	this->quad=src.params.quad; //write assignment operator...
-	this->selectedPoint=src.selectedPoint;
+	this->selectedPointId=src.selectedPointId;
 	this->startDir=Vector3d(src.params.startDir.x,src.params.startDir.y,src.params.startDir.z);
 	this->startPoint=Vector3d(src.params.startPoint.x,src.params.startPoint.y,src.params.startPoint.z);
 	//this->teta0=src.teta0;
@@ -827,7 +834,7 @@ int Region_full::LoadBXY(const std::string& fileName)
 	}
 	int nbDistr_BXY = (int)distrValues.size();
 
-	betaFunctions.Clear();
+	betaFunctions.Resize(0);
 
 	for (int i = 0; i < nbDistr_BXY; i++) {
 		std::vector<double> newVec(distrValues[i].begin() + 1, distrValues[i].end()); //Subvector without the X coord

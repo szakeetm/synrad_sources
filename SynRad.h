@@ -17,7 +17,7 @@
 */
 
 #include "Interface.h"
-#include "ExportDesorption.h"
+//#include "ExportDesorption.h"
 #include "FacetMesh.h"
 #include "FacetDetails.h"
 #include "TrajectoryDetails.h"
@@ -111,7 +111,7 @@ public:
 
     //Dialog
 	RegionInfo       *regionInfo;
-	ExportDesorption *exportDesorption;
+	//ExportDesorption *exportDesorption;
     FacetMesh        *facetMesh;
     FacetDetails     *facetDetails;
 	TrajectoryDetails *trajectoryDetails;

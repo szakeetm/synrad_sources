@@ -17,7 +17,7 @@ GNU General Public License for more details.
 */
 
 #include "FacetDetails.h"
-#include "Facet.h"
+#include "Facet_shared.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/MathTools.h" //FormatMemory
 #include "GLApp/GLMessageBox.h"

@@ -23,7 +23,7 @@
 #include "GLApp/GLToggle.h"
 #include "GLApp/GLTitledPanel.h"
 #include "GLApp/GLGradient.h"
-#include "Shared.h" //MAX_PROCESS macro
+#include "Buffer_shared.h" //MAX_PROCESS macro
 
 class Worker;
 class GLList;

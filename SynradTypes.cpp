@@ -1,10 +1,10 @@
 #include <math.h>
 #include "SynradTypes.h"
+#include "GLApp/MathTools.h"
 #include "File.h" //Error
 
 double Trajectory_Point::Critical_Energy(const double &gamma) {
 	double crit_en=2.959E-5*pow(gamma,3)/rho.Norme(); //rho in cm...
-	//if (!(crit_en==crit_en)) __debugbreak();
 	return crit_en;
 }
 
@@ -24,7 +24,7 @@ Histogram::Histogram(double min_V,double max_V,int N,bool logscale){
 	if (!logarithmic) { //linearly distributed bins
 		delta=(max-min)/number_of_bins;
 	} else {
-		delta=(log(max)-log(min))/number_of_bins;
+		delta=(log10(max)-log10(min))/number_of_bins;
 	}
 	//max_count=0.0;
 	total_count=0.0;
@@ -34,25 +34,24 @@ Histogram::~Histogram() {
 	free(counts);
 }
 
-void Histogram::Add(const double &x,const double &dY,const double &bandwidth) {
+void Histogram::Add(const double &x,const double &dY) {
 	if (x<max && x>=min) {
 		int binIndex;
 		if (!logarithmic) {
 			binIndex = (int)((x - min) / delta);
 		} else {
-			binIndex = (int)((log(x) - log(min)) / delta);
+			binIndex = (int)((log10(x) - log10(min)) / delta);
 		}
 		double binX = GetX(binIndex);
 		/*if (binIndex<number_of_bins && bandwidth == -1 || (abs(x - binX) / binX) < (bandwidth / 2)) {
 			counts[binIndex] += dY;
 			total_count += dY;
 		}*/
-		double factor = 1.0;
-		if (bandwidth > -1) factor = bandwidth / delta;
-		if (binIndex < number_of_bins) {
-			counts[binIndex] += dY*factor;
-			total_count += dY*factor;
-		}
+		
+		//if (binIndex < number_of_bins) { //x<max
+			counts[binIndex] += dY;
+			total_count += dY;
+		//}
 		//if (counts[binIndex]>max_count) max_count = counts[binIndex];
 	}
 }
@@ -70,7 +69,7 @@ double Histogram::GetX(size_t index){
 	if (!logarithmic) {
 		X=min+index*delta;
 	} else {
-		X=exp(log(min)+index*delta);
+		X=Pow10(log10(min)+index*delta);
 	}
 	return X;
 }

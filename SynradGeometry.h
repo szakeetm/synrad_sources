@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Geometry.h"
+#include "Geometry_shared.h"
 #include "Region_full.h"
 
 #define TEXTURE_MODE_MCHITS 0
@@ -28,6 +28,7 @@
 
 #define PARAMVERSION 3
 class Worker;
+class Material;
 
 class SynradGeometry: public Geometry {
 
@@ -46,12 +47,12 @@ public:
 	std::vector<std::string> InsertSYN(FileReader *file, GLProgress *prg, bool newStr);
 	void SaveTXT(FileWriter *file, Dataport *dhHit, bool saveSelected);
 	void ExportTextures(FILE *file, int grouping, int mode, double no_scans, Dataport *dhHit, bool saveSelected);
-	void SaveDesorption(FILE *file, Dataport *dhHit, bool selectedOnly, int mode, double eta0, double alpha, Distribution2D *distr);
+	void SaveDesorption(FILE *file, Dataport *dhHit, bool selectedOnly, int mode, double eta0, double alpha, const Distribution2D &distr);
 
 	//void SaveGEO(FileWriter *file,GLProgress *prg,Dataport *dpHit,bool saveSelected,LEAK *pleak,int *nbleakSave,HIT *hitCache,int *nbHHitSave,bool crashSave=false);
 	void SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit, bool saveSelected, LEAK *leakCache, size_t *nbLeakTotal, HIT *hitCache, size_t *nbHitSave, bool crashSave = false);
 	void SaveXML_geometry(pugi::xml_node saveDoc, Worker *work, GLProgress *prg, bool saveSelected);
-	bool SaveXML_simustate(pugi::xml_node saveDoc, Worker *work, BYTE *buffer, SHGHITS *gHits, int nbLeakSave, int nbHHitSave,
+	bool SaveXML_simustate(pugi::xml_node saveDoc, Worker *work, BYTE *buffer, GlobalHitBuffer *gHits, int nbLeakSave, int nbHHitSave,
 		LEAK *leakCache, HIT *hitCache, GLProgress *prg, bool saveSelected);
 	void LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg);
 	void InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, bool newStr);
@@ -59,11 +60,11 @@ public:
 	void BuildPipe(double L, double R, double s, int step);
 	void LoadProfileSYN(FileReader *file, Dataport *dpHit);
 	void LoadSpectrumSYN(FileReader *file, Dataport *dpHit);
-	size_t GetGeometrySize(std::vector<Region_full> *regions, std::vector<Material> *materials, 
+	size_t GetGeometrySize(std::vector<Region_full> &regions, std::vector<Material> &materials, 
 		std::vector<std::vector<double>> &psi_distro, std::vector<std::vector<std::vector<double>>> &chi_distros,
 		const std::vector<std::vector<double>>& parallel_polarization);
 	size_t GetHitsSize();
-	void CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> *regions, std::vector<Material> *materials,
+	void CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> &regions, std::vector<Material> &materials,
 		std::vector<std::vector<double>> &psi_distro, const std::vector<std::vector<std::vector<double>>> &chi_distros,
 		const std::vector<std::vector<double>> &parallel_polarization, int generation_mode, bool lowFluxMode, double lowFluxCutoff, bool newReflectionModel);
 #pragma endregion

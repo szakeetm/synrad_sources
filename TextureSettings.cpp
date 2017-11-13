@@ -19,7 +19,7 @@
 #include "TextureSettings.h"
 #include "SynradGeometry.h"
 #include "Worker.h"
-#include "Facet.h"
+#include "Facet_shared.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/MathTools.h" //FormatMemory
 #include "GLApp/GLMessageBox.h"
@@ -142,7 +142,7 @@ TextureSettings::TextureSettings():GLWindow() {
 
 void TextureSettings::UpdateSize() {
 
-  DWORD swap = 0;
+  size_t swap = 0;
   size_t nbFacet = geom->GetNbFacet();
   for(size_t i=0;i<nbFacet;i++) {
     Facet *f = geom->GetFacet(i);

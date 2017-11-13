@@ -2,11 +2,12 @@
 #include "Random.h"
 #include "GLApp/MathTools.h"
 #include "GeneratePhoton.h"
-#include "Distributions.h"
+#include "SynradDistributions.h"
 #include <vector>
 #include <tuple>
 
-extern Distribution2D /*polarization_distribution,*/integral_N_photons, integral_SR_power/*,g1h2_distribution*/;
+extern Distribution2D integral_N_photons, integral_SR_power/*,polarization_distribution,g1h2_distribution*/; 
+//extern DistributionND SR_spectrum_CDF;
 
 GenPhoton GeneratePhoton(size_t pointId, Region_mathonly *current_region, int generation_mode,
 	std::vector<std::vector<double>> &psi_distro, std::vector<std::vector<double>> &chi_distro,
@@ -91,22 +92,31 @@ GenPhoton GeneratePhoton(size_t pointId, Region_mathonly *current_region, int ge
 
 	result.critical_energy = 2.959E-5*pow(current_region->params.gamma, 3) / result.radius; //becomes ~1E-30 if radius is 1E30
 
+	//Precalc reused values
+	double loEnergyRatio = current_region->params.energy_low_eV / result.critical_energy;
+	double hiEnergyRatio = current_region->params.energy_hi_eV / result.critical_energy;
+	double log10LoEnergyRatio = log10(loEnergyRatio);
+	double log10HiEnergyRatio = log10(hiEnergyRatio);
+	double interpFluxLo, interpFluxHi, interpPowerLo, interpPowerHi;
+	bool calcInterpolates; //Should SYNGEN1 interpolate?
+
 	if (result.critical_energy == last_critical_energy) { //check if we've calculated the results already
 		result.B_factor = last_Bfactor;
 		result.B_factor_power = last_Bfactor_power;
 		average_photon_energy_for_region = last_average_ans;
+		calcInterpolates = true;
 	}
 	else {
-		//what part of all photons we cover in our region [Emin,Emax]
-		result.B_factor = (integral_N_photons.InterpolateY(log(current_region->params.energy_hi_eV / result.critical_energy),false)
-			- integral_N_photons.InterpolateY(log(current_region->params.energy_low_eV / result.critical_energy),false))
-			/ integral_N_photons.valuesY[integral_N_photons.size - 1];
-		//what part of all power we cover in [Emin,Emax]
-		result.B_factor_power = (integral_SR_power.InterpolateY(log(current_region->params.energy_hi_eV / result.critical_energy),false)
-			- integral_SR_power.InterpolateY(log(current_region->params.energy_low_eV / result.critical_energy),false))
-			/ integral_SR_power.valuesY[integral_SR_power.size - 1];
-		average_photon_energy_for_region = Interval_Mean(current_region->params.energy_low_eV / result.critical_energy,
-			current_region->params.energy_hi_eV / result.critical_energy);
+
+		interpFluxLo = integral_N_photons.InterpolateY(log10LoEnergyRatio, false);
+		interpFluxHi = integral_N_photons.InterpolateY(log10HiEnergyRatio, false);
+		interpPowerLo = integral_SR_power.InterpolateY(log10LoEnergyRatio, false);
+		interpPowerHi = integral_SR_power.InterpolateY(log10HiEnergyRatio, false);
+		
+		result.B_factor = (interpFluxHi - interpFluxLo)	/ integral_N_photons.GetY(NUMBER_OF_INTEGR_VALUES - 1); //what part of all photons we cover in our region [Emin,Emax]
+		result.B_factor_power = (interpPowerHi - interpPowerLo)	/ integral_SR_power.GetY(NUMBER_OF_INTEGR_VALUES - 1); //what part of all power we cover in [Emin,Emax]
+		average_photon_energy_for_region = Interval_Mean(loEnergyRatio,	hiEnergyRatio);
+		calcInterpolates = false;
 	}
 	
 	if (result.B_factor < 1E-10) { //negligible photons inside region energy limits
@@ -118,9 +128,10 @@ GenPhoton GeneratePhoton(size_t pointId, Region_mathonly *current_region, int ge
 		return result;
 	}
 
-	double average_photon_energy_whole_range = integral_SR_power.valuesY[integral_SR_power.size - 1] / integral_N_photons.valuesY[integral_N_photons.size - 1];
+	double average_photon_energy_whole_range = integral_SR_power.GetY(NUMBER_OF_INTEGR_VALUES - 1) / integral_N_photons.GetY(NUMBER_OF_INTEGR_VALUES - 1);
 
-	double generated_energy = SYNGEN1(log(current_region->params.energy_low_eV / result.critical_energy), log(current_region->params.energy_hi_eV / result.critical_energy),
+	double generated_energy = SYNGEN1(log10LoEnergyRatio, log10HiEnergyRatio,
+		interpFluxLo, interpFluxHi, interpPowerLo, interpPowerHi,calcInterpolates,
 		generation_mode);
 
 	int retries = 0;
@@ -197,8 +208,8 @@ double Interval_Mean(const double &min, const double &max) {
 	sum_photons += interval_dN;        //already calculated as valuesY[i]
 	sum_power += interval_dN*x_middle; //already calculated as integral_SR_power.valuesY[i]
 	}*/
-	double sum_photons2 = integral_N_photons.InterpolateY(log(max),false) - integral_N_photons.InterpolateY(log(min), false);
-	double sum_power2 = integral_SR_power.InterpolateY(log(max), false) - integral_SR_power.InterpolateY(log(min), false);
+	double sum_photons2 = integral_N_photons.InterpolateY(log10(max),false) - integral_N_photons.InterpolateY(log10(min), false);
+	double sum_power2 = integral_SR_power.InterpolateY(log10(max), false) - integral_SR_power.InterpolateY(log10(min), false);
 	if (sum_photons2 > VERY_SMALL) return sum_power2 / sum_photons2;
 	else return 0.5*(min + max);
 }

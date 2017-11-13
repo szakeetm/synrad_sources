@@ -1,160 +1,19 @@
-#include <malloc.h>
-#include <cstring>
-#include <math.h>
-#include "Distributions.h"
-#include "File.h"
-#include "Random.h"
+#include "SynradDistributions.h"
+#include "SynradTypes.h"
 #include "GLApp/MathTools.h"
-#include "GLApp\GLTypes.h"
-#include "Shared.h"
-#include <iterator>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <string>
-#include <math.h>
 #include <tuple>
+#include "Random.h"
+#include "File.h"
+#include <sstream>
+#include "Buffer_shared.h"
 
-Distribution2D K_1_3_distribution = Generate_K_Distribution(1.0 / 3.0);
-Distribution2D K_2_3_distribution = Generate_K_Distribution(2.0 / 3.0);
-Distribution2D integral_N_photons = Generate_Integral(LOWER_LIMIT, UPPER_LIMIT, INTEGRAL_MODE_N_PHOTONS);
-Distribution2D integral_SR_power = Generate_Integral(LOWER_LIMIT, UPPER_LIMIT, INTEGRAL_MODE_SR_POWER);
+//Distribution2D K_1_3_distribution = Generate_K_Distribution(1.0 / 3.0);
+//Distribution2D K_2_3_distribution = Generate_K_Distribution(2.0 / 3.0);
+//DistributionND SR_spectrum_CDF = Generate_SR_spectrum(LOWER_LIMIT, UPPER_LIMIT);
+Distribution2D integral_N_photons = Generate_SR_spectrum(LOWER_LIMIT, UPPER_LIMIT, INTEGRAL_MODE_N_PHOTONS);
+Distribution2D integral_SR_power = Generate_SR_spectrum(LOWER_LIMIT, UPPER_LIMIT, INTEGRAL_MODE_SR_POWER);
 //Distribution2D polarization_distribution=Generate_Polarization_Distribution(true,true);
 //Distribution2D g1h2_distribution=Generate_G1_H2_Distribution();
-
-DistributionND::DistributionND() {
-	Clear();
-}
-
-void DistributionND::Clear() {
-	values = std::vector<std::pair<double, std::vector<double>>>();
-}
-
-void DistributionND::AddPair(const double& x, const std::vector<double>& insertVals) {
-	values.push_back(std::make_pair(x, insertVals));
-}
-
-std::vector<double> DistributionND::GetYValues(const double& x) {
-	return InterpolateVector(x, values, true, false); //linear interpolation, limited to bounds
-}
-
-double DistributionND::GetXValue(const size_t& index) {
-	_ASSERTE(index < values.size());
-	return values[index].first;
-}
-
-std::vector<double> DistributionND::GetYValues(const size_t& index) {
-	_ASSERTE(index < values.size());
-	return values[index].second;
-}
-
-size_t DistributionND::GetSize() {
-	return values.size();
-}
-
-Distribution2D::Distribution2D() {
-	valuesX = (double*)malloc(1 * sizeof(double));
-	valuesY = (double*)malloc(1 * sizeof(double));
-	valuesX[0] = 0;
-	valuesY[0] = 0;
-	size = 1;
-}
-
-Distribution2D::Distribution2D(size_t N){
-	if (!(N > 0) && (N < 10000000)) N = 1; //don't create 0 size distributions
-	valuesX = (double*)malloc(N*sizeof(double));
-	valuesY = (double*)malloc(N*sizeof(double));
-	size = N;
-	//sum_energy=sum_photons= 0.0;
-}
-
-void Distribution2D::Resize(size_t N) {
-	if (!(N > 0) && (N < 10000000)) N = 1; //don't create 0 size distributions
-	SAFE_DELETE(valuesX);
-	SAFE_DELETE(valuesY);
-	valuesX = (double*)malloc(N * sizeof(double));
-	valuesY = (double*)malloc(N * sizeof(double));
-	size = N;
-}
-
-Distribution2D::Distribution2D(const Distribution2D &copy_src){ //copy constructor to avoid shallow copy
-	valuesX = (double*)malloc(copy_src.size*sizeof(double));
-	valuesY = (double*)malloc(copy_src.size*sizeof(double));
-	memcpy(valuesX, copy_src.valuesX, copy_src.size*sizeof(double));
-	memcpy(valuesY, copy_src.valuesY, copy_src.size*sizeof(double));
-	size = copy_src.size;
-}
-
-Distribution2D::~Distribution2D(){
-	SAFE_FREE(valuesX);
-	SAFE_FREE(valuesY);
-}
-
-Distribution2D& Distribution2D::operator= (const Distribution2D &copy_src) {
-	if (this != &copy_src) // protect against invalid self-assignment
-	{
-		valuesX = (double*)malloc(copy_src.size*sizeof(double));
-		valuesY = (double*)malloc(copy_src.size*sizeof(double));
-		memcpy(valuesX, copy_src.valuesX, copy_src.size*sizeof(double));
-		memcpy(valuesY, copy_src.valuesY, copy_src.size*sizeof(double));
-		size = copy_src.size;
-	}
-	// by convention, always return *this
-	return *this;
-}
-
-double Distribution2D::InterpolateY(const double &x, const bool& extrapolate) {
-	int inferior_index, superior_index;
-	double slope, overshoot;
-
-	//for (superior_index = 0; valuesX[superior_index] < x && superior_index < size; superior_index++); //To replace by binary search
-	inferior_index = my_binary_search(x, valuesX, size);
-	if (inferior_index == size - 1) {
-		if (!extrapolate) return valuesY[size - 1];
-		inferior_index--; //not found, x too large
-	}
-	if (inferior_index == -1) {
-		if (!extrapolate) return valuesY[0];
-		inferior_index++; //not found, x too small
-	}
-
-	//Interpolate / extrapolate:
-	superior_index = inferior_index + 1;
-
-	double diffX = valuesX[superior_index] - valuesX[inferior_index];
-	double diffY = valuesY[superior_index] - valuesY[inferior_index];
-	slope = diffY / diffX;
-	overshoot = x - valuesX[inferior_index];
-
-	return valuesY[inferior_index] + slope*overshoot;
-}
-
-double Distribution2D::InterpolateX(const double &y, const bool& extrapolate) {
-	int inferior_index, superior_index;
-	double slope, overshoot;
-
-	inferior_index = my_binary_search(y, valuesY, size);
-	if (inferior_index == size - 1) {
-		if (!extrapolate) return valuesX[size - 1]; //not found, y too large
-		inferior_index--;
-	}
-	if (inferior_index == -1) {
-		if (!extrapolate) return valuesX[0]; //not found, y too small
-		inferior_index++;
-	}
-
-	//Interpolate/extrapolate
-	superior_index = inferior_index + 1;
-
-	double diffX = valuesX[superior_index] - valuesX[inferior_index];
-	double diffY = valuesY[superior_index] - valuesY[inferior_index];
-	slope = diffY / diffX;
-	if (slope == 0.0) return valuesX[inferior_index];
-	overshoot = y - valuesY[inferior_index];
-
-	return valuesX[inferior_index] + overshoot / slope;
-}
 
 /*int Distribution2D::findXindex(const double &x) {
 	int superior_index;
@@ -162,7 +21,8 @@ double Distribution2D::InterpolateX(const double &y, const bool& extrapolate) {
 	return superior_index;
 	}*/
 
-double g0ki(double x, double order, int kind) {
+
+//double g0ki(double x, double order, int kind) {
 	/*ported from CALCF1.PAS:function g0ki(x,ord:realt1;kind:integer):realt1;
 
 	{ Adapted from B. Diviacco, Sincrotrone Trieste, private comm. }
@@ -170,7 +30,7 @@ double g0ki(double x, double order, int kind) {
 	{ the degree of polarization, and the integral of K5/3, used to obtain the }
 	{ number of SR photons. In this case it's equivalent to SYNRAD_, but slower.}
 	*/
-
+/*
 	double h1, g0, r1, q1, q2, s1, s2, t1, xs1; //absolutely no idea what these variables are or how this function works :(
 	h1 = 0.5;
 	g0 = 0.0;
@@ -187,7 +47,7 @@ double g0ki(double x, double order, int kind) {
 		g0 = g0 + t1;
 	} while (t1 > 1.0E-6);
 	return h1*(exp(-x) / 2.0 + g0);
-
+	*/
 	/*double sum,r1,q1,q2,s1,s2,increment; //absolutely no idea what these variables are or how this function works :(
 	sum=0.0;
 	x=0.0;
@@ -202,7 +62,8 @@ double g0ki(double x, double order, int kind) {
 	sum+=increment;
 	} while (increment>1.0E-6);
 	return 0.5*(exp(-x)/2.0+sum);*/
-}
+//}
+
 /*
 double Gi(double x,int order) {
 //pascal code: Gi:=exp(ord*ln(x))*g0ki(x,5.0/3.0,1);
@@ -215,6 +76,8 @@ double H(double x, int order) {
 return pow(x,order)*pow(g0ki(x/2.0,2.0/3.0,0),2);
 }
 */
+
+/*
 Distribution2D Generate_K_Distribution(double order){
 	//Gives K_order[x] (previously gave the natural logarithm)
 	Distribution2D result(NUMBER_OF_DISTRO_VALUES);
@@ -229,6 +92,7 @@ Distribution2D Generate_K_Distribution(double order){
 	}
 	return result;
 }
+*/
 
 /*Distribution2D Generate_G1_H2_Distribution(){
 Distribution2D result(NUMBER_OF_DISTRO_VALUES);
@@ -242,7 +106,10 @@ result.valuesY[i]=log(Max((Gi(x,1)/H(x,2)),VERY_SMALL));
 return result;
 }*/
 
-Distribution2D Generate_Integral(double log_min, double log_max, int mode){
+Distribution2D Generate_SR_spectrum(double log10_min, double log10_max, int mode){
+	//log10_min : Log10( Minimum_energy / Critical_energy )
+	//log10_max : Log10( Maximum_energy / Critical_energy )
+
 	/* ported from CALCF1.PAS:function integral(x1,x2:realt1):realt1;
 
 	{ Calculates the two real vectors integ[i,1], for the numbers of SR photons,  }
@@ -251,31 +118,37 @@ Distribution2D Generate_Integral(double log_min, double log_max, int mode){
 	{ according to the real distribution, see fig. 2 ref. G.K. Green for instance }
 	*/
 
+	//return value: Distribution2D a.k.a. pairs of double,double
 	//Scale X: log(ratio of energy / critical energy), goes from -10 to +2
 	//Scale Y: CDF (integral) of SR spectrum (flux or power) from log(E/E_crit)=-10 to X, goes from 0 to 1
-
-	double delta, exp_delta, interval_dN, sum_photons, sum_power, mean_photons, x_lower, x_middle, x_higher;
+	
+	double delta, log10_delta, interval_dN, sum_photons, sum_power, mean_photons, x_lower, x_middle, x_higher;
 
 	int i;
-	Distribution2D result(NUMBER_OF_INTEGR_VALUES);
+	Distribution2D result; result.Resize(NUMBER_OF_INTEGR_VALUES);
+	//DistributionND result2;
 
-	delta = (log_max - log_min) / (double)NUMBER_OF_INTEGR_VALUES;
+	delta = (log10_max - log10_min) / (double)NUMBER_OF_INTEGR_VALUES;
 	sum_photons = sum_power =  0.0;
 
 	for (i = 0; i < NUMBER_OF_INTEGR_VALUES; i++) {
-		x_lower = exp(log_min + i*delta);          //lower energy of bin, in units of E_crit
-		x_higher = exp(log_min + (i + 1.0)*delta); //higher energy of bin, in units of E_crit
-		exp_delta = x_higher - x_lower;            //bin energy range, in units of E_crit
-
+		x_lower = Pow10(log10_min + i*delta);          //lower energy of bin, in units of E_crit
+		x_higher = Pow10(log10_min + (i + 1.0)*delta); //higher energy of bin, in units of E_crit
 		x_middle = (x_lower + x_higher) / 2.0;     //average energy of bin
+		log10_delta = x_higher - x_lower;            //bin energy range, in units of E_crit
 		mean_photons = (SYNRAD_FAST(x_lower) + SYNRAD_FAST(x_higher)) / 2.0;
 
-		interval_dN = mean_photons*exp_delta; //number of photons for the actual interval, different averaging
-		sum_photons += interval_dN; //total integrated flux from log(E/E_crit)=-10 to this interval
-		sum_power += interval_dN*x_middle; //total integrated power from log(E/E_crit)=-10 to this interval (number of photons * average energy: energy of the interval)
-		result.valuesX[i] = log(x_middle);
-		if (mode == INTEGRAL_MODE_N_PHOTONS) result.valuesY[i] = sum_photons; //used to be log(sum_flux)
-		else if (mode == INTEGRAL_MODE_SR_POWER) result.valuesY[i] = sum_power; //used to be log(sum_power)
+		interval_dN = mean_photons*log10_delta; //number of photons for the actual interval, different averaging
+		
+		if (mode == INTEGRAL_MODE_N_PHOTONS) {
+			sum_photons += interval_dN; //total integrated flux from log10(E/E_crit)=-10 to this interval
+			result.SetPair(i,log10(x_middle), sum_photons);
+		}
+		else {
+			sum_power += interval_dN*x_middle; //total integrated power from log10(E/E_crit)=-10 to this interval (number of photons * average energy: energy of the interval)
+			result.SetPair(i,log10(x_middle), sum_power);
+		}
+		//result.AddPair(log10(x_middle), { sum_photons,sum_power });
 	}
 	return result;
 }
@@ -647,15 +520,22 @@ double find_chi(const double& psi, const double& gamma, const std::vector<std::v
 		double FB = interpolated_CDF_higher;
 		double FC = next_interpolated_CDF;
 		
-		chi = InverseQuadraticInterpolation(lookup, a, b, c, FA, FB, FC);
+		chi = QuadraticInterpolateX(lookup, a, b, c, FA, FB, FC);
 		//chi = Weigh(a, b,rnd()); //inverse linear interpolation
 
 	}
 	return chi;
 }
 
-double SYNGEN1(double log_x_min, double log_x_max, int mode) {
+double SYNGEN1(const double& log10LoEnergyRatio, const double& log10HiEnergyRatio,
+	double& interpFluxLo, double& interpFluxHi, double& interpPowerLo, double& interpPowerHi, const bool& calcInterpolates,
+	const int& generation_mode) {
 	/*
+	Originally called SYNGEN1.
+	- Determines the CDF values belonging to log10_x_min and log10_x_max (they are expressed in E/E_crit)
+	- Generates a random number between the two CDF values
+	- Interpolates the energy belonging to the generated number
+
 	{ Generates a random normalized SR photon energy in (xmin,xmax) from a        }
 	{ cumulative distribution given by the Vector3d array integ[i,1] calculated by  }
 	{ the procedure integral before calling SYNGEN1.                              }
@@ -673,19 +553,21 @@ double SYNGEN1(double log_x_min, double log_x_max, int mode) {
 
 	Indexes indexes=find_indexes(x_min,x_max,true); //subst. i1
 	*/
+	if (calcInterpolates) {
+		interpFluxLo = integral_N_photons.InterpolateY(log10LoEnergyRatio, false);
+		interpFluxHi = integral_N_photons.InterpolateY(log10HiEnergyRatio, false);
+		interpPowerLo = integral_SR_power.InterpolateY(log10LoEnergyRatio, false);
+		interpPowerHi = integral_SR_power.InterpolateY(log10HiEnergyRatio, false);
+	}
 
 	double generated_energy;
-	if (mode == SYNGEN_MODE_FLUXWISE) {
-		double flux_min = integral_N_photons.InterpolateY(log_x_min,false);
-		double flux_max = integral_N_photons.InterpolateY(log_x_max,false);
-		double generated_flux = Weigh(flux_min, flux_max, rnd()); //uniform distribution between flux_min and flux_max
-		generated_energy = exp(integral_N_photons.InterpolateX(generated_flux,false));
+	if (generation_mode == SYNGEN_MODE_FLUXWISE) {
+		double generated_flux = Weigh(interpFluxLo, interpFluxHi, rnd()); //uniform distribution between flux_min and flux_max
+		generated_energy = Pow10(integral_N_photons.InterpolateX(generated_flux,false));
 	}
-	else if (mode == SYNGEN_MODE_POWERWISE) {
-		double power_min = integral_SR_power.InterpolateY(log_x_min, false);
-		double power_max = integral_SR_power.InterpolateY(log_x_max, false);
-		double generated_power = Weigh(power_min, power_max, rnd()); //uniform distribution between flux_min and flux_max
-		generated_energy = exp(integral_SR_power.InterpolateX(generated_power,false));
+	else { //Powerwise
+		double generated_power = Weigh(interpPowerLo, interpPowerHi, rnd()); //uniform distribution between flux_min and flux_max
+		generated_energy = Pow10(integral_SR_power.InterpolateX(generated_power,false));
 	}
 	return generated_energy;
 }
@@ -694,12 +576,14 @@ double SYNRAD_FAST(const double &x) {
 	/*
 	{ Adapted from H.H. Umstaetter, CERN/PS/SM/81-13. }
 	{ Works as g0ki(x,5/3,1), but about 2.5x faster }
+
+	x = E/E_crit
 	*/
 	double Y, Z, A, B, P, Q;
 
 	if (x < 6.0) {
 
-		Z = pow(x, 2) / 16.0 - 2.0;
+		Z = Sqr(x) / 16.0 - 2.0;
 		A = +0.0000000001;
 		B = Z*A + 0.0000000023;
 		A = Z*B - A + 0.0000000813;
@@ -715,19 +599,20 @@ double SYNRAD_FAST(const double &x) {
 		A = Z*B - A + 644.8697965824;
 		P = 0.5*Z*A - B + 414.5654364883;
 		A = +0.0000000012;
-		B = Z*A + 0.0000000391;
-		A = Z*B - A + 0.0000011060;
-		B = Z*A - B + 0.0000258145;
-		A = Z*B - A + 0.0004876869;
-		B = Z*A - B + 0.0072845620;
-		A = Z*B - A + 0.0835793546;
-		B = Z*A - B + 0.7103136120;
-		A = Z*B - A + 4.2678026127;
-		B = Z*A - B + 17.0554078580;
-		A = Z*B - A + 41.8390348678;
-		Q = 0.5*Z*A - B + 28.4178737436;
-		Y = exp((2.0 / 3.0)*log(x));
-		return (P / Y - Q*Y - 1.0)*1.8137993642;
+B = Z*A + 0.0000000391;
+A = Z*B - A + 0.0000011060;
+B = Z*A - B + 0.0000258145;
+A = Z*B - A + 0.0004876869;
+B = Z*A - B + 0.0072845620;
+A = Z*B - A + 0.0835793546;
+B = Z*A - B + 0.7103136120;
+A = Z*B - A + 4.2678026127;
+B = Z*A - B + 17.0554078580;
+A = Z*B - A + 41.8390348678;
+Q = 0.5*Z*A - B + 28.4178737436;
+Y = exp((2.0 / 3.0)*log(x));
+//Y = pow(x, 2.0 / 3.0); //new
+return (P / Y - Q*Y - 1.0)*1.8137993642;
 	}
 	else if (x < 80.0)
 	{
@@ -749,7 +634,7 @@ double SYNRAD_FAST(const double &x) {
 	else return 0.0;
 }
 
-void Material::LoadMaterialCSV(FileReader *file){
+void Material::LoadMaterialCSV(FileReader *file) {
 	bool angleInit = true;
 	bool energyInit = true;
 	hasBackscattering = false;
@@ -801,34 +686,69 @@ void Material::InitAngles(std::vector<std::string> data) {
 	}
 }
 
-std::vector<double> Material::Interpolate(const double &energy, const double &angle) {
-	int angleLowerIndex, energyLowerIndex;
+std::vector<double> Material::BilinearInterpolate(const double &energy, const double &angle) {
+	//Bilinear interpolation in a table where each cell is a list of probabilities for forward/diffuse/backscattering/transparent pass
+	//Logarithmic values (both energy and angle), no extrapolation
 
-	angleLowerIndex = my_binary_search(angle, angleVals, angleVals.size());
-	energyLowerIndex = my_binary_search(energy, energyVals, energyVals.size());
+	int angleLowerIndex = my_lower_bound(angle, angleVals);
+	int energyLowerIndex = my_lower_bound(energy, energyVals);
 
-	if (angleLowerIndex == ((int)angleVals.size() - 1)) angleLowerIndex--; //if not in table
-	if (energyLowerIndex == ((int)energyVals.size() - 1)) energyLowerIndex--; //if not in table
+	double angleOvershoot, angleDelta, energyOvershoot, energyDelta;
+	bool interpolateAngle, interpolateEnergy;
 
-	double angleOvershoot = log(angle) - log(angleVals[angleLowerIndex]);
-	double angleDelta = log(angleVals[angleLowerIndex + 1]) - log(angleVals[angleLowerIndex]);
+	//Treat cases where out of table:
+	if (angleLowerIndex == -1) {
+		angleLowerIndex = 0;
+		interpolateAngle = false;
+	}
+	else if (angleLowerIndex == (angleVals.size() - 1)) {
+		interpolateAngle = false;
+	}
+	else {
+		angleOvershoot = log10(angle) - log10(angleVals[angleLowerIndex]);
+		angleDelta = log10(angleVals[angleLowerIndex + 1]) - log10(angleVals[angleLowerIndex]);
+		interpolateAngle = true;
+	}
 
-	double energyOvershoot = log(energy) - log(energyVals[energyLowerIndex]);
-	double energyDelta = log(energyVals[energyLowerIndex + 1]) - log(energyVals[energyLowerIndex]);
+	if (energyLowerIndex == -1) {
+		energyLowerIndex = 0;
+		interpolateEnergy = false;
+	}
+	else if (energyLowerIndex == (energyVals.size() - 1)) {
+		interpolateEnergy = false;
+	}
+	else {
+		energyOvershoot = log10(energy) - log10(energyVals[energyLowerIndex]);
+		energyDelta = log10(energyVals[energyLowerIndex + 1]) - log10(energyVals[energyLowerIndex]);
+		interpolateEnergy = true;
+	}
 
 	std::vector<double> interpRefl;
 	for (size_t comp = 0; comp < reflVals[energyLowerIndex][angleLowerIndex].size(); comp++) {
-		double interpolatedReflForLowerAngle = Weigh(reflVals[energyLowerIndex][angleLowerIndex][comp], reflVals[energyLowerIndex + 1][angleLowerIndex][comp], energyOvershoot / energyDelta);
-		double interpolatedReflForHigherAngle = Weigh(reflVals[energyLowerIndex][angleLowerIndex + 1][comp], reflVals[energyLowerIndex + 1][angleLowerIndex + 1][comp], energyOvershoot / energyDelta);
-		double refl = Weigh(interpolatedReflForLowerAngle, interpolatedReflForHigherAngle, angleOvershoot / angleDelta);
-		Saturate(refl, 0.0, 1.0);
-		interpRefl.push_back(refl);
+		double interpolatedReflForLowerAngle,interpolatedReflForHigherAngle,componentReflValue;
+		
+		interpolatedReflForLowerAngle = 
+			interpolateEnergy
+			? Weigh(reflVals[energyLowerIndex][angleLowerIndex][comp], reflVals[energyLowerIndex + 1][angleLowerIndex][comp], energyOvershoot / energyDelta)
+			: reflVals[energyLowerIndex][angleLowerIndex][comp];
+		if (interpolateAngle) {
+			interpolatedReflForHigherAngle = 
+				interpolateEnergy
+				? Weigh(reflVals[energyLowerIndex][angleLowerIndex + 1][comp], reflVals[energyLowerIndex + 1][angleLowerIndex + 1][comp], energyOvershoot / energyDelta)
+				: reflVals[energyLowerIndex][angleLowerIndex + 1][comp];
+			componentReflValue = Weigh(interpolatedReflForLowerAngle, interpolatedReflForHigherAngle, angleOvershoot / angleDelta);
+		}
+		else {
+			componentReflValue = interpolatedReflForLowerAngle;
+		}
+		Saturate(componentReflValue, 0.0, 1.0);
+		interpRefl.push_back(componentReflValue);
 	}
 	return interpRefl;
 }
 
 int Material::GetReflectionType(const double &energy, const double &angle, double const &rnd) {
-	std::vector<double> components = Interpolate(energy, angle);
+	std::vector<double> components = BilinearInterpolate(energy, angle);
 	if (rnd < components[0]) return REFL_FORWARD; //forward reflection
 	else if (hasBackscattering) {
 		if (rnd < (components[0] + components[1])) return REFL_DIFFUSE; //diffuse reflection

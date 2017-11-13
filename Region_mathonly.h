@@ -73,8 +73,8 @@ public:
 
 	//Methods
 	Region_mathonly();
-	Region_mathonly(const Region_mathonly &src);
-	Region_mathonly& operator=(const Region_mathonly &src);
+	//Region_mathonly(const Region_mathonly &src);
+	//Region_mathonly& operator=(const Region_mathonly &src);
 
 	Vector3d B(size_t pointId,const Vector3d &offset); //returns the B field at a given point, allows interpolation between points and offset due to non-ideal beam
 };

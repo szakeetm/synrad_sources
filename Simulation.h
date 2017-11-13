@@ -16,24 +16,27 @@
   GNU General Public License for more details.
 */
 
-#define MAX_STRUCT 512
+#ifndef _SIMULATIONH_
+#define _SIMULATIONH_
 
-#include "Shared.h"
+#define MAX_STRUCT 512
+#define MAX_THIT 16384
+
+#include "SynradTypes.h"
 #include "SMP.h"
 #include <vector>
 #include "Vector.h"
 #include "Region_mathonly.h"
 #include "TruncatedGaussian\rtnorm.hpp"
-
-#ifndef _SIMULATIONH_
-#define _SIMULATIONH_
+#include "SynradDistributions.h"
+#include <tuple>
 
 // Local facet structure
 
 typedef struct {
 
-  SHFACET sh;
-  SHHITS counter;
+  FacetProperties sh;
+  FacetHitBuffer counter;
 
   int      *indices;   // Indices (Reference to geometry vertex)
   Vector2d *vertices2; // Vertices (2D plane space, UV coordinates)
@@ -70,37 +73,26 @@ typedef struct {
 
   size_t globalId; //Global index (to identify when superstructures are present)
 
-} FACET;
+  void RegisterTransparentPass(); //Allows one shared Intersect routine between MolFlow and Synrad
+
+} SubprocessFacet;
 
 // Temporary transparent hit
-#define MAX_THIT    16384
-extern  FACET     **THits;
-
-// AABBTree node
-
-struct AABBNODE {
-
-  AABB             bb;
-  struct AABBNODE *left;
-  struct AABBNODE *right;
-  FACET          **list;
-  int              nbFacet;
-
-};
+extern  SubprocessFacet     **THitCache; //Global variable
 
 // Local simulation structure
 
 typedef struct {
 
   int              nbFacet;  // Number of facet
-  FACET          **facets;   // Facet handles
+  SubprocessFacet          **facets;   // Facet handles
   struct AABBNODE *aabbTree; // Structure AABB tree
 
 } SUPERSTRUCT;
 
 typedef struct {
 
-  SHHITS tmpCount;            // Temporary number of hits (between 2 calls of UpdateMC)
+  FacetHitBuffer tmpCount;            // Temporary number of hits (between 2 calls of UpdateMC)
   llong  desorptionLimit;       // Maximum number of desorption
 
   int    hitCacheSize;              // Last hits  
@@ -135,7 +127,7 @@ typedef struct {
   std::vector<std::vector<std::vector<double>>> chi_distros;
   std::vector<std::vector<double>> parallel_polarization;
 
-  FACET *lastHit;     // Last hitted facet
+  SubprocessFacet* lastHitFacet;     // Last hitted facet. Pointer, not a reference, that way it can be NULL (example: desorption from the middle of the volume)
   //int sourceArea;  // Number of trajectory points
   double stepPerSec;  // Avg number of step per sec
   size_t textTotalSize;  // Texture total size
@@ -173,8 +165,9 @@ extern SIMULATION *sHandle;
 
 // -- Methods ---------------------------------------------------
 
-void RecordHitOnTexture(FACET *f,double dF,double dP);
-void RecordDirectionVector(FACET *f);
+void RecordHitOnTexture(SubprocessFacet& f,double dF,double dP);
+void RecordDirectionVector(SubprocessFacet& f);
+void ProfileFacet(SubprocessFacet *f, const double &dF, const double &dP, const double &E);
 void InitSimulation();
 void ClearSimulation();
 void SetState(int state, const char *status, bool changeState = true, bool changeStatus = true);
@@ -184,44 +177,30 @@ bool UpdateSimuParams(Dataport *loader);
 bool StartSimulation();
 void ResetSimulation();
 bool SimulationRun();
-bool SimulationMCStep(int nbStep);
-double GetStickingProbability(FACET * collidedFacet, const double & theta, std::vector<double>& materialReflProbabilities, bool & complexScattering);
+bool SimulationMCStep(const size_t& nbStep);
+std::tuple<double, std::vector<double>, bool> GetStickingProbability(const SubprocessFacet& collidedFacet, const double& theta);
 
-bool DoOldRegularReflection(FACET * collidedFacet, double stickingProbability, const std::vector<double>& materialReflProbabilities,
-	const bool& complexScattering, double theta = 0.0, double phi = 0.0,
-	Vector3d N_rotated = Vector3d(0, 0, 0), Vector3d nU_rotated = Vector3d(0, 0, 0), Vector3d nV_rotated = Vector3d(0, 0, 0));
-bool DoLowFluxReflection(FACET * collidedFacet, double stickingProbability, double theta = 0.0, double phi = 0.0,
-	Vector3d N_rotated = Vector3d(0, 0, 0), Vector3d nU_rotated = Vector3d(0, 0, 0), Vector3d nV_rotated = Vector3d(0, 0, 0)); //old or new model
+bool DoOldRegularReflection(SubprocessFacet& collidedFacet, const double& stickingProbability, const int& reflType, const double& inTheta, const double& inPhi,
+	const Vector3d& N_rotated, const Vector3d& nU_rotated, const Vector3d& nV_rotated);
+bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingProbability, const int& reflType, const double& inTheta, const double& inPhi,
+	const Vector3d& N_rotated = Vector3d(0, 0, 0), const Vector3d& nU_rotated = Vector3d(0, 0, 0), const Vector3d& nV_rotated = Vector3d(0, 0, 0)); //old or new model
 int GetHardHitType(const double& stickingProbability, const std::vector<double>& materialReflProbabilities, const bool& complexScattering);
-void PerturbateSurface(double & sigmaRatio, FACET * collidedFacet, Vector3d & nU_rotated, Vector3d & nV_rotated, Vector3d & N_rotated);
-void GetDirComponents(Vector3d & nU_rotated, Vector3d & nV_rotated, Vector3d & N_rotated, double & u, double & v, double & n);
+std::tuple<Vector3d, Vector3d, Vector3d> PerturbateSurface( const SubprocessFacet& collidedFacet, const double& sigmaRatio);
+//std::tuple<double,double,double> GetDirComponents(const Vector3d & nU_rotated, const Vector3d & nV_rotated, const Vector3d & N_rotated);
 void RecordHit(const int &type,const double &dF,const double &dP);
 void RecordLeakPos();
 bool StartFromSource();
 void ComputeSourceArea();
-//int PerformBounce_new(FACET *iFacet,double sigmaRatio=0.0,double theta=0.0,double phi=0.0,
-//	Vector3d N_rotated=Vector3d(0,0,0),Vector3d nU_rotated=Vector3d(0,0,0),Vector3d nV_rotated=Vector3d(0,0,0),double thetaOffset=0.0,double phiOffset=0.0, double randomAngle=0.0, int reflType=1);
-void PerformBounce_new(FACET *iFacet, const double &theta, const double &phi, const int &reflType);
-bool PerformBounce_old(FACET * iFacet, int reflType, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated);
-bool VerifiedSpecularReflection(FACET * iFacet, int reflType, double theta, double phi, Vector3d N_rotated, Vector3d nU_rotated, Vector3d nV_rotated);
-void Stick(FACET *collidedFacet);
-void PerformTeleport(FACET *iFacet);
-void PolarToCartesian(FACET *iFacet,double theta,double phi,bool reverse,double rotateUV=0.0);
+void PerformBounce_new(SubprocessFacet& collidedFacet, const int &reflType, const double &inTheta, const double &inPhi);
+bool PerformBounce_old(SubprocessFacet& collidedFacet, const int& reflType, const double& inTheta, const double& inPhi, const Vector3d& N_rotated, const Vector3d& nU_rotated, const Vector3d& nV_rotated);
+bool VerifiedSpecularReflection(const SubprocessFacet& collidedFacet, const int& reflType, const double& inTheta, const double& inPhi, const Vector3d& nU_rotated, const Vector3d& nV_rotated, const Vector3d& N_rotated);
+void Stick(SubprocessFacet& collidedFacet);
+void PerformTeleport(const SubprocessFacet& collidedFacet);
 
-void CartesianToPolar(FACET *iFacet,double *theta,double *phi);
 void UpdateHits(Dataport *dpHit,int prIdx,DWORD timeout);
 void UpdateMCHits(Dataport *dpHit,int prIdx,DWORD timeout);
 void ResetTmpCounters();
-struct AABBNODE *BuildAABBTree(FACET **list,int nbFacet,int depth);
-int FindBestCuttingPlane(struct AABBNODE *node,int *left,int *right);
-void ComputeBB(struct AABBNODE *node);
-void DestroyAABB(struct AABBNODE *node);
-void IntersectTree(struct AABBNODE *node);
-bool Intersect(Vector3d *rayPos,Vector3d *rayDir,double *dist,FACET **iFact,FACET *last);
-bool RaySphereIntersect(Vector3d *center, double radius, Vector3d *rPos, Vector3d *rDir, double *dist);
-bool Visible(Vector3d *c1,Vector3d *c2,FACET *f1,FACET *f2);
-void ProfileFacet(FACET *f,const double &dF,const double &dP,const double &E);
-bool IsInFacet(FACET *f,const double &u,const double &v);
+//bool RaySphereIntersect(Vector3d *center, double radius, Vector3d *rPos, Vector3d *rDir, double *dist);
 double GetTick();
 size_t   GetHitsSize();
 

@@ -17,8 +17,10 @@ GNU General Public License for more details.
 */
 
 #include "Worker.h"
-#include "Facet.h"
+#include "Facet_shared.h"
 #include "SynradGeometry.h"
+#include "SynradDistributions.h"
+#include "SynradFacet.h"
 #include "GLApp/GLApp.h"
 #include "GLApp/GLMessageBox.h"
 #include <math.h>
@@ -254,7 +256,8 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool sa
 		}
 }
 
-void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr) {
+/*
+void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,const Distribution2D &distr) {
 
 	// Read a file
 
@@ -289,6 +292,7 @@ void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double e
 	fclose(f);
 
 }
+*/
 
 void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 	if (!insert) {
@@ -725,7 +729,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 
 	progressDlg->SetMessage("Creating dataport...");
 	// Create the temporary geometry shared structure
-	size_t loadSize = geom->GetGeometrySize(&regions, &materials, psi_distro, chi_distros, parallel_polarization);
+	size_t loadSize = geom->GetGeometrySize(regions, materials, psi_distro, chi_distros, parallel_polarization);
 	Dataport *loader = CreateDataport(loadDpName,loadSize);
 	if (!loader) {
 		progressDlg->SetVisible(false);
@@ -735,7 +739,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 	progressDlg->SetMessage("Accessing dataport...");
 	AccessDataportTimed(loader,3000+nbProcess*(size_t)((double)loadSize/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");
-	geom->CopyGeometryBuffer((BYTE *)loader->buff,&regions,&materials,psi_distro,chi_distros,
+	geom->CopyGeometryBuffer((BYTE *)loader->buff,regions,materials,psi_distro,chi_distros,
 		parallel_polarization,generation_mode,lowFluxMode,lowFluxCutoff,newReflectionModel);
 	progressDlg->SetMessage("Releasing dataport...");
 	ReleaseDataport(loader);
@@ -1029,7 +1033,7 @@ void Worker::SendHits() {
 			BYTE *pBuff = (BYTE *)dpHit->buff;
 			//memset(pBuff, 0, geom->GetHitsSize());
 
-			SHGHITS *gHits = (SHGHITS *)pBuff;
+			GlobalHitBuffer *gHits = (GlobalHitBuffer *)pBuff;
 
 			gHits->total.nbHit = nbHit;
 			gHits->nbLeakTotal = nbLeakTotal;
@@ -1042,7 +1046,7 @@ void Worker::SendHits() {
 			size_t nbFacet = geom->GetNbFacet();
 			for (int i = 0; i<nbFacet; i++) {
 				Facet *f = geom->GetFacet(i);
-				memcpy(pBuff + f->sh.hitOffset, &(f->counterCache), sizeof(SHHITS));
+				memcpy(pBuff + f->sh.hitOffset, &(f->counterCache), sizeof(FacetHitBuffer));
 			}
 			ReleaseDataport(dpHit);
 		}

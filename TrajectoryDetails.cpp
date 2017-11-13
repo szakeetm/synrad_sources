@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include "GLApp/GLToolkit.h"
 #include "GLApp/MathTools.h" //Pi Min max
 #include "GLApp/GLMessageBox.h"
+#include "SynradDistributions.h"
 
 #include "SynRad.h"
 #include "Random.h"
@@ -391,12 +392,13 @@ void TrajectoryDetails::UpdateTable() {
 	updatePrg->SetVisible(true);
 
 	//creating distributions
-	Distribution2D K_1_3_distribution = Generate_K_Distribution(1.0 / 3.0);
-	Distribution2D K_2_3_distribution = Generate_K_Distribution(2.0 / 3.0);
-	Distribution2D integral_N_photons = Generate_Integral(LOWER_LIMIT, UPPER_LIMIT, INTEGRAL_MODE_N_PHOTONS);
-	Distribution2D integral_SR_power = Generate_Integral(LOWER_LIMIT, UPPER_LIMIT, INTEGRAL_MODE_SR_POWER);
+	//Distribution2D K_1_3_distribution = Generate_K_Distribution(1.0 / 3.0);
+	//Distribution2D K_2_3_distribution = Generate_K_Distribution(2.0 / 3.0);
+	Distribution2D integral_N_photons = Generate_SR_spectrum(LOWER_LIMIT, UPPER_LIMIT, INTEGRAL_MODE_N_PHOTONS);
+	Distribution2D integral_SR_power = Generate_SR_spectrum(LOWER_LIMIT, UPPER_LIMIT, INTEGRAL_MODE_SR_POWER);
 	//Distribution2D polarization_distribution = Generate_Polarization_Distribution(true, true);
 	//Distribution2D g1h2_distribution = Generate_G1_H2_Distribution();
+	//DistributionND SR_spectrum_CDF = Generate_SR_spectrum(LOWER_LIMIT, UPPER_LIMIT);
 
 	/*double integ_BX = 0.0;
 	double integ_BY = 0.0;
@@ -533,7 +535,7 @@ void TrajectoryDetails::ProcessMessage(GLComponent *src, int message) {
 		break;
 
 	case MSG_LIST:
-		worker->regions[displayedRegion].selectedPoint = pointList->GetSelectedRow(true);
+		worker->regions[displayedRegion].selectedPointId = pointList->GetSelectedRow(true);
 		break;
 	case MSG_TEXT_UPD:{
 		int freq_temp;

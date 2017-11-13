@@ -57,7 +57,7 @@ private:
   Facet        *selFacet;
   float        lastUpdate;
   float			maxValue;
-  int			maxX,maxY;
+  size_t			maxX,maxY;
   char         currentDir[512];
 
   GLList      *mapList;

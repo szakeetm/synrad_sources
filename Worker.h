@@ -25,7 +25,7 @@
 //#include "PugiXML/pugixml.hpp"
 #include <string>
 #include "GLApp/GLTypes.h"
-#include "Shared.h"
+//#include "Buffer_shared.h"
 #include "Smp.h"
 
 typedef float ACFLOAT;
@@ -34,6 +34,7 @@ class Geometry;
 class SynradGeometry;
 class GLProgress;
 class LoadStatus;
+class Material;
 
 class Worker
 {
@@ -63,7 +64,7 @@ public:
   bool IsDpInitialized();
   void ExportTextures(char *fileName,int grouping,int mode,bool askConfirm=true,bool saveSelected=false);
   //void ExportRegionPoints(char *fileName,GLProgress *prg,int regionId,int exportFrequency,bool doFullScan);
-  void ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,Distribution2D *distr);
+  //void ExportDesorption(char *fileName,bool selectedOnly,int mode,double eta0,double alpha,const Distribution2D &distr);
 
   // Return/Set the current filename
   char *GetFileName();

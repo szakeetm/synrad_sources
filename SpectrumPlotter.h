@@ -24,7 +24,7 @@
 #include "GLApp/GLParser.h"
 #include "GLApp/GLTextField.h"
 #include "Worker.h"
-#include "Geometry.h"
+#include "Geometry_shared.h"
 
 #ifndef _SPECTRUMPLOTTERH_
 #define _SPECTRUMPLOTTERH_

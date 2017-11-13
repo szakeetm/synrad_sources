@@ -19,7 +19,8 @@ GNU General Public License for more details.
 #include "SpectrumPlotter.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
-#include "Facet.h"
+#include "GLApp/MathTools.h"
+#include "Facet_shared.h"
 
 #include <math.h>
 #include "Synrad.h"
@@ -151,7 +152,7 @@ void SpectrumPlotter::SetScale() {
 		if (traj->isLoaded) {
 			chart->GetXAxis()->SetMinimum(traj->params.energy_low_eV);
 			chart->GetXAxis()->SetMaximum(traj->params.energy_hi_eV);
-			delta=(log(traj->params.energy_hi_eV)-log(traj->params.energy_low_eV))/SPECTRUM_SIZE;
+			delta=(log10(traj->params.energy_hi_eV)-log10(traj->params.energy_low_eV))/SPECTRUM_SIZE;
 		}
 	}
 	}
@@ -204,23 +205,34 @@ void SpectrumPlotter::refreshViews() {
 			size_t textureSize=(f->sh.isTextured)?(f->sh.texWidth*f->sh.texHeight*(2*sizeof(double)+sizeof(llong))):0;
 			size_t directionSize=(f->sh.countDirection)?(f->sh.texWidth*f->sh.texHeight*sizeof(VHIT)):0;
 
-			double *shSpectrum_fluxwise = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize 
+			double *shSpectrum_fluxwise = (double *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize 
 				+ textureSize + directionSize));
-			double *shSpectrum_powerwise = (double *)(buffer + (f->sh.hitOffset + sizeof(SHHITS) + profileSize 
+			double *shSpectrum_powerwise = (double *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize 
 				+ textureSize + directionSize + SPECTRUM_SIZE*sizeof(double)));
 
 			double max_flux,max_power;
 
 			switch(normalize) {
 			case 0: //no normalization
-				if (mode==0) { //flux
-					for(int j=0;j<PROFILE_SIZE;j++)
-						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+(0.5+j)*delta),shSpectrum_fluxwise[j]/worker->no_scans,false); //0.5: point should be center of bin
-				} else if (mode==1) { //power
-					for(int j=0;j<PROFILE_SIZE;j++)
-						v->Add(exp(log(chart->GetXAxis()->GetMinimum())+(0.5+j)*delta),shSpectrum_powerwise[j]/worker->no_scans,false);
+			{
+				// Bandwidth correction
+				// Preferred bin width: 0.1% * Bin_lower_limit
+				// Recorded bin width: Bin_higher_limit - Bin_lower_limit = Bin_lower_limit*10^delta - Bin_lower_limit = Bin_lower_limit*(10^delta - 1)
+				// Preferred / recorded: 0.1% / (10^delta - 1)
+				double log10_min = log10(chart->GetXAxis()->GetMinimum());
+				double log10_max = log10(chart->GetXAxis()->GetMaximum());
+				double bandwidthCorrection = 0.001 / (Pow10(delta) - 1.0);
+
+				if (mode == 0) { //flux
+					for (int j = 0; j < PROFILE_SIZE; j++)
+						v->Add(Pow10(log10_min + (0.5 + j)*delta), shSpectrum_fluxwise[j] / worker->no_scans * bandwidthCorrection, false); //0.5: point should be center of bin
+				}
+				else if (mode == 1) { //power
+					for (int j = 0; j < PROFILE_SIZE; j++)
+						v->Add(Pow10(log10_min + (0.5 + j)*delta), shSpectrum_powerwise[j] / worker->no_scans * bandwidthCorrection, false);
 				}
 				break;
+			}
 			case 1: //normalize max. value to 1
 				if (mode==0) { //flux
 					max_flux=0.0;
@@ -228,14 +240,14 @@ void SpectrumPlotter::refreshViews() {
 						if (shSpectrum_fluxwise[j]>max_flux) max_flux=shSpectrum_fluxwise[j];
 					if (max_flux>0.0)
 						for(int j=0;j<PROFILE_SIZE;j++)
-							v->Add(exp(log(chart->GetXAxis()->GetMinimum()) + (0.5 + j)*delta), shSpectrum_fluxwise[j] / max_flux, false);
+							v->Add(Pow10(log10(chart->GetXAxis()->GetMinimum()) + (0.5 + j)*delta), shSpectrum_fluxwise[j] / max_flux, false);
 				} else if (mode==1) { //power
 					max_power=0.0;
 					for(int j=0;j<PROFILE_SIZE;j++)
 						if (shSpectrum_powerwise[j]>max_power) max_power=shSpectrum_powerwise[j];
 					if (max_power>0.0)
 						for(int j=0;j<PROFILE_SIZE;j++)
-							v->Add(exp(log(chart->GetXAxis()->GetMinimum()) + (0.5 + j)*delta), shSpectrum_powerwise[j] / max_power, false);
+							v->Add(Pow10(log10(chart->GetXAxis()->GetMinimum()) + (0.5 + j)*delta), shSpectrum_powerwise[j] / max_power, false);
 				}
 				break;
 			}

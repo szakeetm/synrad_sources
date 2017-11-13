@@ -17,7 +17,7 @@ GNU General Public License for more details.
 */
 
 #include "TexturePlotter.h"
-#include "Facet.h"
+#include "Facet_shared.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
 #include "GLApp/GLFileBox.h"
@@ -161,11 +161,11 @@ void TexturePlotter::UpdateTable() {
 	if(selFacet->cellPropertiesIds) {
 
 		char tmp[256];
-		int w = selFacet->sh.texWidth;
-		int h = selFacet->sh.texHeight;
-		int textureSize_double=w*h*sizeof(double);
-		int textureSize_llong=w*h*sizeof(llong);
-		int profile_memory=PROFILE_SIZE*(2*sizeof(double)+sizeof(llong));
+		size_t w = selFacet->sh.texWidth;
+		size_t h = selFacet->sh.texHeight;
+		size_t textureSize_double=w*h*sizeof(double);
+		size_t textureSize_llong=w*h*sizeof(llong);
+		size_t profile_memory=PROFILE_SIZE*(2*sizeof(double)+sizeof(llong));
 		mapList->SetSize(w,h);
 		mapList->SetAllColumnAlign(ALIGN_CENTER);
 
@@ -174,8 +174,8 @@ void TexturePlotter::UpdateTable() {
 		switch(mode) {
 
 		case 0: {// Cell area
-			for(int i=0;i<w;i++) {
-				for(int j=0;j<h;j++) {
+			for(size_t i=0;i<w;i++) {
+				for(size_t j=0;j<h;j++) {
 					float val=selFacet->GetMeshArea(i+j*w);
 					sprintf(tmp,"%g",val);
 					if (val>maxValue) {
@@ -194,12 +194,12 @@ void TexturePlotter::UpdateTable() {
 
 			try {
 				if(buffer) {
-					SHGHITS *shGHit = (SHGHITS *)buffer;
-					int profSize = (selFacet->sh.isProfile)?profile_memory:0;
-					double *hits_flux = (double *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(SHHITS) + profSize + textureSize_llong));
+					GlobalHitBuffer *shGHit = (GlobalHitBuffer *)buffer;
+					size_t profSize = (selFacet->sh.isProfile)?profile_memory:0;
+					double *hits_flux = (double *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + textureSize_llong));
 
-					for(int i=0;i<w;i++) {
-						for(int j=0;j<h;j++) {
+					for(size_t i=0;i<w;i++) {
+						for(size_t j=0;j<h;j++) {
 							double val=hits_flux[i+j*w]/worker->no_scans; //already divided by area
 							if (val>maxValue) {
 								maxValue=(float)val;
@@ -223,12 +223,12 @@ void TexturePlotter::UpdateTable() {
 			try{
 				if(buffer) {
 
-					SHGHITS *shGHit = (SHGHITS *)buffer;
-					int profSize = (selFacet->sh.isProfile)?profile_memory:0;
-					double *hits_power = (double *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(SHHITS) + profSize + textureSize_llong + textureSize_double));
+					GlobalHitBuffer *shGHit = (GlobalHitBuffer *)buffer;
+					size_t profSize = (selFacet->sh.isProfile)?profile_memory:0;
+					double *hits_power = (double *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + textureSize_llong + textureSize_double));
 
-					for(int i=0;i<w;i++) {
-						for(int j=0;j<h;j++) {
+					for(size_t i=0;i<w;i++) {
+						for(size_t j=0;j<h;j++) {
 							double val=hits_power[i+j*w]/worker->no_scans;
 
 							if (val>maxValue) {
@@ -254,14 +254,14 @@ void TexturePlotter::UpdateTable() {
 			BYTE *buffer = worker->GetHits();
 			try{
 				if(buffer) {
-					SHGHITS *shGHit = (SHGHITS *)buffer;
-					int profSize = (selFacet->sh.isProfile)?profile_memory:0;
-					llong *hits_MC = (llong *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(SHHITS) + profSize));
+					GlobalHitBuffer *shGHit = (GlobalHitBuffer *)buffer;
+					size_t profSize = (selFacet->sh.isProfile)?profile_memory:0;
+					llong *hits_MC = (llong *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
 					float dCoef = 1.0f;
 					//if( shGHit->mode == MC_MODE ) dCoef=1.0;//dCoef = (float)totalOutgassing / (float)shGHit->total.nbDesorbed;
 
-					for(int i=0;i<w;i++) {
-						for(int j=0;j<h;j++) {
+					for(size_t i=0;i<w;i++) {
+						for(size_t j=0;j<h;j++) {
 
 							llong val=hits_MC[i+j*w];
 							if (val>maxValue) {
@@ -329,7 +329,7 @@ void TexturePlotter::SaveFile() {
 		}
 
 		for(size_t i=u;i<u+wu;i++) {
-			for(int j=v;j<v+wv;j++) {
+			for(size_t j=v;j<v+wv;j++) {
 				char *str = mapList->GetValueAt(j,i);
 				if( str ) fprintf(f,"%s",str);
 				if( j<v+wv-1 ) 

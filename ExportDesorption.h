@@ -41,7 +41,7 @@ private:
   GLToggle *toggle1,*toggle2,*toggle3,*selectedToggle;
   bool fileLoaded;
 
-  Distribution2D *conversionDistr;
+  Distribution2D conversionDistr;
   double eta0,alpha;
   char* fileName;
 

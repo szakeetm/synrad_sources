@@ -23,7 +23,7 @@
 #include "GLApp/GLToggle.h"
 #include "GLApp/GLCombo.h"
 #include "GLApp/GLTitledPanel.h"
-#include "Geometry.h"
+#include "Geometry_shared.h"
 #include "GeometryViewer.h"
 
 #ifndef _VIEWER3DSETTINGSH_

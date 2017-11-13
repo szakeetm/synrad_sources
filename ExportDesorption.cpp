@@ -32,7 +32,8 @@ ExportDesorption::ExportDesorption(Geometry *g,Worker *w):GLWindow() {
 	fileName = NULL;
 	fileLoaded = false;
 	mode=2; //default mode: use equation
-	conversionDistr = new Distribution2D(1); //placeholder
+	//conversionDistr = new Distribution2D(); //placeholder
+	conversionDistr.isLogLog = true;
 
 	SetTitle("Export desorption map");
 

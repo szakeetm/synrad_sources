@@ -19,7 +19,7 @@ public:
 	std::string fileName,MAGXfileName,MAGYfileName,MAGZfileName,BXYfileName;
 	bool isLoaded;
 	Vector3d AABBmin,AABBmax;
-	int selectedPoint;
+	int selectedPointId; //can be -1 if nothing's selected
 
 	//Methods
 	Region_full();
@@ -36,7 +36,7 @@ public:
 	void LoadParam(FileReader *f);
 	Distribution2D LoadMAGFile(FileReader *file,Vector3d *dir,double *period,double *phase,int mode);
 	int LoadBXY(const std::string& fileName); //Throws error
-	void Render(const int& regionId, const int& dispNumTraj, GLMATERIAL *B_material, const double& vectorLength);
+	void Render(const size_t& regionId, const size_t& dispNumTraj, GLMATERIAL *B_material, const double& vectorLength);
 	void SelectTrajPoint(int x,int y, size_t regionId);
 	void SaveParam(FileWriter *f);
 	

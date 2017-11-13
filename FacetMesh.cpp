@@ -18,7 +18,7 @@ GNU General Public License for more details.
 
 #include <math.h>
 
-#include "Facet.h"
+#include "Facet_shared.h"
 #include "FacetMesh.h"
 #include "GLApp/GLLabel.h"
 #include "GLApp/GLToolkit.h"

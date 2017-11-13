@@ -28,7 +28,7 @@ GNU General Public License for more details.
 #include "GLApp/GLWindowManager.h"
 #include "GLApp/GLMenuBar.h"
 #include "RecoveryDialog.h"
-#include "Facet.h"
+#include "Facet_shared.h"
 #include "SynradGeometry.h"
 #include "GLApp\MathTools.h"
 //for Remainder
@@ -55,12 +55,12 @@ int   cSize = 5;
 int   cWidth[] = { 30, 56, 50, 50, 50 };
 char *cName[] = { "#", "Hits", "Flux", "Power", "Abs" };
 
-int appVersion = 1413;
+int appVersion = 1416;
 std::string appId = "Synrad";
 #ifdef _DEBUG
 std::string appName = "SynRad+ development version (Compiled " __DATE__ " " __TIME__ ") DEBUG MODE";
 #else
-std::string appName = "Synrad+ 1.4.13 (" __DATE__ ")";
+std::string appName = "Synrad+ 1.4.16 (" __DATE__ ")";
 #endif
 
 std::vector<string> formulaPrefixes = { "H","A","F","P","AR","h","a","f","p","ar","," };
@@ -94,7 +94,7 @@ float m_fTime;
 SynRad *mApp;
 
 //Menu elements, Synrad specific
-#define MENU_FILE_EXPORT_DESORP 140
+//#define MENU_FILE_EXPORT_DESORP 140
 
 #define MENU_FILE_EXPORTTEXTURE_AREA 151
 #define MENU_FILE_EXPORTTEXTURE_MCHITS 152
@@ -113,8 +113,8 @@ SynRad *mApp;
 #define MENU_FILE_EXPORTTEXTURE_ANSYS_POWER_COORD 177
 
 #define MENU_REGIONS_NEW        901
-#define MENU_REGIONS_LOADPAR      902
-#define MENU_REGIONS_CLEARALL    903
+#define MENU_REGIONS_LOADPAR    902
+#define MENU_REGIONS_CLEARALL   903
 #define MENU_REGIONS_REGIONINFO 904
 
 #define MENU_REGIONS_LOADRECENT		910
@@ -185,7 +185,7 @@ SynRad::SynRad()
 
 	//Synrad only:
 	regionInfo = NULL;
-	exportDesorption = NULL;
+	//exportDesorption = NULL;
 	trajectoryDetails = NULL;
 	spectrumPlotter = NULL;
 	regionEditor = NULL;
@@ -202,7 +202,7 @@ int SynRad::OneTimeSceneInit()
 
 	OneTimeSceneInit_shared();
 
-	menu->GetSubMenu("File")->Add("Export DES file (deprecated)", MENU_FILE_EXPORT_DESORP);
+	//menu->GetSubMenu("File")->Add("Export DES file (deprecated)", MENU_FILE_EXPORT_DESORP);
 
 	menu->GetSubMenu("File")->Add("Export selected textures");
 	menu->GetSubMenu("File")->GetSubMenu("Export selected textures")->Add("Facet by facet");
@@ -1054,7 +1054,7 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 	bool ok = true;
 	Geometry* geom = worker.GetGeometry();
 	size_t nbFacet = geom->GetNbFacet();
-	size_t idx;
+	int idx;
 
 	if ((idx = GetVariable(v->name, "A")) > 0) {
 		ok = (idx <= nbFacet);
@@ -1307,7 +1307,7 @@ int SynRad::RestoreDeviceObjects()
 
 	//Synrad only
 	RVALIDATE_DLG(regionInfo);
-	RVALIDATE_DLG(exportDesorption);
+	//RVALIDATE_DLG(exportDesorption);
 	RVALIDATE_DLG(spectrumPlotter);
 	RVALIDATE_DLG(trajectoryDetails);
 
@@ -1333,7 +1333,7 @@ int SynRad::InvalidateDeviceObjects()
 
 	//Synrad only
 	IVALIDATE_DLG(regionInfo);
-	IVALIDATE_DLG(exportDesorption);
+	//IVALIDATE_DLG(exportDesorption);
 	IVALIDATE_DLG(spectrumPlotter);
 	IVALIDATE_DLG(trajectoryDetails);
 
@@ -1484,7 +1484,7 @@ void SynRad::LoadFile(char *fName) {
 		RebuildPARMenus();
 		UpdateStructMenu();
 		if (profilePlotter) profilePlotter->Reset();
-		if (spectrumPlotter) spectrumPlotter->Reset();
+		if (spectrumPlotter) spectrumPlotter->Refresh();
 		UpdateCurrentDir(fullName);
 
 		// Check non simple polygon
@@ -1688,14 +1688,14 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			ExportTextures(1, 5);
 			break;
 
-		case MENU_FILE_EXPORT_DESORP:
+		/*case MENU_FILE_EXPORT_DESORP:
 			if (!geom->IsLoaded()) {
 				GLMessageBox::Display("No geometry loaded.", "Error", GLDLG_OK, GLDLG_ICONERROR);
 				return;
 			}
 			if (!exportDesorption) exportDesorption = new ExportDesorption(geom, &worker);
 			exportDesorption->SetVisible(true);
-			break;
+			break;*/
 
 		case MENU_EDIT_TSCALING:
 			if (!textureSettings || !textureSettings->IsVisible()) {
@@ -1731,27 +1731,24 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 				outgassingMap->Display(&worker);
 				break;*/
 		case MENU_FACET_REMOVESEL:
+		{
+			auto selectedFacets = geom->GetSelectedFacets();
+			if (selectedFacets.size() == 0) return; //Nothing selected
 			if (GLMessageBox::Display("Remove selected facets?", "Question", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONINFO) == GLDLG_OK) {
 				if (AskToReset()) {
 					if (worker.running) worker.Stop_Public();
-					geom->RemoveSelected();
+					geom->RemoveFacets(selectedFacets);
 					//geom->CheckIsolatedVertex();
 					UpdateModelParams();
+					UpdatePlotters();
 					if (vertexCoordinates) vertexCoordinates->Update();
 					if (facetCoordinates) facetCoordinates->UpdateFromSelection();
-					if (profilePlotter) profilePlotter->Refresh();
-					if (spectrumPlotter) spectrumPlotter->Refresh();
-					//if (pressureEvolution) pressureEvolution->Refresh();
-					//if (timewisePlotter) timewisePlotter->Refresh();
 					// Send to sub process
-					try { worker.Reload(); }
-					catch (Error &e) {
-						GLMessageBox::Display((char *)e.GetMsg(), "Error reloading worker", GLDLG_OK, GLDLG_ICONERROR);
-					}
+					worker.Reload();
 				}
 			}
 			break;
-
+		}
 		case MENU_FACET_DETAILS:
 			if (facetDetails == NULL) facetDetails = new FacetDetails();
 			facetDetails->Display(&worker);
@@ -1816,7 +1813,10 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 						if (vertexCoordinates) vertexCoordinates->Update();
 						if (facetCoordinates) facetCoordinates->UpdateFromSelection();
 						if (profilePlotter) profilePlotter->Refresh();
-						if (spectrumPlotter) spectrumPlotter->Refresh();
+						if (spectrumPlotter) {
+							spectrumPlotter->Reset(); //remove views
+							spectrumPlotter->Refresh(); //rebuild list of available facets
+						}
 						//if (pressureEvolution) pressureEvolution->Refresh();
 						//if (timewisePlotter) timewisePlotter->Refresh();
 						// Send to sub process
@@ -1836,7 +1836,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 				worker.regions[i].params.showPhotons = true;
 			worker.ChangeSimuParams();
 			for (size_t i = 0; i < worker.regions.size(); i++)
-				ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS + i, worker.regions[i].params.showPhotons);
+				ShowHitsMenu->SetCheck((int)(MENU_REGIONS_SHOWHITS + i), worker.regions[i].params.showPhotons);
 			break;
 
 		case MENU_REGIONS_SHOWNONE:
@@ -1844,7 +1844,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 				worker.regions[i].params.showPhotons = false;
 			worker.ChangeSimuParams();
 			for (size_t i = 0; i < worker.regions.size(); i++)
-				ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS + i, worker.regions[i].params.showPhotons);
+				ShowHitsMenu->SetCheck((int)(MENU_REGIONS_SHOWHITS + i), worker.regions[i].params.showPhotons);
 			break;
 		}
 
@@ -1874,9 +1874,9 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		//View hits menu
 		else if (src->GetId() >= MENU_REGIONS_SHOWHITS && src->GetId() < MENU_REGIONS_SHOWHITS + Min((int)worker.regions.size(), 19)) {
 			size_t index = src->GetId() - MENU_REGIONS_SHOWHITS;
-			worker.regions[index].params.showPhotons = !ShowHitsMenu->GetCheck(MENU_REGIONS_SHOWHITS + index);
+			worker.regions[index].params.showPhotons = !ShowHitsMenu->GetCheck((int)(MENU_REGIONS_SHOWHITS + index));
 			worker.ChangeSimuParams();
-			ShowHitsMenu->SetCheck(MENU_REGIONS_SHOWHITS + index, worker.regions[index].params.showPhotons);
+			ShowHitsMenu->SetCheck((int)(MENU_REGIONS_SHOWHITS + index), worker.regions[index].params.showPhotons);
 		}
 
 		//TEXT --------------------------------------------------------------------
@@ -2038,7 +2038,10 @@ void SynRad::BuildPipe(double ratio, int steps) {
 	ClearFacetParams();
 	//UpdatePlotters();
 	if (profilePlotter) profilePlotter->Reset();
-	if (spectrumPlotter) spectrumPlotter->Reset();
+	if (spectrumPlotter) {
+		spectrumPlotter->Reset(); //remove views
+		spectrumPlotter->Refresh(); //rebuild list of available facets
+	}
 
 	if (textureSettings) textureSettings->Update();
 	if (facetDetails) facetDetails->Update();

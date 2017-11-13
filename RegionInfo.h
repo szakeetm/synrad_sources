@@ -13,7 +13,7 @@ Description: Region Info
 #include "GLApp/GLTitledPanel.h"
 #include "RegionEditor.h"
 
-#include "Geometry.h"
+#include "Geometry_shared.h"
 #include "Worker.h"
 */
 

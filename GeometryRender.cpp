@@ -18,7 +18,7 @@
 
 #include "Worker.h"
 #include "SynradGeometry.h"
-#include "Facet.h"
+#include "Facet_shared.h"
 #include <malloc.h>
 #include <string.h>
 #include <math.h>
@@ -31,7 +31,7 @@ extern SynRad *mApp;
 
 void SynradGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, bool renderDirectionTexture) {
 
-	SHGHITS *shGHit = (SHGHITS *)hits;
+	GlobalHitBuffer *shGHit = (GlobalHitBuffer *)hits;
 	Worker *worker = &(mApp->worker);
 
 	GLProgress *prg = new GLProgress("Building texture", "Frame update");
@@ -82,9 +82,9 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, b
 			}
 
 		   // Retrieve texture from shared memory (every seconds)
-			llong *hits_MC = (llong *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(SHHITS) + profSize));
-			double *hits_flux = (double *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(SHHITS) + profSize + nbElem * sizeof(llong)));
-			double *hits_power = (double *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(SHHITS) + profSize + nbElem*(sizeof(llong) + sizeof(double))));
+			llong *hits_MC = (llong *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
+			double *hits_flux = (double *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + nbElem * sizeof(llong)));
+			double *hits_power = (double *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + nbElem*(sizeof(llong) + sizeof(double))));
 
 			if (texAutoScale) {
 				if (textureMode == TEXTURE_MODE_MCHITS) f->BuildTexture(hits_MC, texCMin_MC, texCMax_MC, texColormap, texLogScale);
@@ -105,7 +105,7 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, b
 			if (shGHit->total.nbDesorbed)
 				iDesorbed = 1.0 / (double)shGHit->total.nbDesorbed;
 
-			VHIT *dirs = (VHIT *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(SHHITS) + profSize + tSize));
+			VHIT *dirs = (VHIT *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + tSize));
 			for (int j = 0; j < nbElem; j++) {
 				f->dirCache[j].dir = dirs[j].dir * iDesorbed;
 				f->dirCache[j].count = dirs[j].count;

@@ -19,7 +19,7 @@ GNU General Public License for more details.
 #include "ProfilePlotter.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
-#include "Facet.h"
+#include "Facet_shared.h"
 
 #include <math.h>
 #include "Synrad.h"
@@ -268,7 +268,7 @@ void ProfilePlotter::refreshViews() {
 	if (!buffer) return;
 
 	Geometry *geom = worker->GetGeometry();
-	SHGHITS *gHits = (SHGHITS *)buffer;
+	GlobalHitBuffer *gHits = (GlobalHitBuffer *)buffer;
 	double nbAbs = (double)gHits->total.nbAbsorbed;
 	double nbDes = (double)gHits->total.nbDesorbed;
 	double nbHit = (double)gHits->total.nbHit;
@@ -280,9 +280,9 @@ void ProfilePlotter::refreshViews() {
 			Facet *f = geom->GetFacet(v->userData1);
 			int mode = v->userData2;
 			v->Reset();
-			llong   *profilePtr_MC = (llong *)(buffer + f->sh.hitOffset + sizeof(SHHITS));
-			double  *profilePtr_flux = (double *)(buffer + f->sh.hitOffset + sizeof(SHHITS) + PROFILE_SIZE * sizeof(llong));
-			double  *profilePtr_power = (double *)(buffer + f->sh.hitOffset + sizeof(SHHITS) + PROFILE_SIZE*(sizeof(llong) + sizeof(double)));
+			llong   *profilePtr_MC = (llong *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer));
+			double  *profilePtr_flux = (double *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer) + PROFILE_SIZE * sizeof(llong));
+			double  *profilePtr_power = (double *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer) + PROFILE_SIZE*(sizeof(llong) + sizeof(double)));
 			llong max_MC;
 			double max_flux, max_power;
 			double elemArea = f->sh.area / PROFILE_SIZE;
@@ -341,14 +341,14 @@ void ProfilePlotter::refreshViews() {
 				for (size_t j = 0; j < nb; j++) {
 					Facet *f = geom->GetFacet(j);
 					if (f->sh.isVolatile) {
-						SHHITS *fCount = (SHHITS *)(buffer + f->sh.hitOffset);
+						FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->sh.hitOffset);
 						double z = geom->GetVertex(f->indices[0])->z;
 						v->Add(z, (double)(fCount->nbAbsorbed) / nbDes, false);
 					}
 				}
 				// Last
 				Facet *f = geom->GetFacet(28);
-				SHHITS *fCount = (SHHITS *)(buffer + f->sh.hitOffset);
+				FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->sh.hitOffset);
 				double fnbAbs = (double)fCount->nbAbsorbed;
 				v->Add(1000.0, fnbAbs / nbDes, false);
 				v->CommitChange();

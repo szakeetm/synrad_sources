@@ -252,20 +252,20 @@ void RegionInfo::Update() {
 	t2->SetText(tmp);
 	sprintf(tmp,"(%g , %g , %g)",selectedRegion->Points[(int)selectedRegion->Points.size()-1].position.x,selectedRegion->Points[(int)selectedRegion->Points.size()-1].position.y,selectedRegion->Points[(int)selectedRegion->Points.size()-1].position.z);
 	t3->SetText(tmp);
-	if (selectedRegion->selectedPoint!=-1) {
-		sprintf(tmp,"#%d (%g , %g , %g)",selectedRegion->selectedPoint,selectedRegion->Points[selectedRegion->selectedPoint].position.x,
-			selectedRegion->Points[selectedRegion->selectedPoint].position.y,selectedRegion->Points[selectedRegion->selectedPoint].position.z);
+	if (selectedRegion->selectedPointId!=-1) {
+		sprintf(tmp,"#%d (%g , %g , %g)",selectedRegion->selectedPointId,selectedRegion->Points[selectedRegion->selectedPointId].position.x,
+			selectedRegion->Points[selectedRegion->selectedPointId].position.y,selectedRegion->Points[selectedRegion->selectedPointId].position.z);
 	} else sprintf(tmp,"None.");
 	t4->SetText(tmp);
 	
-	if (selectedRegion->selectedPoint!=-1) {
-		Vector3d B=selectedRegion->B(selectedRegion->selectedPoint,Vector3d(0,0,0));
+	if (selectedRegion->selectedPointId!=-1) {
+		Vector3d B=selectedRegion->B(selectedRegion->selectedPointId,Vector3d(0,0,0));
 		sprintf(tmp,"B=%g T (%g , %g , %g)",B.Norme(),B.x,B.y,B.z);
 	} else sprintf(tmp,"");
 	t5->SetText(tmp);
 	
-	if (selectedRegion->selectedPoint!=-1) {
-		Vector3d Rho=selectedRegion->Points[selectedRegion->selectedPoint].rho;
+	if (selectedRegion->selectedPointId!=-1) {
+		Vector3d Rho=selectedRegion->Points[selectedRegion->selectedPointId].rho;
 		sprintf(tmp,"Rho=%g cm (%g , %g , %g)",Rho.Norme(),Rho.x,Rho.y,Rho.z);
 	} else sprintf(tmp,"");
 	t6->SetText(tmp);

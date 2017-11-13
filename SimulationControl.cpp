@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #pragma once
 
 #ifdef WIN
+#define NOMINMAX
 #include <windows.h> // For GetTickCount()
 #include <Process.h> // For _getpid()
 #else
@@ -31,6 +32,7 @@ GNU General Public License for more details.
 #include <stdlib.h>
 #include <vector>
 #include "Simulation.h"
+#include "IntersectAABB_shared.h"
 #include "Random.h"
 #include "SynradTypes.h" //Histogram
 //#include "Tools.h"
@@ -39,7 +41,7 @@ extern void SetErrorSub(const char *message);
 
 // Global handles
 
-FACET     **THits;
+SubprocessFacet     **THitCache;
 SIMULATION *sHandle;
 
 // Timing stuff
@@ -54,9 +56,8 @@ DWORD tickStart;
 void InitSimulation() {
 
 	// Global handle allocation
-	sHandle = (SIMULATION *)malloc(sizeof(SIMULATION));
-	memset(sHandle, 0, sizeof(SIMULATION));
-	THits = (FACET **)malloc(MAX_THIT * sizeof(FACET *)); // Transparent hit cache
+	sHandle = new SIMULATION();
+	THitCache = new SubprocessFacet*[MAX_THIT]; // Transparent hit cache
 
 #ifdef WIN
 	{
@@ -86,7 +87,7 @@ void ClearSimulation() {
 	SAFE_FREE(sHandle->vertices3);
 	for (j = 0; j < sHandle->nbSuper; j++) {
 		for (i = 0; i < sHandle->str[j].nbFacet; i++) {
-			FACET *f = sHandle->str[j].facets[i];
+			SubprocessFacet *f = sHandle->str[j].facets[i];
 			if (f) {
 				SAFE_FREE(f->indices);
 				SAFE_FREE(f->vertices2);
@@ -187,7 +188,7 @@ bool LoadSimulation(Dataport *loader) {
 
 	// Load new geom from the dataport
 
-	SHGEOM* shGeom = (SHGEOM *)buffer;
+	GeomProperties* shGeom = (GeomProperties *)buffer;
 	if (shGeom->nbSuper > MAX_STRUCT) {
 		ReleaseDataport(loader);
 		SetErrorSub("Too many structures");
@@ -205,7 +206,7 @@ bool LoadSimulation(Dataport *loader) {
 	sHandle->nbRegion = shGeom->nbRegion;
 	sHandle->totalFacet = shGeom->nbFacet;
 
-	buffer += sizeof(SHGEOM);
+	buffer += sizeof(GeomProperties);
 
 	SHMODE* shMode = (SHMODE *)buffer;
 	sHandle->mode.generation_mode = shMode->generation_mode;
@@ -245,23 +246,26 @@ bool LoadSimulation(Dataport *loader) {
 
 			sHandle->regions[r].Bx_distr.Resize((size_t)sHandle->regions[r].params.nbDistr_MAG.x);
 			for (size_t j = 0; j < sHandle->regions[r].params.nbDistr_MAG.x; j++) {
-				sHandle->regions[r].Bx_distr.valuesX[j] = READBUFFER(double);
-				sHandle->regions[r].Bx_distr.valuesY[j] = READBUFFER(double);
+				double x = READBUFFER(double);
+				double y = READBUFFER(double);
+				sHandle->regions[r].Bx_distr.SetPair(j, x, y);
 			}
 
 			sHandle->regions[r].By_distr.Resize((size_t)sHandle->regions[r].params.nbDistr_MAG.y);
 			for (size_t j = 0; j < sHandle->regions[r].params.nbDistr_MAG.y; j++) {
-				sHandle->regions[r].By_distr.valuesX[j] = READBUFFER(double);
-				sHandle->regions[r].By_distr.valuesY[j] = READBUFFER(double);
+				double x = READBUFFER(double);
+				double y = READBUFFER(double);
+				sHandle->regions[r].By_distr.SetPair(j, x, y);
 			}
 
 			sHandle->regions[r].Bz_distr.Resize((size_t)sHandle->regions[r].params.nbDistr_MAG.z);
 			for (size_t j = 0; j < sHandle->regions[r].params.nbDistr_MAG.z; j++) {
-				sHandle->regions[r].Bz_distr.valuesX[j] = READBUFFER(double);
-				sHandle->regions[r].Bz_distr.valuesY[j] = READBUFFER(double);
+				double x = READBUFFER(double);
+				double y = READBUFFER(double);
+				sHandle->regions[r].Bz_distr.SetPair(j, x, y);
 			}
 
-			sHandle->regions[r].betaFunctions.Clear();
+			sHandle->regions[r].betaFunctions.Resize(0);
 
 			for (size_t j = 0; j < sHandle->regions[r].params.nbDistr_BXY; j++) {
 				double x = READBUFFER(double);
@@ -269,6 +273,7 @@ bool LoadSimulation(Dataport *loader) {
 				betaValues.resize(6);
 				memcpy(betaValues.data(), buffer, 6 * sizeof(double)); //Vector data is contigious. The 6 values are: BetaX, BetaY, EtaX, EtaX', AlphaX, AlphaY
 				buffer += 6 * sizeof(double);
+				//sHandle->regions[r].betaFunctions.AddPair(x, betaValues);
 			}
 
 			sHandle->nbDistrPoints_BXY += sHandle->regions[r].params.nbDistr_BXY;
@@ -383,17 +388,17 @@ bool LoadSimulation(Dataport *loader) {
 	// Prepare super structure
 	buffer += sizeof(Vector3d)*sHandle->nbVertex;
 	for (i = 0; i < sHandle->totalFacet; i++) {
-		SHFACET *shFacet = (SHFACET *)buffer;
+		FacetProperties *shFacet = (FacetProperties *)buffer;
 		sHandle->str[shFacet->superIdx].nbFacet++;
-		buffer += sizeof(SHFACET) + shFacet->nbIndex*(sizeof(int) + sizeof(Vector2d));
+		buffer += sizeof(FacetProperties) + shFacet->nbIndex*(sizeof(int) + sizeof(Vector2d));
 	}
 	for (i = 0; i < sHandle->nbSuper; i++) {
 		int nbF = sHandle->str[i].nbFacet;
 		if (nbF == 0) {
 		}
 		else {
-			sHandle->str[i].facets = (FACET **)malloc(nbF * sizeof(FACET *));
-			memset(sHandle->str[i].facets, 0, nbF * sizeof(FACET *));
+			sHandle->str[i].facets = (SubprocessFacet **)malloc(nbF * sizeof(SubprocessFacet *));
+			memset(sHandle->str[i].facets, 0, nbF * sizeof(SubprocessFacet *));
 		}
 		sHandle->str[i].nbFacet = 0;
 	}
@@ -413,14 +418,14 @@ bool LoadSimulation(Dataport *loader) {
 	// Facets
 	for (i = 0; i < sHandle->totalFacet; i++) {
 
-		SHFACET *shFacet = (SHFACET *)buffer;
-		FACET *f = (FACET *)malloc(sizeof(FACET));
+		FacetProperties *shFacet = (FacetProperties *)buffer;
+		SubprocessFacet *f = (SubprocessFacet *)malloc(sizeof(SubprocessFacet));
 		if (!f) {
 			SetErrorSub("Not enough memory to load facets");
 			return false;
 		}
-		memset(f, 0, sizeof(FACET));
-		memcpy(&(f->sh), shFacet, sizeof(SHFACET));
+		memset(f, 0, sizeof(SubprocessFacet));
+		memcpy(&(f->sh), shFacet, sizeof(FacetProperties));
 
 		sHandle->hasVolatile |= f->sh.isVolatile;
 		//sHandle->hasDirection |= f->sh.countDirection;
@@ -448,9 +453,9 @@ bool LoadSimulation(Dataport *loader) {
 		}
 
 		// Reset counter in local memory
-		memset(&(f->counter), 0, sizeof(SHHITS));
+		memset(&(f->counter), 0, sizeof(FacetHitBuffer));
 		f->indices = (int *)malloc(f->sh.nbIndex * sizeof(int));
-		buffer += sizeof(SHFACET);
+		buffer += sizeof(FacetProperties);
 		memcpy(f->indices, buffer, f->sh.nbIndex * sizeof(int));
 		buffer += f->sh.nbIndex * sizeof(int);
 		f->vertices2 = (Vector2d *)malloc(f->sh.nbIndex * sizeof(Vector2d));
@@ -549,8 +554,9 @@ bool LoadSimulation(Dataport *loader) {
 	//ReleaseDataport(loader); //Commented out as AccessDataport removed
 
 	// Build all AABBTrees
+	size_t maxDepth = 0;
 	for (i = 0; i < sHandle->nbSuper; i++)
-		sHandle->str[i].aabbTree = BuildAABBTree(sHandle->str[i].facets, sHandle->str[i].nbFacet, 0);
+		sHandle->str[i].aabbTree = BuildAABBTree(sHandle->str[i].facets, sHandle->str[i].nbFacet, 0,maxDepth);
 
 	// Initialise simulation
 	ComputeSourceArea();
@@ -570,8 +576,8 @@ bool LoadSimulation(Dataport *loader) {
 	printf("  Trajectory points: %zd points\n", sHandle->nbTrajPoints);
 	printf("  Geom size: %d bytes\n", (int)(buffer - bufferStart));
 	printf("  Number of stucture: %zd\n", sHandle->nbSuper);
-	printf("  Global Hit: %zd bytes\n", sizeof(SHGHITS));
-	printf("  Facet Hit : %zd bytes\n", sHandle->totalFacet*(int)sizeof(SHHITS));
+	printf("  Global Hit: %zd bytes\n", sizeof(GlobalHitBuffer));
+	printf("  Facet Hit : %zd bytes\n", sHandle->totalFacet*(int)sizeof(FacetHitBuffer));
 	printf("  Texture   : %zd bytes\n", sHandle->textTotalSize);
 	printf("  Profile   : %zd bytes\n", sHandle->profTotalSize);
 	printf("  Direction : %zd bytes\n", sHandle->dirTotalSize);
@@ -621,13 +627,13 @@ void UpdateHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 
 size_t GetHitsSize() {
 	return sHandle->textTotalSize + sHandle->profTotalSize + sHandle->dirTotalSize +
-		sHandle->spectrumTotalSize + sHandle->totalFacet * sizeof(SHHITS) + sizeof(SHGHITS);
+		sHandle->spectrumTotalSize + sHandle->totalFacet * sizeof(FacetHitBuffer) + sizeof(GlobalHitBuffer);
 }
 
 void ResetTmpCounters() {
 	SetState(NULL, "Resetting local cache...", false, true);
 
-	memset(&sHandle->tmpCount, 0, sizeof(SHHITS));
+	memset(&sHandle->tmpCount, 0, sizeof(FacetHitBuffer));
 
 	sHandle->distTraveledSinceUpdate = 0.0;
 	sHandle->nbLeakSinceUpdate = 0;
@@ -636,7 +642,7 @@ void ResetTmpCounters() {
 
 	for (int j = 0; j < sHandle->nbSuper; j++) {
 		for (int i = 0; i < sHandle->str[j].nbFacet; i++) {
-			FACET *f = sHandle->str[j].facets[i];
+			SubprocessFacet *f = sHandle->str[j].facets[i];
 			f->counter.fluxAbs = 0.0;
 			f->counter.powerAbs = 0.0;
 			f->counter.nbHit = 0;
@@ -660,7 +666,7 @@ void ResetTmpCounters() {
 }
 
 void ResetSimulation() {
-	sHandle->lastHit = NULL;
+	sHandle->lastHitFacet = NULL;
 	sHandle->totalDesorbed = 0;
 	ResetTmpCounters();
 
@@ -685,7 +691,7 @@ bool StartSimulation() {
 		}
 	}
 
-	if (!sHandle->lastHit) StartFromSource();
+	if (!sHandle->lastHitFacet) StartFromSource();
 	return true;
 }
 
@@ -717,7 +723,7 @@ bool SimulationRun() {
 
 	// 1s step
 	double t0, t1;
-	int    nbStep = 1;
+	size_t    nbStep = 1;
 	bool   goOn;
 
 	if (sHandle->stepPerSec == 0.0) {
@@ -727,7 +733,7 @@ bool SimulationRun() {
 	}
 
 	if (sHandle->stepPerSec != 0.0)
-		nbStep = (int)(sHandle->stepPerSec + 0.5);
+		nbStep = (size_t)(sHandle->stepPerSec + 0.5);
 	if (nbStep < 1) nbStep = 1;
 	t0 = GetTick();
 

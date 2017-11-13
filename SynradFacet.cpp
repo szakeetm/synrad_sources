@@ -1,162 +1,10 @@
-/*
-File:        Facet.cpp
-Description: Facet class (memory management)
-Program:     SynRad
-Author:      R. KERSEVAN / M ADY
-Copyright:   E.S.R.F / CERN
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-*/
-
-#ifdef MOLFLOW
-#include "MolFlow.h"
-#endif
-
-#ifdef SYNRAD
-#include "SynRad.h"
-#endif
-#include "Facet.h"
-
-#include <malloc.h>
-#include <string.h>
-#include <math.h>
-#include "GLApp/GLToolkit.h"
+#include "Facet_shared.h"
+#include "SynradTypes.h"
 #include "GlApp/MathTools.h" //IS_ZERO
-#include <sstream>
-#include "PugiXML\pugixml.hpp"
-using namespace pugi;
+#include "SynradDistributions.h" //Material
 
-// Colormap stuff
-extern COLORREF rainbowCol[];
-
-#ifdef MOLFLOW
-extern MolFlow *mApp;
-#endif
-
-#ifdef SYNRAD
-extern SynRad*mApp;
-#endif
-
-static int colorMap[65536];
-static bool colorInited = false;
-
-Facet::Facet(size_t nbIndex) {
-
-	indices = (size_t *)malloc(nbIndex * sizeof(size_t));                    // Ref to Geometry Vector3d
-	vertices2 = (Vector2d *)malloc(nbIndex * sizeof(Vector2d));      // Local U,V coordinates
-	memset(vertices2, 0, nbIndex * sizeof(Vector2d));
-
-	sh.nbIndex = nbIndex;
-	memset(&counterCache, 0, sizeof(SHHITS));
-
-	sh.sticking = 0.0;
-	sh.opacity = 1.0;
-	sh.doScattering = false;
-	sh.rmsRoughness = 100.0E-9; //100nm
-	sh.autoCorrLength = 100 * 100E-9; //tau=autoCorr/RMS=100
-
-	sh.reflectType = REF_MIRROR;
-	sh.profileType = REC_NONE;
-	sh.hasSpectrum = false;
-	sh.texWidth = 0;
-	sh.texHeight = 0;
-	sh.texWidthD = 0.0;
-	sh.texHeightD = 0.0;
-	sh.center.x = 0.0;
-	sh.center.y = 0.0;
-	sh.center.z = 0.0;
-	sh.is2sided = false;
-	sh.isProfile = false;
-	//sh.isOpaque = true;
-	sh.isTextured = false;
-	sh.sign = 0.0;
-	sh.countAbs = false;
-	sh.countRefl = false;
-	sh.countTrans = false;
-	sh.countDirection = false;
-	sh.superIdx = 0;
-	sh.superDest = 0;
-	sh.teleportDest = 0;
-	sh.isVolatile = false;
-
-	textureVisible = true;
-	volumeVisible = true;
-
-	texDimW = 0;
-	texDimH = 0;
-	tRatio = 0.0;
-
-	//mesh = NULL;
-	//meshPts = NULL;
-	cellPropertiesIds = NULL;
-	meshvector = NULL;
-	meshvectorsize = 0;
-	hasMesh = false;
-	//nbElem = 0;
-	selectedElem.u = 0;
-	selectedElem.v = 0;
-	selectedElem.width = 0;
-	selectedElem.height = 0;
-	dirCache = NULL;
-	textureError = false;
-
-	// Init the colormap at the first facet construction
-	for (int i = 0; i < 65536 && !colorInited; i++) {
-
-		double r1, g1, b1;
-		double r2, g2, b2;
-		int colId = i / 8192;
-
-		r1 = (double)((rainbowCol[colId] >> 16) & 0xFF);
-		g1 = (double)((rainbowCol[colId] >> 8) & 0xFF);
-		b1 = (double)((rainbowCol[colId] >> 0) & 0xFF);
-
-		r2 = (double)((rainbowCol[colId + 1] >> 16) & 0xFF);
-		g2 = (double)((rainbowCol[colId + 1] >> 8) & 0xFF);
-		b2 = (double)((rainbowCol[colId + 1] >> 0) & 0xFF);
-
-		double rr = (double)(i - colId * 8192) / 8192.0;
-		Saturate(rr, 0.0, 1.0);
-		colorMap[i] = (COLORREF)((int)(r1 + (r2 - r1)*rr) +
-			(int)(g1 + (g2 - g1)*rr) * 256 +
-			(int)(b1 + (b2 - b1)*rr) * 65536);
-
-	}
-	colorMap[65535] = 0xFFFFFF; // Saturation color
-	colorInited = true;
-
-	glTex = 0;
-	glList = 0;
-	glElem = 0;
-	glSelElem = 0;
-	selected = false;
-	visible = (bool *)malloc(nbIndex * sizeof(bool));
-	memset(visible, 0xFF, nbIndex * sizeof(bool));
-
-}
-
-Facet::~Facet() {
-	SAFE_FREE(indices);
-	SAFE_FREE(vertices2);
-	SAFE_FREE(cellPropertiesIds);
-	SAFE_FREE(dirCache);
-	DELETE_TEX(glTex);
-	DELETE_LIST(glList);
-	DELETE_LIST(glElem);
-	DELETE_LIST(glSelElem);
-	SAFE_FREE(visible);
-	for (size_t i = 0; i < meshvectorsize; i++)
-		SAFE_FREE(meshvector[i].points);
-	SAFE_FREE(meshvector);
-}
+// Colormap stuff, defined in GLGradient.cpp
+extern std::vector<int> colorMap;
 
 void Facet::LoadGEO(FileReader *file, int version, size_t nbVertex) {
 
@@ -270,7 +118,7 @@ void Facet::LoadTXT(FileReader *file) {
 	// Read facet parameters from TXT format
 	sh.sticking = file->ReadDouble();
 	double o = file->ReadDouble();
-	sh.area = file->ReadDouble();
+	/*sh.area =*/ file->ReadDouble();
 	counterCache.nbDesorbed = 0; file->ReadDouble();
 	counterCache.nbHit = 0; file->ReadDouble();
 	counterCache.nbAbsorbed = 0; file->ReadDouble();
@@ -342,7 +190,7 @@ void Facet::LoadTXT(FileReader *file) {
 
 }
 
-void Facet::LoadXML(xml_node f, int nbVertex, bool isSynradFile, int vertexOffset) {
+void Facet::LoadXML(xml_node f, size_t nbVertex, bool isSynradFile, int vertexOffset) {
 	int idx = 0;
 	for (xml_node indice : f.child("Indices").children("Indice")) {
 		indices[idx] = indice.attribute("vertex").as_int() + vertexOffset;
@@ -469,17 +317,9 @@ file->Write("}\n");
 }
 */
 
-void Facet::UpdateFlags() {
-
-	sh.isProfile = (sh.profileType != REC_NONE);
-	//sh.isOpaque   = (sh.opacity!=0.0);
-	sh.isTextured = ((texDimW*texDimH) > 0);
-
-}
-
 size_t Facet::GetGeometrySize() {
 
-	size_t s = sizeof(SHFACET)
+	size_t s = sizeof(FacetProperties)
 		+ (sh.nbIndex * sizeof(int))
 		+ (sh.nbIndex * sizeof(Vector2d));
 
@@ -491,7 +331,7 @@ size_t Facet::GetGeometrySize() {
 
 size_t Facet::GetHitsSize() {
 
-	return   sizeof(SHHITS)
+	return   sizeof(FacetHitBuffer)
 		+ (sh.texWidth*sh.texHeight*(sizeof(llong) + 2 * sizeof(double)))
 		+ (sh.isProfile ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0)
 		+ (sh.countDirection ? (sh.texWidth*sh.texHeight * sizeof(VHIT)) : 0)
@@ -537,62 +377,6 @@ size_t Facet::GetTexRamSizeForRatio(double ratio, bool useMesh, bool countDir) {
 		return 0;
 
 	}
-
-}
-
-#define SUM_NEIGHBOR(i,j,we)                      \
-	if( (i)>=0 && (i)<=w && (j)>=0 && (j)<=h ) {    \
-	add = (i)+(j)*sh.texWidth;                    \
-	if( GetMeshArea(add)>0.0 ) {                   \
-	sum += we*(texBuffer[add]/GetMeshArea(add)*scaleF);          \
-	W=W+we;                                     \
-		}                                             \
-		}
-
-double Facet::GetSmooth(const int &i, const int &j, double *texBuffer, const float &scaleF) {
-
-	double W = 0.0;
-	double sum = 0.0;
-	int w = (int)sh.texWidth - 1;
-	int h = (int)sh.texHeight - 1;
-	int add;
-
-	SUM_NEIGHBOR((i - 1), (j - 1), 1.0);
-	SUM_NEIGHBOR((i - 1), (j + 1), 1.0);
-	SUM_NEIGHBOR((i + 1), (j - 1), 1.0);
-	SUM_NEIGHBOR((i + 1), (j + 1), 1.0);
-	SUM_NEIGHBOR(i, (j - 1), 2.0);
-	SUM_NEIGHBOR(i, (j + 1), 2.0);
-	SUM_NEIGHBOR((i - 1), j, 2.0);
-	SUM_NEIGHBOR((i + 1), j, 2.0);
-
-	if (W == 0.0)
-		return 0.0;
-	else
-		return sum / W;
-}
-
-double Facet::GetSmooth(const int &i, const int &j, llong *texBuffer, const float &scaleF) {
-
-	float W = 0.0f;
-	float sum = 0.0;
-	int w = (int)sh.texWidth - 1;
-	int h = (int)sh.texHeight - 1;
-	int add;
-
-	SUM_NEIGHBOR(i - 1, j - 1, 1.0f);
-	SUM_NEIGHBOR(i - 1, j + 1, 1.0f);
-	SUM_NEIGHBOR(i + 1, j - 1, 1.0f);
-	SUM_NEIGHBOR(i + 1, j + 1, 1.0f);
-	SUM_NEIGHBOR(i, j - 1, 2.0f);
-	SUM_NEIGHBOR(i, j + 1, 2.0f);
-	SUM_NEIGHBOR(i - 1, j, 2.0f);
-	SUM_NEIGHBOR(i + 1, j, 2.0f);
-
-	if (W == 0.0f)
-		return 0.0f;
-	else
-		return sum / W;
 
 }
 
@@ -1011,59 +795,6 @@ void Facet::BuildTexture(llong *texBuffer, llong min, llong max, bool useColorMa
 	GLToolkit::CheckGLErrors("Facet::BuildTexture()");
 }
 
-bool Facet::IsCoplanarAndEqual(Facet *f, double threshold) {
-
-	// Detect if 2 facets are in the same plane (orientation preserving)
-	// and have same parameters (used by collapse)
-
-	return (fabs(a - f->a) < threshold) &&
-		(fabs(b - f->b) < threshold) &&
-		(fabs(c - f->c) < threshold) &&
-		(fabs(d - f->d) < threshold) &&
-		(sh.sticking == f->sh.sticking) &&
-		(sh.opacity == f->sh.opacity) &&
-		(sh.is2sided == f->sh.is2sided) &&
-		(sh.reflectType == f->sh.reflectType);
-	//TODO: Add other properties!
-
-}
-
-void Facet::CopyFacetProperties(Facet *f, bool copyMesh) {
-
-	sh.sticking = f->sh.sticking;
-	sh.opacity = f->sh.opacity;
-	sh.area = f->sh.area;
-	sh.reflectType = f->sh.reflectType;
-	sh.doScattering = f->sh.doScattering;
-	sh.rmsRoughness = f->sh.rmsRoughness;
-	sh.autoCorrLength = f->sh.autoCorrLength;
-	if (copyMesh) sh.profileType = f->sh.profileType;
-	else sh.profileType = REC_NONE;
-	sh.is2sided = f->sh.is2sided;
-	sh.superIdx = f->sh.superIdx;
-	sh.superDest = f->sh.superDest;
-	sh.teleportDest = f->sh.teleportDest;
-	if (copyMesh) {
-		sh.countAbs = f->sh.countAbs;
-		sh.countRefl = f->sh.countRefl;
-		sh.countTrans = f->sh.countTrans;
-		sh.countDirection = f->sh.countDirection;
-		sh.isTextured = f->sh.isTextured;
-		hasMesh = f->hasMesh;
-		tRatio = f->tRatio;
-	}
-	textureVisible = f->textureVisible;
-	volumeVisible = f->volumeVisible;
-	a = f->a;
-	b = f->b;
-	c = f->c;
-	d = f->d;
-	err = f->err;
-	sh.N = f->sh.N;
-	selected = f->selected;
-	this->UpdateFlags();
-}
-
 void Facet::SaveSYN(FileWriter *file, const std::vector<Material> &materials, int idx, bool crashSave) {
 
 	char tmp[256];
@@ -1110,7 +841,7 @@ void Facet::SaveSYN(FileWriter *file, const std::vector<Material> &materials, in
 
 	file->Write("}\n");
 }
-void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, int version, int nbVertex) {
+void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, int version, size_t nbVertex) {
 
 	file->ReadKeyword("indices"); file->ReadKeyword(":");
 	for (int i = 0; i < sh.nbIndex; i++) {
@@ -1125,7 +856,7 @@ void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, in
 		file->ReadKeyword("sticking"); file->ReadKeyword(":");
 		sh.sticking = file->ReadDouble();
 
-		if (sh.reflectType >= 2) { //Material reflection: update index from the material's name
+		if (sh.reflectType >= 10) { //Material reflection: update index from the material's name
 			file->ReadKeyword("materialName"); file->ReadKeyword(":"); std::string matName = file->ReadWord();
 			sh.reflectType = 9; //Invalid material, unless we find it below
 			for (size_t i = 0; i < materials.size(); i++) {
@@ -1222,3 +953,4 @@ void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, in
 	UpdateFlags();
 
 }
+

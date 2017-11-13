@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMatrix.h"
 #include "GLApp/MathTools.h"
+#include "SynradDistributions.h"
 
 #include <math.h>
 #include <malloc.h>

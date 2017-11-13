@@ -982,7 +982,7 @@ void RegionEditor::ApplyChanges() {
 	if (!startPointXtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid X0","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	if (!startPointYtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid Y0","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	if (!startPointZtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid Z0","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
-	if (startDirDefinitionCombo->GetSelectedIndex()==0) {	//define by angle
+	if (startDirDefinitionCombo->GetSelectedIndex()==1) {	//define by angle
 		if (!theta0text->GetNumber(&tmp)) {GLMessageBox::Display("Invalid theta0","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		if (!alpha0text->GetNumber(&tmp)) {GLMessageBox::Display("Invalid alpha0","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	} else { //define by vector
@@ -1065,7 +1065,7 @@ void RegionEditor::ApplyChanges() {
 	// Let's apply his values
 	if (!mApp->AskToReset()) return;
 	//Deselect point, if has selected
-	cr->selectedPoint=-1;
+	cr->selectedPointId=-1;
 
 	startPointXtext->GetNumber(&cr->params.startPoint.x);
 	startPointYtext->GetNumber(&cr->params.startPoint.y);

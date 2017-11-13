@@ -12,13 +12,13 @@ Vector3d Region_mathonly::B(size_t pointId, const Vector3d &offset) {
 	Vector3d result; //return value with the magnetic field vector
 
 	//Creating references to X,Y,Z components -> we can avoid repeating code 3 times
-	double* result_ptr[3]={&result.x,&result.y,&result.z};
-	double* Bconst_ptr[3]={&params.B_const.x,&params.B_const.y,&params.B_const.z};
-	Vector3d* Bdir_ptr[3]={&params.Bx_dir,&params.By_dir,&params.Bz_dir};
-	int* Bmode_ptr[3]={&params.Bx_mode,&params.By_mode,&params.Bz_mode};
-	double* Bperiod_ptr[3]={&params.Bx_period,&params.By_period,&params.Bz_period};
-	double* Bphase_ptr[3]={&params.Bx_phase,&params.By_phase,&params.Bz_phase};
-	Distribution2D* distr_ptr[3]={&Bx_distr,&By_distr,&Bz_distr};
+	double* result_components[3]={&result.x,&result.y,&result.z};
+	double* Bconst_components[3]={&params.B_const.x,&params.B_const.y,&params.B_const.z};
+	Vector3d* Bdir_components[3]={&params.Bx_dir,&params.By_dir,&params.Bz_dir};
+	int* Bmode_components[3]={&params.Bx_mode,&params.By_mode,&params.Bz_mode};
+	double* Bperiod_components[3]={&params.Bx_period,&params.By_period,&params.Bz_period};
+	double* Bphase_components[3]={&params.Bx_phase,&params.By_phase,&params.Bz_phase};
+	Distribution2D* distr_components[3]={&Bx_distr,&By_distr,&Bz_distr};
 	double Ls_,ratio,K_,K_x,K_y;
 	bool Bset=false; //if true, then when we have calculated the X component, we already set Y and Z as well. Used for rotating dipole and analytic expressions
 
@@ -40,27 +40,31 @@ Vector3d Region_mathonly::B(size_t pointId, const Vector3d &offset) {
 	position_along_beam = Points[pointId].position;
 	Vector3d position_with_offset = position_along_beam + offset;
 	
-	for (int i=0;i<3&&!Bset;i++) { //X,Y,Z components
-		Ls_= Dot(Bdir_ptr[i]->Normalized(),position_with_offset - params.startPoint);//distance towards Bx_dir direction (specified in .MAG file)
-		Ls_-= (int)(Ls_/(*Bperiod_ptr)[i])*(*Bperiod_ptr)[i]; //substract filled periods
-		switch(*Bmode_ptr[i]) {
+	for (size_t componentIndex=0;componentIndex<3&&!Bset;componentIndex++) { //X,Y,Z components
+		
+		switch(*Bmode_components[componentIndex]) {
 		case B_MODE_CONSTANT:
-			*result_ptr[i]=*Bconst_ptr[i];
+			*result_components[componentIndex]=*Bconst_components[componentIndex];
 			break;
 		case B_MODE_DIRECTION:
-			*result_ptr[i]=distr_ptr[i]->InterpolateY(Ls_,false);
+			Ls_ = Dot(Bdir_components[componentIndex]->Normalized(), position_with_offset - params.startPoint);//distance towards Bx_dir direction (specified in .MAG file)
+			Ls_-=(int)(Ls_/(*Bperiod_components)[componentIndex])*(*Bperiod_components)[componentIndex]; //substract filled periods
+			*result_components[componentIndex]=distr_components[componentIndex]->InterpolateY(Ls_,false);
 			break;
 		case B_MODE_ALONGBEAM:
 			Ls_=pointId*this->params.dL_cm; //distance along the beam path
-			Ls_-=(int)(Ls_/(*Bperiod_ptr)[i])*(*Bperiod_ptr)[i]; //substract filled periods
-			*result_ptr[i]=distr_ptr[i]->InterpolateY(Ls_,false);
+			Ls_-=(int)(Ls_/(*Bperiod_components)[componentIndex])*(*Bperiod_components)[componentIndex]; //substract filled periods
+			*result_components[componentIndex]=distr_components[componentIndex]->InterpolateY(Ls_,false);
 			break;
 		case B_MODE_SINCOS:
-			*result_ptr[i]=0.0;
-			ratio=Ls_*2*PI/(*Bperiod_ptr[i]);
-			for (int j=0;j<distr_ptr[i]->size;j++) { //loop through orders
-				*result_ptr[i]+=distr_ptr[i]->valuesX[j]*pow(sin((double)(j+1)*ratio),j+1);
-				*result_ptr[i]+=distr_ptr[i]->valuesY[j]*pow(cos((double)(j+1)*ratio),j+1);
+			Ls_ = Dot(Bdir_components[componentIndex]->Normalized(), position_with_offset - params.startPoint);//distance towards Bx_dir direction (specified in .MAG file)
+			//Ls_ -= (int)(Ls_ / (*Bperiod_components)[componentIndex])*(*Bperiod_components)[componentIndex]; //substract filled periods
+
+			*result_components[componentIndex]=0.0;
+			ratio=Ls_*2*PI/(*Bperiod_components[componentIndex]);
+			for (int j=0;j<distr_components[componentIndex]->GetSize();j++) { //loop through orders
+				*result_components[componentIndex]+=distr_components[componentIndex]->GetX(j)*pow(sin((double)(j+1)*ratio),j+1);
+				*result_components[componentIndex]+=distr_components[componentIndex]->GetY(j)*pow(cos((double)(j+1)*ratio),j+1);
 			}
 			break;
 		case B_MODE_QUADRUPOLE: //mode 4
@@ -69,26 +73,32 @@ Vector3d Region_mathonly::B(size_t pointId, const Vector3d &offset) {
 			break;
 		case B_MODE_ANALYTIC: //mode 5
 			K_=2*PI/ params.Bx_period;
-			K_x=Bx_distr.valuesX[0];
+			K_x=Bx_distr.GetX(0);
 			K_y=sqrt(Sqr(K_)-Sqr(K_x));
-			result.x=K_x/K_y*Bx_distr.valuesY[0]*sinh(K_x*position_with_offset.x)*sinh(K_y*position_with_offset.y)*cos(K_*position_with_offset.z);
-			result.y=Bx_distr.valuesY[0]*cosh(K_x*position_with_offset.x)*cosh(K_y*position_with_offset.y)*cos(K_*position_with_offset.z);
-			result.z=-K_/K_y*Bx_distr.valuesY[0]*cosh(K_x*position_with_offset.x)*sinh(K_y*position_with_offset.y)*sin(K_*position_with_offset.z);
+			result.x=K_x/K_y*Bx_distr.GetY(0)*sinh(K_x*position_with_offset.x)*sinh(K_y*position_with_offset.y)*cos(K_*position_with_offset.z);
+			result.y=Bx_distr.GetY(0)*cosh(K_x*position_with_offset.x)*cosh(K_y*position_with_offset.y)*cos(K_*position_with_offset.z);
+			result.z=-K_/K_y*Bx_distr.GetY(0)*cosh(K_x*position_with_offset.x)*sinh(K_y*position_with_offset.y)*sin(K_*position_with_offset.z);
 			Bset=true; //all is set, don't run again for the remaining two components
 			break;
 		case B_MODE_HELICOIDAL:  //helicoidal field, as per PE 31/1/2001
-			*result_ptr[i]=0.0;
-			ratio=Ls_*2*PI/(*Bperiod_ptr[i]);
-			for (int j=0;j<distr_ptr[i]->size;j++) { //loop through orders (sinX+sin^2X+...)
-				*result_ptr[i]+=distr_ptr[i]->valuesX[j]*sin((double)(j+1)*ratio)*cos(PI*(*Bphase_ptr[i])/(*Bperiod_ptr[i]));
-				*result_ptr[i]+=distr_ptr[i]->valuesY[j]*cos((double)(j+1)*ratio)*sin(PI*(*Bphase_ptr[i])/(*Bperiod_ptr[i]));
+			Ls_ = Dot(Bdir_components[componentIndex]->Normalized(), position_with_offset - params.startPoint);//distance towards Bx_dir direction (specified in .MAG file)
+			//Ls_ -= (int)(Ls_ / (*Bperiod_components)[componentIndex])*(*Bperiod_components)[componentIndex]; //substract filled periods
+
+			*result_components[componentIndex]=0.0;
+			ratio=Ls_*2*PI/(*Bperiod_components[componentIndex]);
+			for (int j=0;j<distr_components[componentIndex]->GetSize();j++) { //loop through orders (sinX+sin^2X+...)
+				*result_components[componentIndex]+=distr_components[componentIndex]->GetX(j)*sin((double)(j+1)*ratio)*cos(PI*(*Bphase_components[componentIndex])/(*Bperiod_components[componentIndex]));
+				*result_components[componentIndex]+=distr_components[componentIndex]->GetY(j)*cos((double)(j+1)*ratio)*sin(PI*(*Bphase_components[componentIndex])/(*Bperiod_components[componentIndex]));
 			}
 			break;
 		case B_MODE_ROTATING_DIPOLE: //rotating dipole field ( see S. Duncan's presentation on generation of 20MeV circ.pol. photons 
-			*result_ptr[i]=0.0;
-			ratio=Ls_*2*PI/(*Bperiod_ptr[i]);
-			result.x=Bx_distr.valuesX[0]*sin(ratio);
-			result.y=Bx_distr.valuesX[0]*cos(ratio);
+			Ls_ = Dot(Bdir_components[componentIndex]->Normalized(), position_with_offset - params.startPoint);//distance towards Bx_dir direction (specified in .MAG file)
+			//Ls_ -= (int)(Ls_ / (*Bperiod_components)[componentIndex])*(*Bperiod_components)[componentIndex]; //substract filled periods
+
+			*result_components[componentIndex]=0.0;
+			ratio=Ls_*2*PI/(*Bperiod_components[componentIndex]);
+			result.x=Bx_distr.GetX(0)*sin(ratio);
+			result.y=Bx_distr.GetX(0)*cos(ratio);
 			result.z=0.0;
 			Bset=true;
 			break;
@@ -120,6 +130,7 @@ Region_mathonly::Region_mathonly(){
 	params.showPhotons = true;
 }
 
+/*
 Region_mathonly::Region_mathonly(const Region_mathonly &src) {
 	this->params = src.params;
 	Bx_distr = Distribution2D(src.Bx_distr);
@@ -138,3 +149,4 @@ Region_mathonly& Region_mathonly::operator=(const Region_mathonly &src) {
 	this->Points = src.Points;
 	return *this;
 }
+*/
