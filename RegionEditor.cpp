@@ -1071,7 +1071,7 @@ void RegionEditor::ApplyChanges() {
 	startPointYtext->GetNumber(&cr->params.startPoint.y);
 	startPointZtext->GetNumber(&cr->params.startPoint.z);
 
-	if (startDirDefinitionCombo->GetSelectedIndex()==0) { //define by angle
+	if (startDirDefinitionCombo->GetSelectedIndex()==1) { //define by angle
 		double a0,t0;
 		alpha0text->GetNumber(&a0);
 		theta0text->GetNumber(&t0);
