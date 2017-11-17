@@ -180,9 +180,10 @@ bool SimulationRun();
 bool SimulationMCStep(const size_t& nbStep);
 std::tuple<double, std::vector<double>, bool> GetStickingProbability(const SubprocessFacet& collidedFacet, const double& theta);
 
-bool DoOldRegularReflection(SubprocessFacet& collidedFacet, const double& stickingProbability, const int& reflType, const double& inTheta, const double& inPhi,
+bool DoOldRegularReflection(SubprocessFacet& collidedFacet, const int& reflType, const double& inTheta, const double& inPhi,
 	const Vector3d& N_rotated, const Vector3d& nU_rotated, const Vector3d& nV_rotated);
-bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingProbability, const int& reflType, const double& inTheta, const double& inPhi,
+bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingProbability, const bool& complexScattering, const std::vector<double>& materialReflProbabilities,
+	const double& inTheta, const double& inPhi,
 	const Vector3d& N_rotated = Vector3d(0, 0, 0), const Vector3d& nU_rotated = Vector3d(0, 0, 0), const Vector3d& nV_rotated = Vector3d(0, 0, 0)); //old or new model
 int GetHardHitType(const double& stickingProbability, const std::vector<double>& materialReflProbabilities, const bool& complexScattering);
 std::tuple<Vector3d, Vector3d, Vector3d> PerturbateSurface( const SubprocessFacet& collidedFacet, const double& sigmaRatio);

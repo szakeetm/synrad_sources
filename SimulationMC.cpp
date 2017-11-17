@@ -355,8 +355,10 @@ bool SimulationMCStep(const size_t& nbStep) {
 							std::tie(stickingProbability,materialReflProbabilities, complexScattering) = GetStickingProbability(collidedFacet, inTheta);
 							//In the new reflection model, reflection probabilities don't take into account surface roughness
 						}
-						int reflType = GetHardHitType(stickingProbability, materialReflProbabilities, complexScattering);
-						if (!sHandle->mode.lowFluxMode) {	
+						
+						if (!sHandle->mode.lowFluxMode) {
+							//Regular mode, stick or bounce
+							int reflType = GetHardHitType(stickingProbability, materialReflProbabilities, complexScattering);
 							if (reflType == REFL_ABSORB) {
 								Stick(collidedFacet);
 								if (!StartFromSource()) return false;
@@ -366,11 +368,12 @@ bool SimulationMCStep(const size_t& nbStep) {
 						else {
 							//Low flux mode and simple scattering:
 							Vector3d dummyNullVector(0.0, 0.0, 0.0); //DoLowFluxReflection will not use it since sHandle->newReflectionModel == true
-							DoLowFluxReflection(collidedFacet, stickingProbability, reflType, inTheta, inPhi, dummyNullVector, dummyNullVector, dummyNullVector);
+							DoLowFluxReflection(collidedFacet, stickingProbability, complexScattering, materialReflProbabilities,
+								inTheta, inPhi, dummyNullVector, dummyNullVector, dummyNullVector);
 						} //end low flux mode
 					}
 					else {
-						//Old reflection model (Synrad <=1.3)						
+						//Old reflection model (Synrad <=1.3 or if user deselects new model in Global Settings)						
 						if (sHandle->dF == 0.0 || sHandle->dP == 0.0 || sHandle->energy < 1E-3) { //stick non real photons (from beam beginning)
 							Stick(collidedFacet);
 							if (!StartFromSource()) return false;
@@ -405,7 +408,7 @@ bool SimulationMCStep(const size_t& nbStep) {
 										
 									//Second step: determine sticking/scattering probabilities
 									double stickingProbability; 
-									std::vector<double> materialReflProbabilities; //list of fwd/diffuse/back/transparent scattering probs
+									std::vector<double> materialReflProbabilities; //vector of fwd/diffuse/back/transparent scattering probs
 									bool complexScattering; //does the material support multiple (diffuse, back, transparent) reflection modes?
 
 									if (collidedFacet.sh.reflectType < 2) {
@@ -417,13 +420,16 @@ bool SimulationMCStep(const size_t& nbStep) {
 										//material reflection, depends on incident angle and energy
 										std::tie(stickingProbability,materialReflProbabilities, complexScattering) = GetStickingProbability(collidedFacet, inTheta);
 									}
-									int reflType = GetHardHitType(stickingProbability, materialReflProbabilities, complexScattering);
 									if (!sHandle->mode.lowFluxMode) {
-										//Low-flux mode disabled OR the facet's material supports complex scattering, which is not possible with low-flux mode
-										reflected = DoOldRegularReflection(collidedFacet, stickingProbability, reflType, inTheta, inPhi, N_rotated, nU_rotated, nV_rotated);
+										//Regular Monte-Carlo, stick or reflect fwd/diff/back/through
+										int reflType = GetHardHitType(stickingProbability, materialReflProbabilities, complexScattering);
+										reflected = DoOldRegularReflection(collidedFacet, reflType, inTheta, inPhi, N_rotated, nU_rotated, nV_rotated);
 									}
 									else {
-										reflected = DoLowFluxReflection(collidedFacet, stickingProbability, reflType, inTheta, inPhi, N_rotated, nU_rotated, nV_rotated);
+										//Low flux mode
+										reflected = DoLowFluxReflection(collidedFacet, stickingProbability, complexScattering, materialReflProbabilities,
+											inTheta, inPhi, 
+											N_rotated, nU_rotated, nV_rotated);
 									}
 								} while (!reflected); //do it again if reflection wasn't successful (reflected against the surface due to roughness)
 							}
@@ -516,14 +522,16 @@ std::tuple<double,double,double> GetDirComponents(const Vector3d& nU_rotated, co
 	return std::make_tuple(u, v, n);
 }*/
 
-bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingProbability, const int& reflType, const double& inTheta, const double& inPhi,
+bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingProbability, const bool& complexScattering, const std::vector<double>& materialReflProbabilities,
+	const double& inTheta, const double& inPhi,
 	const Vector3d& N_rotated, const Vector3d& nU_rotated, const Vector3d& nV_rotated) {
+
+	//First register sticking part:
 	collidedFacet.counter.fluxAbs += sHandle->dF*stickingProbability;
 	collidedFacet.counter.powerAbs += sHandle->dP*stickingProbability;
-	
 	if (collidedFacet.hits_MC && collidedFacet.sh.countAbs) RecordHitOnTexture(collidedFacet,
 		sHandle->dF*stickingProbability, sHandle->dP*stickingProbability);
-	//okay, absorbed part recorded, let's see how much is left
+	//Absorbed part recorded, let's see how much is left
 	double survivalProbability = 1.0 - stickingProbability;
 	sHandle->oriRatio *= survivalProbability;
 	if (sHandle->oriRatio < sHandle->mode.lowFluxCutoff) {//reflected part not important, throw it away
@@ -533,6 +541,19 @@ bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingP
 	else { //reflect remainder
 		sHandle->dF *= survivalProbability;
 		sHandle->dP *= survivalProbability;
+
+		//Decide reflection type (fwd/diff/back, transparent excluded by intersect)
+		int reflType;
+		if (!complexScattering) reflType = REFL_FORWARD;
+		else {
+			//Like GetHardHitType() but already excluding absorption
+			double anyReflectionProbability = survivalProbability - materialReflProbabilities[3]; //Not absorbed, not transparent
+			double random = rnd() * anyReflectionProbability;
+			if (random < materialReflProbabilities[0]) reflType = REFL_FORWARD;
+			else if (random < (materialReflProbabilities[0] + materialReflProbabilities[1])) reflType = REFL_DIFFUSE;
+			else reflType = REFL_BACK;
+		}
+
 		if (sHandle->newReflectionModel) {
 			PerformBounce_new(collidedFacet, reflType, inTheta, inPhi);
 			return true;
@@ -543,7 +564,7 @@ bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingP
 	}
 }
 
-bool DoOldRegularReflection(SubprocessFacet& collidedFacet, const double& stickingProbability, const int& reflType, const double& theta, const double& phi,
+bool DoOldRegularReflection(SubprocessFacet& collidedFacet, const int& reflType, const double& theta, const double& phi,
 	const Vector3d& N_rotated, const Vector3d& nU_rotated, const Vector3d& nV_rotated) {
 		if (reflType == REFL_ABSORB) {
 				Stick(collidedFacet);
@@ -659,15 +680,15 @@ void PerformBounce_new(SubprocessFacet& collidedFacet,  const int &reflType, con
 	}
 	else { //material reflection, might have backscattering
 		switch (reflType) {
-		case 1: //forward scattering
+		case REFL_FORWARD: //forward scattering
 			outTheta = PI - inTheta;
 			outPhi = inPhi;
 			break;
-		case 2: //diffuse scattering
+		case REFL_DIFFUSE: //diffuse scattering
 			outTheta = acos(sqrt(rnd()));
 			outPhi = rnd()*2.0*PI;
 			break;
-		case 3: //back scattering
+		case REFL_BACK: //back scattering
 			outTheta = PI - inTheta;
 			outPhi = PI + inPhi;
 			break;
@@ -722,11 +743,11 @@ void PerformBounce_new(SubprocessFacet& collidedFacet,  const int &reflType, con
 bool PerformBounce_old(SubprocessFacet& collidedFacet, const int& reflType, const double& inTheta, const double& inPhi,
 	const Vector3d& N_rotated, const Vector3d& nU_rotated, const Vector3d& nV_rotated) {
 
-	// Relaunch particle
+	// Relaunch particle, regular monte-carlo
 	if (collidedFacet.sh.reflectType == REF_DIFFUSE) {
 		//See docs/theta_gen.png for further details on angular distribution generation
 		PolarToCartesian(&collidedFacet, acos(sqrt(rnd())), rnd()*2.0*PI, false);
-	} else { //Mirror reflection, optionally with surface perturbation
+	} else { //Fwd/diff/back reflection, optionally with surface perturbation
 		if (!VerifiedSpecularReflection(collidedFacet, (collidedFacet.sh.reflectType == REF_MIRROR)?REFL_FORWARD:reflType, inTheta, inPhi,
 			nU_rotated, nV_rotated, N_rotated)) {
 			return false;
@@ -754,15 +775,16 @@ bool VerifiedSpecularReflection(const SubprocessFacet& collidedFacet, const int&
 	bool calcNewDir = true;
 
 	switch (reflType) {
-	case 1: //forward scattering
+	case REFL_FORWARD: //forward scattering
 		outTheta = PI - inTheta;
 		outPhi = inPhi;
 		break;
-	case 2: //diffuse scattering
+	case REFL_DIFFUSE: //diffuse scattering
 		outTheta = acos(sqrt(rnd()));
 		outPhi = rnd()*2.0*PI;
 		break;
-	case 3: //back scattering
+	case REFL_BACK: //back scattering
+
 		//we need to perturbate the backscattered ray with the angle difference between the original and the rotated surface
 		
 		//Get rotation matrix that transforms collidedFacet->sh.N into N_rotated
@@ -861,6 +883,7 @@ void Stick(SubprocessFacet& collidedFacet) {
 
 void SubprocessFacet::RegisterTransparentPass()
 {
+	//Low flux mode not supported (ray properties can't change on transparent pass since it's inside the Intersect() routine)
 	this->hitted = true;
 	this->counter.nbHit++; //count MC hits
 	this->counter.fluxAbs += sHandle->dF;
