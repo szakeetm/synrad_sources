@@ -370,7 +370,7 @@ int SynRad::OneTimeSceneInit()
 	facetList->SetWorker(&worker);
 	facetList->SetGrid(true);
 	facetList->SetSelectionMode(MULTIPLE_ROW);
-	facetList->SetSize(5, 1);
+	facetList->SetSize(5, 0);
 	facetList->SetColumnWidths((int*)cWidth);
 	facetList->SetColumnLabels((char **)cName);
 	facetList->SetColumnLabelVisible(true);
@@ -379,6 +379,7 @@ int SynRad::OneTimeSceneInit()
 
 	ClearFacetParams();
 	LoadConfig();
+	appUpdater = new AppUpdater(appId, appVersion, "updater_config.xml"); //Loads config
 	UpdateRecentMenu();
 	UpdateRecentPARMenu();
 	UpdateViewerPanel();
@@ -443,24 +444,8 @@ int SynRad::OneTimeSceneInit()
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
 	}
 
-	if (checkForUpdates) {
-		//Launch updater tool
-		char command[2048];
-		char CWD[MAX_PATH];
-		_getcwd(CWD, MAX_PATH);
-		//sprintf(tmp5,"%s\\synrad_updater_tmp.exe",CWD);
-		if (FileUtils::Exist("synrad_updater_tmp.exe")) { //rename after new installation
-			sprintf(command, "move \"%s\\synrad_updater_tmp.exe\" \"%s\\synrad_updater.exe\"", CWD, CWD);
-			system(command);
-		}
-		//win_sparkle_set_appcast_url("http://test.xml");
-		//win_sparkle_init();
-		//win_sparkle_check_update_with_ui();
-		if (FileUtils::Exist("synrad_updater.exe"))
-			StartProc("synrad_updater.exe", STARTPROC_BACKGROUND);
-		else GLMessageBox::Display("synrad_updater.exe not found. You will not receive updates to Synrad."
-			"\n(You can disable checking for updates in Tools/Global Settings)", "Updater module missing.", GLDLG_OK, GLDLG_ICONINFO);
-	}
+	EmptyGeometry();
+
 	return GL_OK;
 }
 
@@ -1470,10 +1455,8 @@ void SynRad::LoadFile(char *fName) {
 		Geometry *geom = worker.GetGeometry();
 
 		// Default initialisation
-		viewer[0]->SetWorker(&worker);
-		viewer[1]->SetWorker(&worker);
-		viewer[2]->SetWorker(&worker);
-		viewer[3]->SetWorker(&worker);
+		for (int i = 0; i < MAX_VIEWER; i++)
+			viewer[i]->SetWorker(&worker);
 		startSimu->SetEnabled(true);
 		ClearFacetParams();
 		nbDesStart = worker.nbDesorption;
@@ -1567,6 +1550,10 @@ void SynRad::InsertGeometry(bool newStr, char *fName) {
 
 		AddRecent(fullName);
 		geom->viewStruct = -1;
+
+		//Increase BB
+		for (int i = 0; i < MAX_VIEWER; i++)
+			viewer[i]->SetWorker(&worker);
 
 		RebuildPARMenus();
 		UpdateStructMenu();
@@ -2049,15 +2036,66 @@ void SynRad::BuildPipe(double ratio, int steps) {
 	if (vertexCoordinates) vertexCoordinates->Update();
 	UpdateStructMenu();
 	// Send to sub process
-	try { worker.Reload(); }
-	catch (Error &e) {
-		GLMessageBox::Display((char *)e.GetMsg(), "Error", GLDLG_OK, GLDLG_ICONERROR);
-		return;
-	}
+	worker.Reload();
 
 	UpdateTitle();
 	changedSinceSave = false;
 	ResetAutoSaveTimer();
+}
+
+void SynRad::EmptyGeometry() {
+
+	Geometry *geom = worker.GetGeometry();
+	ResetSimulation(false);
+
+	try {
+		geom->EmptyGeometry();
+		worker.ClearRegions();
+	}
+	catch (Error &e) {
+		GLMessageBox::Display((char *)e.GetMsg(), "Error resetting geometry", GLDLG_OK, GLDLG_ICONERROR);
+		geom->Clear();
+		return;
+	}
+	worker.SetFileName("");
+	nbDesStart = 0;
+	nbHitStart = 0;
+
+	for (int i = 0; i < MAX_VIEWER; i++)
+		viewer[i]->SetWorker(&worker);
+
+	//UpdateModelParams();
+	startSimu->SetEnabled(true);
+	//resetSimu->SetEnabled(true);
+	ClearFacetParams();
+	ClearFormulas();
+	ClearAllSelections();
+	ClearAllViews();
+	ClearRegions();
+	ClearAllSelections();
+	ClearAllViews();
+
+	RebuildPARMenus();
+	UpdateStructMenu();
+	// Send to sub process
+	worker.Reload();
+
+	//UpdatePlotters();
+
+	if (profilePlotter) profilePlotter->Refresh();
+	if (texturePlotter) texturePlotter->Update(0.0, true);
+	//if (parameterEditor) parameterEditor->UpdateCombo(); //Done by ClearParameters()
+	if (textureSettings) textureSettings->Update();
+	if (facetDetails) facetDetails->Update();
+	if (facetCoordinates) facetCoordinates->UpdateFromSelection();
+	if (vertexCoordinates) vertexCoordinates->Update();
+	//if (globalSettings && globalSettings->IsVisible()) globalSettings->Update();
+	if (spectrumPlotter) spectrumPlotter->Refresh();
+	if (formulaEditor) formulaEditor->Refresh();
+	UpdateTitle();
+	changedSinceSave = false;
+	ResetAutoSaveTimer();
+	UpdatePlotters();
 }
 
 void SynRad::RebuildPARMenus() {
@@ -2272,7 +2310,7 @@ void SynRad::LoadConfig() {
 		f->ReadKeyword("autoSaveSimuOnly"); f->ReadKeyword(":");
 		autoSaveSimuOnly = f->ReadInt();
 		f->ReadKeyword("checkForUpdates"); f->ReadKeyword(":");
-		checkForUpdates = f->ReadInt();
+		/*checkForUpdates =*/ f->ReadInt(); //Old check for updates tag
 		f->ReadKeyword("autoUpdateFormulas"); f->ReadKeyword(":");
 		autoUpdateFormulas = f->ReadInt();
 		f->ReadKeyword("compressSavedFiles"); f->ReadKeyword(":");
@@ -2289,6 +2327,10 @@ void SynRad::LoadConfig() {
 		f->ReadKeyword("hideLot"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
 			viewer[i]->hideLot = f->ReadInt();
+		/*f->ReadKeyword("installId"); f->ReadKeyword(":");
+		installId = f->ReadString();
+		f->ReadKeyword("appLaunchesWithoutAsking"); f->ReadKeyword(":");
+		appLaunchesWithoutAsking = f->ReadInt();*/
 	}
 	catch (Error &err) {
 		printf("Warning, load config file (one or more feature not supported) %s\n", err.GetMsg());
@@ -2314,7 +2356,7 @@ void SynRad::LoadConfig() {
 	f->Write("\n");                      \
 }
 
-void SynRad::SaveConfig(bool increaseSessionCount) {
+void SynRad::SaveConfig() {
 
 	FileWriter *f = NULL;
 
@@ -2382,7 +2424,7 @@ void SynRad::SaveConfig(bool increaseSessionCount) {
 		WRITEI("showTP", showDir); f->Write("\n");
 		f->Write("autoSaveFrequency:"); f->Write(autoSaveFrequency, "\n");
 		f->Write("autoSaveSimuOnly:"); f->Write(autoSaveSimuOnly, "\n");
-		f->Write("checkForUpdates:"); f->Write(checkForUpdates, "\n");
+		f->Write("checkForUpdates:"); f->Write(/*checkForUpdates*/ 0, "\n");
 		f->Write("autoUpdateFormulas:"); f->Write(autoUpdateFormulas, "\n");
 		f->Write("compressSavedFiles:"); f->Write(compressSavedFiles, "\n");
 		f->Write("lowFluxMode:"); f->Write(worker.lowFluxMode, "\n");
@@ -2391,6 +2433,9 @@ void SynRad::SaveConfig(bool increaseSessionCount) {
 		f->Write("newReflectionModel:"); f->Write(worker.newReflectionModel, "\n");
 
 		WRITEI("hideLot", hideLot);
+		/*f->Write("installId:"); f->Write(installId + "\n");
+		if (increaseSessionCount && appLaunchesWithoutAsking >= 0) appLaunchesWithoutAsking++;
+		f->Write("appLaunchesWithoutAsking:"); f->Write(appLaunchesWithoutAsking, "\n");*/
 	}
 	catch (Error &err) {
 		printf("Warning, failed to save config file %s\n", err.GetMsg());

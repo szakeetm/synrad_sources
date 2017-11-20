@@ -188,7 +188,13 @@ void GlobalSettings::Display(Worker *w) {
 	sprintf(tmp,"%g",mApp->autoSaveFrequency);
 	autoSaveText->SetText(tmp);
 	chkSimuOnly->SetState(mApp->autoSaveSimuOnly);
-	chkCheckForUpdates->SetState(mApp->checkForUpdates);
+	if (mApp->appUpdater) { //Updater initialized
+		chkCheckForUpdates->SetState(mApp->appUpdater->checkForUpdates);
+	}
+	else {
+		chkCheckForUpdates->SetState(0);
+		chkCheckForUpdates->SetEnabled(false);
+	}
 	chkCompressSavedFiles->SetState(mApp->compressSavedFiles);
 	
 	size_t nb = worker->GetProcNumber();
@@ -298,7 +304,7 @@ void GlobalSettings::RestartProc() {
 				try {
 					worker->SetProcNumber(nbProc);
 					worker->Reload();
-					mApp->SaveConfig(false);
+					mApp->SaveConfig();
 				} catch(Error &e) {
 					GLMessageBox::Display((char *)e.GetMsg(),"Error",GLDLG_OK,GLDLG_ICONERROR);
 				}
@@ -338,7 +344,13 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 		} else if (src==applyButton) {
 			mApp->antiAliasing = chkAntiAliasing->GetState();
 			mApp->whiteBg = chkWhiteBg->GetState();
-			mApp->checkForUpdates = chkCheckForUpdates->GetState();
+			bool updateCheckPreference = chkCheckForUpdates->GetState();
+			if (mApp->appUpdater) {
+				if (mApp->appUpdater->checkForUpdates != updateCheckPreference) {
+					mApp->appUpdater->checkForUpdates = updateCheckPreference;
+					mApp->appUpdater->SetUserUpdatePreference(updateCheckPreference);
+				}
+			}
 			mApp->compressSavedFiles = chkCompressSavedFiles->GetState();
 			mApp->autoUpdateFormulas = chkAutoUpdateFormulas->GetState();
 			mApp->autoSaveSimuOnly=chkSimuOnly->GetState();

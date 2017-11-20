@@ -51,7 +51,7 @@ public:
     void UpdateFacetParams(bool updateSelection=false);
     void ApplyFacetParams();
     void StartStopSimulation();
-    void SaveConfig(bool increaseSessionCount = false);
+    void SaveConfig();
     void LoadConfig();
 	
     void UpdateFacetHits(bool all=false);
@@ -129,7 +129,7 @@ public:
     //int     nbSt;
     //void LogProfile();
     void BuildPipe(double ratio,int steps=0);
-    //void BuildPipeStick(double s);
+	void EmptyGeometry();
 	
 	void CrashHandler(Error *e);
 

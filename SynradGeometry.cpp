@@ -315,6 +315,8 @@ void  SynradGeometry::BuildPipe(double L, double R, double s, int step) {
 
 	sh.nbFacet = step + 2 + nbTF;
 	sh.nbSuper = 1;
+	strName[0] = _strdup("Pipe");
+
 	if (!(facets = (Facet **)malloc(sh.nbFacet * sizeof(Facet *))))
 		throw Error("Couldn't allocate memory for facets");
 	memset(facets, 0, sh.nbFacet * sizeof(Facet *));
