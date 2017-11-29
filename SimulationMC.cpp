@@ -104,10 +104,10 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 		if (sHandle->hitCacheSize > 0) {
 			gHits->lastHitIndex = (gHits->lastHitIndex + sHandle->hitCacheSize) % HITCACHESIZE;
 
-			if (gHits->lastHitIndex < (HITCACHESIZE - 1)) {
-				gHits->lastHitIndex++;
+			//if (gHits->lastHitIndex < (HITCACHESIZE - 1)) {
+			//	gHits->lastHitIndex++;
 				gHits->hitCache[gHits->lastHitIndex].type = HIT_LAST; //Penup (border between blocks of consecutive hits in the hit cache)
-			}
+			//}
 
 			gHits->hitCacheSize = Min(HITCACHESIZE, gHits->hitCacheSize + sHandle->hitCacheSize);
 		}
@@ -275,7 +275,7 @@ void PerformTeleport(SubprocessFacet& collidedFacet) {
 	}
 
 	// Count this hit as a transparent pass
-	RecordHit(HIT_TELEPORT, sHandle->dF, sHandle->dP);
+	RecordHit(HIT_TELEPORTSOURCE, sHandle->dF, sHandle->dP);
 	if (collidedFacet.hits_MC && collidedFacet.sh.countTrans) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
 
 	// Relaunch particle from new facet
@@ -285,7 +285,7 @@ void PerformTeleport(SubprocessFacet& collidedFacet) {
 	// Move particle to teleport destination point
 	sHandle->pPos = destination->sh.O + collidedFacet.colU*destination->sh.U + collidedFacet.colV*destination->sh.V;
 
-	RecordHit(HIT_TELEPORT, sHandle->dF, sHandle->dP);
+	RecordHit(HIT_TELEPORTDEST, sHandle->dF, sHandle->dP);
 	sHandle->lastHitFacet = destination;
 
 	//Count hits on teleport facets (only TP source)
@@ -631,18 +631,14 @@ bool StartFromSource() {
 	sHandle->oriRatio = 1.0;
 
 	//starting position
-	sHandle->pPos.x = photon.start_pos.x;
-	sHandle->pPos.y = photon.start_pos.y;
-	sHandle->pPos.z = photon.start_pos.z;
+	sHandle->pPos = photon.start_pos;
 
 	sHandle->sourceRegionId = regionId;
 
 	RecordHit(HIT_DES, sHandle->dF, sHandle->dP);
 
 	//angle
-	sHandle->pDir.x = photon.start_dir.x;
-	sHandle->pDir.y = photon.start_dir.y;
-	sHandle->pDir.z = photon.start_dir.z;
+	sHandle->pDir = photon.start_dir;
 
 	//_ASSERTE(Norme(&sHandle->pDir)<=1.0);
 	// Current structure = 0
@@ -830,9 +826,7 @@ bool VerifiedSpecularReflection(const SubprocessFacet& collidedFacet, const int&
 		v = sin(outTheta)*sin(outPhi);
 		n = cos(outTheta);
 
-		newDir = Vector3d(u*nU_rotated.x + v*nV_rotated.x + n*N_rotated.x,
-			u*nU_rotated.y + v*nV_rotated.y + n*N_rotated.y,
-			u*nU_rotated.z + v*nV_rotated.z + n*N_rotated.z);
+		newDir = u*nU_rotated + v*nV_rotated + n*N_rotated;
 
 	}
 
@@ -842,9 +836,7 @@ bool VerifiedSpecularReflection(const SubprocessFacet& collidedFacet, const int&
 		return false; //if reflection would go against the surface, generate new angles
 	}
 
-	sHandle->pDir.x = newDir.x;	
-	sHandle->pDir.y = newDir.y;
-	sHandle->pDir.z = newDir.z;
+	sHandle->pDir = newDir;
 	return true;
 }
 

@@ -20,8 +20,8 @@ GNU General Public License for more details.
 #include "GLApp/GLMessageBox.h"
 #include "GLApp/GLInputBox.h"
 #include "GLApp/MathTools.h"
-
 #include "Synrad.h"
+#include "AppUpdater.h"
 
 extern SynRad *mApp;
 
@@ -189,7 +189,7 @@ void GlobalSettings::Display(Worker *w) {
 	autoSaveText->SetText(tmp);
 	chkSimuOnly->SetState(mApp->autoSaveSimuOnly);
 	if (mApp->appUpdater) { //Updater initialized
-		chkCheckForUpdates->SetState(mApp->appUpdater->checkForUpdates);
+		chkCheckForUpdates->SetState(mApp->appUpdater->IsUpdateCheckAllowed());
 	}
 	else {
 		chkCheckForUpdates->SetState(0);
@@ -346,8 +346,7 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 			mApp->whiteBg = chkWhiteBg->GetState();
 			bool updateCheckPreference = chkCheckForUpdates->GetState();
 			if (mApp->appUpdater) {
-				if (mApp->appUpdater->checkForUpdates != updateCheckPreference) {
-					mApp->appUpdater->checkForUpdates = updateCheckPreference;
+				if (mApp->appUpdater->IsUpdateCheckAllowed() != updateCheckPreference) {
 					mApp->appUpdater->SetUserUpdatePreference(updateCheckPreference);
 				}
 			}

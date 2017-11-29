@@ -44,6 +44,13 @@ GNU General Public License for more details.
 #include "VertexCoordinates.h"
 #include "FormulaEditor.h"
 
+//Hard-coded identifiers, update these on new release
+//---------------------------------------------------
+std::string appName = "Synrad";
+int appVersionId = 1418;
+std::string appVersionName = "1.4.18";
+//---------------------------------------------------
+
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
 const char *fileSFilters = "SYN files\0*.syn;*.syn7z;\0GEO files\0*.geo;*.geo7z;\0Text files\0*.txt\0All files\0*.*\0";
 //static const char *fileSelFilters = "Selection files\0*.sel\0All files\0*.*\0";
@@ -55,12 +62,10 @@ int   cSize = 5;
 int   cWidth[] = { 30, 56, 50, 50, 50 };
 char *cName[] = { "#", "Hits", "Flux", "Power", "Abs" };
 
-int appVersion = 1416;
-std::string appId = "Synrad";
 #ifdef _DEBUG
-std::string appName = "SynRad+ development version (Compiled " __DATE__ " " __TIME__ ") DEBUG MODE";
+std::string appTitle = "SynRad+ debug version (Compiled " __DATE__ " " __TIME__ ")";
 #else
-std::string appName = "Synrad+ 1.4.16 (" __DATE__ ")";
+std::string appTitle = "SynRad+ " + appVersionName + " (" __DATE__ ")";
 #endif
 
 std::vector<string> formulaPrefixes = { "H","A","F","P","AR","h","a","f","p","ar","," };
@@ -200,7 +205,7 @@ SynRad::SynRad()
 int SynRad::OneTimeSceneInit()
 {
 
-	OneTimeSceneInit_shared();
+	Interface::OneTimeSceneInit_shared_pre();
 
 	//menu->GetSubMenu("File")->Add("Export DES file (deprecated)", MENU_FILE_EXPORT_DESORP);
 
@@ -377,23 +382,9 @@ int SynRad::OneTimeSceneInit()
 	facetList->Sortable = true;
 	Add(facetList);
 
-	ClearFacetParams();
-	LoadConfig();
-	appUpdater = new AppUpdater(appId, appVersion, "updater_config.xml"); //Loads config
-	UpdateRecentMenu();
-	UpdateRecentPARMenu();
-	UpdateViewerPanel();
-	PlaceComponents();
-	CheckNeedsTexture();
+	Interface::OneTimeSceneInit_shared_post();
 
-	try {
-		worker.SetProcNumber(nbProc);
-	}
-	catch (Error &e) {
-		char errMsg[512];
-		sprintf(errMsg, "Failed to start working sub-process(es), simulation not available\n%s", e.GetMsg());
-		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
-	}
+	UpdateRecentPARMenu();
 
 	int index;
 	try {
@@ -443,8 +434,6 @@ int SynRad::OneTimeSceneInit()
 		sprintf(errMsg, "Failed to load angular distribution file.\nIt should be in the param\\Distributions directory.\n%s", e.GetMsg());
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
 	}
-
-	EmptyGeometry();
 
 	return GL_OK;
 }

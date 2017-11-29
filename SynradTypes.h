@@ -9,8 +9,9 @@
 #define HIT_ABS   2
 #define HIT_REF   3
 #define HIT_TRANS 4
-#define HIT_TELEPORT 5
-#define HIT_LAST 6
+#define HIT_TELEPORTSOURCE 5
+#define HIT_TELEPORTDEST 6
+#define HIT_LAST 10
 
 //Reflection type
 #define REFL_ABSORB 0
