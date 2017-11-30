@@ -106,9 +106,9 @@ Viewer3DSettings::Viewer3DSettings():GLWindow() {
   bigDots->SetBounds(10,250,50,18);
   Add(bigDots);
 
-  showTP = new GLToggle(0,"Show Teleports");
-  showTP->SetBounds(10,275,50,18);
-  Add(showTP);
+  showTPtoggle = new GLToggle(0,"Show Teleports");
+  showTPtoggle->SetBounds(10,275,50,18);
+  Add(showTPtoggle);
 
   shadeLines = new GLToggle(0,"Shade lines by flux/power");
   shadeLines->SetBounds(10,300,50,18);
@@ -189,7 +189,7 @@ void Viewer3DSettings::Refresh(Geometry *s,GeometryViewer *v) {
 
   bigDots->SetState(viewer->bigDots);
   showDirection->SetState(viewer->showDir);
-  showTP->SetState(viewer->showTP);
+  showTPtoggle->SetState(viewer->showTP);
   shadeLines->SetState(viewer->shadeLines);
   sprintf(tmp,"%g",viewer->transStep);
   traStepText->SetText(tmp);
@@ -285,7 +285,7 @@ void Viewer3DSettings::ProcessMessage(GLComponent *src,int message) {
 	  viewer->bigDots=bigDots->GetState();
       viewer->showDir=showDirection->GetState();
 	  viewer->shadeLines=shadeLines->GetState();
-	  viewer->showTP=showTP->GetState();
+	  viewer->showTP=showTPtoggle->GetState();
 
       if( !normeText->GetNumber(&nratio) ) {
         GLMessageBox::Display("Invalid norme ratio value","Error",GLDLG_OK,GLDLG_ICONERROR);

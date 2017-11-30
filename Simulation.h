@@ -167,7 +167,7 @@ extern SIMULATION *sHandle;
 
 void RecordHitOnTexture(SubprocessFacet& f,double dF,double dP);
 void RecordDirectionVector(SubprocessFacet& f);
-void ProfileFacet(SubprocessFacet *f, const double &dF, const double &dP, const double &E);
+void ProfileFacet(SubprocessFacet &f, const double &dF, const double &dP, const double &E);
 void InitSimulation();
 void ClearSimulation();
 void SetState(int state, const char *status, bool changeState = true, bool changeStatus = true);

@@ -47,8 +47,8 @@ GNU General Public License for more details.
 //Hard-coded identifiers, update these on new release
 //---------------------------------------------------
 std::string appName = "Synrad";
-int appVersionId = 1418;
-std::string appVersionName = "1.4.18";
+int appVersionId = 1420;
+std::string appVersionName = "1.4.20";
 //---------------------------------------------------
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
@@ -359,12 +359,12 @@ int SynRad::OneTimeSceneInit()
 	facetRecType = new GLCombo(0);
 	facetRecType->SetSize(4);
 	facetRecType->SetValueAt(0, "None");
-	facetRecType->SetValueAt(1, "Along \201");
-	facetRecType->SetValueAt(2, "Along \202");
-	facetRecType->SetValueAt(3, "Angular");
+	facetRecType->SetValueAt(1, "Absorbed flux along \201");
+	facetRecType->SetValueAt(2, "Absorbed flux along \202");
+	facetRecType->SetValueAt(3, "Incident angle of absorbed");
 	facetPanel->Add(facetRecType);
 
-	facetSpectrumToggle = new GLToggle(0, "Record Spectrum");
+	facetSpectrumToggle = new GLToggle(0, "Record absorbed spectrum");
 	facetPanel->Add(facetSpectrumToggle);
 
 	facetTexBtn = new GLButton(0, "Mesh...");
@@ -2409,8 +2409,8 @@ void SynRad::SaveConfig() {
 		f->Write("centernorme:"); f->Write(geom->GetCenterNorme(), "\n");
 		f->Write("normeratio:"); f->Write((double)(geom->GetNormeRatio()), "\n");
 		WRITEI("showDirection", showDir); f->Write("\n");
-		WRITEI("shadeLines", showDir); f->Write("\n");
-		WRITEI("showTP", showDir); f->Write("\n");
+		WRITEI("shadeLines", shadeLines); f->Write("\n");
+		WRITEI("showTP", showTP); f->Write("\n");
 		f->Write("autoSaveFrequency:"); f->Write(autoSaveFrequency, "\n");
 		f->Write("autoSaveSimuOnly:"); f->Write(autoSaveSimuOnly, "\n");
 		f->Write("checkForUpdates:"); f->Write(/*checkForUpdates*/ 0, "\n");

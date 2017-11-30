@@ -135,7 +135,7 @@ void ProfilePlotter::Refresh() {
 	size_t nbProf = 0;
 	for (size_t i = 0; i < nb; i++)
 		if (geom->GetFacet(i)->sh.isProfile) nbProf += 3;
-	profCombo->Clear(); profCombo->SetSelectedIndex(0);
+	profCombo->Clear(); profCombo->SetSelectedIndex(-1);
 	if (nbProf) profCombo->SetSize(nbProf);
 	nbProf = 0;
 	for (size_t i = 0; i < nb; i++) {
@@ -444,15 +444,20 @@ void ProfilePlotter::ProcessMessage(GLComponent *src, int message) {
 		}
 		else if (src == addButton) {
 			int idx = profCombo->GetSelectedIndex();
-			int facetId = (int)((double)profCombo->GetUserValueAt(idx) / 3.0);
-			if (idx >= 0) addView(facetId, profCombo->GetUserValueAt(idx) % 3);
-			refreshViews();
+			if (idx >= 0) {
+				int facetId = (int)((double)profCombo->GetUserValueAt(idx) / 3.0);
+				addView(facetId, profCombo->GetUserValueAt(idx) % 3);
+				refreshViews();
+			}
+			
 		}
 		else if (src == removeButton) {
 			int idx = profCombo->GetSelectedIndex();
-			int facetId = (int)((double)profCombo->GetUserValueAt(idx) / 3.0);
-			if (idx >= 0) remView(facetId, profCombo->GetUserValueAt(idx) % 3);
-			refreshViews();
+			if (idx >= 0) {
+				int facetId = (int)((double)profCombo->GetUserValueAt(idx) / 3.0);
+				remView(facetId, profCombo->GetUserValueAt(idx) % 3);
+				refreshViews();
+			}
 		}
 		else if (src == resetButton) {
 			Reset();

@@ -61,7 +61,7 @@ private:
   GLToggle      *hiddenVertex;
   GLToggle      *showMesh;
   GLToggle      *showDirection;
-  GLToggle      *showTP;
+  GLToggle      *showTPtoggle;
   GLToggle      *shadeLines;
   GLToggle      *autoNorme;
   GLToggle      *centerNorme;

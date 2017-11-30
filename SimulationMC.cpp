@@ -280,7 +280,7 @@ void PerformTeleport(SubprocessFacet& collidedFacet) {
 
 	// Relaunch particle from new facet
 	double inPhi, inTheta;
-	std::tie(inPhi,inTheta) = CartesianToPolar(collidedFacet.sh.nU,collidedFacet.sh.nV, collidedFacet.sh.N);
+	std::tie(inTheta,inPhi) = CartesianToPolar(collidedFacet.sh.nU,collidedFacet.sh.nV, collidedFacet.sh.N);
 	PolarToCartesian(destination, inTheta, inPhi, false);
 	// Move particle to teleport destination point
 	sHandle->pPos = destination->sh.O + collidedFacet.colU*destination->sh.U + collidedFacet.colV*destination->sh.V;
@@ -292,6 +292,7 @@ void PerformTeleport(SubprocessFacet& collidedFacet) {
 	//collidedFacet.counter.nbAbsorbed++;
 	//destination->counter.nbDesorbed++;
 
+	ProfileFacet(collidedFacet, sHandle->dF, sHandle->dP, sHandle->energy); //Put here since removed from Intersect() routine
 	collidedFacet.counter.nbHit++;//destination->counter.nbHit++;
 	collidedFacet.counter.fluxAbs += sHandle->dF;//destination->counter.fluxAbs+=sHandle->dF;
 	collidedFacet.counter.powerAbs += sHandle->dP;//destination->counter.powerAbs+=sHandle->dP;
@@ -329,6 +330,7 @@ bool SimulationMCStep(const size_t& nbStep) {
 					sHandle->curStruct = collidedFacet.sh.superDest - 1;
 					// Count this hit as a transparent pass
 					RecordHit(HIT_TRANS, sHandle->dF, sHandle->dP);
+					ProfileFacet(collidedFacet, sHandle->dF, sHandle->dP,sHandle->energy); //Links record all spectrum
 					if (collidedFacet.hits_MC && collidedFacet.sh.countTrans) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
 				}
 				else { //Not superDest or Teleport
@@ -531,6 +533,7 @@ bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingP
 	collidedFacet.counter.powerAbs += sHandle->dP*stickingProbability;
 	if (collidedFacet.hits_MC && collidedFacet.sh.countAbs) RecordHitOnTexture(collidedFacet,
 		sHandle->dF*stickingProbability, sHandle->dP*stickingProbability);
+	ProfileFacet(collidedFacet, sHandle->dF*stickingProbability, sHandle->dP*stickingProbability, sHandle->energy);
 	//Absorbed part recorded, let's see how much is left
 	double survivalProbability = 1.0 - stickingProbability;
 	sHandle->oriRatio *= survivalProbability;
@@ -870,6 +873,7 @@ void Stick(SubprocessFacet& collidedFacet) {
 	//sHandle->counter.fluxAbs+=sHandle->dF;
 	//sHandle->counter.powerAbs+=sHandle->dP;
 	RecordHit(HIT_ABS, sHandle->dF, sHandle->dP); //for hits and lines display
+	ProfileFacet(collidedFacet, sHandle->dF, sHandle->dP, sHandle->energy);
 	if (collidedFacet.hits_MC && collidedFacet.sh.countAbs) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
 }
 
@@ -880,48 +884,48 @@ void SubprocessFacet::RegisterTransparentPass()
 	this->counter.nbHit++; //count MC hits
 	this->counter.fluxAbs += sHandle->dF;
 	this->counter.powerAbs += sHandle->dP;
-	ProfileFacet(this, sHandle->dF, sHandle->dP, sHandle->energy); //count profile
+	ProfileFacet(*this, sHandle->dF, sHandle->dP, sHandle->energy); //count profile
 	if (this->hits_MC && this->sh.countTrans) RecordHitOnTexture(*this, sHandle->dF, sHandle->dP); //count texture
 	if (this->direction && this->sh.countDirection) RecordDirectionVector(*this);
 }
 
-void ProfileFacet(SubprocessFacet *f, const double &dF, const double &dP, const double &E) {
+void ProfileFacet(SubprocessFacet &f, const double &dF, const double &dP, const double &E) {
 
 	size_t pos;
 
-	switch (f->sh.profileType) {
+	switch (f.sh.profileType) {
 
 	case REC_ANGULAR: {
-		double dot = abs(Dot(f->sh.N, sHandle->pDir));
+		double dot = abs(Dot(f.sh.N, sHandle->pDir));
 		double theta = acos(dot);              // Angle to normal (0 to PI/2)
 		size_t grad = (size_t)(((double)PROFILE_SIZE)*(theta) / (PI / 2)); // To Grad
 		Saturate(grad, 0, PROFILE_SIZE - 1);
-		f->profile_hits[grad]++;
-		f->profile_flux[grad] += dF;
-		f->profile_power[grad] += dP;
+		f.profile_hits[grad]++;
+		f.profile_flux[grad] += dF;
+		f.profile_power[grad] += dP;
 
 	} break;
 
 	case REC_PRESSUREU:
-		pos = (size_t)((f->colU)*(double)PROFILE_SIZE);
+		pos = (size_t)((f.colU)*(double)PROFILE_SIZE);
 		Saturate(pos, 0, PROFILE_SIZE - 1);
-		f->profile_hits[pos]++;
-		f->profile_flux[pos] += dF;
-		f->profile_power[pos] += dP;
+		f.profile_hits[pos]++;
+		f.profile_flux[pos] += dF;
+		f.profile_power[pos] += dP;
 		break;
 
 	case REC_PRESSUREV:
-		pos = (size_t)((f->colV)*(double)PROFILE_SIZE);
+		pos = (size_t)((f.colV)*(double)PROFILE_SIZE);
 		Saturate(pos, 0, PROFILE_SIZE - 1);
-		f->profile_hits[pos]++;
-		f->profile_flux[pos] += dF;
-		f->profile_power[pos] += dP;
+		f.profile_hits[pos]++;
+		f.profile_flux[pos] += dF;
+		f.profile_power[pos] += dP;
 		break;
 
 	}
 
-	if (f->sh.hasSpectrum) {
-		f->spectrum_fluxwise->Add(E, dF);
-		f->spectrum_powerwise->Add(E, dP);
+	if (f.sh.hasSpectrum) {
+		f.spectrum_fluxwise->Add(E, dF);
+		f.spectrum_powerwise->Add(E, dP);
 	}
 }

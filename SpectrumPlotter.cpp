@@ -126,6 +126,7 @@ void SpectrumPlotter::Refresh() {
 	for(size_t i=0;i<nb;i++)
 		if(geom->GetFacet(i)->sh.hasSpectrum) nbSpec+=2;
 	specCombo->Clear();
+	specCombo->SetSelectedIndex(-1);
 	if(nbSpec) specCombo->SetSize(nbSpec);
 	nbSpec=0;
 	for(size_t i=0;i<nb;i++) {
@@ -342,14 +343,18 @@ void SpectrumPlotter::ProcessMessage(GLComponent *src,int message) {
 			}
 		} else if(src==addButton) {
 			int idx = specCombo->GetSelectedIndex();
-			int facetId=(int)((double)specCombo->GetUserValueAt(idx)/2.0);
-			if(idx>=0) addView(facetId,specCombo->GetUserValueAt(idx)%2);
-			refreshViews();
+			if (idx >= 0) {
+				int facetId = (int)((double)specCombo->GetUserValueAt(idx) / 2.0);
+				addView(facetId, specCombo->GetUserValueAt(idx) % 2);
+				refreshViews();
+			}
 		} else if(src==removeButton) {
 			int idx = specCombo->GetSelectedIndex();
-			int facetId=(int)((double)specCombo->GetUserValueAt(idx)/2.0);
-			if(idx>=0) remView(facetId,specCombo->GetUserValueAt(idx)%2);
-			refreshViews();
+			if (idx >= 0) {
+				int facetId = (int)((double)specCombo->GetUserValueAt(idx) / 2.0);
+				remView(facetId, specCombo->GetUserValueAt(idx) % 2);
+				refreshViews();
+			}
 		} else if(src==resetButton) {
 			Reset();
 		}
