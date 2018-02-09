@@ -93,15 +93,10 @@ void ClearSimulation() {
 				SAFE_FREE(f->vertices2);
 				SAFE_FREE(f->inc);
 				SAFE_FREE(f->largeEnough);
-				SAFE_FREE(f->hits_MC);
-				SAFE_FREE(f->hits_flux);
-				SAFE_FREE(f->hits_power);
+				SAFE_FREE(f->texture);
 				//SAFE_FREE(f->area);
-				SAFE_FREE(f->profile_hits);
-				SAFE_FREE(f->profile_flux);
-				SAFE_FREE(f->profile_power);
-				delete f->spectrum_fluxwise;
-				delete f->spectrum_powerwise;
+				SAFE_FREE(f->profile);
+				delete f->spectrum;
 				SAFE_FREE(f->direction);
 				//SAFE_FREE(f->fullElem);
 			}
@@ -208,11 +203,7 @@ bool LoadSimulation(Dataport *loader) {
 
 	buffer += sizeof(GeomProperties);
 
-	SHMODE* shMode = (SHMODE *)buffer;
-	sHandle->mode.generation_mode = shMode->generation_mode;
-	sHandle->mode.lowFluxCutoff = shMode->lowFluxCutoff;
-	sHandle->mode.lowFluxMode = shMode->lowFluxMode;
-	buffer += sizeof(SHMODE);
+	sHandle->ontheflyParams = READBUFFER(OntheflySimulationParams);
 
 	sHandle->nbTrajPoints = 0;
 
@@ -469,15 +460,10 @@ bool LoadSimulation(Dataport *loader) {
 		//Textures
 		if (f->sh.isTextured) {
 			size_t nbE = f->sh.texWidth*f->sh.texHeight;
-			f->textureSize = nbE*(2 * sizeof(double) + sizeof(llong));
-			f->hits_MC = (llong *)malloc(nbE * sizeof(llong));
-			memset(f->hits_MC, 0, nbE * sizeof(llong));
-			f->hits_flux = (double *)malloc(nbE * sizeof(double));
-			memset(f->hits_flux, 0, nbE * sizeof(double));
-			f->hits_power = (double *)malloc(nbE * sizeof(double));
-			memset(f->hits_power, 0, nbE * sizeof(double));
+			f->textureSize = nbE*sizeof(TextureCell);
+			f->texture = (TextureCell *)calloc(nbE, sizeof(TextureCell));
 
-			f->inc = (double*)malloc(f->textureSize);
+			f->inc = (double*)malloc(nbE*sizeof(double));
 			f->largeEnough = (bool *)malloc(sizeof(bool)*nbE);
 			//f->fullElem = (char *)malloc(nbE);
 			if (!(f->inc && f->largeEnough/* && f->fullElem*/)) {
@@ -509,31 +495,24 @@ bool LoadSimulation(Dataport *loader) {
 		else f->textureSize = 0;
 
 		if (f->sh.isProfile) {
-			f->profileSize = PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double));
+			f->profileSize = PROFILE_SIZE*sizeof(ProfileSlice);
 
-			f->profile_hits = (llong *)malloc(PROFILE_SIZE * sizeof(llong));
-			memset(f->profile_hits, 0, PROFILE_SIZE * sizeof(llong));
-
-			f->profile_flux = (double *)malloc(PROFILE_SIZE * sizeof(double));
-			memset(f->profile_flux, 0, PROFILE_SIZE * sizeof(double));
-
-			f->profile_power = (double *)malloc(PROFILE_SIZE * sizeof(double));
-			memset(f->profile_power, 0, PROFILE_SIZE * sizeof(double));
+			f->profile = (ProfileSlice *)calloc(PROFILE_SIZE,sizeof(ProfileSlice));
 
 			sHandle->profTotalSize += f->profileSize;
 		}
 		else f->profileSize = 0;
 
 		if (f->sh.countDirection) {
-			f->directionSize = f->sh.texWidth*f->sh.texHeight * sizeof(VHIT);
-			f->direction = (VHIT *)malloc(f->directionSize);
+			f->directionSize = f->sh.texWidth*f->sh.texHeight * sizeof(DirectionCell);
+			f->direction = (DirectionCell *)malloc(f->directionSize);
 			memset(f->direction, 0, f->directionSize);
 			sHandle->dirTotalSize += f->directionSize;
 		}
 		else f->directionSize = 0;
 
-		if (f->sh.hasSpectrum) {
-			f->spectrumSize = 2 * sizeof(double)*SPECTRUM_SIZE;
+		if (f->sh.recordSpectrum) {
+			f->spectrumSize = sizeof(ProfileSlice)*SPECTRUM_SIZE;
 			double min_energy, max_energy;
 			if (sHandle->nbRegion > 0) {
 				min_energy = sHandle->regions[0].params.energy_low_eV;
@@ -543,8 +522,7 @@ bool LoadSimulation(Dataport *loader) {
 				min_energy = 10.0;
 				max_energy = 1000000.0;
 			}
-			f->spectrum_fluxwise = new Histogram(min_energy, max_energy, SPECTRUM_SIZE, true);
-			f->spectrum_powerwise = new Histogram(min_energy, max_energy, SPECTRUM_SIZE, true);
+			f->spectrum = new Histogram(min_energy, max_energy, SPECTRUM_SIZE, true);
 			sHandle->spectrumTotalSize += f->spectrumSize;
 		}
 		else f->spectrumSize = 0;
@@ -589,7 +567,7 @@ bool LoadSimulation(Dataport *loader) {
 
 }
 
-bool UpdateSimuParams(Dataport *loader) {
+bool UpdateOntheflySimuParams(Dataport *loader) {
 	// Connect the dataport
 	if (!AccessDataportTimed(loader, 2000)) {
 		SetErrorSub("Failed to connect to DP");
@@ -597,11 +575,7 @@ bool UpdateSimuParams(Dataport *loader) {
 	}
 	BYTE* buffer = (BYTE *)loader->buff;
 
-	SHMODE* shMode = (SHMODE *)buffer;
-	sHandle->mode.generation_mode = shMode->generation_mode;
-	sHandle->mode.lowFluxCutoff = shMode->lowFluxCutoff;
-	sHandle->mode.lowFluxMode = shMode->lowFluxMode;
-	buffer += sizeof(SHMODE);
+	sHandle->ontheflyParams = READBUFFER(OntheflySimulationParams);
 
 	for (size_t i = 0; i < sHandle->nbRegion; i++) {
 		sHandle->regions[i].params.showPhotons = READBUFFER(bool);
@@ -643,21 +617,12 @@ void ResetTmpCounters() {
 	for (int j = 0; j < sHandle->nbSuper; j++) {
 		for (int i = 0; i < sHandle->str[j].nbFacet; i++) {
 			SubprocessFacet *f = sHandle->str[j].facets[i];
-			f->counter.fluxAbs = 0.0;
-			f->counter.powerAbs = 0.0;
-			f->counter.nbHit = 0;
-			f->counter.nbAbsorbed = 0;
+			f->ResetCounter();
 			f->hitted = false;
 			size_t textureElemNb = f->sh.texHeight*f->sh.texWidth;
-			if (f->hits_MC) memset(f->hits_MC, 0, textureElemNb * sizeof(llong));
-			if (f->hits_flux) memset(f->hits_flux, 0, textureElemNb * sizeof(double));
-			if (f->hits_power) memset(f->hits_power, 0, textureElemNb * sizeof(double));
-
-			if (f->profile_hits) memset(f->profile_hits, 0, PROFILE_SIZE * sizeof(llong));
-			if (f->profile_flux) memset(f->profile_flux, 0, PROFILE_SIZE * sizeof(double));
-			if (f->profile_power) memset(f->profile_power, 0, PROFILE_SIZE * sizeof(double));
-			if (f->spectrum_fluxwise) f->spectrum_fluxwise->ResetCounts();
-			if (f->spectrum_powerwise) f->spectrum_powerwise->ResetCounts();
+			if (f->texture) memset(f->texture, 0, textureElemNb * sizeof(f->texture[0]));
+			if (f->profile) memset(f->profile, 0, PROFILE_SIZE * sizeof(f->profile[0]));
+			if (f->spectrum) f->spectrum->ResetCounts();
 
 			if (f->direction) memset(f->direction, 0, f->directionSize);
 		}

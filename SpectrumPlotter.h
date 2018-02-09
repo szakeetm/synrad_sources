@@ -16,6 +16,8 @@
   GNU General Public License for more details.
 */
 
+#pragma once
+
 #include "GLApp/GLWindow.h"
 #include "GLApp/GLChart/GLChart.h"
 #include "GLApp/GLLabel.h"
@@ -25,9 +27,6 @@
 #include "GLApp/GLTextField.h"
 #include "Worker.h"
 #include "Geometry_shared.h"
-
-#ifndef _SPECTRUMPLOTTERH_
-#define _SPECTRUMPLOTTERH_
 
 class SpectrumPlotter : public GLWindow {
 
@@ -73,5 +72,3 @@ private:
   float        lastUpdate;
 
 };
-
-#endif /* _SPECTRUMPLOTTERH_ */

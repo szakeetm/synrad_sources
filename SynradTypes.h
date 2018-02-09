@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Vector.h"
-#include "Buffer_shared.h"
+//#include "Buffer_shared.h"
 #include "GLApp/GLTypes.h"
 
 // Hit type
@@ -21,26 +21,44 @@
 #define REFL_TRANS 4
 
 // Reflection type
-#define REF_DIFFUSE 0   // Diffuse (cosine law)
-#define REF_MIRROR  1   // Mirror
-#define REF_MATERIAL 10 //Real rough surface reflection
+#define REFLECTION_DIFFUSE 0   // Diffuse (cosine law)
+#define REFLECTION_SPECULAR  1   // Mirror
+#define REFLECTION_MATERIAL 10 //Real rough surface reflection
 
 // Profile type
 
-#define REC_NONE       0  // No recording
-#define REC_PRESSUREU  1  // Pressure profile (U direction)
-#define REC_PRESSUREV  2  // Pressure profile (V direction)
-#define REC_ANGULAR    3  // Angular profile
+#define PROFILE_NONE  0  // No recording
+#define PROFILE_U  1  // Flux, power (U direction)
+#define PROFILE_V  2  // Flux, power (V direction)
+#define PROFILE_ANGULAR    3  // Angular profile
 
 // Density/Hit field stuff
 #define HITMAX_INT64 18446744073709551615
 #define HITMAX_DOUBLE 1E308
 
-typedef struct {
-	int      generation_mode; //fluxwise or powerwise
-	bool	 lowFluxMode;
-	double	 lowFluxCutoff;
-} SHMODE;
+//Texture modes
+#define TEXTURE_MODE_MCHITS 0
+#define TEXTURE_MODE_FLUX 1
+#define TEXTURE_MODE_POWER 2
+
+class ProfileSlice {
+public:
+	size_t count_incident;
+	size_t count_absorbed;
+	double flux_incident;
+	double flux_absorbed;
+	double power_incident;
+	double power_absorbed;
+	ProfileSlice& operator+=(const ProfileSlice& rhs);
+};
+
+class TextureCell {
+public:
+	size_t count;
+	double flux;
+	double power;
+	TextureCell& operator+=(const TextureCell& rhs);
+};
 
 class Trajectory_Point {
 public:
@@ -67,16 +85,14 @@ class Histogram {
 private:
 	int number_of_bins;
 	double delta,min,max;
-	double *counts;
+	ProfileSlice *counts;
 public:
 	Histogram(double min,double max,int number_of_bins,bool logscale);
 	~Histogram();
-	double GetCount(size_t index);
-	double GetFrequency(size_t index);
+	ProfileSlice GetCounts(size_t index);
 	//double GetNormalized(int index);
 	double GetX(size_t index);
-	void Add(const double &x,const double &dY);
+	void Add(const double &x,const ProfileSlice &increment);
 	bool logarithmic;
-	double /*max_count,*/total_count;
 	void ResetCounts();
 };

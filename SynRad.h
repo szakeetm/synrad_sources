@@ -85,8 +85,8 @@ public:
 	GLCombo       *facetReflType;
 	GLToggle      *facetDoScattering;
     GLTextField   *facetSuperDest;
-    GLCombo       *facetRecType;
-	GLToggle      *facetSpectrumToggle;
+    GLCombo       *facetProfileCombo;
+	GLToggle	  *facetSpectrumToggle;
     GLButton      *facetTexBtn;
     GLLabel       *modeLabel;
 	GLLabel       *doseLabel;
@@ -99,6 +99,7 @@ public:
    // GLLabel       *facetTLabel;
     GLLabel       *facetRLabel;
     GLLabel       *facetReLabel;
+	GLLabel		*facetSpecLabel;
 
 	GLMenu        *PARloadToMenu;
 	GLMenu        *PARremoveMenu;

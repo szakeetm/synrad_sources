@@ -27,7 +27,7 @@ GNU General Public License for more details.
 
 extern GLApplication *theApp;
 
-static const char*specMode[] = {"Flux (ph/sec/.1%BW)","Power (W/.1%BW)"};
+static const char*specMode[] = { "MC hits (inc.)","MC hits (abs.)","Flux inc. (ph/sec/.1%BW)","Flux abs. (ph/sec/.1%BW)","Power inc. (W/.1%BW)","Power abs. (W/.1%BW)" };
 
 SpectrumPlotter::SpectrumPlotter():GLWindow() {
 
@@ -105,13 +105,13 @@ SpectrumPlotter::SpectrumPlotter():GLWindow() {
 
 void SpectrumPlotter::SetBounds(int x,int y,int w,int h) {
 	chart->SetBounds(7,5,w-15,h-60);
-	specCombo->SetBounds(7,h-45,117,19);
-	selButton->SetBounds(130,h-45,80,19);
-	addButton->SetBounds(215,h-45,80,19);
-	removeButton->SetBounds(300,h-45,80,19);
-	resetButton->SetBounds(385,h-45,80,19);
-	logToggle->SetBounds(487,h-45,50,19);
-	normToggle->SetBounds(537,h-45,105,19);
+	specCombo->SetBounds(7,h-45,167,19);
+	selButton->SetBounds(180,h-45,80,19);
+	addButton->SetBounds(265,h-45,80,19);
+	removeButton->SetBounds(350,h-45,80,19);
+	resetButton->SetBounds(235,h-45,80,19);
+	logToggle->SetBounds(537,h-45,50,19);
+	normToggle->SetBounds(587,h-45,105,19);
 	dismissButton->SetBounds(w-100,h-45,90,19);
 	GLWindow::SetBounds(x,y,w,h);
 }
@@ -124,18 +124,18 @@ void SpectrumPlotter::Refresh() {
 	size_t nb = geom->GetNbFacet();
 	size_t nbSpec = 0;
 	for(size_t i=0;i<nb;i++)
-		if(geom->GetFacet(i)->sh.hasSpectrum) nbSpec+=2;
+		if(geom->GetFacet(i)->sh.recordSpectrum) nbSpec+=6;
 	specCombo->Clear();
 	specCombo->SetSelectedIndex(-1);
 	if(nbSpec) specCombo->SetSize(nbSpec);
 	nbSpec=0;
 	for(size_t i=0;i<nb;i++) {
 		Facet *f = geom->GetFacet(i);
-		if(f->sh.hasSpectrum) {
+		if(f->sh.recordSpectrum) {
 			char tmp[128];
-			for (size_t mode=0;mode<2;mode++) { //Flux, power
+			for (size_t mode=0;mode<6;mode++) { //Flux, power
 				sprintf(tmp,"F#%zd %s",i+1,specMode[mode]);
-				specCombo->SetValueAt(nbSpec,tmp,(int)(i*2+mode));
+				specCombo->SetValueAt(nbSpec,tmp,(int)(i*6+mode));
 				specCombo->SetSelectedIndex(0);
 				nbSpec++;
 			}
@@ -178,7 +178,7 @@ void SpectrumPlotter::Update(float appTime,bool force) {
 	}
 
 	if( (appTime-lastUpdate>1.0f || force) && nbView ) {
-		if(worker->running) refreshViews();
+		if(worker->isRunning) refreshViews();
 		lastUpdate = appTime;
 	}
 
@@ -202,16 +202,13 @@ void SpectrumPlotter::refreshViews() {
 			int mode=v->userData2;
 			v->Reset();
 
-			size_t profileSize=(f->sh.isProfile)?(PROFILE_SIZE*(sizeof(llong)+2*sizeof(double))):0;
-			size_t textureSize=(f->sh.isTextured)?(f->sh.texWidth*f->sh.texHeight*(2*sizeof(double)+sizeof(llong))):0;
-			size_t directionSize=(f->sh.countDirection)?(f->sh.texWidth*f->sh.texHeight*sizeof(VHIT)):0;
+			size_t profileSize=f->sh.isProfile?PROFILE_SIZE*sizeof(ProfileSlice):0;
+			size_t textureSize=f->sh.isTextured?f->sh.texWidth*f->sh.texHeight*sizeof(TextureCell):0;
+			size_t directionSize=f->sh.countDirection?f->sh.texWidth*f->sh.texHeight*sizeof(DirectionCell):0;
 
-			double *shSpectrum_fluxwise = (double *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize 
-				+ textureSize + directionSize));
-			double *shSpectrum_powerwise = (double *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize 
-				+ textureSize + directionSize + SPECTRUM_SIZE*sizeof(double)));
-
-			double max_flux,max_power;
+			ProfileSlice* spectrum = (ProfileSlice*)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize + textureSize + directionSize));
+			
+			double max;			
 
 			switch(normalize) {
 			case 0: //no normalization
@@ -224,31 +221,80 @@ void SpectrumPlotter::refreshViews() {
 				double log10_max = log10(chart->GetXAxis()->GetMaximum());
 				double bandwidthCorrection = 0.001 / (Pow10(delta) - 1.0);
 
-				if (mode == 0) { //flux
-					for (int j = 0; j < PROFILE_SIZE; j++)
-						v->Add(Pow10(log10_min + (0.5 + j)*delta), shSpectrum_fluxwise[j] / worker->no_scans * bandwidthCorrection, false); //0.5: point should be center of bin
+				if (mode == 0) {
+					for (size_t j = 0; j < SPECTRUM_SIZE; j++)
+						v->Add(Pow10(log10_min + (0.5 + (double)j)*delta), (double)spectrum[j].count_incident);
 				}
-				else if (mode == 1) { //power
-					for (int j = 0; j < PROFILE_SIZE; j++)
-						v->Add(Pow10(log10_min + (0.5 + j)*delta), shSpectrum_powerwise[j] / worker->no_scans * bandwidthCorrection, false);
+				else if (mode == 1) {
+					for (size_t j = 0; j < SPECTRUM_SIZE; j++)
+						v->Add(Pow10(log10_min + (0.5 + (double)j)*delta), (double)spectrum[j].count_absorbed);
+				}
+				else if (mode == 2) {
+					for (size_t j = 0; j < SPECTRUM_SIZE; j++)
+						v->Add(Pow10(log10_min + (0.5 + (double)j)*delta), spectrum[j].flux_incident / worker->no_scans * bandwidthCorrection, false); //0.5: point should be center of bin
+				}
+				else if (mode == 3) {
+					for (size_t j = 0; j < SPECTRUM_SIZE; j++)
+						v->Add(Pow10(log10_min + (0.5 + (double)j)*delta), spectrum[j].flux_absorbed / worker->no_scans * bandwidthCorrection, false); //0.5: point should be center of bin
+				}
+				else if (mode == 4) {
+					for (size_t j = 0; j < SPECTRUM_SIZE; j++)
+						v->Add(Pow10(log10_min + (0.5 + (double)j)*delta), spectrum[j].power_incident / worker->no_scans * bandwidthCorrection, false); //0.5: point should be center of bin
+				}
+				else if (mode == 5) {
+					for (size_t j = 0; j < SPECTRUM_SIZE; j++)
+						v->Add(Pow10(log10_min + (0.5 + (double)j)*delta), spectrum[j].power_absorbed / worker->no_scans * bandwidthCorrection, false); //0.5: point should be center of bin
 				}
 				break;
 			}
 			case 1: //normalize max. value to 1
-				if (mode==0) { //flux
-					max_flux=0.0;
-					for(int j=0;j<PROFILE_SIZE;j++)
-						if (shSpectrum_fluxwise[j]>max_flux) max_flux=shSpectrum_fluxwise[j];
-					if (max_flux>0.0)
-						for(int j=0;j<PROFILE_SIZE;j++)
-							v->Add(Pow10(log10(chart->GetXAxis()->GetMinimum()) + (0.5 + j)*delta), shSpectrum_fluxwise[j] / max_flux, false);
-				} else if (mode==1) { //power
-					max_power=0.0;
-					for(int j=0;j<PROFILE_SIZE;j++)
-						if (shSpectrum_powerwise[j]>max_power) max_power=shSpectrum_powerwise[j];
-					if (max_power>0.0)
-						for(int j=0;j<PROFILE_SIZE;j++)
-							v->Add(Pow10(log10(chart->GetXAxis()->GetMinimum()) + (0.5 + j)*delta), shSpectrum_powerwise[j] / max_power, false);
+				if (mode == 0) {
+					max = 0.0;
+					for (size_t j = 0; j < SPECTRUM_SIZE; j++) {
+						if ((double)spectrum[j].count_incident > max) max = (double)spectrum[j].count_incident;
+					}
+					for(size_t j=0;j<SPECTRUM_SIZE;j++)
+						v->Add(Pow10(log10(chart->GetXAxis()->GetMinimum()) + (0.5 + (double)j)*delta), (double)spectrum[j].count_incident / max, false);
+				}
+				else if (mode == 1) {
+					max = 0.0;
+					for (size_t j = 0; j < SPECTRUM_SIZE; j++) {
+						if ((double)spectrum[j].count_absorbed > max) max = (double)spectrum[j].count_absorbed;
+					}
+					for (size_t j = 0; j<SPECTRUM_SIZE; j++)
+						v->Add(Pow10(log10(chart->GetXAxis()->GetMinimum()) + (0.5 + (double)j)*delta), (double)spectrum[j].count_absorbed / max, false);
+				}
+				else if (mode == 2) {
+					max = 0.0;
+					for (size_t j = 0; j < SPECTRUM_SIZE; j++) {
+						if (spectrum[j].flux_incident > max) max = spectrum[j].flux_incident;
+					}
+					for (size_t j = 0; j<SPECTRUM_SIZE; j++)
+						v->Add(Pow10(log10(chart->GetXAxis()->GetMinimum()) + (0.5 + (double)j)*delta), spectrum[j].flux_incident / max, false);
+				}
+				else if (mode == 3) {
+					max = 0.0;
+					for (size_t j = 0; j < SPECTRUM_SIZE; j++) {
+						if (spectrum[j].flux_absorbed > max) max = spectrum[j].flux_absorbed;
+					}
+					for (size_t j = 0; j<SPECTRUM_SIZE; j++)
+						v->Add(Pow10(log10(chart->GetXAxis()->GetMinimum()) + (0.5 + (double)j)*delta), spectrum[j].flux_absorbed / max, false);
+				}
+				else if (mode == 4) {
+					max = 0.0;
+					for (size_t j = 0; j < SPECTRUM_SIZE; j++) {
+						if (spectrum[j].power_incident > max) max = spectrum[j].power_incident;
+					}
+					for (size_t j = 0; j<SPECTRUM_SIZE; j++)
+						v->Add(Pow10(log10(chart->GetXAxis()->GetMinimum()) + (0.5 + (double)j)*delta), spectrum[j].power_incident / max, false);
+				}
+				else if (mode == 5) {
+					max = 0.0;
+					for (size_t j = 0; j < SPECTRUM_SIZE; j++) {
+						if (spectrum[j].power_absorbed > max) max = spectrum[j].power_absorbed;
+					}
+					for (size_t j = 0; j<SPECTRUM_SIZE; j++)
+						v->Add(Pow10(log10(chart->GetXAxis()->GetMinimum()) + (0.5 + (double)j)*delta), spectrum[j].power_absorbed / max, false);
 				}
 				break;
 			}
@@ -334,7 +380,7 @@ void SpectrumPlotter::ProcessMessage(GLComponent *src,int message) {
 			int idx = specCombo->GetSelectedIndex();
 			if (idx>=0) {
 				geom->UnselectAll();
-				int facetId=(int)((double)specCombo->GetUserValueAt(idx)/2.0);
+				int facetId=(int)((double)specCombo->GetUserValueAt(idx)/6.0);
 				geom->GetFacet(facetId)->selected = true;
 				mApp->UpdateFacetParams(true);
 				geom->UpdateSelection();
@@ -344,15 +390,15 @@ void SpectrumPlotter::ProcessMessage(GLComponent *src,int message) {
 		} else if(src==addButton) {
 			int idx = specCombo->GetSelectedIndex();
 			if (idx >= 0) {
-				int facetId = (int)((double)specCombo->GetUserValueAt(idx) / 2.0);
-				addView(facetId, specCombo->GetUserValueAt(idx) % 2);
+				int facetId = (int)((double)specCombo->GetUserValueAt(idx) / 6.0);
+				addView(facetId, specCombo->GetUserValueAt(idx) % 6);
 				refreshViews();
 			}
 		} else if(src==removeButton) {
 			int idx = specCombo->GetSelectedIndex();
 			if (idx >= 0) {
-				int facetId = (int)((double)specCombo->GetUserValueAt(idx) / 2.0);
-				remView(facetId, specCombo->GetUserValueAt(idx) % 2);
+				int facetId = (int)((double)specCombo->GetUserValueAt(idx) / 6.0);
+				remView(facetId, specCombo->GetUserValueAt(idx) % 6);
 				refreshViews();
 			}
 		} else if(src==resetButton) {

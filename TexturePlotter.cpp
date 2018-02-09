@@ -142,7 +142,7 @@ void TexturePlotter::Update(float appTime,bool force) {
 	}
 
 	if( (appTime-lastUpdate>1.0f) ) {
-		if(worker->running) UpdateTable();
+		if(worker->isRunning) UpdateTable();
 		lastUpdate = appTime;
 	}
 
@@ -163,9 +163,8 @@ void TexturePlotter::UpdateTable() {
 		char tmp[256];
 		size_t w = selFacet->sh.texWidth;
 		size_t h = selFacet->sh.texHeight;
-		size_t textureSize_double=w*h*sizeof(double);
-		size_t textureSize_llong=w*h*sizeof(llong);
-		size_t profile_memory=PROFILE_SIZE*(2*sizeof(double)+sizeof(llong));
+		size_t textureSize=w*h*sizeof(TextureCell);
+		size_t profile_memory=PROFILE_SIZE*sizeof(ProfileSlice);
 		mapList->SetSize(w,h);
 		mapList->SetAllColumnAlign(ALIGN_CENTER);
 
@@ -196,11 +195,11 @@ void TexturePlotter::UpdateTable() {
 				if(buffer) {
 					GlobalHitBuffer *shGHit = (GlobalHitBuffer *)buffer;
 					size_t profSize = (selFacet->sh.isProfile)?profile_memory:0;
-					double *hits_flux = (double *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + textureSize_llong));
+					TextureCell *texture = (TextureCell *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
 
 					for(size_t i=0;i<w;i++) {
 						for(size_t j=0;j<h;j++) {
-							double val=hits_flux[i+j*w]/worker->no_scans; //already divided by area
+							double val=texture[i+j*w].flux/worker->no_scans; //already divided by area
 							if (val>maxValue) {
 								maxValue=(float)val;
 								maxX=i;maxY=j;
@@ -225,11 +224,11 @@ void TexturePlotter::UpdateTable() {
 
 					GlobalHitBuffer *shGHit = (GlobalHitBuffer *)buffer;
 					size_t profSize = (selFacet->sh.isProfile)?profile_memory:0;
-					double *hits_power = (double *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + textureSize_llong + textureSize_double));
+					TextureCell *texture = (TextureCell *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
 
 					for(size_t i=0;i<w;i++) {
 						for(size_t j=0;j<h;j++) {
-							double val=hits_power[i+j*w]/worker->no_scans;
+							double val=texture[i+j*w].power/worker->no_scans;
 
 							if (val>maxValue) {
 								maxValue=(float)val;
@@ -256,14 +255,14 @@ void TexturePlotter::UpdateTable() {
 				if(buffer) {
 					GlobalHitBuffer *shGHit = (GlobalHitBuffer *)buffer;
 					size_t profSize = (selFacet->sh.isProfile)?profile_memory:0;
-					llong *hits_MC = (llong *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
+					TextureCell *texture = (TextureCell *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
 					float dCoef = 1.0f;
 					//if( shGHit->mode == MC_MODE ) dCoef=1.0;//dCoef = (float)totalOutgassing / (float)shGHit->total.nbDesorbed;
 
 					for(size_t i=0;i<w;i++) {
 						for(size_t j=0;j<h;j++) {
 
-							llong val=hits_MC[i+j*w];
+							llong val=texture[i+j*w].count;
 							if (val>maxValue) {
 								maxValue=(float)val;
 								maxX=i;maxY=j;

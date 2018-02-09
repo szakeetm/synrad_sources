@@ -14,9 +14,8 @@ double Trajectory_Point::dAlpha(const double &dL) {
 
 Histogram::Histogram(double min_V,double max_V,int N,bool logscale){
 	number_of_bins=N;
-	counts = (double*)malloc(number_of_bins*sizeof(double));
+	counts = (ProfileSlice*)calloc(number_of_bins,sizeof(ProfileSlice));
 	if (!counts) throw Error("Can't reserve memory for histogram");
-	memset(counts,0,number_of_bins*sizeof(double));
 	logarithmic=logscale;	
 	this->min=min_V;
 	this->max=max_V;
@@ -26,15 +25,13 @@ Histogram::Histogram(double min_V,double max_V,int N,bool logscale){
 	} else {
 		delta=(log10(max)-log10(min))/number_of_bins;
 	}
-	//max_count=0.0;
-	total_count=0.0;
 }
 
 Histogram::~Histogram() {
 	free(counts);
 }
 
-void Histogram::Add(const double &x,const double &dY) {
+void Histogram::Add(const double &x,const ProfileSlice &increment) {
 	if (x<max && x>=min) {
 		int binIndex;
 		if (!logarithmic) {
@@ -43,26 +40,15 @@ void Histogram::Add(const double &x,const double &dY) {
 			binIndex = (int)((log10(x) - log10(min)) / delta);
 		}
 		double binX = GetX(binIndex);
-		/*if (binIndex<number_of_bins && bandwidth == -1 || (abs(x - binX) / binX) < (bandwidth / 2)) {
-			counts[binIndex] += dY;
-			total_count += dY;
-		}*/
-		
-		//if (binIndex < number_of_bins) { //x<max
-			counts[binIndex] += dY;
-			total_count += dY;
-		//}
-		//if (counts[binIndex]>max_count) max_count = counts[binIndex];
+		counts[binIndex] += increment;
 	}
 }
 
-double Histogram::GetCount(size_t index){
+ProfileSlice Histogram::GetCounts(size_t index){
 	return counts[index];
 }
 
-double Histogram::GetFrequency(size_t index){
-	return (counts[index]/total_count);
-}
+
 
 double Histogram::GetX(size_t index){
 	double X;
@@ -75,6 +61,24 @@ double Histogram::GetX(size_t index){
 }
 
 void Histogram::ResetCounts(){
-	/*max_count=*/total_count=0.0;
-	memset(counts,0,number_of_bins*sizeof(double));
+	memset(counts,0,number_of_bins*sizeof(ProfileSlice));
+}
+
+ProfileSlice & ProfileSlice::operator+=(const ProfileSlice & rhs)
+{
+	this->count_absorbed += rhs.count_absorbed;
+	this->count_incident += rhs.count_incident;
+	this->flux_absorbed += rhs.flux_absorbed;
+	this->flux_incident += rhs.flux_incident;
+	this->power_absorbed += rhs.power_absorbed;
+	this->power_incident += rhs.power_incident;
+	return *this;
+}
+
+TextureCell & TextureCell::operator+=(const TextureCell & rhs)
+{
+	this->count += rhs.count;
+	this->flux += rhs.flux;
+	this->power += rhs.power;
+	return *this;
 }

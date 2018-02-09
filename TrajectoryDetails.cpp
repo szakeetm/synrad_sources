@@ -446,7 +446,7 @@ void TrajectoryDetails::UpdateTable() {
 		componentIndex = 2; //Orthogonal polarization
 
 	for (int pointId = 0; pointId < nbPoints; pointId += freq) {
- 		GenPhoton photon = GeneratePhoton(pointId, &worker->regions[displayedRegion], worker->generation_mode,
+ 		GenPhoton photon = GeneratePhoton(pointId, &worker->regions[displayedRegion], worker->ontheflyParams.generation_mode,
 			worker->psi_distro, worker->chi_distros[componentIndex], 
 			worker->parallel_polarization, pointId == 0);
 		updatePrg->SetProgress((double)pointId / (double)nbPoints);

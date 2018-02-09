@@ -186,10 +186,15 @@ private:
 	GLTextField	*MAGfileYtext;
 	GLLabel	*label69;
 	GLButton	*applyButton;
+	GLTextField	*copyFromRegionTextfield;
+	GLButton	*copyFromRegionButton;
+	GLLabel	*label52;
+	GLTextField	*startingStructureTextfield;
 
 	void EnableDisableControls(GLComponent* src);
 	void FillValues();
 	void ApplyChanges();
+	void CopyFromRegion(const size_t& sourceRegionId);
 };
 
 #endif /* _REGIONEDITORH_ */

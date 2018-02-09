@@ -174,27 +174,27 @@ void TextureSettings::Update() {
   */
 
   //Autoscale minimum label
-  if (geom->textureMode==TEXTURE_MODE_MCHITS) sprintf(tmp,"%.3E",(double)geom->texCMin_MC);
-  else if (geom->textureMode==TEXTURE_MODE_FLUX) sprintf(tmp,"%.3E",geom->texCMin_flux);
-  else if (geom->textureMode==TEXTURE_MODE_POWER) sprintf(tmp,"%.3E",geom->texCMin_power);
+  if (geom->textureMode==TEXTURE_MODE_MCHITS) sprintf(tmp,"%.3E",(double)geom->textureMin_auto.count);
+  else if (geom->textureMode==TEXTURE_MODE_FLUX) sprintf(tmp,"%.3E",geom->textureMin_auto.flux);
+  else if (geom->textureMode==TEXTURE_MODE_POWER) sprintf(tmp,"%.3E",geom->textureMin_auto.power);
   texCMinText->SetText(tmp);
   //Autoscale maximum label
-   if (geom->textureMode==TEXTURE_MODE_MCHITS) sprintf(tmp,"%.3E",(double)geom->texCMax_MC);
-  else if (geom->textureMode==TEXTURE_MODE_FLUX) sprintf(tmp,"%.3E",geom->texCMax_flux);
-  else if (geom->textureMode==TEXTURE_MODE_POWER) sprintf(tmp,"%.3E",geom->texCMax_power);
+   if (geom->textureMode==TEXTURE_MODE_MCHITS) sprintf(tmp,"%.3E",(double)geom->textureMax_auto.count);
+  else if (geom->textureMode==TEXTURE_MODE_FLUX) sprintf(tmp,"%.3E",geom->textureMax_auto.flux);
+  else if (geom->textureMode==TEXTURE_MODE_POWER) sprintf(tmp,"%.3E",geom->textureMax_auto.power);
   texCMaxText->SetText(tmp);
 
   texAutoScale->SetState(geom->texAutoScale);
   logBtn->SetState(geom->texLogScale);
   gradient->SetScale(geom->texLogScale?LOG_SCALE:LINEAR_SCALE);
   if( !geom->texAutoScale ) {
-    if (geom->textureMode==TEXTURE_MODE_MCHITS) gradient->SetMinMax((double)geom->texMin_MC,(double)geom->texMax_MC);
-	else if (geom->textureMode==TEXTURE_MODE_FLUX) gradient->SetMinMax(geom->texMin_flux,geom->texMax_flux);
-	else if (geom->textureMode==TEXTURE_MODE_POWER) gradient->SetMinMax(geom->texMin_power,geom->texMax_power);
+    if (geom->textureMode==TEXTURE_MODE_MCHITS) gradient->SetMinMax((double)geom->textureMin_manual.count,(double)geom->textureMax_manual.count);
+	else if (geom->textureMode==TEXTURE_MODE_FLUX) gradient->SetMinMax(geom->textureMin_manual.flux,geom->textureMax_manual.flux);
+	else if (geom->textureMode==TEXTURE_MODE_POWER) gradient->SetMinMax(geom->textureMin_manual.power,geom->textureMax_manual.power);
   } else {
-    if (geom->textureMode==TEXTURE_MODE_MCHITS) gradient->SetMinMax((double)geom->texCMin_MC,(double)geom->texCMax_MC);
-	else if (geom->textureMode==TEXTURE_MODE_FLUX) gradient->SetMinMax(geom->texCMin_flux,geom->texCMax_flux);
-	else if (geom->textureMode==TEXTURE_MODE_POWER) gradient->SetMinMax(geom->texCMin_power,geom->texCMax_power);
+	  if (geom->textureMode == TEXTURE_MODE_MCHITS) gradient->SetMinMax((double)geom->textureMin_auto.count, (double)geom->textureMax_auto.count);
+	  else if (geom->textureMode == TEXTURE_MODE_FLUX) gradient->SetMinMax(geom->textureMin_auto.flux, geom->textureMax_auto.flux);
+	  else if (geom->textureMode == TEXTURE_MODE_POWER) gradient->SetMinMax(geom->textureMin_auto.power, geom->textureMax_auto.power);
   }
   colormapBtn->SetState(geom->texColormap);
   gradient->SetType( geom->texColormap?GRADIENT_COLOR:GRADIENT_BW );
@@ -217,14 +217,14 @@ void TextureSettings::Display(Worker *w,GeometryViewer **v) {
 
   char tmp[64];
   //Manual minimum label
-  if (geom->textureMode == TEXTURE_MODE_MCHITS) sprintf(tmp, "%.3E", (double)geom->texMin_MC);
-  else if (geom->textureMode == TEXTURE_MODE_FLUX) sprintf(tmp, "%.3E", geom->texMin_flux);
-  else if (geom->textureMode == TEXTURE_MODE_POWER) sprintf(tmp, "%.3E", geom->texMin_power);
+  if (geom->textureMode == TEXTURE_MODE_MCHITS) sprintf(tmp, "%.3E", (double)geom->textureMin_manual.count);
+  else if (geom->textureMode == TEXTURE_MODE_FLUX) sprintf(tmp, "%.3E", geom->textureMin_manual.flux);
+  else if (geom->textureMode == TEXTURE_MODE_POWER) sprintf(tmp, "%.3E", geom->textureMin_manual.power);
   texMinText->SetText(tmp);
   //Manual maximum label
-  if (geom->textureMode == TEXTURE_MODE_MCHITS) sprintf(tmp, "%.3E", (double)geom->texMax_MC);
-  else if (geom->textureMode == TEXTURE_MODE_FLUX) sprintf(tmp, "%.3E", geom->texMax_flux);
-  else if (geom->textureMode == TEXTURE_MODE_POWER) sprintf(tmp, "%.3E", geom->texMax_power);
+  if (geom->textureMode == TEXTURE_MODE_MCHITS) sprintf(tmp, "%.3E", (double)geom->textureMax_manual.count);
+  else if (geom->textureMode == TEXTURE_MODE_FLUX) sprintf(tmp, "%.3E", geom->textureMax_manual.flux);
+  else if (geom->textureMode == TEXTURE_MODE_POWER) sprintf(tmp, "%.3E", geom->textureMax_manual.power);
   texMaxText->SetText(tmp);
 
 }
@@ -254,16 +254,16 @@ void TextureSettings::ProcessMessage(GLComponent *src,int message) {
         return;
       }
 	  if (geom->textureMode==TEXTURE_MODE_MCHITS) {
-		  geom->texMin_MC = (llong)min;
-		  geom->texMax_MC = (llong)max;
+		  geom->textureMin_manual.count = (llong)min;
+		  geom->textureMax_manual.count = (llong)max;
 	  }
-	  else if (geom->textureMode==TEXTURE_MODE_FLUX) {
-		  geom->texMin_flux = (double)min;
-		  geom->texMax_flux = (double)max;
+	  else if (geom->textureMode == TEXTURE_MODE_FLUX) {
+		  geom->textureMin_manual.flux = min;
+		  geom->textureMax_manual.flux = max;
 	  }
 	  else if (geom->textureMode==TEXTURE_MODE_POWER) {
-		  geom->texMin_power = (double)min;
-		  geom->texMax_power = (double)max;
+		  geom->textureMin_manual.power = min;
+		  geom->textureMax_manual.power = max;
 	  }
       geom->texAutoScale = texAutoScale->GetState();
       worker->Update(0.0f);
@@ -271,16 +271,16 @@ void TextureSettings::ProcessMessage(GLComponent *src,int message) {
 
     } else if (src==setCurrentButton) {
 		if (geom->textureMode==TEXTURE_MODE_MCHITS) {
-			geom->texMin_MC = geom->texCMin_MC;
-			geom->texMax_MC = geom->texCMax_MC;
+			geom->textureMin_manual.count = geom->textureMin_auto.count;
+			geom->textureMax_manual.count = geom->textureMax_auto.count;
 		}
 		else if (geom->textureMode==TEXTURE_MODE_FLUX) {
-			geom->texMin_flux = geom->texCMin_flux;
-			geom->texMax_flux = geom->texCMax_flux;
+			geom->textureMin_manual.flux = geom->textureMin_auto.flux;
+			geom->textureMax_manual.flux = geom->textureMax_auto.flux;
 		}
 		else if (geom->textureMode==TEXTURE_MODE_POWER) {
-			geom->texMin_power = geom->texCMin_power;
-			geom->texMax_power = geom->texCMax_power;
+			geom->textureMin_manual.power = geom->textureMin_auto.power;
+			geom->textureMax_manual.power = geom->textureMax_auto.power;
 		}
 		texMinText->SetText(texCMinText->GetText());
 		texMaxText->SetText(texCMaxText->GetText());
@@ -323,19 +323,19 @@ void TextureSettings::ProcessMessage(GLComponent *src,int message) {
 			worker->Update(0.0f);
 			char tmp[256];
 			if (geom->textureMode==TEXTURE_MODE_MCHITS) {
-				sprintf(tmp,"%g",(double)geom->texMin_MC);
+				sprintf(tmp,"%g",(double)geom->textureMin_manual.count);
 				texMinText->SetText(tmp);
-				sprintf(tmp,"%g",(double)geom->texMax_MC);
+				sprintf(tmp,"%g",(double)geom->textureMax_manual.count);
 				texMaxText->SetText(tmp);
 			} else if (geom->textureMode==TEXTURE_MODE_FLUX) {
-				sprintf(tmp,"%g",geom->texMin_flux);
+				sprintf(tmp,"%g",geom->textureMin_manual.flux);
 				texMinText->SetText(tmp);
-				sprintf(tmp,"%g",geom->texMax_flux);
+				sprintf(tmp,"%g",geom->textureMax_manual.flux);
 				texMaxText->SetText(tmp);
 			} else if (geom->textureMode==TEXTURE_MODE_POWER) {
-				sprintf(tmp,"%g",geom->texMin_power);
+				sprintf(tmp,"%g",geom->textureMin_manual.power);
 				texMinText->SetText(tmp);
-				sprintf(tmp,"%g",geom->texMax_power);
+				sprintf(tmp,"%g",geom->textureMax_manual.power);
 				texMaxText->SetText(tmp);
 			}
 			Update();

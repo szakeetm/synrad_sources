@@ -296,13 +296,13 @@ char *FacetDetails::FormatCell(size_t idx,Facet *f, size_t mode) {
 		sprintf(ret,"%s",profStr[f->sh.profileType]);
 		break;
 	case 18:
-		sprintf(ret,f->sh.hasSpectrum==1?"Yes":"No");
+		sprintf(ret,f->sh.recordSpectrum==1?"Yes":"No");
 		break;
 	case 19:
-		sprintf(ret,"%zd",f->counterCache.nbHit);
+		sprintf(ret,"%zd",f->counterCache.nbMCHit);
 		break;
 	case 20:
-		sprintf(ret,"%zd",f->counterCache.nbAbsorbed);
+		sprintf(ret,"%g",f->counterCache.nbAbsEquiv);
 		break;
 
 	case 21:

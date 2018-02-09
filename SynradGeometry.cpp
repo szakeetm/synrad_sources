@@ -39,14 +39,8 @@ SynradGeometry::SynradGeometry() {
 
 	
 	textureMode = TEXTURE_MODE_FLUX;
-	texMin_MC = 0;
-	texMax_MC = 1;
-	texMin_flux = 0.0;
-	texMax_flux = 1.0;
-	texMin_power = 0.0;
-	texMax_power = 1.0;
 
-	Clear();
+	Clear(); //Contains resettexturelimits
 
 }
 
@@ -101,8 +95,8 @@ size_t SynradGeometry::GetGeometrySize(std::vector<Region_full> &regions, std::v
 
 void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> &regions, std::vector<Material> &materials,
 	std::vector<std::vector<double>> &psi_distro, const std::vector<std::vector<std::vector<double>>> &chi_distros,
-	const std::vector<std::vector<double>> &parallel_polarization, int generation_mode, bool lowFluxMode, double lowFluxCutoff,
-	bool newReflectionModel) {
+	const std::vector<std::vector<double>> &parallel_polarization, 
+	const bool& newReflectionModel, const OntheflySimulationParams& ontheflyParams) {
 
 	// Build shared buffer for geometry (see Shared.h)
 	size_t fOffset = sizeof(GlobalHitBuffer);
@@ -112,11 +106,7 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> &
 	memcpy(shGeom, &(this->sh), sizeof(GeomProperties));
 	buffer += sizeof(GeomProperties);
 
-	SHMODE *shMode = (SHMODE *)buffer;
-	shMode->generation_mode = generation_mode;
-	shMode->lowFluxMode = lowFluxMode;
-	shMode->lowFluxCutoff = lowFluxCutoff;
-	buffer += sizeof(SHMODE);
+	WRITEBUFFER(ontheflyParams, OntheflySimulationParams);
 
 	// Build shared buffer for trajectory (see Shared.h)
 	for (size_t i = 0; i < sh.nbRegion; i++) {
@@ -347,7 +337,7 @@ void  SynradGeometry::BuildPipe(double L, double R, double s, int step) {
 		// Wall facet
 		for (int i = 0; i < step; i++) {
 			facets[i + 2 + nbTF] = new Facet(4);
-			facets[i + 2 + nbTF]->sh.reflectType = REF_MIRROR;
+			facets[i + 2 + nbTF]->sh.reflectType = REFLECTION_SPECULAR;
 			facets[i + 2 + nbTF]->sh.sticking = s;
 			facets[i + 2 + nbTF]->indices[0] = 2 * i + nbTV;
 			facets[i + 2 + nbTF]->indices[1] = 2 * i + 1 + nbTV;
@@ -643,6 +633,7 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 	return parFileList;
 }
 
+/*
 void SynradGeometry::SaveProfileGEO(FileWriter *file, int super, bool saveSelected) {
 	file->Write("profiles {\n");
 	// Profiles
@@ -650,10 +641,11 @@ void SynradGeometry::SaveProfileGEO(FileWriter *file, int super, bool saveSelect
 	file->Write(" number: "); file->Write(nbProfile, "\n");
 	file->Write(" facets: ");
 	file->Write("\n");
-	for (int j = 0; j < PROFILE_SIZE; j++)
+	for (int sliceId = 0; sliceId < PROFILE_SIZE; sliceId++)
 		file->Write("\n");
 	file->Write("}\n");
 }
+*/
 
 void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 
@@ -675,14 +667,14 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 	}
 
 	file->ReadKeyword("totalHit"); file->ReadKeyword(":");
-	loaded_nbHit = 0; file->ReadLLong();
+	loaded_nbMCHit = 0; loaded_nbHitEquiv = 0.0; file->ReadLLong();
 	file->ReadKeyword("totalDes"); file->ReadKeyword(":");
 	loaded_nbDesorption = 0; file->ReadLLong();
 	file->ReadKeyword("totalLeak"); file->ReadKeyword(":");
 	loaded_nbLeak = 0; file->ReadLLong();
 	if (*version >= 12) {
 		file->ReadKeyword("totalAbs"); file->ReadKeyword(":");
-		loaded_nbAbsorption = 0; file->ReadLLong();
+		loaded_nbAbsEquiv = 0.0; file->ReadLLong();
 		if (*version >= 15) {
 			file->ReadKeyword("totalDist_total");
 		}
@@ -697,7 +689,7 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 		}
 	}
 	else {
-		loaded_nbAbsorption = 0;
+		loaded_nbAbsEquiv = 0.0;
 		loaded_distTraveledTotal = 0.0;
 	}
 	file->ReadKeyword("maxDes"); file->ReadKeyword(":");
@@ -937,9 +929,10 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 		BYTE *buffer = (BYTE *)dpHit->buff;
 		GlobalHitBuffer *gHits = (GlobalHitBuffer *)buffer;
 
-		gHits->total.nbHit = loaded_nbHit;
+		gHits->total.nbMCHit = loaded_nbMCHit;
+		gHits->total.nbHitEquiv = loaded_nbHitEquiv;
 		gHits->total.nbDesorbed = loaded_nbDesorption;
-		gHits->total.nbAbsorbed = loaded_nbAbsorption;
+		gHits->total.nbAbsEquiv = loaded_nbAbsEquiv;
 		gHits->nbLeakTotal = loaded_nbLeak;
 		gHits->total.fluxAbs = loaded_totalFlux;
 		gHits->total.powerAbs = loaded_totalPower;
@@ -947,17 +940,17 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 
 		// Read facets
 		file->ReadKeyword("minHit_MC"); file->ReadKeyword(":");
-		gHits->minHit_MC = file->ReadLLong();
+		gHits->hitMin.count = file->ReadLLong();
 		file->ReadKeyword("maxHit_MC"); file->ReadKeyword(":");
-		gHits->maxHit_MC = file->ReadLLong();
+		gHits->hitMax.count = file->ReadLLong();
 		file->ReadKeyword("minHit_flux"); file->ReadKeyword(":");
-		gHits->minHit_flux = file->ReadDouble();
+		gHits->hitMin.flux = file->ReadDouble();
 		file->ReadKeyword("maxHit_flux"); file->ReadKeyword(":");
-		gHits->maxHit_flux = file->ReadDouble();
+		gHits->hitMax.flux = file->ReadDouble();
 		file->ReadKeyword("minHit_power"); file->ReadKeyword(":");
-		gHits->minHit_power = file->ReadDouble();
+		gHits->hitMin.power = file->ReadDouble();
 		file->ReadKeyword("maxHit_power"); file->ReadKeyword(":");
-		gHits->maxHit_power = file->ReadDouble();
+		gHits->hitMax.power = file->ReadDouble();
 
 		for (int i = 0; i < sh.nbFacet; i++) {
 			Facet *f = facets[i];
@@ -977,11 +970,8 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 
 				size_t ix, iy;
 
-				size_t profSize = (f->sh.isProfile) ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0;
-				size_t nbE = f->sh.texHeight*f->sh.texWidth;
-				llong *hits_MC = (llong *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
-				double *hits_flux = (double *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + nbE*sizeof(llong)));
-				double *hits_power = (double *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + nbE*(sizeof(llong) + sizeof(double))));
+				size_t profSize = (f->sh.isProfile) ? PROFILE_SIZE*sizeof(ProfileSlice) : 0;
+				TextureCell *texture = (TextureCell *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
 
 				size_t texWidth_file, texHeight_file;
 				//In case of rounding errors, the file might contain different texture dimensions than expected.
@@ -997,15 +987,15 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 				for (iy = 0; iy < (Min(f->sh.texHeight, texHeight_file)); iy++) { //MIN: If stored texture is larger, don't read extra cells
 					for (ix = 0; ix<(Min(f->sh.texWidth, texWidth_file)); ix++) { //MIN: If stored texture is larger, don't read extra cells
 						size_t index = iy*(f->sh.texWidth) + ix;
-						*(hits_MC + index) = file->ReadLLong();
+						texture[index].count = file->ReadLLong();
 						if (version >= 7) file->ReadDouble(); //cell area
-						*(hits_flux + index) = file->ReadDouble();
-						*(hits_power + index) = file->ReadDouble();
+						texture[index].flux = file->ReadDouble();
+						texture[index].power = file->ReadDouble();
 
 						//Normalize by area
 						if (f->GetMeshArea(index)>0.0) {
-							*(hits_flux + index) /= f->GetMeshArea(index);
-							*(hits_power + index) /= f->GetMeshArea(index);
+							texture[index].flux /= f->GetMeshArea(index);
+							texture[index].power /= f->GetMeshArea(index);
 						}
 					}
 					for (size_t ie = 0; ie < texWidth_file - f->sh.texWidth; ie++) {//Executed if file texture is bigger than expected texture
@@ -1141,11 +1131,9 @@ void SynradGeometry::ExportTextures(FILE *file, int grouping, int mode, double n
 				size_t w = f->sh.texWidth;
 				size_t h = f->sh.texHeight;
 				size_t nbE = w*h;
-				size_t profSize = (f->sh.isProfile) ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0;
+				size_t profSize = (f->sh.isProfile) ? PROFILE_SIZE*sizeof(ProfileSlice) : 0;
 
-				llong *hits_MC = (llong *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
-				double *hits_flux = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + nbE*sizeof(llong)));
-				double *hits_power = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + nbE*(sizeof(llong) + sizeof(double))));
+				TextureCell *texture = (TextureCell *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
 				double norm = 1.0 / no_scans; //normalize values by number of scans (and don't normalize by area...)
 
 				for (size_t i = 0; i < w; i++) {
@@ -1159,23 +1147,23 @@ void SynradGeometry::ExportTextures(FILE *file, int grouping, int mode, double n
 							break;
 
 						case 1: // MC_hits
-							if (!grouping || hits_MC[index]) sprintf(tmp, "%I64d", hits_MC[index]);
+							if (!grouping || texture[index].count) sprintf(tmp, "%I64d", texture[index].count);
 							break;
 
 						case 2: // Flux
-							if (!grouping || hits_flux[index]) sprintf(tmp, "%g", hits_flux[index] * f->GetMeshArea(i+j*w)*norm);
+							if (!grouping || texture[index].flux) sprintf(tmp, "%g", texture[index].flux * f->GetMeshArea(i+j*w)*norm);
 							break;
 
 						case 3: // Power
-							if (!grouping || hits_power[index]) sprintf(tmp, "%g", hits_power[index] * f->GetMeshArea(i+j*w)*norm);
+							if (!grouping || texture[index].power) sprintf(tmp, "%g", texture[index].power * f->GetMeshArea(i+j*w)*norm);
 							break;
 
 						case 4: // Flux/area
-							if (!grouping || hits_flux[index]) sprintf(tmp, "%g", hits_flux[index] * norm);
+							if (!grouping || texture[index].flux) sprintf(tmp, "%g", texture[index].flux * norm);
 							break;
 
 						case 5: // Power/area
-							if (!grouping || hits_power[index]) sprintf(tmp, "%g", hits_power[index] * 0.01*norm); //Don't write 0 powers
+							if (!grouping || texture[index].power) sprintf(tmp, "%g", texture[index].power * 0.01*norm); //Don't write 0 powers
 							break;
 						}
 
@@ -1209,6 +1197,7 @@ void SynradGeometry::ExportTextures(FILE *file, int grouping, int mode, double n
 }
 
 void SynradGeometry::SaveDesorption(FILE *file, Dataport *dpHit, bool selectedOnly, int mode, double eta0, double alpha, const Distribution2D &distr) {
+	//Deprecated, not used anymore
 
 	if (!IsLoaded()) throw Error("Nothing to save !");
 
@@ -1240,16 +1229,12 @@ void SynradGeometry::SaveDesorption(FILE *file, Dataport *dpHit, bool selectedOn
 
 				size_t w = f->sh.texWidth;
 				size_t h = f->sh.texHeight;
-				size_t textureSize_double = w*h*sizeof(double);
-				size_t textureSize_llong = w*h*sizeof(llong);
-				//GlobalHitBuffer *shGHit = (GlobalHitBuffer *)buffer;
-				size_t profile_memory = PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong));
-				size_t profSize = (f->sh.isProfile) ? profile_memory : 0;
-				double *hits_flux = (double *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + textureSize_llong));
+				size_t profSize = (f->sh.isProfile) ? PROFILE_SIZE * sizeof(ProfileSlice) : 0;
+				TextureCell *texture = (TextureCell *)((BYTE *)buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
 
 				for (size_t i = 0; i < w; i++) {
 					for (size_t j = 0; j < h; j++) {
-						double dose = hits_flux[i + j*w] * f->GetMeshArea(i+j*w) / worker->no_scans;
+						double dose = texture[i + j*w].flux * f->GetMeshArea(i+j*w) / worker->no_scans;
 						double val;
 						if (mode == 1) { //no conversion
 							val = dose;
@@ -1302,21 +1287,18 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	int ix, iy;
 
 	Worker *worker = &(mApp->worker);
-	texCMin_MC = (!crashSave && !saveSelected) ? gHits->minHit_MC : 0;
-	texCMax_MC = (!crashSave && !saveSelected) ? gHits->maxHit_MC : 1;
-	texCMin_flux = (!crashSave && !saveSelected) ? gHits->minHit_flux : 0;
-	texCMax_flux = (!crashSave && !saveSelected) ? gHits->maxHit_flux : 1;
-	texCMin_power = (!crashSave && !saveSelected) ? gHits->minHit_power : 0;
-	texCMax_power = (!crashSave && !saveSelected) ? gHits->maxHit_power : 1;
 
 	prg->SetMessage("Writing geometry details...");
 	file->Write("version:"); file->Write(SYNVERSION, "\n");
-	file->Write("totalHit:"); file->Write((!crashSave && !saveSelected) ? gHits->total.nbHit : 0, "\n");
+	file->Write("totalHit:"); file->Write((!crashSave && !saveSelected) ? gHits->total.nbMCHit : 0, "\n");
+	file->Write("totalHitEquiv:"); file->Write((!crashSave && !saveSelected) ? gHits->total.nbHitEquiv : 0, "\n");
 	file->Write("totalDes:"); file->Write((!crashSave && !saveSelected) ? gHits->total.nbDesorbed : 0, "\n");
 	file->Write("no_scans:"); file->Write((!crashSave && !saveSelected) ? worker->no_scans : 0, "\n");
 	file->Write("totalLeak:"); file->Write((!crashSave && !saveSelected) ? gHits->nbLeakTotal : 0, "\n");
 	file->Write("totalFlux:"); file->Write((!crashSave && !saveSelected) ? gHits->total.fluxAbs : 0, "\n");
 	file->Write("totalPower:"); file->Write((!crashSave && !saveSelected) ? gHits->total.powerAbs : 0, "\n");
+	file->Write("totalAbsEquiv:"); file->Write((!crashSave && !saveSelected) ? gHits->total.nbAbsEquiv : 0, "\n");
+	file->Write("totalDist:"); file->Write((!crashSave && !saveSelected) ? gHits->distTraveledTotal : 0, "\n");
 	file->Write("maxDes:"); file->Write((!crashSave && !saveSelected) ? loaded_desorptionLimit : 0, "\n");
 	file->Write("nbVertex:"); file->Write(sh.nbVertex, "\n");
 	auto selectedFacets = GetSelectedFacets();
@@ -1462,12 +1444,12 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	char tmp[256];
 	file->Write("{textures}\n");
 
-	file->Write("minHit_MC:"); file->Write(texCMin_MC, "\n");
-	file->Write("maxHit_MC:"); file->Write(texCMax_MC, "\n");
-	file->Write("minHit_flux:"); file->Write(texCMin_flux, "\n");
-	file->Write("maxHit_flux:"); file->Write(texCMax_flux, "\n");
-	file->Write("minHit_power:"); file->Write(texCMin_power, "\n");
-	file->Write("maxHit_power:"); file->Write(texCMax_power, "\n");
+	file->Write("minHit_MC:"); file->Write((!crashSave && !saveSelected) ? gHits->hitMin.count : 0 , "\n");
+	file->Write("maxHit_MC:"); file->Write((!crashSave && !saveSelected) ? gHits->hitMax.count : 1, "\n");
+	file->Write("minHit_flux:"); file->Write((!crashSave && !saveSelected) ? gHits->hitMin.flux : 0, "\n");
+	file->Write("maxHit_flux:"); file->Write((!crashSave && !saveSelected) ? gHits->hitMax.flux : 1, "\n");
+	file->Write("minHit_power:"); file->Write((!crashSave && !saveSelected) ? gHits->hitMin.power : 0, "\n");
+	file->Write("maxHit_power:"); file->Write((!crashSave && !saveSelected) ? gHits->hitMax.power : 1, "\n");
 
 	//Selections
 	//SaveSelections();
@@ -1477,14 +1459,10 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 		prg->SetProgress(((double)i / (double)sh.nbFacet) *0.33 + 0.66);
 		Facet *f = facets[i];
 		if (f->hasMesh) {
-			size_t profSize = (f->sh.isProfile) ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0;
+			size_t profSize = f->sh.isProfile ? PROFILE_SIZE*sizeof(ProfileSlice) : 0;
 			size_t nbE = f->sh.texHeight*f->sh.texWidth;
-			llong *hits_MC;
-			if (!crashSave && !saveSelected) hits_MC = (llong *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
-			double *hits_flux;
-			if (!crashSave && !saveSelected) hits_flux = (double *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + nbE*sizeof(llong)));
-			double *hits_power;
-			if (!crashSave && !saveSelected) hits_power = (double *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + nbE*(sizeof(llong) + sizeof(double))));
+			TextureCell *texture;
+			if (!crashSave && !saveSelected) texture = (TextureCell *)((BYTE *)gHits + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
 
 			//char tmp[256];
 			sprintf(tmp, "texture_facet %d {\n", i + 1);
@@ -1493,10 +1471,10 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 			for (iy = 0; iy < (f->sh.texHeight); iy++) {
 				for (ix = 0; ix < (f->sh.texWidth); ix++) {
 					size_t index = iy*(f->sh.texWidth) + ix;
-					file->Write((!crashSave && !saveSelected) ? *(hits_MC + index) : 0, "\t");
+					file->Write((!crashSave && !saveSelected) ? texture[index].count : 0, "\t");
 					file->Write(f->GetMeshArea(index), "\t");
-					file->Write((!crashSave && !saveSelected) ? *(hits_flux + index)*f->GetMeshArea(index) : 0, "\t");
-					file->Write((!crashSave && !saveSelected) ? *(hits_power + index)*f->GetMeshArea(index) : 0, "\t");
+					file->Write((!crashSave && !saveSelected) ? texture[index].flux * f->GetMeshArea(index) : 0, "\t");
+					file->Write((!crashSave && !saveSelected) ? texture[index].power * f->GetMeshArea(index) : 0, "\t");
 				}
 				file->Write("\n");
 			}
@@ -1527,7 +1505,15 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 	}
 
 	file->ReadKeyword("totalHit"); file->ReadKeyword(":");
-	loaded_nbHit = file->ReadLLong();
+	loaded_nbMCHit = file->ReadLLong();
+	if (*version >= 10) {
+		file->ReadKeyword("totalHitEquiv"); file->ReadKeyword(":");
+		loaded_nbHitEquiv = file->ReadDouble();
+	}
+	else
+	{
+		loaded_nbHitEquiv = static_cast<double>(loaded_nbMCHit);
+	}
 	file->ReadKeyword("totalDes"); file->ReadKeyword(":");
 	loaded_nbDesorption = file->ReadLLong();
 	if (*version >= 6) {
@@ -1543,8 +1529,16 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 		file->ReadKeyword("totalPower"); file->ReadKeyword(":");
 		loaded_totalPower = file->ReadDouble();
 	}
-	loaded_nbAbsorption = 0;
-	loaded_distTraveledTotal = 0.0;
+	if (*version >= 10) {
+		file->ReadKeyword("totalAbsEquiv"); file->ReadKeyword(":");
+		loaded_nbAbsEquiv = file->ReadDouble();
+		file->ReadKeyword("totalDist"); file->ReadKeyword(":");
+		loaded_nbAbsEquiv = file->ReadDouble();
+	}
+	else {
+		loaded_nbAbsEquiv = 0.0;
+		loaded_distTraveledTotal = 0.0;
+	}
 	file->ReadKeyword("maxDes"); file->ReadKeyword(":");
 	loaded_desorptionLimit = file->ReadLLong();
 	file->ReadKeyword("nbVertex"); file->ReadKeyword(":");
@@ -1749,63 +1743,65 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 	return result;
 }
 
-void SynradGeometry::LoadProfileSYN(FileReader *file, Dataport *dpHit) { //profiles and spectrums
+void SynradGeometry::LoadProfileSYN(FileReader *file, Dataport *dpHit, const int& version) { //profiles and spectrums
 	AccessDataport(dpHit);
 	BYTE *buffer = (BYTE *)dpHit->buff;
 	file->ReadKeyword("profiles"); file->ReadKeyword("{");
 	// Profiles
-	int nbProfile;
-	file->ReadKeyword("number"); file->ReadKeyword(":"); nbProfile = file->ReadInt();
-	int *profileFacet = (int *)malloc((nbProfile)*sizeof(int));
+	file->ReadKeyword("number"); file->ReadKeyword(":"); int nbProfile = file->ReadInt();
+	int *facetsWithProfile = (int *)malloc((nbProfile)*sizeof(int));
 	file->ReadKeyword("facets"); file->ReadKeyword(":");
 	for (int i = 0; i < nbProfile; i++)
-		profileFacet[i] = file->ReadInt();
+		facetsWithProfile[i] = file->ReadInt();
 	for (int j = 0; j < PROFILE_SIZE; j++) {
 		for (int i = 0; i < nbProfile; i++) {
-			Facet *f = GetFacet(profileFacet[i]);
-			llong *profilePtr_MC = (llong *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer));
-			double *profilePtr_flux = (double *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer) + PROFILE_SIZE*sizeof(llong));
-			double *profilePtr_power = (double *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer) + PROFILE_SIZE*(sizeof(llong) + sizeof(double)));
+			Facet *f = GetFacet(facetsWithProfile[i]);
+			ProfileSlice *profilePtr = (ProfileSlice*)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer));
 
-			profilePtr_MC[j] = file->ReadLLong();
-			profilePtr_flux[j] = file->ReadDouble();
-			profilePtr_power[j] = file->ReadDouble();
+			if (version>=10) profilePtr[j].count_absorbed = file->ReadLLong();
+			profilePtr[j].count_incident = file->ReadLLong();
+			if (version >= 10) profilePtr[j].flux_absorbed = file->ReadDouble();
+			profilePtr[j].flux_incident = file->ReadDouble();
+			if (version>=10) profilePtr[j].power_absorbed = file->ReadDouble();
+			profilePtr[j].power_incident = file->ReadDouble();
 		}
 	}
 	file->ReadKeyword("}");
 	ReleaseDataport(dpHit);
-	SAFE_FREE(profileFacet);
+	SAFE_FREE(facetsWithProfile);
 }
-void SynradGeometry::LoadSpectrumSYN(FileReader *file, Dataport *dpHit) { //spectrums and spectrums
+void SynradGeometry::LoadSpectrumSYN(FileReader *file, Dataport *dpHit, const int& version) { //spectrums and spectrums
 	AccessDataport(dpHit);
 	BYTE *buffer = (BYTE *)dpHit->buff;
 	file->ReadKeyword("spectrums"); file->ReadKeyword("{");
 	// Spectrums
 	int nbSpectrum;
 	file->ReadKeyword("number"); file->ReadKeyword(":"); nbSpectrum = file->ReadInt();
-	int *spectrumFacet = (int *)malloc((nbSpectrum)*sizeof(int));
+	int *facetsWithSpectrum = (int *)malloc((nbSpectrum)*sizeof(int));
 	file->ReadKeyword("facets"); file->ReadKeyword(":");
 	for (int i = 0; i < nbSpectrum; i++)
-		spectrumFacet[i] = file->ReadInt();
+		facetsWithSpectrum[i] = file->ReadInt();
 
 	for (size_t j = 0; j < PROFILE_SIZE; j++) {
 		for (size_t i = 0; i < nbSpectrum; i++) {
-			Facet *f = GetFacet(spectrumFacet[i]);
-			size_t profileSize = (f->sh.isProfile) ? PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong)) : 0;
-			size_t textureSize = f->sh.texWidth*f->sh.texHeight*(2 * sizeof(double) + sizeof(llong));
-			size_t directionSize = f->sh.countDirection*f->sh.texWidth*f->sh.texHeight*sizeof(VHIT);
-			double *shSpectrum_fluxwise = (double *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize
+			Facet *f = GetFacet(facetsWithSpectrum[i]);
+			size_t profileSize = f->sh.isProfile ? PROFILE_SIZE*sizeof(ProfileSlice) : 0;
+			size_t textureSize = f->sh.texWidth*f->sh.texHeight*sizeof(TextureCell);
+			size_t directionSize = f->sh.countDirection ? f->sh.texWidth*f->sh.texHeight*sizeof(DirectionCell) : 0;
+			ProfileSlice *shSpectrum = (ProfileSlice *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize
 				+ textureSize + directionSize));
-			double *shSpectrum_powerwise = (double *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize
-				+ textureSize + directionSize + SPECTRUM_SIZE*sizeof(double)));
-
-			shSpectrum_fluxwise[j] = file->ReadDouble();
-			shSpectrum_powerwise[j] = file->ReadDouble();
+			
+			if (version >= 10) shSpectrum[j].count_absorbed = file->ReadLLong();
+			if (version >= 10) shSpectrum[j].count_incident = file->ReadLLong();
+			if (version >= 10) shSpectrum[j].flux_absorbed = file->ReadDouble();
+			shSpectrum[j].flux_incident = file->ReadDouble();
+			if (version >= 10) shSpectrum[j].power_absorbed = file->ReadDouble();
+			shSpectrum[j].power_incident = file->ReadDouble();
 		}
 	}
 	file->ReadKeyword("}");
 	ReleaseDataport(dpHit);
-	SAFE_FREE(spectrumFacet);
+	SAFE_FREE(facetsWithSpectrum);
 }
 void SynradGeometry::SaveProfileSYN(FileWriter *file, Dataport *dpHit, int super, bool saveSelected, bool crashSave) {
 	//Profiles
@@ -1814,34 +1810,33 @@ void SynradGeometry::SaveProfileSYN(FileWriter *file, Dataport *dpHit, int super
 	if (!crashSave && !saveSelected) buffer = (BYTE *)dpHit->buff;
 	file->Write("profiles {\n");
 	// Profiles
-	int nbProfile = 0;
-	int *profileFacet = (int *)malloc((sh.nbFacet)*sizeof(int));
-	for (int i = 0; i < sh.nbFacet; i++)
-		if ((!saveSelected && !crashSave) && facets[i]->sh.isProfile)
-			profileFacet[nbProfile++] = i;
-	file->Write(" number: "); file->Write(nbProfile, "\n");
-	file->Write(" facets: ");
-	for (int i = 0; i < nbProfile; i++)  //doesn't execute when crashSave or saveSelected...
-		file->Write(profileFacet[i], "\t");
-	file->Write("\n");
-	for (int j = 0; j < PROFILE_SIZE; j++) {
-		for (int i = 0; i < nbProfile; i++) { //doesn't execute when crashSave or saveSelected...
-			Facet *f = GetFacet(profileFacet[i]);
-			llong *profilePtr_MC;
-			if (!crashSave) profilePtr_MC = (llong *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer));
-			double *profilePtr_flux;
-			if (!crashSave) profilePtr_flux = (double *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer) + PROFILE_SIZE*sizeof(llong));
-			double *profilePtr_power;
-			if (!crashSave) profilePtr_power = (double *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer) + PROFILE_SIZE*(sizeof(llong) + sizeof(double)));
+	
+	std::vector<size_t> profiledFacetIds;
 
-			file->Write((!crashSave) ? profilePtr_MC[j] : 0); file->Write("\t");
-			file->Write((!crashSave) ? profilePtr_flux[j] : 0); file->Write("\t");
-			file->Write((!crashSave) ? profilePtr_power[j] : 0); file->Write("\t");
+	for (size_t i = 0; i < sh.nbFacet; i++)
+		if ((!saveSelected && !crashSave) && facets[i]->sh.isProfile)
+			profiledFacetIds.push_back(i);
+	file->Write(" number: "); file->Write(profiledFacetIds.size(), "\n");
+	file->Write(" facets: ");
+	for (auto facetId:profiledFacetIds)  //doesn't execute when crashSave or saveSelected...
+		file->Write(facetId, "\t");
+	file->Write("\n");
+	for (size_t sliceId = 0; sliceId < PROFILE_SIZE; sliceId++) {
+		for (auto facetId : profiledFacetIds) { //doesn't execute when crashSave or saveSelected...
+			Facet *f = GetFacet(facetId);
+			ProfileSlice *profilePtr;
+			if (!crashSave) profilePtr = (ProfileSlice *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer));
+
+			file->Write((!crashSave) ? profilePtr[sliceId].count_absorbed : 0); file->Write("\t");
+			file->Write((!crashSave) ? profilePtr[sliceId].count_incident : 0); file->Write("\t");
+			file->Write((!crashSave) ? profilePtr[sliceId].flux_absorbed : 0); file->Write("\t");
+			file->Write((!crashSave) ? profilePtr[sliceId].flux_incident : 0); file->Write("\t");
+			file->Write((!crashSave) ? profilePtr[sliceId].power_absorbed : 0); file->Write("\t");
+			file->Write((!crashSave) ? profilePtr[sliceId].power_incident : 0); file->Write("\t");
 		}
 		file->Write("\n");
 	}
 	file->Write("}\n");
-	SAFE_FREE(profileFacet);
 }
 
 void SynradGeometry::SaveSpectrumSYN(FileWriter *file, Dataport *dpHit, int super, bool saveSelected, bool crashSave) {
@@ -1850,37 +1845,36 @@ void SynradGeometry::SaveSpectrumSYN(FileWriter *file, Dataport *dpHit, int supe
 	BYTE *buffer;
 	if (!crashSave && !saveSelected) buffer = (BYTE *)dpHit->buff;
 	file->Write("spectrums {\n");
-	// Profiles
-	int nbSpectrum = 0;
-	int *spectrumFacet = (int *)malloc((sh.nbFacet)*sizeof(int));
-	for (int i = 0; i < sh.nbFacet; i++)
-		if ((!saveSelected && !crashSave) && facets[i]->sh.hasSpectrum)
-			spectrumFacet[nbSpectrum++] = i;
-	file->Write(" number: "); file->Write(nbSpectrum, "\n");
+	
+	std::vector<size_t> spectrumFacetIds;
+	for (size_t i = 0; i < sh.nbFacet; i++)
+		if ((!saveSelected && !crashSave) && facets[i]->sh.recordSpectrum)
+			spectrumFacetIds.push_back(i);
+	file->Write(" number: "); file->Write(spectrumFacetIds.size(), "\n");
 	file->Write(" facets: ");
-	for (int i = 0; i < nbSpectrum; i++)   //doesn't execute when crashSave or saveSelected...
-		file->Write(spectrumFacet[i], "\t");
+	for (auto facetId:spectrumFacetIds)   //doesn't execute when crashSave or saveSelected...
+		file->Write(facetId, "\t");
 	file->Write("\n");
-	for (int j = 0; j < SPECTRUM_SIZE; j++) {
-		for (int i = 0; i < nbSpectrum; i++) {  //doesn't execute when crashSave or saveSelected...
-			Facet *f = GetFacet(spectrumFacet[i]);
-			size_t profileSize = (f->sh.isProfile) ? PROFILE_SIZE*(2 * sizeof(double) + sizeof(llong)) : 0;
-			size_t textureSize = f->sh.texWidth*f->sh.texHeight*(2 * sizeof(double) + sizeof(llong));
-			size_t directionSize = f->sh.countDirection*f->sh.texWidth*f->sh.texHeight*sizeof(VHIT);
-			double *shSpectrum_fluxwise;
-			if (!crashSave) shSpectrum_fluxwise = (double *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize
+	for (size_t sliceId = 0; sliceId < SPECTRUM_SIZE; sliceId++) {
+		for (auto facetId : spectrumFacetIds) {  //doesn't execute when crashSave or saveSelected...
+			Facet *f = GetFacet(facetId);
+			size_t profileSize = (f->sh.isProfile) ? PROFILE_SIZE*sizeof(ProfileSlice) : 0;
+			size_t textureSize = f->sh.texWidth*f->sh.texHeight*sizeof(TextureCell);
+			size_t directionSize = f->sh.countDirection*f->sh.texWidth*f->sh.texHeight*sizeof(DirectionCell);
+			ProfileSlice *shSpectrum;
+			if (!crashSave) shSpectrum = (ProfileSlice *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize
 				+ textureSize + directionSize));
-			double *shSpectrum_powerwise;
-			if (!crashSave) shSpectrum_powerwise = (double *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize
-				+ textureSize + directionSize + SPECTRUM_SIZE*sizeof(double)));
 
-			file->Write((!crashSave) ? shSpectrum_fluxwise[j] : 0); file->Write("\t");
-			file->Write((!crashSave) ? shSpectrum_powerwise[j] : 0); file->Write("\t");
+			file->Write((!crashSave) ? shSpectrum[sliceId].count_absorbed : 0); file->Write("\t");
+			file->Write((!crashSave) ? shSpectrum[sliceId].count_incident : 0); file->Write("\t");
+			file->Write((!crashSave) ? shSpectrum[sliceId].flux_absorbed : 0); file->Write("\t");
+			file->Write((!crashSave) ? shSpectrum[sliceId].flux_incident : 0); file->Write("\t");
+			file->Write((!crashSave) ? shSpectrum[sliceId].power_absorbed : 0); file->Write("\t");
+			file->Write((!crashSave) ? shSpectrum[sliceId].power_incident : 0); file->Write("\t");
 		}
 		file->Write("\n");
 	}
 	file->Write("}\n");
-	SAFE_FREE(spectrumFacet);
 }
 
 //Temporary placeholders

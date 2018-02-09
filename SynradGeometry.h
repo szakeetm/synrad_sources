@@ -21,12 +21,9 @@
 #include "Geometry_shared.h"
 #include "Region_full.h"
 
-#define TEXTURE_MODE_MCHITS 0
-#define TEXTURE_MODE_FLUX 1
-#define TEXTURE_MODE_POWER 2
-#define SYNVERSION   9
+#define SYNVERSION   10
 
-#define PARAMVERSION 3
+#define PARAMVERSION 4
 class Worker;
 class Material;
 
@@ -38,7 +35,7 @@ private:
 	std::vector<std::string> InsertSYNGeom(FileReader *file, size_t *nbV, size_t *nbF, InterfaceVertex **V, Facet ***F, size_t strIdx = 0, bool newStruct = false);
 	void SaveProfileSYN(FileWriter *file, Dataport *dpHit, int super = -1, bool saveSelected = false, bool crashSave = false);
 	void SaveSpectrumSYN(FileWriter *file, Dataport *dpHit, int super = -1, bool saveSelected = false, bool crashSave = false);
-	void SaveProfileGEO(FileWriter *file, int super = -1, bool saveSelected = false);
+	//void SaveProfileGEO(FileWriter *file, int super = -1, bool saveSelected = false);
 public:
 	SynradGeometry();
 	void LoadGEO(FileReader *file, GLProgress *prg, int *version);
@@ -47,7 +44,7 @@ public:
 	std::vector<std::string> InsertSYN(FileReader *file, GLProgress *prg, bool newStr);
 	void SaveTXT(FileWriter *file, Dataport *dhHit, bool saveSelected);
 	void ExportTextures(FILE *file, int grouping, int mode, double no_scans, Dataport *dhHit, bool saveSelected);
-	void SaveDesorption(FILE *file, Dataport *dhHit, bool selectedOnly, int mode, double eta0, double alpha, const Distribution2D &distr);
+	void SaveDesorption(FILE *file, Dataport *dhHit, bool selectedOnly, int mode, double eta0, double alpha, const Distribution2D &distr); //Deprecated, not used anymore
 
 	//void SaveGEO(FileWriter *file,GLProgress *prg,Dataport *dpHit,bool saveSelected,LEAK *pleak,int *nbleakSave,HIT *hitCache,int *nbHHitSave,bool crashSave=false);
 	void SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit, bool saveSelected, LEAK *leakCache, size_t *nbLeakTotal, HIT *hitCache, size_t *nbHitSave, bool crashSave = false);
@@ -58,15 +55,15 @@ public:
 	void InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress *progressDlg, bool newStr);
 	bool LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit, Worker *work, GLProgress *progressDlg);
 	void BuildPipe(double L, double R, double s, int step);
-	void LoadProfileSYN(FileReader *file, Dataport *dpHit);
-	void LoadSpectrumSYN(FileReader *file, Dataport *dpHit);
+	void LoadProfileSYN(FileReader *file, Dataport *dpHit, const int& version);
+	void LoadSpectrumSYN(FileReader *file, Dataport *dpHit, const int& version);
 	size_t GetGeometrySize(std::vector<Region_full> &regions, std::vector<Material> &materials, 
 		std::vector<std::vector<double>> &psi_distro, std::vector<std::vector<std::vector<double>>> &chi_distros,
 		const std::vector<std::vector<double>>& parallel_polarization);
 	size_t GetHitsSize();
 	void CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> &regions, std::vector<Material> &materials,
 		std::vector<std::vector<double>> &psi_distro, const std::vector<std::vector<std::vector<double>>> &chi_distros,
-		const std::vector<std::vector<double>> &parallel_polarization, int generation_mode, bool lowFluxMode, double lowFluxCutoff, bool newReflectionModel);
+		const std::vector<std::vector<double>> &parallel_polarization, const bool& newReflectionModel, const OntheflySimulationParams& ontheflyParams);
 #pragma endregion
 
 #pragma region GeometryRender.cpp

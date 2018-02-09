@@ -76,7 +76,7 @@ void GeometryViewer::DrawLinesAndHits() {
 		if (shadeLines) {
 			while (count < Min(dispNumHits, mApp->worker.hitCacheSize) && mApp->worker.hitCache[count].type != 0) {
 				double logVal;
-				if (work->generation_mode == SYNGEN_MODE_FLUXWISE) {
+				if (work->ontheflyParams.generation_mode == SYNGEN_MODE_FLUXWISE) {
 					logVal = log10(mApp->worker.hitCache[count].dP);
 				}
 				else { //Powerwise
@@ -103,7 +103,7 @@ void GeometryViewer::DrawLinesAndHits() {
 			else {
 				if (shadeLines) {
 					double logVal;
-					if (work->generation_mode == SYNGEN_MODE_FLUXWISE) {
+					if (work->ontheflyParams.generation_mode == SYNGEN_MODE_FLUXWISE) {
 						logVal = log10(mApp->worker.hitCache[count].dP);
 					}
 					else {
@@ -152,7 +152,7 @@ void GeometryViewer::DrawLinesAndHits() {
 						else {
 							if (shadeLines) {
 								double logVal;
-								if (work->generation_mode == SYNGEN_MODE_FLUXWISE) {
+								if (work->ontheflyParams.generation_mode == SYNGEN_MODE_FLUXWISE) {
 									logVal = log10(mApp->worker.hitCache[count].dP);
 								}
 								else {

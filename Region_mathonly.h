@@ -56,6 +56,7 @@ struct RegionParams {
 	Vector3d startPoint, startDir, B_const, limits;//AABBmin,AABBmax
 	Quadrupole quad_params;
 	bool showPhotons; //Whether to include photons from this region in the hit cache
+	size_t structureId; //Which structure generated photons belong to
 };
 
 class Region_mathonly { //Beam trajectory

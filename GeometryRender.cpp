@@ -39,12 +39,12 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, b
 	int startTime = SDL_GetTicks();
 
 	if (renderRegularTexture) {
-		texCMin_MC = shGHit->minHit_MC;// * dCoef;
-		texCMax_MC = shGHit->maxHit_MC;// * dCoef;
-		texCMin_flux = shGHit->minHit_flux / worker->no_scans;// * dCoef;
-		texCMax_flux = shGHit->maxHit_flux / worker->no_scans;// * dCoef;
-		texCMin_power = shGHit->minHit_power / worker->no_scans;// * dCoef;
-		texCMax_power = shGHit->maxHit_power / worker->no_scans;// * dCoef;
+		textureMin_auto = shGHit->hitMin;// * dCoef;
+		textureMax_auto = shGHit->hitMax;// * dCoef;
+		textureMin_auto.flux /= worker->no_scans;
+		textureMax_auto.flux /= worker->no_scans;
+		textureMin_auto.power /= worker->no_scans;
+		textureMax_auto.power /= worker->no_scans;
 	}
 
 	for (int i = 0; i < sh.nbFacet; i++) {
@@ -55,8 +55,7 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, b
 		prg->SetProgress((double)i / (double)sh.nbFacet);
 		Facet *f = facets[i];
 
-		int profSize = (f->sh.isProfile) ? (PROFILE_SIZE*(sizeof(llong) + 2 * sizeof(double))) : 0;
-		//int spectrumSize = (f->sh.hasSpectrum)?(SPECTRUM_SIZE*2*sizeof(double)):0;
+		int profSize = (f->sh.isProfile) ? PROFILE_SIZE*sizeof(ProfileSlice) : 0;
 		size_t nbElem = f->sh.texWidth*f->sh.texHeight;
 		size_t tSize = nbElem * sizeof(double);
 
@@ -82,30 +81,18 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, b
 			}
 
 		   // Retrieve texture from shared memory (every seconds)
-			llong *hits_MC = (llong *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
-			double *hits_flux = (double *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + nbElem * sizeof(llong)));
-			double *hits_power = (double *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + nbElem*(sizeof(llong) + sizeof(double))));
-
-			if (texAutoScale) {
-				if (textureMode == TEXTURE_MODE_MCHITS) f->BuildTexture(hits_MC, texCMin_MC, texCMax_MC, texColormap, texLogScale);
-				else if (textureMode == TEXTURE_MODE_FLUX) f->BuildTexture(hits_flux, texCMin_flux, texCMax_flux, worker->no_scans, texColormap, texLogScale);
-				else if (textureMode == TEXTURE_MODE_POWER) f->BuildTexture(hits_power, texCMin_power, texCMax_power, worker->no_scans, texColormap, texLogScale);
-			}
-			else {
-				if (textureMode == TEXTURE_MODE_MCHITS) f->BuildTexture(hits_MC, texMin_MC, texMax_MC, texColormap, texLogScale);
-				else if (textureMode == TEXTURE_MODE_FLUX) f->BuildTexture(hits_flux, texMin_flux, texMax_flux, worker->no_scans, texColormap, texLogScale);
-				else if (textureMode == TEXTURE_MODE_POWER) f->BuildTexture(hits_power, texMin_power, texMax_power, worker->no_scans, texColormap, texLogScale);
-			}
+			TextureCell *texture = (TextureCell *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
+			f->BuildTexture(texture, textureMode, texAutoScale ? textureMin_auto : textureMin_manual, texAutoScale ? textureMax_auto : textureMax_manual, worker->no_scans, texColormap, texLogScale);
 		}
 		if (renderDirectionTexture && f->sh.countDirection && f->dirCache) {
 			
-			size_t dSize = nbElem * sizeof(VHIT);
+			size_t dSize = nbElem * sizeof(DirectionCell);
 			
 			double iDesorbed = 0.0;
 			if (shGHit->total.nbDesorbed)
 				iDesorbed = 1.0 / (double)shGHit->total.nbDesorbed;
 
-			VHIT *dirs = (VHIT *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + tSize));
+			DirectionCell *dirs = (DirectionCell *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + tSize));
 			for (int j = 0; j < nbElem; j++) {
 				f->dirCache[j].dir = dirs[j].dir * iDesorbed;
 				f->dirCache[j].count = dirs[j].count;

@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include "Buffer_shared.h"
 
 #include "Simulation.h"
 #ifdef WIN
@@ -39,7 +40,7 @@
 static Dataport *dpControl=NULL;
 static Dataport *dpHit=NULL;
 static int       prIdx;
-static int       prState;
+static size_t    prState;
 static size_t    prParam;
 static llong     prParam2;
 static DWORD     hostProcessId;
@@ -79,14 +80,14 @@ void GetState() {
   }
 }
 
-int GetLocalState() {
+size_t GetLocalState() {
   return prState;
 }
 
-void SetState(int state,const char *status, bool changeState, bool changeStatus) {
+void SetState(size_t state,const char *status, bool changeState, bool changeStatus) {
 
 	prState = state;
-	printf("\n setstate %d \n",state);
+	printf("\n setstate %zd \n",state);
 	if( AccessDataport(dpControl) ) {
 		SHCONTROL *master = (SHCONTROL *)dpControl->buff;
 		if (changeState) master->states[prIdx] = state;
@@ -189,7 +190,7 @@ bool UpdateParams() {
 
 	printf("Connected to %s\n", loadDpName);
 
-	if (!UpdateSimuParams(loader)) {
+	if (!UpdateOntheflySimuParams(loader)) {
 		CLOSEDP(loader);
 		return false;
 	}

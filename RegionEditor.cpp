@@ -92,7 +92,6 @@ RegionEditor::RegionEditor():GLWindow() {
 	startDirDefinitionCombo->SetSize(2);
 	startDirDefinitionCombo->SetValueAt(0, "By vector:");
 	startDirDefinitionCombo->SetValueAt(1, "By angle:");
-	startDirDefinitionCombo->SetSelectedIndex(0); //Default
 
 	label8 = new GLLabel("Beam start direction:");
 	beamPanel->SetCompBounds(label8, 8, 53, 103, 13);
@@ -425,7 +424,7 @@ RegionEditor::RegionEditor():GLWindow() {
 	photonGenPanel->SetCompBounds(enableParPolarizationToggle, 276, 50, 60, 17);
 	photonGenPanel->Add(enableParPolarizationToggle);
 
-	label59 = new GLLabel("Generated photon polarization:");
+	label59 = new GLLabel("Generated photon energy:");
 	photonGenPanel->SetCompBounds(label59, 8, 51, 131, 13);
 	photonGenPanel->Add(label59);
 
@@ -612,9 +611,25 @@ RegionEditor::RegionEditor():GLWindow() {
 	magPanel->SetCompBounds(label69, 297, 48, 50, 13);
 	magPanel->Add(label69);
 
-	applyButton = new GLButton(0, "Apply && Recalculate points");
+	applyButton = new GLButton(0, "Apply & Recalculate points");
 	applyButton->SetBounds(289, 636, 223, 23);
 	Add(applyButton);
+
+	copyFromRegionTextfield = new GLTextField(0, "");
+	beamParamPanel->SetCompBounds(copyFromRegionTextfield, 631, 15, 74, 20);
+	beamParamPanel->Add(copyFromRegionTextfield);
+
+	copyFromRegionButton = new GLButton(0, "Copy from region ->");
+	beamParamPanel->SetCompBounds(copyFromRegionButton, 471, 14, 153, 21);
+	beamParamPanel->Add(copyFromRegionButton);
+
+	label52 = new GLLabel("Structure:");
+	photonGenPanel->SetCompBounds(label52, 627, 51, 90, 13);
+	photonGenPanel->Add(label52);
+
+	startingStructureTextfield = new GLTextField(0, "");
+	photonGenPanel->SetCompBounds(startingStructureTextfield, 630, 73, 75, 20);
+	photonGenPanel->Add(startingStructureTextfield);
 
 	SetTitle("RegionEditor");
 	// Center dialog
@@ -623,6 +638,8 @@ RegionEditor::RegionEditor():GLWindow() {
 	int xD = (wS - wD) / 2;
 	int yD = (hS - hD) / 2;
 	SetBounds(xD, yD, wD, hD);
+	
+	startDirDefinitionCombo->SetSelectedIndex(1); //Angle, by default
 
 	RestoreDeviceObjects();
 }
@@ -758,6 +775,17 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 
 			return;
 
+		}
+		else if (src == copyFromRegionButton) {
+			int regionId;
+			if (!copyFromRegionTextfield->GetNumberInt(&regionId)) { GLMessageBox::Display("Invalid source region Id", "Invalid input", GLDLG_OK, GLDLG_ICONERROR); return; };
+			if (! (regionId>0 && regionId <= worker->regions.size())) {
+				std::ostringstream msg;
+				msg << regionId << " is not a valid region id. Must be between 1 and " << worker->regions.size();
+				GLMessageBox::Display(msg.str().c_str(), "Invalid input", GLDLG_OK, GLDLG_ICONERROR); return;
+			};
+			CopyFromRegion(regionId - 1);
+			return;
 		}
 		break;
 
@@ -955,24 +983,62 @@ void RegionEditor::FillValues() {
 	psiMaxXtext->SetText(cr->params.psimaxX_rad);
 	psiMaxYtext->SetText(cr->params.psimaxY_rad);
 
+	startingStructureTextfield->SetText(cr->params.structureId + 1);
+
 	BxtypeCombo->SetSelectedIndex(cr->params.Bx_mode-1);
 	if (cr->params.Bx_mode==B_MODE_CONSTANT) {
 		constBXtext->SetText(cr->params.B_const.x);
 	} else {
 		MAGfileXtext->SetText(cr->MAGXfileName);
 	}
-	BytypeCombo->SetSelectedIndex(cr->params.By_mode-1);
-	if (cr->params.By_mode==B_MODE_CONSTANT) {
+
+	BytypeCombo->SetSelectedIndex(cr->params.By_mode - 1);
+	if (cr->params.By_mode == B_MODE_CONSTANT) {
 		constBYtext->SetText(cr->params.B_const.y);
-	} else {
+	}
+	else {
 		MAGfileYtext->SetText(cr->MAGYfileName);
 	}
-	BztypeCombo->SetSelectedIndex(cr->params.Bz_mode-1);
-	if (cr->params.Bz_mode==B_MODE_CONSTANT) {
+
+	BztypeCombo->SetSelectedIndex(cr->params.Bz_mode - 1);
+	if (cr->params.Bz_mode == B_MODE_CONSTANT) {
 		constBZtext->SetText(cr->params.B_const.z);
-	} else {
+	}
+	else {
 		MAGfileZtext->SetText(cr->MAGZfileName);
 	}
+
+
+	//Control of magnetic field components
+	std::vector<GLCombo*> combos = { BxtypeCombo,BytypeCombo,BztypeCombo };
+	
+		std::vector<GLTextField*> constFields = { constBXtext , constBYtext, constBZtext };
+		std::vector<GLTextField*> magFileFields = { MAGfileXtext , MAGfileYtext, MAGfileZtext };
+		std::vector<GLButton*> browseButtons = { magxBrowseButton , magyBrowseButton, magzBrowseButton };
+		std::vector<GLButton*> editButtons = { magxEditButton , magyEditButton, magzEditButton };
+
+		std::vector<int> allCompModes = { B_MODE_QUADRUPOLE,B_MODE_ANALYTIC,B_MODE_ROTATING_DIPOLE };
+		
+		int setAllComponentsId = -1; //No all component setter
+		for (size_t i = 0; setAllComponentsId = -1 && i < 3; i++) {
+			int compMode = combos[i]->GetSelectedIndex() + 1;
+			if (Contains(allCompModes, compMode))
+				setAllComponentsId = (int)i;
+		}
+
+		for (size_t i = 0; i < 3; i++) {
+			int compMode = combos[i]->GetSelectedIndex() + 1;
+			bool useMagFile = (compMode != B_MODE_CONSTANT);
+			bool allowComponent = setAllComponentsId == -1 || setAllComponentsId == i;
+
+			combos[i]->SetEditable(allowComponent);
+			constFields[i]->SetEditable(allowComponent && !useMagFile);
+			magFileFields[i]->SetEditable(allowComponent && useMagFile);
+			browseButtons[i]->SetEnabled(allowComponent && useMagFile);
+			editButtons[i]->SetEnabled(allowComponent && useMagFile);
+			
+		}
+	
 }
 
 void RegionEditor::ApplyChanges() {
@@ -1042,6 +1108,11 @@ void RegionEditor::ApplyChanges() {
 		if (!psiMaxYtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid psiMaxY","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		if (tmp<=0.0) {GLMessageBox::Display("psiMaxY must be positive","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	}
+
+	int tmpInt;
+	if (!(startingStructureTextfield->GetNumberInt(&tmpInt))) {GLMessageBox::Display("Invalid starting structure id.","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
+	if (!(tmpInt>=1 && tmpInt<=worker->GetGeometry()->GetNbStructure())) { GLMessageBox::Display("Starting structure doesn't exist.", "Invalid input", GLDLG_OK, GLDLG_ICONERROR); return; }
+
 	if (BxtypeCombo->GetSelectedIndex()==0) {//const B field
 		if (!constBXtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid Bx field value","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	} else { //use MAG file
@@ -1137,6 +1208,9 @@ void RegionEditor::ApplyChanges() {
 		cr->params.psimaxY_rad=PI;
 	}
 
+	startingStructureTextfield->GetNumberInt(&tmpInt);
+	cr->params.structureId = (size_t)tmpInt - 1; //Structures are numbered from 0
+
 	//X comp.
 	cr->params.Bx_mode=BxtypeCombo->GetSelectedIndex()+1;
 	if (cr->params.Bx_mode==B_MODE_CONSTANT) { //constant B field
@@ -1193,4 +1267,53 @@ void RegionEditor::ApplyChanges() {
 	if (mApp->trajectoryDetails && mApp->trajectoryDetails->IsVisible() && mApp->trajectoryDetails->GetRegionId() == regionId) mApp->trajectoryDetails->Update();
 	if (mApp->spectrumPlotter) mApp->spectrumPlotter->SetScale();
 	GLWindow::ProcessMessage(NULL,MSG_CLOSE);
+}
+
+void RegionEditor::CopyFromRegion(const size_t & sourceRegionId)
+{
+	if (sourceRegionId >= worker->regions.size()) return;
+	Region_full* cr = &worker->regions[sourceRegionId];
+
+	particleMassText->SetText(abs(cr->params.particleMass_GeV));
+	particleChargeCombo->SetSelectedIndex(cr->params.particleMass_GeV<0);
+
+	beamEnergyText->SetText(cr->params.E_GeV);
+	beamCurrentText->SetText(cr->params.current_mA);
+	idealBeamToggle->SetState(cr->params.emittance_cm == 0.0);
+	emittanceCouplingToggle->SetState(cr->params.emittance_cm != 0.0);
+
+	if (cr->params.emittance_cm == 0.0) { //ideal beam
+		constantBXYtoggle->SetState(1);
+		BXYfileNameText->SetText("");
+		emittanceText->SetText("0");
+		betaXtext->SetText("");
+		betaYtext->SetText("");
+		etaText->SetText("");
+		etaPrimeText->SetText("");
+		couplingText->SetText("");
+		energySpreadText->SetText("");
+		emittanceXtext->SetText("");
+		emittanceYtext->SetText("");
+	}
+
+	emittanceText->SetText(cr->params.emittance_cm);
+	couplingText->SetText(cr->params.coupling_percent);
+	double emittanceX = cr->params.emittance_cm / (1.0 + cr->params.coupling_percent * 0.01);
+	emittanceXtext->SetText(emittanceX);
+	emittanceYtext->SetText(emittanceX * cr->params.coupling_percent * 0.01);
+	energySpreadText->SetText(cr->params.energy_spread_percent);
+
+	if (cr->params.betax_const_cm >= 0.0) { //don't use BXY file
+		constantBXYtoggle->SetState(1);
+		BXYfileNameText->SetText("");
+		betaXtext->SetText(cr->params.betax_const_cm);
+		betaYtext->SetText(cr->params.betay_const_cm);
+		etaText->SetText(cr->params.eta_x_const_cm);
+		etaPrimeText->SetText(cr->params.eta_x_prime_const);
+		energySpreadText->SetText(cr->params.energy_spread_percent);
+	}
+	else {
+		constantBXYtoggle->SetState(0);
+		BXYfileNameText->SetText(cr->BXYfileName);
+	}
 }

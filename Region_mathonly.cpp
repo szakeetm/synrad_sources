@@ -128,6 +128,7 @@ Region_mathonly::Region_mathonly(){
 	params.Bx_mode= params.By_mode= params.Bz_mode=B_MODE_CONSTANT;
 	params.B_const=Vector3d(0,0,0);
 	params.showPhotons = true;
+	params.structureId = 0;
 }
 
 /*

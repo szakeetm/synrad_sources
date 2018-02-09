@@ -870,6 +870,7 @@ void Region_full::SaveParam(FileWriter *file) {
 	file->Write("enable_par_polarization:");file->Write(params.enable_par_polarization,"\n");
 	file->Write("enable_ort_polarization:");file->Write(params.enable_ort_polarization,"\n");
 	file->Write("psiMax_X_Y_rad:");file->Write(params.psimaxX_rad);file->Write(params.psimaxY_rad,"\n");
+	file->Write("structureId:"); file->Write(params.structureId, "\n");
 	
 	file->Write("Bx_mode:");file->Write(params.Bx_mode,"\n");
 	if (params.Bx_mode==B_MODE_CONSTANT) {
@@ -994,6 +995,7 @@ void Region_full::LoadParam(FileReader *file){
 		params.polarizationCompIndex = 2; //Orthogonal polarization
 
 	(paramVersion>=3)?file->ReadKeyword("psiMax_X_Y_rad"):file->ReadKeyword("psiMax_rad");file->ReadKeyword(":");params.psimaxX_rad=file->ReadDouble();params.psimaxY_rad=file->ReadDouble();
+	if (paramVersion>=4) {file->ReadKeyword("structureId");file->ReadKeyword(":");params.structureId=file->ReadLLong();}
 
 	for (int i=0;i<3;i++) {
 		file->ReadKeyword((char*)Bmode_str[i].c_str());file->ReadKeyword(":");*Bmode_ptr[i]=file->ReadInt();

@@ -23,6 +23,7 @@
 #define MAX_THIT 16384
 
 #include "SynradTypes.h"
+#include "Buffer_shared.h"
 #include "SMP.h"
 #include <vector>
 #include "Vector.h"
@@ -40,19 +41,14 @@ typedef struct {
 
   int      *indices;   // Indices (Reference to geometry vertex)
   Vector2d *vertices2; // Vertices (2D plane space, UV coordinates)
-  llong     *hits_MC;      // Number of MC hits
-  double    *hits_flux;  //absorbed SR flux
-  double    *hits_power; //absorbed SR power
   double	 fullSizeInc; // 1/Texture FULL element area
   double   *inc;        // reciprocial of element area
   bool     *largeEnough; //cells that are NOT too small for autoscaling
-  VHIT     *direction; // Direction field recording (average)
+  DirectionCell     *direction; // Direction field recording (average)
   //char     *fullElem;  // Direction field recording (only on full element) (WHY???)
-  llong    *profile_hits;   // MC hits
-  double   *profile_flux;   // SR Flux
-  double   *profile_power;  // SR power
-  Histogram    *spectrum_fluxwise; //Energy spectrum fluxwise
-  Histogram    *spectrum_powerwise;
+  ProfileSlice *profile;
+  TextureCell  *texture;
+  Histogram    *spectrum;
 
   // Temporary var (used in Intersect for collision)
   double colDist;
@@ -74,6 +70,7 @@ typedef struct {
   size_t globalId; //Global index (to identify when superstructures are present)
 
   void RegisterTransparentPass(); //Allows one shared Intersect routine between MolFlow and Synrad
+  void ResetCounter();
 
 } SubprocessFacet;
 
@@ -154,7 +151,7 @@ typedef struct {
   double oriRatio;
   bool newReflectionModel;
 
-  SHMODE mode; //Low flux, generation mode, photon cache display
+  OntheflySimulationParams ontheflyParams; //Low flux, generation mode, photon cache display
 
 } SIMULATION;
 
@@ -167,13 +164,13 @@ extern SIMULATION *sHandle;
 
 void RecordHitOnTexture(SubprocessFacet& f,double dF,double dP);
 void RecordDirectionVector(SubprocessFacet& f);
-void ProfileFacet(SubprocessFacet &f, const double &dF, const double &dP, const double &E);
+void ProfileFacet(SubprocessFacet &f, const double& energy, const ProfileSlice &increment);
 void InitSimulation();
 void ClearSimulation();
-void SetState(int state, const char *status, bool changeState = true, bool changeStatus = true);
+void SetState(size_t state, const char *status, bool changeState = true, bool changeStatus = true);
 void SetErrorSub(const char *msg);
 bool LoadSimulation(Dataport *loader);
-bool UpdateSimuParams(Dataport *loader);
+bool UpdateOntheflySimuParams(Dataport *loader);
 bool StartSimulation();
 void ResetSimulation();
 bool SimulationRun();

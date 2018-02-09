@@ -55,13 +55,13 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	panel2->SetBounds(310,2,295,78);
 	Add(panel2);
 
-	lowFluxInfo = new GLButton(0, "Info");
-	lowFluxInfo->SetBounds(520, 20, 40, 19);
-	panel2->Add(lowFluxInfo);
-
 	lowFluxToggle = new GLToggle(0,"Enable low flux mode");
 	lowFluxToggle->SetBounds(315, 20, 150, 19);
 	panel2->Add(lowFluxToggle);
+
+	lowFluxInfo = new GLButton(0, "Info");
+	lowFluxInfo->SetBounds(520, 20, 40, 19);
+	panel2->Add(lowFluxInfo);
 
 	GLLabel *cutoffLabel = new GLLabel("Cutoff ratio:");
 	cutoffLabel->SetBounds(330, 50, 80, 19);
@@ -180,9 +180,9 @@ void GlobalSettings::Display(Worker *w) {
 	chkAntiAliasing->SetState(mApp->antiAliasing);
 	chkWhiteBg->SetState(mApp->whiteBg);
 
-	cutoffText->SetText(worker->lowFluxCutoff);
-	cutoffText->SetEditable(worker->lowFluxMode);
-	lowFluxToggle->SetState(worker->lowFluxMode);
+	cutoffText->SetText(worker->ontheflyParams.lowFluxCutoff);
+	cutoffText->SetEditable(worker->ontheflyParams.lowFluxMode);
+	lowFluxToggle->SetState(worker->ontheflyParams.lowFluxMode);
 	chkNewReflectionModel->SetState(worker->newReflectionModel);
 
 	sprintf(tmp,"%g",mApp->autoSaveFrequency);
@@ -218,7 +218,7 @@ void GlobalSettings::SMPUpdate() {
 
 	char tmp[512];
 	PROCESS_INFO pInfo;
-	int  states[MAX_PROCESS];
+	size_t  states[MAX_PROCESS];
 	std::vector<std::string> statusStrings(MAX_PROCESS);
 
 	memset(states, 0, MAX_PROCESS * sizeof(int));
@@ -366,15 +366,10 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 				return;
 			}
 
-			if (!IsEqual(worker->lowFluxCutoff , cutoffnumber) || (int)worker->lowFluxMode!=lowFluxToggle->GetState()) {
-				//if (mApp->AskToReset()) {
-					worker->lowFluxCutoff = cutoffnumber;
-					worker->lowFluxMode = lowFluxToggle->GetState();
-					/*mApp->changedSinceSave = true;
-					worker->Reload();
-					mApp->UpdateFacetHits();*/
+			if (!IsEqual(worker->ontheflyParams.lowFluxCutoff , cutoffnumber) || (int)worker->ontheflyParams.lowFluxMode!=lowFluxToggle->GetState()) {
+					worker->ontheflyParams.lowFluxCutoff = cutoffnumber;
+					worker->ontheflyParams.lowFluxMode = lowFluxToggle->GetState();
 					worker->ChangeSimuParams();
-				//}
 			}
 
 			if (worker->newReflectionModel != (chkNewReflectionModel->GetState()==1)) {
@@ -393,7 +388,7 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 			GLMessageBox::Display("Low flux mode helps to gain more statistics on low flux/power parts of the system, at the expense\n"
 				"of higher flux/power parts. If a traced photon reflects from a low reflection probability surface, regardless of that probability,\n"
 				"a reflected test photon representing a reduced flux will still be traced. Therefore test photons can reach low flux areas more easily, but\n"
-				"at the same time tracng a test photon takes longer. The cutoff ratio defines what ratio of the originally generated flux/power\n"
+				"at the same time tracing a test photon takes longer. The cutoff ratio defines what ratio of the originally generated flux/power\n"
 				"can be neglected. If, for example, it is 0.001, then, when after subsequent reflections the test photon carries less than 0.1%\n"
 				"of the original flux, it will be eliminated. A good advice is that if you'd like to see flux across N orders of magnitude, set it to 1E-N"
 				, "Low flux mode", GLDLG_OK, GLDLG_ICONINFO);

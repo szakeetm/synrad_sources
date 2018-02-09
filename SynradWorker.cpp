@@ -27,6 +27,8 @@ GNU General Public License for more details.
 #include <stdlib.h>
 #include <Process.h>
 #include "GLApp/GLUnitDialog.h"
+#include "File.h" //GetFileName
+#include "GLApp/MathTools.h"
 #ifdef MOLFLOW
 #include "MolFlow.h"
 #endif
@@ -60,25 +62,26 @@ Worker::Worker() {
 	sprintf(materialsDpName,"SRDMATS%d",pid);
 	nbProcess = 0;
 	desorptionLimit = 0;
-	distTraveledTotal=0.0;
-	lowFluxCutoff = 1E-7;
-	lowFluxMode = false;
+	distTraveled_total=0.0;
+	ontheflyParams.lowFluxCutoff = 1E-7;
+	ontheflyParams.lowFluxMode = false;
+	ontheflyParams.generation_mode=SYNGEN_MODE_FLUXWISE;
 	newReflectionModel = false;
 	ResetWorkerStats();
 	geom = new SynradGeometry();
 	regions = std::vector<Region_full>();
-	generation_mode=SYNGEN_MODE_FLUXWISE;
+	
 	dpControl = NULL;
 	dpHit = NULL;
 	hitCacheSize = 0;
 	leakCacheSize = 0;
-	nbHit = 0;
+
 	nbLeakTotal = 0;
 	startTime = 0.0f;
 	stopTime = 0.0f;
 	simuTime = 0.0f;
 	nbTrajPoints=0;
-	running = false;
+	isRunning = false;
 	calcAC = false; //not used, reserved for shared function
 
 	strcpy(fullFileName,"");
@@ -230,28 +233,66 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool sa
 		}
 	} else*/ if (ok && isSYN7Z) {
 			if (FileUtils::Exist("compress.exe")) { //compress SYN file to SYN7Z using 7-zip launcher "compress.exe"
-				sprintf(tmp,"compress.exe \"%s\" Geometry.syn",fileNameWithSyn);
-				for (int i=0;i<(int)regions.size();i++) {
-					sprintf(tmp,"%s \"%s\"",tmp,regions[i].fileName.c_str());
-					if (!regions[i].MAGXfileName.empty())
-						sprintf(tmp,"%s \"%s\"",tmp,regions[i].MAGXfileName.c_str());
-					if (!regions[i].MAGYfileName.empty())
-						sprintf(tmp,"%s \"%s\"",tmp,regions[i].MAGYfileName.c_str());
-					if (!regions[i].MAGZfileName.empty())
-						sprintf(tmp,"%s \"%s\"",tmp,regions[i].MAGZfileName.c_str());
-					if (!regions[i].BXYfileName.empty())
-						sprintf(tmp,"%s \"%s\"",tmp,regions[i].BXYfileName.c_str());
+				
+				std::vector<std::string> paths;
+				std::vector<std::string> fileNames;
+				std::vector<size_t> regionIds;
+				bool foundConflict = false;
+
+				for (size_t i = 0; !foundConflict && i < regions.size(); i++) {
+					Region_full& r = regions[i];
+
+					foundConflict = CheckFilenameConflict(r.fileName, i, paths, fileNames, regionIds);
+
+					if (!foundConflict && r.MAGXfileName != "") {
+						foundConflict = CheckFilenameConflict(r.MAGXfileName, i, paths, fileNames, regionIds);
+					}
+					if (!foundConflict && r.MAGYfileName != "") {
+						foundConflict = CheckFilenameConflict(r.MAGYfileName, i, paths, fileNames, regionIds);
+					}
+					if (!foundConflict && r.MAGZfileName != "") {
+						foundConflict = CheckFilenameConflict(r.MAGZfileName, i, paths, fileNames, regionIds);
+					}
+					if (!foundConflict && r.BXYfileName != "") {
+						foundConflict = CheckFilenameConflict(r.BXYfileName, i, paths, fileNames, regionIds);
+					}
 				}
-				int procId = StartProc(tmp, STARTPROC_BACKGROUND);
-				mApp->compressProcessHandle=OpenProcess(PROCESS_ALL_ACCESS, true, procId);
-				fileName=fileNameWithSyn7z;
+
+
+				if (!foundConflict) {
+					std::ostringstream commandLine;
+					commandLine << "compress.exe \"" << fileNameWithSyn << "\" Geometry.syn";
+					for (auto path : paths) {
+						commandLine << " \"" << path << "\"";
+					}
+
+
+					/*sprintf(tmp, "compress.exe \"%s\" Geometry.syn", fileNameWithSyn);
+					for (int i = 0; i<(int)regions.size(); i++) {
+						sprintf(tmp, "%s \"%s\"", tmp, regions[i].fileName.c_str());
+						if (!regions[i].MAGXfileName.empty())
+							sprintf(tmp, "%s \"%s\"", tmp, regions[i].MAGXfileName.c_str());
+						if (!regions[i].MAGYfileName.empty())
+							sprintf(tmp, "%s \"%s\"", tmp, regions[i].MAGYfileName.c_str());
+						if (!regions[i].MAGZfileName.empty())
+							sprintf(tmp, "%s \"%s\"", tmp, regions[i].MAGZfileName.c_str());
+						if (!regions[i].BXYfileName.empty())
+							sprintf(tmp, "%s \"%s\"", tmp, regions[i].BXYfileName.c_str());
+					}*/
+					int procId = StartProc(commandLine.str().c_str(), STARTPROC_BACKGROUND);
+					mApp->compressProcessHandle = OpenProcess(PROCESS_ALL_ACCESS, true, procId);
+					fileName = fileNameWithSyn7z;
+				}
+				else {
+					fileName=fileNameWithSyn;
+				}
 			} else {
 				GLMessageBox::Display("compress.exe (part of Synrad) not found.\n Will save as uncompressed SYN file.","Compressor not found",GLDLG_OK,GLDLG_ICONERROR);
 				fileName=fileNameWithSyn;
 			}
 		} else if (ok && isSYN) fileName=fileNameWithSyn;
 		if (!autoSave && !saveSelected) {
-			SetFileName(fileName);
+			SetCurrentFileName(fileName);
 			mApp->UpdateTitle();
 		}
 }
@@ -439,10 +480,11 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 				regionsToLoad = geom->LoadSYN(f, progressDlg, loaded_leakCache, &loaded_nbLeak, hitCache, &hitCacheSize, &version);
 				//copy temp values from geom to worker. They will be sent to shared memory in LoadTextures() which connects to dpHit
 				nbLeakTotal = geom->loaded_nbLeak;
-				nbHit = geom->loaded_nbHit;
+				nbMCHit = geom->loaded_nbMCHit;
+				nbHitEquiv = geom->loaded_nbHitEquiv;
 				nbDesorption = geom->loaded_nbDesorption;
-				nbAbsorption = geom->loaded_nbAbsorption;
-				distTraveledTotal = geom->loaded_distTraveledTotal;
+				nbAbsEquiv = geom->loaded_nbAbsEquiv;
+				distTraveled_total = geom->loaded_distTraveledTotal;
 				desorptionLimit = geom->loaded_desorptionLimit;
 				totalFlux = geom->loaded_totalFlux;
 				totalPower = geom->loaded_totalPower;
@@ -485,8 +527,8 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 			if (!insert) {
 				progressDlg->SetMessage("Reloading worker with new geometry...");
 				RealReload(); //for the loading of textures
-				geom->LoadProfileSYN(f, dpHit);
-				geom->LoadSpectrumSYN(f, dpHit);
+				geom->LoadProfileSYN(f, dpHit, version);
+				geom->LoadSpectrumSYN(f, dpHit, version);
 				SetLeakCache(loaded_leakCache, &loaded_nbLeak, dpHit);
 				SetHitCache(hitCache, &hitCacheSize, dpHit);
 				progressDlg->SetMessage("Loading texture values...");
@@ -659,13 +701,13 @@ void Worker::InnerStop(float appTime) {
 
 	stopTime =appTime;
 	simuTime+=appTime-startTime;
-	running  = false;
+	isRunning  = false;
 
 }
 
-void Worker::StartStop(float appTime,int mode) {
+void Worker::StartStop(float appTime) {
 
-	if( running )  {
+	if( isRunning )  {
 
 		// Stop
 		InnerStop(appTime);
@@ -684,13 +726,13 @@ void Worker::StartStop(float appTime,int mode) {
 		try {
 			if (needsReload) RealReload();
 			startTime = appTime;
-			running = true;
+			isRunning = true;
 
-			this->mode = mode;
+			//this->mode = mode;
 		
 			Start();
 		} catch(Error &e) {
-			running = false;
+			isRunning = false;
 			GLMessageBox::Display((char *)e.GetMsg(),"Error (Start)",GLDLG_OK,GLDLG_ICONERROR);
 			return;
 		}
@@ -737,10 +779,11 @@ void Worker::RealReload() { //Sharing geometry with workers
 		throw Error("Failed to create 'loader' dataport.\nMost probably out of memory.\nReduce number of subprocesses or texture size.");
 	}
 	progressDlg->SetMessage("Accessing dataport...");
-	AccessDataportTimed(loader,3000+nbProcess*(size_t)((double)loadSize/10000.0));
+	AccessDataportTimed(loader,(DWORD)(3000.0+(double)(nbProcess*loadSize)/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");
+	this->ontheflyParams;
 	geom->CopyGeometryBuffer((BYTE *)loader->buff,regions,materials,psi_distro,chi_distros,
-		parallel_polarization,generation_mode,lowFluxMode,lowFluxCutoff,newReflectionModel);
+		parallel_polarization,newReflectionModel,ontheflyParams);
 	progressDlg->SetMessage("Releasing dataport...");
 	ReleaseDataport(loader);
 
@@ -755,7 +798,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 	}
 
 	// Compute number of max desorption per process
-	if(AccessDataportTimed(dpControl,3000+nbProcess*(size_t)((double)loadSize/10000.0))) {
+	if(AccessDataportTimed(dpControl, (DWORD)(3000.0 + (double)(nbProcess*loadSize) / 10000.0))) {
 		SHCONTROL *m = (SHCONTROL *)dpControl->buff;
 		llong common = desorptionLimit / (llong)nbProcess;
 		size_t remain = (desorptionLimit % (llong)nbProcess);
@@ -802,66 +845,6 @@ void Worker::RealReload() { //Sharing geometry with workers
 	SAFE_DELETE(progressDlg);
 }
 
-void Worker::ChangeSimuParams() { //Send simulation mode changes to subprocesses without reloading the whole geometry
-	if (nbProcess == 0 || !geom->IsLoaded()) return;
-	if (needsReload) RealReload(); //Sync (number of) regions
-
-	GLProgress *progressDlg = new GLProgress("Creating dataport...", "Passing simulation mode to workers");
-	progressDlg->SetVisible(true);
-	progressDlg->SetProgress(0.0);
-	
-	// Create the temporary geometry shared structure
-	size_t loadSize = sizeof(SHMODE) + regions.size() * sizeof(bool);
-	Dataport *loader = CreateDataport(loadDpName, loadSize);
-	if (!loader) {
-		progressDlg->SetVisible(false);
-		SAFE_DELETE(progressDlg);
-		throw Error("Failed to create 'loader' dataport.\nMost probably out of memory.\nReduce number of subprocesses or texture size.");
-	}
-	progressDlg->SetMessage("Accessing dataport...");
-	AccessDataportTimed(loader, 1000);
-	progressDlg->SetMessage("Assembling parameters to pass...");
-	
-	BYTE* buffer = (BYTE*)loader->buff;
-
-	SHMODE* shMode = (SHMODE*)buffer;
-	shMode->generation_mode = generation_mode;
-	shMode->lowFluxCutoff = lowFluxCutoff;
-	shMode->lowFluxMode = lowFluxMode;
-	buffer += sizeof(SHMODE);
-
-	for (size_t i = 0; i < regions.size(); i++) {
-		WRITEBUFFER(regions[i].params.showPhotons, bool);
-	}
-
-	progressDlg->SetMessage("Releasing dataport...");
-	ReleaseDataport(loader);
-
-	// Pass to workers
-	progressDlg->SetMessage("Waiting for subprocesses to read mode...");
-	if (!ExecuteAndWait(COMMAND_UPDATEPARAMS, running?PROCESS_RUN:PROCESS_READY, running ? PROCESS_RUN : PROCESS_READY)) {
-		CLOSEDP(loader);
-		char errMsg[1024];
-		sprintf(errMsg, "Failed to send params to sub process:\n%s", GetErrorDetails());
-		GLMessageBox::Display(errMsg, "Warning (Updateparams)", GLDLG_OK, GLDLG_ICONWARNING);
-
-		progressDlg->SetVisible(false);
-		SAFE_DELETE(progressDlg);
-		return;
-	}
-
-	progressDlg->SetMessage("Closing dataport...");
-	CLOSEDP(loader);
-	progressDlg->SetVisible(false);
-	SAFE_DELETE(progressDlg);
-
-	//Reset leak and hit cache
-	leakCacheSize = 0;
-	SetLeakCache(leakCache, &leakCacheSize, dpHit); //will only write leakCacheSize
-	hitCacheSize = 0;
-	SetHitCache(hitCache, &hitCacheSize, dpHit); //will only write hitCacheSize
-}
-
 void Worker::ClearHits(bool noReload) {
 	try {
 		if (!noReload && needsReload) RealReload();
@@ -880,14 +863,16 @@ void Worker::ClearHits(bool noReload) {
 
 void Worker::ResetWorkerStats() {
 
-	nbAbsorption = 0;
+
+	nbAbsEquiv = 0.0;
 	nbDesorption = 0;
-	nbHit = 0;
+	nbMCHit = 0;
+	nbHitEquiv = 0.0;
 	nbLeakTotal = 0;
 
 	totalFlux = 0.0;
 	totalPower = 0.0;
-	distTraveledTotal = 0.0;
+	distTraveled_total = 0.0;
 	no_scans=1.0;
 
 }
@@ -897,21 +882,8 @@ void Worker::Start() {
 	if( nbProcess==0 )
 		throw Error("No sub process found. (Simulation not available)");
 
-	if( !ExecuteAndWait(COMMAND_START,PROCESS_RUN,mode) )
+	if( !ExecuteAndWait(COMMAND_START,PROCESS_RUN,ontheflyParams.generation_mode) ) //here the param is ignored
 		ThrowSubProcError();
-}
-
-std::vector<std::vector<double>> Worker::ImportCSV(FileReader *file){
-	std::vector<std::vector<double>> table;
-	do {
-		std::vector<double> currentRow;
-		do {
-			currentRow.push_back(file->ReadDouble());
-			if (!file->IsEol()) file->ReadKeyword(",");
-		} while (!file->IsEol());
-		table.push_back(currentRow);
-	} while (!file->IsEof());
-	return table;
 }
 
 void Worker::AddRegion(const char *fileName,int position) {
@@ -1005,6 +977,33 @@ void Worker::SaveRegion(char *fileName,int position,bool overwrite) {
 	}
 }
 
+bool Worker::CheckFilenameConflict(const std::string & newPath, const size_t & regionId, std::vector<std::string>& paths, std::vector<std::string>& fileNames, std::vector<size_t>& regionIds)
+{
+	std::string newFileName = FileUtils::GetFilename(newPath);
+	size_t firstFound = FirstIndex(fileNames, newFileName);
+
+	if (firstFound<fileNames.size()) { //There's already a file like this
+		if (paths[firstFound] != newPath) {
+			std::ostringstream msg;
+			msg << "You have multiple files with same names but different locations.\nThey can't be packed in the same syn7z (compressed) file.\n\n";
+			msg << "Region " << regionIds[firstFound] + 1 << ": " << paths[firstFound] << "\n";
+			msg << "Region " << regionId + 1 << ": " << newPath << "\n\n";
+			msg << "Until the name conflict is resolved, the file will be saved as an uncompressed syn file.";
+			GLMessageBox::Display(msg.str().c_str(), "Name conflict", GLDLG_OK, GLDLG_ICONWARNING);
+			return true;
+		}
+		else {
+			//Same file, simply don't add again
+		}
+	}
+	else {
+		paths.push_back(newPath);
+		fileNames.push_back(newFileName);
+		regionIds.push_back(regionId);
+	}
+	return false;
+}
+
 bool EndsWithPar(const char* s)
 {
   int ret = 0;
@@ -1035,11 +1034,12 @@ void Worker::SendHits() {
 
 			GlobalHitBuffer *gHits = (GlobalHitBuffer *)pBuff;
 
-			gHits->total.nbHit = nbHit;
+			gHits->total.nbMCHit = nbMCHit;
+			gHits->total.nbHitEquiv = nbHitEquiv;
 			gHits->nbLeakTotal = nbLeakTotal;
 			gHits->total.nbDesorbed = nbDesorption;
-			gHits->total.nbAbsorbed = nbAbsorption;
-			gHits->distTraveledTotal = distTraveledTotal;
+			gHits->total.nbAbsEquiv = nbAbsEquiv;
+			gHits->distTraveledTotal = distTraveled_total;
 			gHits->total.fluxAbs = totalFlux;
 			gHits->total.powerAbs = totalPower;
 

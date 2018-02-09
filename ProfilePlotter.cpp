@@ -20,6 +20,7 @@ GNU General Public License for more details.
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
 #include "Facet_shared.h"
+#include "GLApp/MathTools.h"
 
 #include <math.h>
 #include "Synrad.h"
@@ -27,7 +28,7 @@ GNU General Public License for more details.
 extern SynRad *mApp;
 
 static const char*profType[] = { "None","\201","\202","Angle" };
-static const char*profMode[] = { "MC Hits","SR Flux/cm\262","SR Power/cm\262" };
+static const char*profMode[] = { "MC Hits (incident)","MC Hits (absorbed)","SR Flux/cm\262 (incident)","SR Flux/cm\262 (absorbed)","SR Power/cm\262 (incident)","SR Power/cm\262 (absorbed)" };
 
 ProfilePlotter::ProfilePlotter() :GLWindow() {
 
@@ -110,13 +111,13 @@ ProfilePlotter::ProfilePlotter() :GLWindow() {
 void ProfilePlotter::SetBounds(int x, int y, int w, int h) {
 
 	chart->SetBounds(7, 5, w - 15, h - 85);
-	profCombo->SetBounds(7, h - 70, 117, 19);
-	selButton->SetBounds(130, h - 70, 80, 19);
-	addButton->SetBounds(215, h - 70, 80, 19);
-	removeButton->SetBounds(300, h - 70, 80, 19);
-	resetButton->SetBounds(385, h - 70, 80, 19);
-	logToggle->SetBounds(487, h - 70, 50, 19);
-	normToggle->SetBounds(537, h - 70, 105, 19);
+	profCombo->SetBounds(7, h - 70, 177, 19);
+	selButton->SetBounds(190, h - 70, 80, 19);
+	addButton->SetBounds(275, h - 70, 80, 19);
+	removeButton->SetBounds(360, h - 70, 80, 19);
+	resetButton->SetBounds(445, h - 70, 80, 19);
+	logToggle->SetBounds(547, h - 70, 50, 19);
+	normToggle->SetBounds(597, h - 70, 105, 19);
 	formulaText->SetBounds(7, h - 45, 525, 19);
 	formulaBtn->SetBounds(537, h - 45, 80, 19);
 	dismissButton->SetBounds(w - 100, h - 45, 90, 19);
@@ -133,8 +134,9 @@ void ProfilePlotter::Refresh() {
 	Geometry *geom = worker->GetGeometry();
 	size_t nb = geom->GetNbFacet();
 	size_t nbProf = 0;
+	size_t nbProfileModes = 6;
 	for (size_t i = 0; i < nb; i++)
-		if (geom->GetFacet(i)->sh.isProfile) nbProf += 3;
+		if (geom->GetFacet(i)->sh.isProfile) nbProf += nbProfileModes;
 	profCombo->Clear(); profCombo->SetSelectedIndex(-1);
 	if (nbProf) profCombo->SetSize(nbProf);
 	nbProf = 0;
@@ -142,9 +144,9 @@ void ProfilePlotter::Refresh() {
 		Facet *f = geom->GetFacet(i);
 		if (f->sh.isProfile) {
 			char tmp[128];
-			for (size_t mode = 0; mode < 3; mode++) { //MC hits, flux, power
+			for (size_t mode = 0; mode < nbProfileModes; mode++) { //MC hits, flux, power
 				sprintf(tmp, "F#%zd %s %s", i + 1, profType[f->sh.profileType], profMode[mode]);
-				profCombo->SetValueAt(nbProf, tmp, (int)(i * 3 + mode));
+				profCombo->SetValueAt(nbProf, tmp, (int)(i * nbProfileModes + mode));
 				profCombo->SetSelectedIndex(0);
 				nbProf++;
 			}
@@ -184,7 +186,7 @@ void ProfilePlotter::Update(float appTime, bool force) {
 	}
 
 	if ((appTime - lastUpdate > 1.0f || force) && nbView) {
-		if (worker->running) refreshViews();
+		if (worker->isRunning) refreshViews();
 		lastUpdate = appTime;
 	}
 
@@ -235,7 +237,7 @@ void ProfilePlotter::plot() {
 		v->Reset();
 	}
 	else {
-		if (nbView < 32) {
+		if (nbView < 50) {
 			v = new GLDataView();
 			v->SetName(formulaText->GetText());
 			v->userData1 = -1;
@@ -269,9 +271,9 @@ void ProfilePlotter::refreshViews() {
 
 	Geometry *geom = worker->GetGeometry();
 	GlobalHitBuffer *gHits = (GlobalHitBuffer *)buffer;
-	double nbAbs = (double)gHits->total.nbAbsorbed;
+	//double nbAbs = gHits->total.nbAbsEquiv;
 	double nbDes = (double)gHits->total.nbDesorbed;
-	double nbHit = (double)gHits->total.nbHit;
+	//double nbHit = (double)gHits->total.nbMCHit;
 
 	for (int i = 0; i < nbView; i++) {
 
@@ -280,26 +282,40 @@ void ProfilePlotter::refreshViews() {
 			Facet *f = geom->GetFacet(v->userData1);
 			int mode = v->userData2;
 			v->Reset();
-			llong   *profilePtr_MC = (llong *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer));
-			double  *profilePtr_flux = (double *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer) + PROFILE_SIZE * sizeof(llong));
-			double  *profilePtr_power = (double *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer) + PROFILE_SIZE*(sizeof(llong) + sizeof(double)));
+			ProfileSlice   *profile = (ProfileSlice *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer));
+			
 			llong max_MC;
 			double max_flux, max_power;
+			
 			double elemArea = f->sh.area / PROFILE_SIZE;
 
 			switch (normalize) {
 			case 0: //linear no normalization
-				if (mode == 0) { //mc hits
+				 //mc hits, put raw value
+				if (mode == 0) {
 					for (int j = 0; j < PROFILE_SIZE; j++)
-						v->Add((double)j, (double)profilePtr_MC[j], false);
+						v->Add((double)j, (double)profile[j].count_incident, false);
 				}
-				else if (mode == 1) { //flux
+				else if (mode == 1) { //mc hits, put raw value
 					for (int j = 0; j < PROFILE_SIZE; j++)
-						v->Add((double)j, profilePtr_flux[j] / worker->no_scans / elemArea, false);
+						v->Add((double)j, (double)profile[j].count_absorbed, false);
 				}
-				else if (mode == 2) { //power
+				//flux or power, normalize by no_scans and elemarea
+				else if (mode == 2) {
 					for (int j = 0; j < PROFILE_SIZE; j++)
-						v->Add((double)j, profilePtr_power[j] / worker->no_scans / elemArea, false);
+						v->Add((double)j, profile[j].flux_incident / worker->no_scans / elemArea, false);
+				}
+				else if (mode == 3) {
+					for (int j = 0; j < PROFILE_SIZE; j++)
+						v->Add((double)j, profile[j].flux_absorbed / worker->no_scans / elemArea, false);
+				}
+				else if (mode == 4) {
+					for (int j = 0; j < PROFILE_SIZE; j++)
+						v->Add((double)j, profile[j].power_incident / worker->no_scans / elemArea, false);
+				}
+				else if (mode == 5) {
+					for (int j = 0; j < PROFILE_SIZE; j++)
+						v->Add((double)j, profile[j].power_absorbed / worker->no_scans / elemArea, false);
 				}
 				break;
 
@@ -307,26 +323,50 @@ void ProfilePlotter::refreshViews() {
 				if (mode == 0) { //mc hits
 					max_MC = 0;
 					for (int j = 0; j < PROFILE_SIZE; j++)
-						if (profilePtr_MC[j] > max_MC) max_MC = profilePtr_MC[j];
+						if (profile[j].count_incident > max_MC) max_MC = profile[j].count_incident;
 					if (max_MC > 0)
 						for (int j = 0; j < PROFILE_SIZE; j++)
-							v->Add((double)j, ((double)profilePtr_MC[j] / (double)max_MC), false);
+							v->Add((double)j, ((double)profile[j].count_incident / (double)max_MC), false);
 				}
-				else if (mode == 1) { //flux
+				else if (mode == 1) { //mc hits
+					max_MC = 0;
+					for (int j = 0; j < PROFILE_SIZE; j++)
+						if (profile[j].count_absorbed > max_MC) max_MC = profile[j].count_absorbed;
+					if (max_MC > 0)
+						for (int j = 0; j < PROFILE_SIZE; j++)
+							v->Add((double)j, ((double)profile[j].count_absorbed / (double)max_MC), false);
+				}
+				else if (mode == 2) { //flux
 					max_flux = 0.0;
 					for (int j = 0; j < PROFILE_SIZE; j++)
-						if (profilePtr_flux[j] > max_flux) max_flux = profilePtr_flux[j];
+						if (profile[j].flux_incident > max_flux) max_flux = profile[j].flux_incident;
 					if (max_flux > 0.0)
 						for (int j = 0; j < PROFILE_SIZE; j++)
-							v->Add((double)j, profilePtr_flux[j] / max_flux, false);
+							v->Add((double)j, profile[j].flux_incident / max_flux, false);
 				}
-				else if (mode == 2) { //power
+				else if (mode == 3) { //flux
+					max_flux = 0.0;
+					for (int j = 0; j < PROFILE_SIZE; j++)
+						if (profile[j].flux_absorbed > max_flux) max_flux = profile[j].flux_absorbed;
+					if (max_flux > 0.0)
+						for (int j = 0; j < PROFILE_SIZE; j++)
+							v->Add((double)j, profile[j].flux_absorbed / max_flux, false);
+				}
+				else if (mode == 4) { //power
 					max_power = 0.0;
 					for (int j = 0; j < PROFILE_SIZE; j++)
-						if (profilePtr_power[j] > max_power) max_power = profilePtr_power[j];
+						if (profile[j].power_incident > max_power) max_power = profile[j].power_incident;
 					if (max_power > 0.0)
 						for (int j = 0; j < PROFILE_SIZE; j++)
-							v->Add((double)j, profilePtr_power[j] / max_power, false);
+							v->Add((double)j, profile[j].power_incident / max_power, false);
+				}
+				else if (mode == 5) { //power
+					max_power = 0.0;
+					for (int j = 0; j < PROFILE_SIZE; j++)
+						if (profile[j].power_absorbed > max_power) max_power = profile[j].power_absorbed;
+					if (max_power > 0.0)
+						for (int j = 0; j < PROFILE_SIZE; j++)
+							v->Add((double)j, profile[j].power_absorbed / max_power, false);
 				}
 				break;
 			}
@@ -343,13 +383,13 @@ void ProfilePlotter::refreshViews() {
 					if (f->sh.isVolatile) {
 						FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->sh.hitOffset);
 						double z = geom->GetVertex(f->indices[0])->z;
-						v->Add(z, (double)(fCount->nbAbsorbed) / nbDes, false);
+						v->Add(z, fCount->nbAbsEquiv / nbDes, false);
 					}
 				}
 				// Last
 				Facet *f = geom->GetFacet(28);
 				FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->sh.hitOffset);
-				double fnbAbs = (double)fCount->nbAbsorbed;
+				double fnbAbs = fCount->nbAbsEquiv;
 				v->Add(1000.0, fnbAbs / nbDes, false);
 				v->CommitChange();
 			}
@@ -376,7 +416,7 @@ void ProfilePlotter::addView(int facet, int mode) {
 		GLMessageBox::Display("Profile already plotted", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		return;
 	}
-	if (nbView < 32) {
+	if (nbView < 50) {
 		Facet *f = geom->GetFacet(facet);
 		GLDataView *v = new GLDataView();
 		sprintf(tmp, "F#%d %s %s", facet + 1, profType[f->sh.profileType], profMode[mode]);
@@ -434,7 +474,7 @@ void ProfilePlotter::ProcessMessage(GLComponent *src, int message) {
 			int idx = profCombo->GetSelectedIndex();
 			if (idx >= 0) {
 				geom->UnselectAll();
-				int facetId = (int)((double)profCombo->GetUserValueAt(idx) / 3.0);
+				int facetId = (int)((double)profCombo->GetUserValueAt(idx) / 6.0);
 				geom->GetFacet(facetId)->selected = true;
 				mApp->UpdateFacetParams(true);
 				geom->UpdateSelection();
@@ -445,8 +485,8 @@ void ProfilePlotter::ProcessMessage(GLComponent *src, int message) {
 		else if (src == addButton) {
 			int idx = profCombo->GetSelectedIndex();
 			if (idx >= 0) {
-				int facetId = (int)((double)profCombo->GetUserValueAt(idx) / 3.0);
-				addView(facetId, profCombo->GetUserValueAt(idx) % 3);
+				int facetId = (int)((double)profCombo->GetUserValueAt(idx) / 6.0);
+				addView(facetId, profCombo->GetUserValueAt(idx) % 6);
 				refreshViews();
 			}
 			
@@ -454,8 +494,8 @@ void ProfilePlotter::ProcessMessage(GLComponent *src, int message) {
 		else if (src == removeButton) {
 			int idx = profCombo->GetSelectedIndex();
 			if (idx >= 0) {
-				int facetId = (int)((double)profCombo->GetUserValueAt(idx) / 3.0);
-				remView(facetId, profCombo->GetUserValueAt(idx) % 3);
+				int facetId = (int)((double)profCombo->GetUserValueAt(idx) / 6.0);
+				remView(facetId, profCombo->GetUserValueAt(idx) % 6);
 				refreshViews();
 			}
 		}
