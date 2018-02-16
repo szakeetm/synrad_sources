@@ -56,21 +56,21 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 	t0 = GetTick();
 #endif
 	SetState(NULL, "Waiting for 'hits' dataport access...", false, true);
-	sHandle->lastUpdateOK = AccessDataportTimed(dpHit, timeout);
+	sHandle->lastHitUpdateOK = AccessDataportTimed(dpHit, timeout);
 	SetState(NULL, "Updating MC hits...", false, true);
-	if (!sHandle->lastUpdateOK) return;
+	if (!sHandle->lastHitUpdateOK) return;
 
 	buffer = (BYTE*)dpHit->buff;
 	gHits = (GlobalHitBuffer *)buffer;
 
 	// Global hits and leaks
-	gHits->total.nbMCHit += sHandle->tmpCount.nbMCHit;
-	gHits->total.nbHitEquiv += sHandle->tmpCount.nbHitEquiv;
-	gHits->total.nbAbsEquiv += sHandle->tmpCount.nbAbsEquiv;
-	gHits->total.nbDesorbed += sHandle->tmpCount.nbDesorbed;
+	gHits->total.nbMCHit += sHandle->tmpGlobalCount.nbMCHit;
+	gHits->total.nbHitEquiv += sHandle->tmpGlobalCount.nbHitEquiv;
+	gHits->total.nbAbsEquiv += sHandle->tmpGlobalCount.nbAbsEquiv;
+	gHits->total.nbDesorbed += sHandle->tmpGlobalCount.nbDesorbed;
 	gHits->distTraveledTotal += sHandle->distTraveledSinceUpdate;
-	gHits->total.fluxAbs += sHandle->tmpCount.fluxAbs;
-	gHits->total.powerAbs += sHandle->tmpCount.powerAbs;
+	gHits->total.fluxAbs += sHandle->tmpGlobalCount.fluxAbs;
+	gHits->total.powerAbs += sHandle->tmpGlobalCount.powerAbs;
 
 	oldMin = gHits->hitMin;
 	oldMax = gHits->hitMax;
@@ -256,6 +256,7 @@ void PerformTeleport(SubprocessFacet& collidedFacet) {
 	increment.power_absorbed = 0.0;
 	increment.power_incident = sHandle->dP;
 	ProfileFacet(collidedFacet, sHandle->energy, increment); //Put here since removed from Intersect() routine
+	LogHit(&collidedFacet);
 
 	collidedFacet.counter.nbMCHit++;//destination->counter.nbMCHit++;
 	collidedFacet.counter.nbHitEquiv += sHandle->oriRatio;
@@ -289,8 +290,8 @@ bool SimulationMCStep(const size_t& nbStep) {
 			}
 			else {
 				// Record incident
-				sHandle->tmpCount.nbMCHit++;
-				sHandle->tmpCount.nbHitEquiv += sHandle->oriRatio;
+				sHandle->tmpGlobalCount.nbMCHit++;
+				sHandle->tmpGlobalCount.nbHitEquiv += sHandle->oriRatio;
 				collidedFacet.counter.nbMCHit++;
 				collidedFacet.counter.nbHitEquiv += sHandle->oriRatio;
 				if (collidedFacet.sh.superDest) {	// Handle super structure link facet
@@ -305,6 +306,7 @@ bool SimulationMCStep(const size_t& nbStep) {
 					increment.power_absorbed = 0.0;
 					increment.power_incident = sHandle->dP;
 					ProfileFacet(collidedFacet, sHandle->energy, increment);
+					LogHit(&collidedFacet);
 					if (collidedFacet.texture && collidedFacet.sh.countTrans) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
 				}
 				else { //Not superDest or Teleport
@@ -516,6 +518,7 @@ bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingP
 	increment.power_absorbed = sHandle->dP*stickingProbability;
 	increment.power_incident = sHandle->dP;
 	ProfileFacet(collidedFacet, sHandle->energy, increment);
+	LogHit(&collidedFacet);
 	//Absorbed part recorded, let's see how much is left
 	double survivalProbability = 1.0 - stickingProbability;
 	sHandle->oriRatio *= survivalProbability;
@@ -562,8 +565,8 @@ bool DoOldRegularReflection(SubprocessFacet& collidedFacet, const int& reflType,
 bool StartFromSource() {
 
 	// Check end of simulation
-	if (sHandle->desorptionLimit > 0) {
-		if (sHandle->totalDesorbed >= sHandle->desorptionLimit) {
+	if (sHandle->ontheflyParams.desorptionLimit > 0) {
+		if (sHandle->totalDesorbed >= sHandle->ontheflyParams.desorptionLimit / sHandle->ontheflyParams.nbProcess) {
 			sHandle->lastHitFacet = NULL;
 			return false;
 		}
@@ -592,7 +595,7 @@ bool StartFromSource() {
 	do {
 		photon = GeneratePhoton(pointIdLocal, sourceRegion, sHandle->ontheflyParams.generation_mode,
 			sHandle->psi_distro, sHandle->chi_distros[sourceRegion->params.polarizationCompIndex],
-			sHandle->parallel_polarization, sHandle->tmpCount.nbDesorbed == 0);
+			sHandle->parallel_polarization, sHandle->tmpGlobalCount.nbDesorbed == 0);
 		validEnergy = (photon.energy >= sourceRegion->params.energy_low_eV && photon.energy <= sourceRegion->params.energy_hi_eV);
 		if (!validEnergy && photon.energy>0.0) {
 			retries++;
@@ -636,9 +639,9 @@ bool StartFromSource() {
 
 	// Count
 	sHandle->totalDesorbed++;
-	sHandle->tmpCount.fluxAbs += sHandle->dF;
-	sHandle->tmpCount.powerAbs += sHandle->dP;
-	sHandle->tmpCount.nbDesorbed++;
+	sHandle->tmpGlobalCount.fluxAbs += sHandle->dF;
+	sHandle->tmpGlobalCount.powerAbs += sHandle->dP;
+	sHandle->tmpGlobalCount.nbDesorbed++;
 
 	sHandle->lastHitFacet = NULL; //Photon originates from the volume, not from a facet
 
@@ -746,6 +749,7 @@ bool PerformBounce_old(SubprocessFacet& collidedFacet, const int& reflType, cons
 	increment.power_absorbed = 0.0;
 	increment.power_incident = sHandle->dP;
 	ProfileFacet(collidedFacet, sHandle->energy, increment);
+	LogHit(&collidedFacet);
 	if (collidedFacet.texture && collidedFacet.sh.countRefl) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
 	return true;
 }
@@ -858,7 +862,7 @@ void Stick(SubprocessFacet& collidedFacet) {
 	collidedFacet.counter.nbAbsEquiv+=1.0;
 	collidedFacet.counter.fluxAbs += sHandle->dF;
 	collidedFacet.counter.powerAbs += sHandle->dP;
-	sHandle->tmpCount.nbAbsEquiv+=1.0;
+	sHandle->tmpGlobalCount.nbAbsEquiv+=1.0;
 	//sHandle->distTraveledSinceUpdate+=sHandle->distTraveledCurrentParticle;
 	//sHandle->counter.nbAbsorbed++;
 	//sHandle->counter.fluxAbs+=sHandle->dF;
@@ -872,6 +876,7 @@ void Stick(SubprocessFacet& collidedFacet) {
 	increment.power_absorbed = sHandle->dP;
 	increment.power_incident = sHandle->dP;
 	ProfileFacet(collidedFacet, sHandle->energy, increment);
+	LogHit(&collidedFacet);
 	if (collidedFacet.texture && collidedFacet.sh.countAbs) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
 }
 
@@ -891,6 +896,7 @@ void SubprocessFacet::RegisterTransparentPass()
 	increment.power_absorbed = 0.0;
 	increment.power_incident = sHandle->dP;
 	ProfileFacet(*this, sHandle->energy, increment); //count profile
+	LogHit(this);
 	if (this->texture && this->sh.countTrans) RecordHitOnTexture(*this, sHandle->dF, sHandle->dP); //count texture
 	if (this->direction && this->sh.countDirection) RecordDirectionVector(*this);
 }
@@ -931,4 +937,51 @@ void ProfileFacet(SubprocessFacet &f, const double &energy, const ProfileSlice& 
 
 void SubprocessFacet::ResetCounter() {
 	memset(&counter, 0, sizeof(counter));
+}
+
+void UpdateLog(Dataport * dpLog, DWORD timeout)
+{
+	if (sHandle->tmpParticleLog.size()) {
+		double t0, t1;
+		t0 = GetTick();
+		SetState(NULL, "Waiting for 'dpLog' dataport access...", false, true);
+		sHandle->lastLogUpdateOK = AccessDataportTimed(dpLog, timeout);
+		SetState(NULL, "Updating Log...", false, true);
+		if (!sHandle->lastLogUpdateOK) return;
+
+		size_t* logBuff = (size_t*)dpLog->buff;
+		size_t recordedLogSize = *logBuff;
+		ParticleLoggerItem* logBuff2 = (ParticleLoggerItem*)(logBuff + 1);
+
+		size_t writeNb;
+		if (recordedLogSize > sHandle->ontheflyParams.logLimit) writeNb = 0;
+		else writeNb = Min(sHandle->tmpParticleLog.size(), sHandle->ontheflyParams.logLimit - recordedLogSize);
+		memcpy(&logBuff2[recordedLogSize], &sHandle->tmpParticleLog[0], writeNb * sizeof(ParticleLoggerItem)); //Knowing that vector memories are contigious
+		(*logBuff) += writeNb;
+		ReleaseDataport(dpLog);
+		sHandle->tmpParticleLog.clear();
+		extern char* GetSimuStatus();
+		SetState(NULL, GetSimuStatus(), false, true);
+
+#ifdef _DEBUG
+		t1 = GetTick();
+		printf("Update log: %f us\n", (t1 - t0)*1000000.0);
+#endif
+	}
+}
+
+void LogHit(SubprocessFacet * f)
+{
+	if (sHandle->ontheflyParams.enableLogging &&
+		sHandle->ontheflyParams.logFacetId == f->globalId &&
+		sHandle->tmpParticleLog.size() < (sHandle->ontheflyParams.logLimit / sHandle->ontheflyParams.nbProcess)) {
+		ParticleLoggerItem log;
+		log.facetHitPosition = Vector2d(f->colU, f->colV);
+		std::tie(log.hitTheta, log.hitPhi) = CartesianToPolar(f->sh.nU, f->sh.nV, f->sh.N);
+		log.oriRatio = sHandle->oriRatio;
+		log.energy = sHandle->energy;
+		log.dF = sHandle->dF;
+		log.dP = sHandle->dP;
+		sHandle->tmpParticleLog.push_back(log);
+	}
 }

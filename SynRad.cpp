@@ -43,6 +43,7 @@ GNU General Public License for more details.
 #include "SmartSelection.h"
 #include "VertexCoordinates.h"
 #include "FormulaEditor.h"
+#include "ParticleLogger.h"
 
 //Hard-coded identifiers, update these on new release
 //---------------------------------------------------
@@ -129,7 +130,7 @@ SynRad *mApp;
 #define MENU_REGIONS_SHOWNONE		990
 #define MENU_REGIONS_SHOWALL		991
 
-#define MENU_TOOLS_SPECTRUMPLOTTER 403
+#define MENU_TOOLS_SPECTRUMPLOTTER 405
 
 #define MENU_FACET_MESH        360
 
@@ -962,7 +963,7 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 
 		if (recordE) facetProfileCombo->SetSelectedIndex(f0->sh.profileType); else facetProfileCombo->SetSelectedValue("...");
 		if (recordSpectrumE) facetSpectrumToggle->SetState(f0->sh.recordSpectrum); else facetSpectrumToggle->SetState(2);
-		facetSpectrumToggle->AllowMixedState(!hasSpectrumE);
+		facetSpectrumToggle->AllowMixedState(!recordSpectrumE);
 		if (superDestE) {
 			if (f0->sh.superDest == 0) {
 				facetSuperDest->SetText("no");
@@ -1591,6 +1592,7 @@ void SynRad::StartStopSimulation() {
 	worker.StartStop(m_fTime);
 	UpdatePlotters();
 	if (autoUpdateFormulas && formulaEditor && formulaEditor->IsVisible()) formulaEditor->ReEvaluate();
+	if (particleLogger && particleLogger->IsVisible()) particleLogger->UpdateStatus();
 
 	// Frame rate measurement
 	lastMeasTime = m_fTime;
@@ -2005,7 +2007,10 @@ void SynRad::BuildPipe(double ratio, int steps) {
 			return;
 		}
 	}
-
+	
+	std::ostringstream temp;
+	temp << "PIPE" << L / R;
+	geom->UpdateName(temp.str().c_str());
 	ResetSimulation(false);
 	ClearFormulas();
 	ClearAllSelections();

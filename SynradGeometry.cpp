@@ -292,7 +292,7 @@ void  SynradGeometry::BuildPipe(double L, double R, double s, int step) {
 
 	//mApp->ClearAllSelections();
 	//mApp->ClearAllViews();
-	sprintf(sh.name, "PIPE%g", L / R);
+	
 
 	int nbDecade = 0;
 	int nbTF = 9 * nbDecade;

@@ -56,13 +56,16 @@ extern SynRad*mApp;
 Worker::Worker() {
 
 	pid = _getpid();
-	sprintf(ctrlDpName,"SRDCTRL%d",pid);
-	sprintf(loadDpName,"SRDLOAD%d",pid);
-	sprintf(hitsDpName,"SRDHITS%d",pid);
-	sprintf(materialsDpName,"SRDMATS%d",pid);
-	nbProcess = 0;
-	desorptionLimit = 0;
+	sprintf(ctrlDpName,"SNRDCTRL%d",pid);
+	sprintf(loadDpName,"SNRDLOAD%d",pid);
+	sprintf(hitsDpName,"SNRDHITS%d",pid);
+	sprintf(logDpName, "SNRDLOG%d", pid);
+	sprintf(materialsDpName,"SNRDMATS%d",pid);
+	
 	distTraveled_total=0.0;
+	ontheflyParams.nbProcess = 0;
+	ontheflyParams.enableLogging = false;
+	ontheflyParams.desorptionLimit = 0;
 	ontheflyParams.lowFluxCutoff = 1E-7;
 	ontheflyParams.lowFluxMode = false;
 	ontheflyParams.generation_mode=SYNGEN_MODE_FLUXWISE;
@@ -73,6 +76,7 @@ Worker::Worker() {
 	
 	dpControl = NULL;
 	dpHit = NULL;
+	dpLog = NULL;
 	hitCacheSize = 0;
 	leakCacheSize = 0;
 
@@ -183,7 +187,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool sa
 					GLMessageBox::Display((char*)e.GetMsg(),"Error in Worker::SaveGeometry()",GLDLG_OK,GLDLG_ICONERROR);
 					return;
 				}
-				geom->loaded_desorptionLimit = desorptionLimit;
+				geom->loaded_desorptionLimit = ontheflyParams.desorptionLimit;
 				if( isTXT ) geom->SaveTXT(f,dpHit,saveSelected);
 				else if( isSYN || isSYN7Z ) {
 					//Save regions
@@ -485,7 +489,7 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 				nbDesorption = geom->loaded_nbDesorption;
 				nbAbsEquiv = geom->loaded_nbAbsEquiv;
 				distTraveled_total = geom->loaded_distTraveledTotal;
-				desorptionLimit = geom->loaded_desorptionLimit;
+				ontheflyParams.desorptionLimit = geom->loaded_desorptionLimit;
 				totalFlux = geom->loaded_totalFlux;
 				totalPower = geom->loaded_totalPower;
 				no_scans = geom->loaded_no_scans;
@@ -568,7 +572,7 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 			if (!insert) {
 				geom->LoadGEO(f, progressDlg, &version);
 				SAFE_DELETE(f);
-				desorptionLimit = 0;
+				ontheflyParams.desorptionLimit = 0;
 				progressDlg->SetMessage("Reloading worker with new geometry...");
 				RealReload();
 				strcpy(fullFileName,fileName);
@@ -636,7 +640,7 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 			progressDlg->SetMessage("Building geometry...");
 			if (!insert) {
 				geom->LoadXML_geom(loadXML, this, progressDlg);
-				desorptionLimit = 0;
+				ontheflyParams.desorptionLimit = 0;
 				progressDlg->SetMessage("Reloading worker with new geometry...");
 				RealReload();
 				geom->UpdateName(fileName);
@@ -748,7 +752,7 @@ void Worker::StartStop(float appTime) {
 
 void Worker::RealReload() { //Sharing geometry with workers
 
-	if(nbProcess==0) return;
+	if(ontheflyParams.nbProcess==0) return;
 
 	GLProgress *progressDlg = new GLProgress("Asking subprocesses to clear geometry...","Passing Geometry to workers");
 	progressDlg->SetVisible(true);
@@ -756,6 +760,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 
 	// Clear geometry
 	CLOSEDP(dpHit);
+	CLOSEDP(dpLog);
 	std::string lastError;
 	if (!ExecuteAndWait(COMMAND_CLOSE, PROCESS_READY)) {
 		progressDlg->SetVisible(false);
@@ -772,6 +777,12 @@ void Worker::RealReload() { //Sharing geometry with workers
 	progressDlg->SetMessage("Creating dataport...");
 	// Create the temporary geometry shared structure
 	size_t loadSize = geom->GetGeometrySize(regions, materials, psi_distro, chi_distros, parallel_polarization);
+	if (ontheflyParams.enableLogging) {
+		dpLog = CreateDataport(logDpName, sizeof(size_t) + sizeof(ParticleLoggerItem)*ontheflyParams.logLimit);
+		if (!dpLog)
+			throw Error("Failed to create 'dpLog' dataport.\nMost probably out of memory.\nReduce number of logged particles in Particle Logger.");
+		//*((size_t*)dpLog->buff) = 0; //Automatic 0-filling
+	}
 	Dataport *loader = CreateDataport(loadDpName,loadSize);
 	if (!loader) {
 		progressDlg->SetVisible(false);
@@ -779,7 +790,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 		throw Error("Failed to create 'loader' dataport.\nMost probably out of memory.\nReduce number of subprocesses or texture size.");
 	}
 	progressDlg->SetMessage("Accessing dataport...");
-	AccessDataportTimed(loader,(DWORD)(3000.0+(double)(nbProcess*loadSize)/10000.0));
+	AccessDataportTimed(loader,(DWORD)(3000.0+(double)(ontheflyParams.nbProcess*loadSize)/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");
 	this->ontheflyParams;
 	geom->CopyGeometryBuffer((BYTE *)loader->buff,regions,materials,psi_distro,chi_distros,
@@ -798,11 +809,11 @@ void Worker::RealReload() { //Sharing geometry with workers
 	}
 
 	// Compute number of max desorption per process
-	if(AccessDataportTimed(dpControl, (DWORD)(3000.0 + (double)(nbProcess*loadSize) / 10000.0))) {
+	if(AccessDataportTimed(dpControl, (DWORD)(3000.0 + (double)(ontheflyParams.nbProcess*loadSize) / 10000.0))) {
 		SHCONTROL *m = (SHCONTROL *)dpControl->buff;
-		llong common = desorptionLimit / (llong)nbProcess;
-		size_t remain = (desorptionLimit % (llong)nbProcess);
-		for(size_t i=0;i<nbProcess;i++) {
+		llong common = ontheflyParams.desorptionLimit / ontheflyParams.nbProcess;
+		size_t remain = (ontheflyParams.desorptionLimit % ontheflyParams.nbProcess);
+		for(size_t i=0;i<ontheflyParams.nbProcess;i++) {
 			m->cmdParam2[i] = common;
 			if(i<remain) m->cmdParam2[i]++;
 		}
@@ -879,7 +890,7 @@ void Worker::ResetWorkerStats() {
 
 void Worker::Start() {
 
-	if( nbProcess==0 )
+	if(ontheflyParams.nbProcess==0 )
 		throw Error("No sub process found. (Simulation not available)");
 
 	if( !ExecuteAndWait(COMMAND_START,PROCESS_RUN,ontheflyParams.generation_mode) ) //here the param is ignored

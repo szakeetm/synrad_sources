@@ -109,7 +109,7 @@ void SpectrumPlotter::SetBounds(int x,int y,int w,int h) {
 	selButton->SetBounds(180,h-45,80,19);
 	addButton->SetBounds(265,h-45,80,19);
 	removeButton->SetBounds(350,h-45,80,19);
-	resetButton->SetBounds(235,h-45,80,19);
+	resetButton->SetBounds(435,h-45,80,19);
 	logToggle->SetBounds(537,h-45,50,19);
 	normToggle->SetBounds(587,h-45,105,19);
 	dismissButton->SetBounds(w-100,h-45,90,19);

@@ -39,6 +39,7 @@
 
 static Dataport *dpControl=NULL;
 static Dataport *dpHit=NULL;
+static Dataport *dpLog = NULL;
 static int       prIdx;
 static size_t    prState;
 static size_t    prParam;
@@ -47,6 +48,7 @@ static DWORD     hostProcessId;
 static char      ctrlDpName[32];
 static char      loadDpName[32];
 static char      hitsDpName[32];
+static char		 logDpName[32];
 static char      materialsDpName[32];
 
 bool end = false;
@@ -119,7 +121,7 @@ char *GetSimuStatus() {
 
   static char ret[128];
   llong count = sHandle->totalDesorbed;
-  llong max   = sHandle->desorptionLimit;
+  llong max   = sHandle->ontheflyParams.desorptionLimit / sHandle->ontheflyParams.nbProcess;
 
       if( max!=0 ) {
         double percent = (double)(count)*100.0 / (double)(max);
@@ -147,7 +149,7 @@ void Load() {
   size_t hSize;
 
   // Load geometry
-  loader = OpenDataport(loadDpName,prParam);
+  loader = OpenDataport(loadDpName/*,prParam*/);
   if( !loader ) {
     char err[512];
     sprintf(err,"Failed to connect to 'loader' dataport %s (%zd Bytes)",loadDpName, prParam);
@@ -163,9 +165,23 @@ void Load() {
   }
   CLOSEDP(loader);
 
+  //Connect to log dataport
+  if (sHandle->ontheflyParams.enableLogging) {
+	  dpLog = OpenDataport(logDpName/*, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem)*/);
+	  if (!dpLog) {
+		  char err[512];
+		  sprintf(err, "Failed to connect to 'dpLog' dataport %s (%zd Bytes)", logDpName, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem));
+		  SetErrorSub(err);
+		  sHandle->loadOK = false;
+		  return;
+	  }
+	  //*((size_t*)dpLog->buff) = 0; //Autofill with 0. Besides, we don't write without access!
+  }
+
+
   // Connect to hit dataport
   hSize = GetHitsSize();
-  dpHit = OpenDataport(hitsDpName,hSize);
+  dpHit = OpenDataport(hitsDpName/*,hSize*/);
   if( !dpHit ) {
     SetErrorSub("Failed to connect to 'hits' dataport");
     return;
@@ -180,7 +196,7 @@ bool UpdateParams() {
 	Dataport *loader;
 
 	// Load geometry
-	loader = OpenDataport(loadDpName, prParam);
+	loader = OpenDataport(loadDpName/*, prParam*/);
 	if (!loader) {
 		char err[512];
 		sprintf(err, "Failed to connect to 'loader' dataport %s (%zd Bytes)", loadDpName, prParam);
@@ -190,12 +206,24 @@ bool UpdateParams() {
 
 	printf("Connected to %s\n", loadDpName);
 
-	if (!UpdateOntheflySimuParams(loader)) {
-		CLOSEDP(loader);
-		return false;
-	}
+	bool result = UpdateOntheflySimuParams(loader);
 	CLOSEDP(loader);
-	return true;
+
+	if (sHandle->ontheflyParams.enableLogging) {
+		dpLog = OpenDataport(logDpName/*, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem)*/);
+		if (!dpLog) {
+			char err[512];
+			sprintf(err, "Failed to connect to 'dpLog' dataport %s (%zd Bytes)", logDpName, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem));
+			SetErrorSub(err);
+			return false;
+		}
+		//*((size_t*)dpLog->buff) = 0; //Autofill with 0, besides we would need access first
+	}
+	sHandle->tmpParticleLog.clear();
+	sHandle->tmpParticleLog.shrink_to_fit();
+	if (sHandle->ontheflyParams.enableLogging) sHandle->tmpParticleLog.reserve(sHandle->ontheflyParams.logLimit / sHandle->ontheflyParams.nbProcess);
+
+	return result;
 }
 
 int main(int argc,char* argv[])
@@ -210,12 +238,13 @@ int main(int argc,char* argv[])
   hostProcessId=atoi(argv[1]);
   prIdx = atoi(argv[2]);
 
-  sprintf(ctrlDpName,"SRDCTRL%s",argv[1]);
-  sprintf(loadDpName,"SRDLOAD%s",argv[1]);
-  sprintf(hitsDpName,"SRDHITS%s",argv[1]);
-  sprintf(materialsDpName,"SRDMATS%s",argv[1]);
+  sprintf(ctrlDpName,"SNRDCTRL%s",argv[1]);
+  sprintf(loadDpName,"SNRDLOAD%s",argv[1]);
+  sprintf(hitsDpName,"SNRDHITS%s",argv[1]);
+  sprintf(logDpName, "SNRDLOG%s", argv[1]);
+  sprintf(materialsDpName,"SNRDMATS%s",argv[1]);
 
-  dpControl = OpenDataport(ctrlDpName,sizeof(SHCONTROL));
+  dpControl = OpenDataport(ctrlDpName/*,sizeof(SHCONTROL)*/);
   if( !dpControl ) {
     printf("Usage: Cannot connect to SRDCTRL%s\n",argv[1]);
     return 1;
@@ -238,7 +267,7 @@ int main(int argc,char* argv[])
         printf("COMMAND: LOAD (%zd,%I64d)\n",prParam,prParam2);
         Load();
         if( sHandle->loadOK ) {
-          sHandle->desorptionLimit = prParam2; // 0 for endless
+          //sHandle->desorptionLimit = prParam2; // 0 for endless
           SetReady();
         }
         break;
@@ -249,6 +278,13 @@ int main(int argc,char* argv[])
 			  SetState(prParam, GetSimuStatus());
 		  }
 		  break;
+
+	  case COMMAND_RELEASEDPLOG:
+		  printf("COMMAND: UPDATEPARAMS (%zd,%I64d)\n", prParam, prParam2);
+		  CLOSEDP(dpLog);
+		  SetState(prParam, GetSimuStatus());
+		  break;
+
 
       case COMMAND_START:
         printf("COMMAND: START (%zd,%I64d)\n",prParam,prParam2);
@@ -265,9 +301,9 @@ int main(int argc,char* argv[])
 
       case COMMAND_PAUSE:
         printf("COMMAND: PAUSE (%zd,%I64d)\n",prParam,prParam2);
-        if( !sHandle->lastUpdateOK ) {
+        if( !sHandle->lastHitUpdateOK ) {
           // Last update not successful, retry with a longer tomeout
-			if (dpHit && (GetLocalState() != PROCESS_ERROR)) UpdateHits(dpHit,prIdx,60000);
+			if (dpHit && (GetLocalState() != PROCESS_ERROR)) UpdateHits(dpHit,dpLog,prIdx,60000);
         }
         SetReady();
         break;
@@ -293,7 +329,7 @@ int main(int argc,char* argv[])
       case PROCESS_RUN:
         SetStatus(GetSimuStatus()); //update hits only
         eos = SimulationRun();      // Run during 1 sec
-        if(dpHit && (GetLocalState()!=PROCESS_ERROR)) UpdateHits(dpHit,prIdx,20); // Update hit with 20ms timeout. If fails, probably an other subprocess is updating, so we'll keep calculating and try it later (latest when the simulation is stopped).
+        if(dpHit && (GetLocalState()!=PROCESS_ERROR)) UpdateHits(dpHit,dpLog,prIdx,20); // Update hit with 20ms timeout. If fails, probably an other subprocess is updating, so we'll keep calculating and try it later (latest when the simulation is stopped).
         if(eos) {
           if( GetLocalState()!=PROCESS_ERROR ) {
             // Max desorption reached

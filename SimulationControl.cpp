@@ -99,8 +99,9 @@ void ClearSimulation() {
 				delete f->spectrum;
 				SAFE_FREE(f->direction);
 				//SAFE_FREE(f->fullElem);
+				delete(f); f = NULL;
 			}
-			SAFE_FREE(f);
+			
 		}
 		SAFE_FREE(sHandle->str[j].facets);
 		if (sHandle->str[j].aabbTree) {
@@ -185,12 +186,12 @@ bool LoadSimulation(Dataport *loader) {
 
 	GeomProperties* shGeom = (GeomProperties *)buffer;
 	if (shGeom->nbSuper > MAX_STRUCT) {
-		ReleaseDataport(loader);
+		//ReleaseDataport(loader);
 		SetErrorSub("Too many structures");
 		return false;
 	}
 	if (shGeom->nbSuper <= 0) {
-		ReleaseDataport(loader);
+		//ReleaseDataport(loader);
 		SetErrorSub("No structures");
 		return false;
 	}
@@ -436,7 +437,7 @@ bool LoadSimulation(Dataport *loader) {
 			if ((f->sh.superDest - 1) >= sHandle->nbSuper || f->sh.superDest < 0) {
 				// Geometry error
 				ClearSimulation();
-				ReleaseDataport(loader);
+				//ReleaseDataport(loader);
 				sprintf(err, "Invalid structure (wrong link on F#%zd)", i + 1);
 				SetErrorSub(err);
 				return false;
@@ -570,7 +571,7 @@ bool LoadSimulation(Dataport *loader) {
 bool UpdateOntheflySimuParams(Dataport *loader) {
 	// Connect the dataport
 	if (!AccessDataportTimed(loader, 2000)) {
-		SetErrorSub("Failed to connect to DP");
+		SetErrorSub("Failed to connect to loader DP");
 		return false;
 	}
 	BYTE* buffer = (BYTE *)loader->buff;
@@ -593,10 +594,10 @@ bool UpdateOntheflySimuParams(Dataport *loader) {
 	return true;
 }
 
-void UpdateHits(Dataport *dpHit, int prIdx, DWORD timeout) {
+void UpdateHits(Dataport *dpHit, Dataport* dpLog, int prIdx, DWORD timeout) {
 
 	UpdateMCHits(dpHit, prIdx, timeout);
-
+	if (dpLog) UpdateLog(dpLog, timeout);
 }
 
 size_t GetHitsSize() {
@@ -607,7 +608,7 @@ size_t GetHitsSize() {
 void ResetTmpCounters() {
 	SetState(NULL, "Resetting local cache...", false, true);
 
-	memset(&sHandle->tmpCount, 0, sizeof(FacetHitBuffer));
+	memset(&sHandle->tmpGlobalCount, 0, sizeof(FacetHitBuffer));
 
 	sHandle->distTraveledSinceUpdate = 0.0;
 	sHandle->nbLeakSinceUpdate = 0;
@@ -634,7 +635,7 @@ void ResetSimulation() {
 	sHandle->lastHitFacet = NULL;
 	sHandle->totalDesorbed = 0;
 	ResetTmpCounters();
-
+	sHandle->tmpParticleLog.clear();
 }
 
 bool StartSimulation() {
