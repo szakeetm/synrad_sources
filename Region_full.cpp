@@ -103,14 +103,14 @@ void Region_full::CalcPointProperties(int pointId) {
 			else if (params.beta_kind == 2) coordinate = p->position.y;
 			else if (params.beta_kind == 3) coordinate = p->position.z;
 
-			std::vector<double> betaValues = betaFunctions.InterpolateY(coordinate,true); //interpolation
+			std::vector<double> latticeValues = latticeFunctions.InterpolateY(coordinate,false); //interpolation, don't extrapolate beta functions
 
-			p->beta_X = betaValues[0];    // [cm]
-			p->beta_Y = betaValues[1];    // [cm]
-			p->eta = betaValues[2];       // [cm]
-			p->eta_prime = betaValues[3]; // [derivative -> dimensionless]
-			p->alpha_X = betaValues[4];   // [derivative -> dimensionless]
-			p->alpha_Y = betaValues[5];   // [derivative -> dimensionless]
+			p->beta_X = latticeValues[0];    // [cm]
+			p->beta_Y = latticeValues[1];    // [cm]
+			p->eta = latticeValues[2];       // [cm]
+			p->eta_prime = latticeValues[3]; // [derivative -> dimensionless]
+			p->alpha_X = latticeValues[4];   // [derivative -> dimensionless]
+			p->alpha_Y = latticeValues[5];   // [derivative -> dimensionless]
 			//the six above distributions are the ones that are read from the BXY file
 			//GetValuesAt finds the Y values corresponding to X input
 
@@ -754,6 +754,7 @@ int Region_full::LoadBXY(const std::string& fileName)
 	std::string line;
 	while (std::getline(file, line)) {
 		nbLines++;
+		if (line.length() == 0) continue; //Skip empty lines, usually at end of file
 		vector<string> tokens = SplitString(line);
 		if (nbLines == 1) { //First line, format: "Coord type [N]"
 			if ((tokens.size()==2 && Contains({ "0","1","2","3","l","x","y","z","L","X","Y","Z" },tokens[1]))
@@ -833,12 +834,13 @@ int Region_full::LoadBXY(const std::string& fileName)
 		}
 	}
 	int nbDistr_BXY = (int)distrValues.size();
+	if (nbDistr_BXY < 2) throw Error("BXY file contained less than 2 valid lines");
 
-	betaFunctions.Resize(0);
+	latticeFunctions.Resize(0);
 
 	for (int i = 0; i < nbDistr_BXY; i++) {
 		std::vector<double> newVec(distrValues[i].begin() + 1, distrValues[i].end()); //Subvector without the X coord
-		betaFunctions.AddPair(distrValues[i][0], newVec);
+		latticeFunctions.AddPair(distrValues[i][0], newVec);
 	}
 	return nbDistr_BXY;
 }

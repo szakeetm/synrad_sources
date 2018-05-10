@@ -256,7 +256,6 @@ void PerformTeleport(SubprocessFacet& collidedFacet) {
 	increment.power_absorbed = 0.0;
 	increment.power_incident = sHandle->dP;
 	ProfileFacet(collidedFacet, sHandle->energy, increment); //Put here since removed from Intersect() routine
-	LogHit(&collidedFacet);
 
 	collidedFacet.counter.nbMCHit++;//destination->counter.nbMCHit++;
 	collidedFacet.counter.nbHitEquiv += sHandle->oriRatio;
@@ -284,6 +283,7 @@ bool SimulationMCStep(const size_t& nbStep) {
 			// Move particle to intersection point
 			sHandle->pPos = sHandle->pPos + d*sHandle->pDir;
 			sHandle->distTraveledSinceUpdate += d;
+			LogHit(&collidedFacet);
 
 			if (collidedFacet.sh.teleportDest) {
 				PerformTeleport(collidedFacet); //increases hit, flux, power counters
@@ -306,7 +306,7 @@ bool SimulationMCStep(const size_t& nbStep) {
 					increment.power_absorbed = 0.0;
 					increment.power_incident = sHandle->dP;
 					ProfileFacet(collidedFacet, sHandle->energy, increment);
-					LogHit(&collidedFacet);
+					
 					if (collidedFacet.texture && collidedFacet.sh.countTrans) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
 				}
 				else { //Not superDest or Teleport
@@ -359,6 +359,7 @@ bool SimulationMCStep(const size_t& nbStep) {
 						else {
 							//We first generate a perturbated surface, and from that point on we treat the whole reflection process as if it were locally flat
 							
+
 							if ((collidedFacet.sh.reflectType - 10) < (int)sHandle->materials.size()) { //found material type
 																										//Generate incident angle
 								Vector3d nU_rotated, N_rotated, nV_rotated;
@@ -518,7 +519,6 @@ bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingP
 	increment.power_absorbed = sHandle->dP*stickingProbability;
 	increment.power_incident = sHandle->dP;
 	ProfileFacet(collidedFacet, sHandle->energy, increment);
-	LogHit(&collidedFacet);
 	//Absorbed part recorded, let's see how much is left
 	double survivalProbability = 1.0 - stickingProbability;
 	sHandle->oriRatio *= survivalProbability;
@@ -554,7 +554,18 @@ bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingP
 
 bool DoOldRegularReflection(SubprocessFacet& collidedFacet, const int& reflType, const double& theta, const double& phi,
 	const Vector3d& N_rotated, const Vector3d& nU_rotated, const Vector3d& nV_rotated) {
-		if (reflType == REFL_ABSORB) {
+	
+	sHandle->lastHitFacet = &collidedFacet;
+	ProfileSlice increment;
+	increment.count_absorbed = 0;
+	increment.count_incident = 1;
+	increment.flux_absorbed = 0.0;
+	increment.flux_incident = sHandle->dF;
+	increment.power_absorbed = 0.0;
+	increment.power_incident = sHandle->dP;
+	ProfileFacet(collidedFacet, sHandle->energy, increment);
+	if (collidedFacet.texture && collidedFacet.sh.countRefl) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
+	if (reflType == REFL_ABSORB) {
 				Stick(collidedFacet);
 				return StartFromSource(); //false if maxdesorption reached
 		} else return PerformBounce_old(collidedFacet, reflType, theta, phi, N_rotated, nU_rotated, nV_rotated);		
@@ -728,7 +739,7 @@ void PerformBounce_new(SubprocessFacet& collidedFacet,  const int &reflType, con
 
 bool PerformBounce_old(SubprocessFacet& collidedFacet, const int& reflType, const double& inTheta, const double& inPhi,
 	const Vector3d& N_rotated, const Vector3d& nU_rotated, const Vector3d& nV_rotated) {
-
+	RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
 	// Relaunch particle, regular monte-carlo
 	if (collidedFacet.sh.reflectType == REFLECTION_DIFFUSE) {
 		//See docs/theta_gen.png for further details on angular distribution generation
@@ -739,18 +750,6 @@ bool PerformBounce_old(SubprocessFacet& collidedFacet, const int& reflType, cons
 			return false;
 		}
 	}
-	RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
-	sHandle->lastHitFacet = &collidedFacet;
-	ProfileSlice increment;
-	increment.count_absorbed = 0;
-	increment.count_incident = 1;
-	increment.flux_absorbed = 0.0;
-	increment.flux_incident = sHandle->dF;
-	increment.power_absorbed = 0.0;
-	increment.power_incident = sHandle->dP;
-	ProfileFacet(collidedFacet, sHandle->energy, increment);
-	LogHit(&collidedFacet);
-	if (collidedFacet.texture && collidedFacet.sh.countRefl) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
 	return true;
 }
 
@@ -876,7 +875,6 @@ void Stick(SubprocessFacet& collidedFacet) {
 	increment.power_absorbed = sHandle->dP;
 	increment.power_incident = sHandle->dP;
 	ProfileFacet(collidedFacet, sHandle->energy, increment);
-	LogHit(&collidedFacet);
 	if (collidedFacet.texture && collidedFacet.sh.countAbs) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
 }
 

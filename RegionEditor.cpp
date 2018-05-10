@@ -938,8 +938,13 @@ void RegionEditor::FillValues() {
 
 	beamEnergyText->SetText(cr->params.E_GeV);
 	beamCurrentText->SetText(cr->params.current_mA);
-	idealBeamToggle->SetState(cr->params.emittance_cm==0.0);
-	emittanceCouplingToggle->SetState(cr->params.emittance_cm != 0.0);
+	bool idealBeam = cr->params.emittance_cm == 0.0;
+	emittanceCouplingToggle->SetState(!idealBeam);
+	emittanceText->SetEditable(!idealBeam);
+	couplingText->SetEditable(!idealBeam);
+	emittanceXYtoggle->SetState(0);
+	emittanceXtext->SetEditable(false);
+	emittanceYtext->SetEditable(false);
 
 	if (cr->params.emittance_cm==0.0) { //ideal beam
 		constantBXYtoggle->SetState(1);
@@ -1020,7 +1025,7 @@ void RegionEditor::FillValues() {
 		std::vector<int> allCompModes = { B_MODE_QUADRUPOLE,B_MODE_ANALYTIC,B_MODE_ROTATING_DIPOLE };
 		
 		int setAllComponentsId = -1; //No all component setter
-		for (size_t i = 0; setAllComponentsId = -1 && i < 3; i++) {
+		for (size_t i = 0; setAllComponentsId == -1 && i < 3; i++) {
 			int compMode = combos[i]->GetSelectedIndex() + 1;
 			if (Contains(allCompModes, compMode))
 				setAllComponentsId = (int)i;
@@ -1279,8 +1284,17 @@ void RegionEditor::CopyFromRegion(const size_t & sourceRegionId)
 
 	beamEnergyText->SetText(cr->params.E_GeV);
 	beamCurrentText->SetText(cr->params.current_mA);
-	idealBeamToggle->SetState(cr->params.emittance_cm == 0.0);
-	emittanceCouplingToggle->SetState(cr->params.emittance_cm != 0.0);
+	bool idealBeam = cr->params.emittance_cm == 0.0;
+
+	idealBeamToggle->SetState(idealBeam);
+	
+	emittanceCouplingToggle->SetState(!idealBeam);
+	emittanceText->SetEditable(!idealBeam);
+	couplingText->SetEditable(!idealBeam);
+	emittanceXYtoggle->SetState(0);
+	emittanceXtext->SetEditable(false);
+	emittanceYtext->SetEditable(false);
+
 
 	if (cr->params.emittance_cm == 0.0) { //ideal beam
 		constantBXYtoggle->SetState(1);
@@ -1316,4 +1330,25 @@ void RegionEditor::CopyFromRegion(const size_t & sourceRegionId)
 		constantBXYtoggle->SetState(0);
 		BXYfileNameText->SetText(cr->BXYfileName);
 	}
+
+	bool useIdealBeam = idealBeamToggle->GetState();
+	bool useBXYfile = (constantBXYtoggle->GetState() == 0);
+
+	energySpreadText->SetEditable(!useIdealBeam);
+
+	constantBXYtoggle->SetEnabled(!useIdealBeam);
+	BXYfileNameText->SetEditable(!useIdealBeam && useBXYfile);
+	bxyBrowseButton->SetEnabled(!useIdealBeam && useBXYfile);
+	bxyEditButton->SetEnabled(!useIdealBeam && useBXYfile);
+
+	emittanceText->SetEditable(!useIdealBeam && emittanceCouplingToggle->GetState());
+	couplingText->SetEditable(!useIdealBeam  && emittanceCouplingToggle->GetState());
+	emittanceXtext->SetEditable(!useIdealBeam  && emittanceXYtoggle->GetState());
+	emittanceYtext->SetEditable(!useIdealBeam  && emittanceXYtoggle->GetState());
+
+	betaXtext->SetEditable(!useIdealBeam && !useBXYfile);
+	betaYtext->SetEditable(!useIdealBeam && !useBXYfile);
+	etaText->SetEditable(!useIdealBeam && !useBXYfile);
+	etaPrimeText->SetEditable(!useIdealBeam && !useBXYfile);
 }
+

@@ -59,7 +59,7 @@ size_t SynradGeometry::GetGeometrySize(std::vector<Region_full> &regions, std::v
 		memoryUsage += 2 * sizeof(double)*regions[i].Bx_distr.GetSize();
 		memoryUsage += 2 * sizeof(double)*regions[i].By_distr.GetSize();
 		memoryUsage += 2 * sizeof(double)*regions[i].Bz_distr.GetSize();
-		memoryUsage += 7 * sizeof(double)*regions[i].betaFunctions.GetSize(); //Coord, BetaX, BetaY, EtaX, EtaX', AlphaX, AlphaY
+		memoryUsage += 7 * sizeof(double)*regions[i].latticeFunctions.GetSize(); //Coord, BetaX, BetaY, EtaX, EtaX', AlphaX, AlphaY
 	}
 	//Material library
 	memoryUsage += sizeof(size_t); //number of materials
@@ -145,8 +145,8 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> &
 		}
 
 		for (size_t j = 0; j < regions[i].params.nbDistr_BXY; j++) {
-			WRITEBUFFER(regions[i].betaFunctions.GetX(j), double);
-			memcpy(buffer, regions[i].betaFunctions.GetY(j).data(), 6 * sizeof(double));
+			WRITEBUFFER(regions[i].latticeFunctions.GetX(j), double);
+			memcpy(buffer, regions[i].latticeFunctions.GetY(j).data(), 6 * sizeof(double));
 			buffer += 6 * sizeof(double);
 		}
 	}
@@ -426,6 +426,10 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 
 	file->ReadKeyword("totalHit"); file->ReadKeyword(":");
 	file->ReadLLong();
+	if (version2 >= 10) {
+		file->ReadKeyword("totalHitEquiv"); file->ReadKeyword(":");
+		file->ReadDouble();
+	}
 	file->ReadKeyword("totalDes"); file->ReadKeyword(":");
 	file->ReadLLong();
 	if (version2 >= 6) {
@@ -440,6 +444,12 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 		file->ReadDouble();
 		file->ReadKeyword("totalPower"); file->ReadKeyword(":");
 		file->ReadDouble();
+	}
+	if (version2 >= 10) {
+		file->ReadKeyword("totalAbsEquiv"); file->ReadKeyword(":");
+		file->ReadDouble();
+		file->ReadKeyword("totalDist"); file->ReadKeyword(":");
+		 file->ReadDouble();
 	}
 	file->ReadKeyword("maxDes"); file->ReadKeyword(":");
 	file->ReadLLong();
@@ -1413,8 +1423,8 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 	//hit cache (lines and dots)
 	prg->SetMessage("Writing hit cache...");
 	file->Write("hits {\n");
-	file->Write("  nbHHit:"); file->Write((!crashSave && !saveSelected) ? HITCACHESIZE : 0, "\n");
-	for (int i = 0; (i < HITCACHESIZE) && (!crashSave && !saveSelected); i++) {
+	file->Write("  nbHHit:"); file->Write((!crashSave && !saveSelected) ? Min(*nbHitSave, HITCACHESIZE) : 0, "\n");
+	for (int i = 0; (i < Min(*nbHitSave, HITCACHESIZE)) && (!crashSave && !saveSelected); i++) {
 
 		file->Write("  ");
 		file->Write(i, " ");

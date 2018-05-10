@@ -61,13 +61,13 @@ struct RegionParams {
 
 class Region_mathonly { //Beam trajectory
 public:
-	RegionParams params; //everything except distributions
+	RegionParams params; //everything except distributions (Plain Old Data)
 	//References
 	//std::string fileName,MAGXfileName,MAGYfileName,MAGZfileName,BXYfileName;
 
 	//Loaded from files
 	Distribution2D Bx_distr,By_distr,Bz_distr; //B field distribution (if file-based)
-	DistributionND betaFunctions; //BetaX, BetaY, EtaX, EtaX', AlphaX, AlphaY
+	DistributionND latticeFunctions; //BetaX, BetaY, EtaX, EtaX', AlphaX, AlphaY
 
 	//Calculated data
 	std::vector<Trajectory_Point> Points;

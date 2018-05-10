@@ -257,7 +257,7 @@ bool LoadSimulation(Dataport *loader) {
 				sHandle->regions[r].Bz_distr.SetPair(j, x, y);
 			}
 
-			sHandle->regions[r].betaFunctions.Resize(0);
+			sHandle->regions[r].latticeFunctions.Resize(0);
 
 			for (size_t j = 0; j < sHandle->regions[r].params.nbDistr_BXY; j++) {
 				double x = READBUFFER(double);
@@ -265,7 +265,7 @@ bool LoadSimulation(Dataport *loader) {
 				betaValues.resize(6);
 				memcpy(betaValues.data(), buffer, 6 * sizeof(double)); //Vector data is contigious. The 6 values are: BetaX, BetaY, EtaX, EtaX', AlphaX, AlphaY
 				buffer += 6 * sizeof(double);
-				//sHandle->regions[r].betaFunctions.AddPair(x, betaValues);
+				//sHandle->regions[r].latticeFunctions.AddPair(x, betaValues);
 			}
 
 			sHandle->nbDistrPoints_BXY += sHandle->regions[r].params.nbDistr_BXY;

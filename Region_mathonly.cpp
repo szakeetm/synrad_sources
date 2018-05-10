@@ -137,7 +137,7 @@ Region_mathonly::Region_mathonly(const Region_mathonly &src) {
 	Bx_distr = Distribution2D(src.Bx_distr);
 	By_distr = Distribution2D(src.By_distr);
 	Bz_distr = Distribution2D(src.Bz_distr);
-	this->betaFunctions = src.betaFunctions;
+	this->latticeFunctions = src.latticeFunctions;
 	this->Points = src.Points;
 }
 
@@ -146,7 +146,7 @@ Region_mathonly& Region_mathonly::operator=(const Region_mathonly &src) {
 	Bx_distr = Distribution2D(src.Bx_distr);
 	By_distr = Distribution2D(src.By_distr);
 	Bz_distr = Distribution2D(src.Bz_distr);
-	betaFunctions = src.betaFunctions;
+	latticeFunctions = src.latticeFunctions;
 	this->Points = src.Points;
 	return *this;
 }

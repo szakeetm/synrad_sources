@@ -48,12 +48,12 @@ GNU General Public License for more details.
 //Hard-coded identifiers, update these on new release
 //---------------------------------------------------
 std::string appName = "Synrad";
-int appVersionId = 1420;
-std::string appVersionName = "1.4.20";
+int appVersionId = 1421;
+std::string appVersionName = "1.4.21";
 //---------------------------------------------------
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
-const char *fileSFilters = "SYN files\0*.syn;*.syn7z;\0GEO files\0*.geo;*.geo7z;\0Text files\0*.txt\0All files\0*.*\0";
+const char *fileSFilters = "SYN files\0*.syn;*.syn7z;\0Text files\0*.txt\0All files\0*.*\0";
 //static const char *fileSelFilters = "Selection files\0*.sel\0All files\0*.*\0";
 //static const char *fileTexFilters = "Text files\0*.txt\0Texture files\0*.tex\0All files\0*.*\0";
 static const char *fileParFilters = "param files\0*.param\0PAR files\0*.par\0All files\0*.*\0";
@@ -253,8 +253,8 @@ int SynRad::OneTimeSceneInit()
 	showFilter = new GLToggle(0, "Filtering");
 	togglePanel->Add(showFilter);
 
-	showMoreBtn = new GLButton(0, "<< View");
-	togglePanel->Add(showMoreBtn);
+	viewerMoreButton = new GLButton(0, "<< View");
+	togglePanel->Add(viewerMoreButton);
 
 	/*
 	shortcutPanel = new GLTitledPanel("Shortcuts");
@@ -469,7 +469,7 @@ void SynRad::PlaceComponents() {
 
 	togglePanel->SetCompBounds(showVertex, 70, 86, 60, 18);
 	togglePanel->SetCompBounds(showIndex, 137, 86, 60, 18);
-	togglePanel->SetCompBounds(showMoreBtn, 5, 86, 55, 19);
+	togglePanel->SetCompBounds(viewerMoreButton, 5, 86, 55, 19);
 
 	sy += (togglePanel->GetHeight() + 5);
 
@@ -514,7 +514,8 @@ void SynRad::PlaceComponents() {
 	facetPanel->SetCompBounds(facetSpectrumToggle, 5, 230, 150, 18);
 
 	facetPanel->SetCompBounds(facetDetailsBtn, 5, 255, 45, 18);
-	facetPanel->SetCompBounds(facetCoordBtn, 53, 255, 44, 18);
+	//facetPanel->SetCompBounds(facetCoordBtn, 53, 255, 44, 18);
+	facetPanel->SetCompBounds(facetHistogramBtn, 53, 255, 44, 18);
 	facetPanel->SetCompBounds(facetTexBtn, 101, 255, 50, 18);
 	facetPanel->SetCompBounds(facetApplyBtn, 155, 255, 40, 18);
 
@@ -1959,17 +1960,17 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			if (facetDetails == NULL) facetDetails = new FacetDetails();
 			facetDetails->Display(&worker);
 		}
-		else if (src == facetCoordBtn) {
+		/*else if (src == facetCoordBtn) {
 			if (!facetCoordinates) facetCoordinates = new FacetCoordinates();
 			facetCoordinates->Display(&worker);
-		}
+		}*/
 		else if (src == facetTexBtn) {
 			if (!facetMesh) facetMesh = new FacetMesh();
 			facetMesh->EditFacet(&worker);
 			changedSinceSave = true;
 			UpdateFacetParams();
 		}
-		else if (src == showMoreBtn) {
+		else if (src == viewerMoreButton) {
 			if (!viewer3DSettings) viewer3DSettings = new Viewer3DSettings();
 			viewer3DSettings->SetVisible(!viewer3DSettings->IsVisible());
 			viewer3DSettings->Reposition();
@@ -2329,6 +2330,8 @@ void SynRad::LoadConfig() {
 		f->ReadKeyword("hideLot"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
 			viewer[i]->hideLot = f->ReadInt();
+		f->ReadKeyword("leftHandedView"); f->ReadKeyword(":");
+		leftHandedView = f->ReadInt();
 		/*f->ReadKeyword("installId"); f->ReadKeyword(":");
 		installId = f->ReadString();
 		f->ReadKeyword("appLaunchesWithoutAsking"); f->ReadKeyword(":");
@@ -2433,8 +2436,8 @@ void SynRad::SaveConfig() {
 		f->Write("lowFluxCutoff:"); f->Write(worker.ontheflyParams.lowFluxCutoff, "\n");
 		f->Write("textureLogScale:"); f->Write(geom->texLogScale, "\n");
 		f->Write("newReflectionModel:"); f->Write(worker.newReflectionModel, "\n");
-
 		WRITEI("hideLot", hideLot);
+		f->Write("leftHandedView:"); f->Write(leftHandedView, "\n");
 		/*f->Write("installId:"); f->Write(installId + "\n");
 		if (increaseSessionCount && appLaunchesWithoutAsking >= 0) appLaunchesWithoutAsking++;
 		f->Write("appLaunchesWithoutAsking:"); f->Write(appLaunchesWithoutAsking, "\n");*/

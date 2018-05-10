@@ -51,6 +51,10 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	chkWhiteBg->SetBounds(10,50,80,19);
 	panel->Add(chkWhiteBg);
 
+	leftHandedToggle = new GLToggle(0, "Left-handed coord. system");
+	leftHandedToggle->SetBounds(150, 20, 80, 19);
+	panel->Add(leftHandedToggle);
+
 	GLTitledPanel *panel2 = new GLTitledPanel("Low flux mode");
 	panel2->SetBounds(310,2,295,78);
 	Add(panel2);
@@ -179,6 +183,7 @@ void GlobalSettings::Display(Worker *w) {
 	char tmp[256];
 	chkAntiAliasing->SetState(mApp->antiAliasing);
 	chkWhiteBg->SetState(mApp->whiteBg);
+	leftHandedToggle->SetState(mApp->leftHandedView);
 
 	cutoffText->SetText(worker->ontheflyParams.lowFluxCutoff);
 	cutoffText->SetEditable(worker->ontheflyParams.lowFluxMode);
@@ -346,6 +351,7 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 		} else if (src==applyButton) {
 			mApp->antiAliasing = chkAntiAliasing->GetState();
 			mApp->whiteBg = chkWhiteBg->GetState();
+			mApp->leftHandedView = leftHandedToggle->GetState();
 			bool updateCheckPreference = chkCheckForUpdates->GetState();
 			if (mApp->appUpdater) {
 				if (mApp->appUpdater->IsUpdateCheckAllowed() != updateCheckPreference) {

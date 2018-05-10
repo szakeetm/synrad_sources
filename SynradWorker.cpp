@@ -838,7 +838,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 	progressDlg->SetMessage("Sending hits...");
 	//Send hit counts
 	try {
-		SendHits();
+		WriteHitBuffer();
 
 	} catch(Error &e) {
 		// Geometry not loaded !
@@ -904,8 +904,13 @@ void Worker::AddRegion(const char *fileName,int position) {
 	std::string ext = FileUtils::GetExtension(fileName);
 	if(ext=="par" || ext=="PAR" || ext=="param") {
 			Region_full newtraj;
-			if (ext=="par" || ext=="PAR") newtraj.LoadPAR(&FileReader(fileName));
-			else newtraj.LoadParam(&FileReader(fileName));
+			if (ext == "par" || ext == "PAR") newtraj.LoadPAR(&FileReader(fileName));
+			else {
+				FileReader* fr = new FileReader(fileName);
+				newtraj.LoadParam(fr);
+				SAFE_DELETE(fr);
+
+			}
 			newtraj.fileName=fileName;
 			if (position==-1) regions.push_back(newtraj);
 			else {
@@ -1034,7 +1039,7 @@ bool EndsWithPar(const char* s)
   return ret;
 }
 
-void Worker::SendHits() {
+void Worker::WriteHitBuffer() {
 	//if (!needsReload) {
 	if (dpHit) {
 		if (AccessDataport(dpHit)) {
