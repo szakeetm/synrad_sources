@@ -227,8 +227,8 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> &
 		fOffset += f->GetHitsSize();
 		memcpy(buffer, &(f->sh), sizeof(FacetProperties));
 		buffer += sizeof(FacetProperties);
-		memcpy(buffer, f->indices, sizeof(int)*f->sh.nbIndex);
-		buffer += sizeof(int)*f->sh.nbIndex;
+		memcpy(buffer, f->indices, sizeof(size_t)*f->sh.nbIndex);
+		buffer += sizeof(size_t)*f->sh.nbIndex;
 		memcpy(buffer, f->vertices2, sizeof(Vector2d)*f->sh.nbIndex);
 		buffer += sizeof(Vector2d)*f->sh.nbIndex;
 	}

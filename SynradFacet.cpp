@@ -321,7 +321,7 @@ file->Write("}\n");
 size_t Facet::GetGeometrySize() {
 
 	size_t s = sizeof(FacetProperties)
-		+ (sh.nbIndex * sizeof(int))
+		+ (sh.nbIndex * sizeof(size_t)) //indices
 		+ (sh.nbIndex * sizeof(Vector2d));
 
 	// Size of the 'element area' array passed to the geometry buffer

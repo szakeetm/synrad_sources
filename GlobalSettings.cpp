@@ -351,7 +351,12 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 		} else if (src==applyButton) {
 			mApp->antiAliasing = chkAntiAliasing->GetState();
 			mApp->whiteBg = chkWhiteBg->GetState();
-			mApp->leftHandedView = leftHandedToggle->GetState();
+			//if (mApp->leftHandedView != (leftHandedToggle->GetState()==1)) {
+				mApp->leftHandedView = (bool)leftHandedToggle->GetState();
+				/*mApp->worker.GetGeometry()->RestoreDeviceObjects(); //Re-render facets
+				if (mApp->needsTexture) mApp->worker.RebuildTextures();*/
+				for (int i = 0; i < MAX_VIEWER; i++)  mApp->viewer[i]->UpdateMatrix();
+			//}
 			bool updateCheckPreference = chkCheckForUpdates->GetState();
 			if (mApp->appUpdater) {
 				if (mApp->appUpdater->IsUpdateCheckAllowed() != updateCheckPreference) {

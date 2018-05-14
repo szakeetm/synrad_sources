@@ -39,7 +39,7 @@ public:
 	FacetProperties sh;
 	FacetHitBuffer counter;
 
-	int      *indices;   // Indices (Reference to geometry vertex)
+	size_t   *indices;   // Indices (Reference to geometry vertex)
 	Vector2d *vertices2; // Vertices (2D plane space, UV coordinates)
 	double	 fullSizeInc; // 1/Texture FULL element area
 	double   *inc;        // reciprocial of element area

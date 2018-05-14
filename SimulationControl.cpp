@@ -382,7 +382,7 @@ bool LoadSimulation(Dataport *loader) {
 	for (i = 0; i < sHandle->totalFacet; i++) {
 		FacetProperties *shFacet = (FacetProperties *)buffer;
 		sHandle->str[shFacet->superIdx].nbFacet++;
-		buffer += sizeof(FacetProperties) + shFacet->nbIndex*(sizeof(int) + sizeof(Vector2d));
+		buffer += sizeof(FacetProperties) + shFacet->nbIndex*(sizeof(size_t) + sizeof(Vector2d));
 	}
 	for (i = 0; i < sHandle->nbSuper; i++) {
 		int nbF = sHandle->str[i].nbFacet;
@@ -446,10 +446,10 @@ bool LoadSimulation(Dataport *loader) {
 
 		// Reset counter in local memory
 		memset(&(f->counter), 0, sizeof(FacetHitBuffer));
-		f->indices = (int *)malloc(f->sh.nbIndex * sizeof(int));
+		f->indices = (size_t *)malloc(f->sh.nbIndex * sizeof(size_t));
 		buffer += sizeof(FacetProperties);
-		memcpy(f->indices, buffer, f->sh.nbIndex * sizeof(int));
-		buffer += f->sh.nbIndex * sizeof(int);
+		memcpy(f->indices, buffer, f->sh.nbIndex * sizeof(size_t));
+		buffer += f->sh.nbIndex * sizeof(size_t);
 		f->vertices2 = (Vector2d *)malloc(f->sh.nbIndex * sizeof(Vector2d));
 		if (!f->vertices2) {
 			SetErrorSub("Not enough memory to load vertices");
