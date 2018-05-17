@@ -48,8 +48,8 @@ GNU General Public License for more details.
 //Hard-coded identifiers, update these on new release
 //---------------------------------------------------
 std::string appName = "Synrad";
-int appVersionId = 1421;
-std::string appVersionName = "1.4.21";
+int appVersionId = 1423; //Recompile Interface.cpp after changing it to make AppUpdater aware of change
+std::string appVersionName = "1.4.23";
 //---------------------------------------------------
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";

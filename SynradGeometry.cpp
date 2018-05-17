@@ -51,6 +51,7 @@ size_t SynradGeometry::GetGeometrySize(std::vector<Region_full> &regions, std::v
 	// Compute number of bytes allocated
 	size_t memoryUsage = 0;
 	memoryUsage += sizeof(GeomProperties);
+	memoryUsage += sizeof(OntheflySimulationParams);
 	
 	//Regions
 	memoryUsage += regions.size()*sizeof(RegionParams);
