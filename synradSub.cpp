@@ -50,7 +50,6 @@ static char      ctrlDpName[32];
 static char      loadDpName[32];
 static char      hitsDpName[32];
 static char		 logDpName[32];
-static char      materialsDpName[32];
 
 bool end = false;
 bool IsProcessRunning(DWORD pid);
@@ -243,7 +242,6 @@ int main(int argc,char* argv[])
   sprintf(loadDpName,"SNRDLOAD%s",argv[1]);
   sprintf(hitsDpName,"SNRDHITS%s",argv[1]);
   sprintf(logDpName, "SNRDLOG%s", argv[1]);
-  sprintf(materialsDpName,"SNRDMATS%s",argv[1]);
 
   dpControl = OpenDataport(ctrlDpName/*,sizeof(SHCONTROL)*/);
   if( !dpControl ) {
@@ -324,6 +322,7 @@ int main(int argc,char* argv[])
         printf("COMMAND: CLOSE (%zd,%I64d)\n",prParam,prParam2);
         ClearSimulation();
         CLOSEDP(dpHit);
+		CLOSEDP(dpLog);
         SetReady();
         break;
 

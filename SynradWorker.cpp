@@ -61,7 +61,6 @@ Worker::Worker() {
 	sprintf(loadDpName,"SNRDLOAD%d",pid);
 	sprintf(hitsDpName,"SNRDHITS%d",pid);
 	sprintf(logDpName, "SNRDLOG%d", pid);
-	sprintf(materialsDpName,"SNRDMATS%d",pid);
 	
 	distTraveled_total=0.0;
 	ontheflyParams.nbProcess = 0;
