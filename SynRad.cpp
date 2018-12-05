@@ -346,10 +346,10 @@ int SynRad::OneTimeSceneInit()
 
 	facetLinkLabel = new GLLabel("Link:");
 	facetPanel->Add(facetLinkLabel);
-	facetSILabel = new GLTextField(0, "");
-	facetSILabel->SetEditable(true);
+	facetStructure = new GLTextField(0, "");
+	facetStructure->SetEditable(true);
 
-	facetPanel->Add(facetSILabel);
+	facetPanel->Add(facetStructure);
 
 	facetStrLabel = new GLLabel("Structure:");
 	facetPanel->Add(facetStrLabel);
@@ -490,7 +490,7 @@ void SynRad::PlaceComponents() {
 	facetPanel->SetCompBounds(facetAutoCorrLengthLabel, 113, 55, 35, 18);
 	facetPanel->SetCompBounds(facetAutoCorrLength, 150, 55, 45, 18);
 
-	PlaceScatteringControls(worker.newReflectionModel);
+	PlaceScatteringControls(worker.wp.newReflectionModel);
 
 	facetPanel->SetCompBounds(facetSideLabel, 7, 80, 50, 18);
 	facetPanel->SetCompBounds(facetSideType, 65, 80, 130, 18);
@@ -505,7 +505,7 @@ void SynRad::PlaceComponents() {
 	facetPanel->SetCompBounds(facetTeleport, 110, 155, 82, 18);
 
 	facetPanel->SetCompBounds(facetStrLabel, 7, 180, 55, 18); //Structure:
-	facetPanel->SetCompBounds(facetSILabel, 65, 180, 42, 18); //Editable Textfield
+	facetPanel->SetCompBounds(facetStructure, 65, 180, 42, 18); //Editable Textfield
 	facetPanel->SetCompBounds(facetLinkLabel, 115, 180, 18, 18); //Link
 	facetPanel->SetCompBounds(facetSuperDest, 148, 180, 42, 18); //Textfield
 
@@ -515,8 +515,8 @@ void SynRad::PlaceComponents() {
 	facetPanel->SetCompBounds(facetSpectrumToggle, 5, 230, 150, 18);
 
 	facetPanel->SetCompBounds(facetDetailsBtn, 5, 255, 45, 18);
-	//facetPanel->SetCompBounds(facetCoordBtn, 53, 255, 44, 18);
-	facetPanel->SetCompBounds(facetHistogramBtn, 53, 255, 44, 18);
+	facetPanel->SetCompBounds(facetCoordBtn, 53, 255, 44, 18);
+	//facetPanel->SetCompBounds(facetHistogramBtn, 53, 255, 44, 18);
 	facetPanel->SetCompBounds(facetTexBtn, 101, 255, 50, 18);
 	facetPanel->SetCompBounds(facetApplyBtn, 155, 255, 40, 18);
 
@@ -590,8 +590,8 @@ void SynRad::ClearFacetParams()
 	facetArea->Clear();
 	facetSuperDest->Clear();
 	facetSuperDest->SetEditable(false);
-	facetSILabel->Clear();
-	facetSILabel->SetEditable(false);
+	facetStructure->Clear();
+	facetStructure->SetEditable(false);
 	facetOpacity->Clear();
 	facetOpacity->SetEditable(false);
 	facetSideType->SetSelectedValue("");
@@ -627,7 +627,7 @@ void SynRad::ApplyFacetParams() {
 			doSticking = true;
 		}
 		else { //Not a double number
-			if (strcmp(facetSticking->GetText(), "...") == 0) doSticking = false;
+			if (facetSticking->GetText() == "...") doSticking = false;
 			else {
 				GLMessageBox::Display("Invalid sticking number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 				UpdateFacetParams();
@@ -656,7 +656,7 @@ void SynRad::ApplyFacetParams() {
 				doRoughness = true;
 			}
 			else {
-				if (strcmp(facetRMSroughness->GetText(), "...") == 0) doRoughness = false;
+				if (facetRMSroughness->GetText() == "...") doRoughness = false;
 				else {
 					GLMessageBox::Display("Invalid roughness number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 					UpdateFacetParams();
@@ -664,7 +664,7 @@ void SynRad::ApplyFacetParams() {
 				}
 			}
 
-			if (worker.newReflectionModel) {
+			if (worker.wp.newReflectionModel) {
 				// Autocorrelation length
 				if (facetAutoCorrLength->GetNumber(&corrLength)) {
 					if (corrLength <= 0.0) {
@@ -675,7 +675,7 @@ void SynRad::ApplyFacetParams() {
 					doCorrLength = true;
 				}
 				else {
-					if (strcmp(facetAutoCorrLength->GetText(), "...") == 0) doCorrLength = false;
+					if (facetAutoCorrLength->GetText() == "...") doCorrLength = false;
 					else {
 						GLMessageBox::Display("Invalid autocorrelation length", "Error", GLDLG_OK, GLDLG_ICONERROR);
 						UpdateFacetParams();
@@ -706,7 +706,7 @@ void SynRad::ApplyFacetParams() {
 		doTeleport = true;
 	}
 	else {
-		if (strcmp(facetTeleport->GetText(), "...") == 0) doTeleport = false;
+		if (facetTeleport->GetText()== "...") doTeleport = false;
 		else {
 			GLMessageBox::Display("Invalid teleport destination\n(If no teleport: set number to 0)", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			UpdateFacetParams();
@@ -726,7 +726,7 @@ void SynRad::ApplyFacetParams() {
 		doOpacity = true;
 	}
 	else {
-		if (strcmp(facetOpacity->GetText(), "...") == 0) doOpacity = false;
+		if (facetOpacity->GetText()== "...") doOpacity = false;
 		else {
 			GLMessageBox::Display("Invalid opacity number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			UpdateFacetParams();
@@ -734,15 +734,27 @@ void SynRad::ApplyFacetParams() {
 		}
 	}
 
-	// Superstructure
 	int superStruct;
 	bool doSuperStruct = false;
-	if (sscanf(facetSILabel->GetText(), "%d", &superStruct) > 0 && superStruct > 0 && superStruct <= geom->GetNbStructure()) doSuperStruct = true;
+	auto ssText = facetStructure->GetText();
+	if (Contains({ "All","all" }, ssText)) {
+		doSuperStruct = true;
+		superStruct = -1;
+	}
+	else if (ssText == "...") {
+		//Nothing to do, doSuperStruct is already false
+	}
 	else {
-		if (strcmp(facetSILabel->GetText(), "...") == 0) doSuperStruct = false;
-		else {
+		try {
+			superStruct = std::stoi(ssText);
+			superStruct--; //Internally numbered from 0
+			if (superStruct < 0 || superStruct >= geom->GetNbStructure()) {
+				throw std::invalid_argument("Invalid superstructure number");
+			}
+			doSuperStruct = true;
+		}
+		catch (std::invalid_argument err) {
 			GLMessageBox::Display("Invalid superstructre number", "Error", GLDLG_OK, GLDLG_ICONERROR);
-			UpdateFacetParams();
 			return;
 		}
 	}
@@ -750,26 +762,26 @@ void SynRad::ApplyFacetParams() {
 	// Super structure destination (link)
 	int superDest;
 	bool doLink = false;
-	if (strcmp(facetSuperDest->GetText(), "none") == 0 || strcmp(facetSuperDest->GetText(), "no") == 0 || strcmp(facetSuperDest->GetText(), "0") == 0) {
+	if (Contains({ "none","no","0" }, facetSuperDest->GetText())) {
 		doLink = true;
 		superDest = 0;
 	}
-	else if (sscanf(facetSuperDest->GetText(), "%d", &superDest) > 0) {
-		if (superDest == superStruct) {
+	else if (facetSuperDest->GetNumberInt(&superDest)) {
+		if (superDest == (superStruct + 1)) {
 			GLMessageBox::Display("Link and superstructure can't be the same", "Error", GLDLG_OK, GLDLG_ICONERROR);
-			return;
+			return ;
 		}
 		else if (superDest < 0 || superDest > geom->GetNbStructure()) {
 			GLMessageBox::Display("Link destination points to a structure that doesn't exist", "Error", GLDLG_OK, GLDLG_ICONERROR);
-			return;
+			return ;
 		}
 		else
 			doLink = true;
 	}
-	else if (strcmp(facetSuperDest->GetText(), "...") == 0) doLink = false;
+	else if (facetSuperDest->GetText() == "...") doLink = false;
 	else {
 		GLMessageBox::Display("Invalid superstructure destination", "Error", GLDLG_OK, GLDLG_ICONERROR);
-		return;
+		return ;
 	}
 
 	// Record type
@@ -794,7 +806,7 @@ void SynRad::ApplyFacetParams() {
 			}
 			if (doSticking) f->sh.sticking = sticking;
 			if (doScattering) f->sh.doScattering = facetDoScattering->GetState();
-			if (worker.newReflectionModel) { //Apply values directly
+			if (worker.wp.newReflectionModel) { //Apply values directly
 				if (doRoughness) f->sh.rmsRoughness = roughness*1E-9; //nm->m
 				if (doCorrLength) f->sh.autoCorrLength = corrLength*1E-9; //nm->m
 			}
@@ -884,7 +896,7 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 			double fArea = f->GetArea();
 			reflectTypeE = reflectTypeE && (f0->sh.reflectType == f->sh.reflectType);
 			stickingE = stickingE && (abs(f0->sh.sticking - f->sh.sticking) < 1e-7);
-			if (worker.newReflectionModel) { //RMS roughness compare
+			if (worker.wp.newReflectionModel) { //RMS roughness compare
 				rmsRoughnessE = rmsRoughnessE && (abs(f0->sh.rmsRoughness - f->sh.rmsRoughness) < 1e-15);
 			}
 			else { //Roughness ratio compare
@@ -948,7 +960,7 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 		else {
 			facetDoScattering->SetEnabled(true);
 			if (rmsRoughnessE) {
-				if (worker.newReflectionModel) { //RMS roughness (nm)
+				if (worker.wp.newReflectionModel) { //RMS roughness (nm)
 					facetRMSroughness->SetText(f0->sh.rmsRoughness*1E9);
 				}
 				else { //Roughness ratio
@@ -980,10 +992,10 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 		}
 		if (superIdxE) {
 			sprintf(tmp, "%zd", f0->sh.superIdx + 1);
-			facetSILabel->SetText(tmp);
+			facetStructure->SetText(tmp);
 		}
 		else {
-			facetSILabel->SetText("...");
+			facetStructure->SetText("...");
 		}
 		if (updateSelection) {
 			if (nbSel > 1000 || geom->GetNbFacet() > 50000) { //If it would take too much time to look up every selected facet in the list
@@ -1005,7 +1017,7 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 		facetTeleport->SetEditable(true);
 		facetOpacity->SetEditable(true);
 		facetSuperDest->SetEditable(true);
-		facetSILabel->SetEditable(true);
+		facetStructure->SetEditable(true);
 		facetSideType->SetEditable(true);
 
 		facetProfileCombo->SetEditable(true);
@@ -1884,14 +1896,14 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		else if (src == facetOpacity) {
 			facetApplyBtn->SetEnabled(true);
 		}
-		else if (src == facetSuperDest || src == facetSILabel) {
+		else if (src == facetSuperDest || src == facetStructure) {
 			facetApplyBtn->SetEnabled(true);
 		}
 		break;
 
 	case MSG_TEXT:
 		if (src == facetSticking || src == facetRMSroughness || src == facetAutoCorrLength
-			|| src == facetTeleport || src == facetOpacity || src == facetSuperDest || src == facetSILabel) {
+			|| src == facetTeleport || src == facetOpacity || src == facetSuperDest || src == facetStructure) {
 			ApplyFacetParams();
 		}
 		break;
@@ -1910,7 +1922,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			facetRMSroughness->SetEditable(!isDiffuse && scatter);
 			facetAutoCorrLength->SetEditable(!isDiffuse && scatter);
 		}
-		else if (src == facetProfileCombo || facetSpectrumToggle || src == facetSideType) {
+		else if (Contains({ facetProfileCombo ,facetSideType },src)) {
 			facetApplyBtn->SetEnabled(true);
 		}
 		else if (src == modeCombo) {
@@ -1941,6 +1953,9 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		else if (src == autoFrameMoveToggle) {
 			autoFrameMove = autoFrameMoveToggle->GetState();
 			forceFrameMoveButton->SetEnabled(!autoFrameMove);
+		}
+		else if (src == facetSpectrumToggle) {
+			facetApplyBtn->SetEnabled(true);
 		}
 		else UpdateViewerFlags(); //Viewer flags clicked
 		break;
@@ -2326,8 +2341,8 @@ void SynRad::LoadConfig() {
 		f->ReadKeyword("textureLogScale"); f->ReadKeyword(":");
 		geom->texLogScale = f->ReadInt();
 		f->ReadKeyword("newReflectionModel"); f->ReadKeyword(":");
-		worker.newReflectionModel = f->ReadInt();
-		PlaceScatteringControls(worker.newReflectionModel);
+		worker.wp.newReflectionModel = f->ReadInt();
+		PlaceScatteringControls(worker.wp.newReflectionModel);
 		f->ReadKeyword("hideLot"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
 			viewer[i]->hideLot = f->ReadInt();
@@ -2436,7 +2451,7 @@ void SynRad::SaveConfig() {
 		f->Write("lowFluxMode:"); f->Write(worker.ontheflyParams.lowFluxMode, "\n");
 		f->Write("lowFluxCutoff:"); f->Write(worker.ontheflyParams.lowFluxCutoff, "\n");
 		f->Write("textureLogScale:"); f->Write(geom->texLogScale, "\n");
-		f->Write("newReflectionModel:"); f->Write(worker.newReflectionModel, "\n");
+		f->Write("newReflectionModel:"); f->Write(worker.wp.newReflectionModel, "\n");
 		WRITEI("hideLot", hideLot);
 		f->Write("leftHandedView:"); f->Write(leftHandedView, "\n");
 		/*f->Write("installId:"); f->Write(installId + "\n");

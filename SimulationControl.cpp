@@ -42,8 +42,8 @@ extern void SetErrorSub(const char *message);
 
 // Global handles
 
-SubprocessFacet     **THitCache;
-SIMULATION *sHandle;
+
+Simulation *sHandle;
 
 // Timing stuff
 
@@ -57,8 +57,7 @@ DWORD tickStart;
 void InitSimulation() {
 
 	// Global handle allocation
-	sHandle = new SIMULATION();
-	THitCache = new SubprocessFacet*[MAX_THIT]; // Transparent hit cache
+	sHandle = new Simulation();
 
 #ifdef WIN
 	{
@@ -84,7 +83,7 @@ void ClearSimulation() {
 	/*for (i=0;i<(int)sHandle->regions.size();i++)
 	delete &(sHandle->regions[i]);*/
 	sHandle->regions.clear();
-	sHandle->tmpGlobalHistograms.clear(); sHandle->tmpGlobalHistograms.shrink_to_fit();
+	//sHandle->tmpGlobalHistograms.clear(); sHandle->tmpGlobalHistograms.shrink_to_fit();
 	//sHandle->regions=std::vector<Region_mathonly>();
 	SAFE_FREE(sHandle->vertices3);
 	for (j = 0; j < sHandle->nbSuper; j++) {
@@ -101,8 +100,8 @@ void ClearSimulation() {
 				delete f->spectrum;
 				SAFE_FREE(f->direction);
 				//SAFE_FREE(f->fullElem);
-				f->tmpHistograms.clear();
-				f->tmpHistograms.shrink_to_fit();
+				//f->tmpHistograms.clear();
+				//f->tmpHistograms.shrink_to_fit();
 				delete(f); f = NULL;
 			}
 			
@@ -115,7 +114,7 @@ void ClearSimulation() {
 			sHandle->str[j].aabbTree = NULL;
 		}
 	}
-	memset(sHandle, 0, sizeof(SIMULATION));
+	memset(sHandle, 0, sizeof(Simulation));
 	sHandle->tmpParticleLog.clear(); sHandle->tmpParticleLog.shrink_to_fit();
 
 }

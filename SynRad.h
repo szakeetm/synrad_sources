@@ -96,7 +96,7 @@ public:
 	GLLabel       *facetAutoCorrLengthLabel;
     GLLabel       *facetLinkLabel;
     GLLabel       *facetStrLabel;
-    GLTextField   *facetSILabel;
+    GLTextField   *facetStructure;
    // GLLabel       *facetTLabel;
     GLLabel       *facetRLabel;
     GLLabel       *facetReLabel;

@@ -20,10 +20,10 @@
 #define _SIMULATIONH_
 
 #define MAX_STRUCT 512
-#define MAX_THIT 16384
 
 #include "SynradTypes.h"
 #include "Buffer_shared.h"
+#include "IntersectAABB_shared.h"
 #include "SMP.h"
 #include <vector>
 #include "Vector.h"
@@ -74,16 +74,17 @@ public:
 
 };
 
-// Temporary transparent hit
-extern  SubprocessFacet     **THitCache; //Global variable
+
 
 // Local simulation structure
+
+class AABBNODE;
 
 typedef struct {
 
 	int              nbFacet;  // Number of facet
-	SubprocessFacet          **facets;   // Facet handles
-	struct AABBNODE *aabbTree; // Structure AABB tree
+	SubprocessFacet   **facets;   // Facet handles
+	AABBNODE *aabbTree; // Structure AABB tree
 
 } SUPERSTRUCT;
 
@@ -147,17 +148,19 @@ typedef struct {
 	double   energy; //energy of the generated photon
 	double   distTraveledCurrentParticle; //Distance traveled by particle before absorption
 	double   distTraveledSinceUpdate;
+	std::vector<SubprocessFacet*> transparentHitBuffer; //Storing this buffer simulation-wide is cheaper than recreating it at every Intersect() call
 
+	
 	double oriRatio;
 	bool newReflectionModel;
 
 	OntheflySimulationParams ontheflyParams; //Low flux, generation mode, photon cache display
 	std::vector<ParticleLoggerItem> tmpParticleLog;
 
-} SIMULATION;
+} Simulation;
 
 // Handle to simulation object
-extern SIMULATION *sHandle;
+extern Simulation *sHandle;
 
 // -- Macros ---------------------------------------------------
 
