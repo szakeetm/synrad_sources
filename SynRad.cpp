@@ -49,8 +49,8 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 //Hard-coded identifiers, update these on new release
 //---------------------------------------------------
 std::string appName = "Synrad";
-int appVersionId = 1423; //Recompile Interface.cpp after changing it to make AppUpdater aware of change
-std::string appVersionName = "1.4.23";
+int appVersionId = 1424; //Recompile Interface.cpp after changing it to make AppUpdater aware of change
+std::string appVersionName = "1.4.24";
 //---------------------------------------------------
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
@@ -346,15 +346,15 @@ int SynRad::OneTimeSceneInit()
 
 	facetLinkLabel = new GLLabel("Link:");
 	facetPanel->Add(facetLinkLabel);
-	facetSILabel = new GLTextField(0, "");
-	facetSILabel->SetEditable(true);
+	facetSuperDest = new GLTextField(0, "");
+	facetSuperDest->SetEditable(true);
 
-	facetPanel->Add(facetSILabel);
-
-	facetStrLabel = new GLLabel("Structure:");
-	facetPanel->Add(facetStrLabel);
-	facetSuperDest = new GLTextField(0, NULL);
 	facetPanel->Add(facetSuperDest);
+
+	facetStructureLabel = new GLLabel("Structure:");
+	facetPanel->Add(facetStructureLabel);
+	facetStructure = new GLTextField(0, NULL);
+	facetPanel->Add(facetStructure);
 
 	facetReLabel = new GLLabel("Profile:");
 	facetPanel->Add(facetReLabel);
@@ -504,8 +504,8 @@ void SynRad::PlaceComponents() {
 	facetPanel->SetCompBounds(facetTPLabel, 7, 155, 100, 18);
 	facetPanel->SetCompBounds(facetTeleport, 110, 155, 82, 18);
 
-	facetPanel->SetCompBounds(facetStrLabel, 7, 180, 55, 18); //Structure:
-	facetPanel->SetCompBounds(facetSILabel, 65, 180, 42, 18); //Editable Textfield
+	facetPanel->SetCompBounds(facetStructureLabel, 7, 180, 55, 18); //Structure:
+	facetPanel->SetCompBounds(facetStructure, 65, 180, 42, 18); //Editable Textfield
 	facetPanel->SetCompBounds(facetLinkLabel, 115, 180, 18, 18); //Link
 	facetPanel->SetCompBounds(facetSuperDest, 148, 180, 42, 18); //Textfield
 
@@ -515,8 +515,8 @@ void SynRad::PlaceComponents() {
 	facetPanel->SetCompBounds(facetSpectrumToggle, 5, 230, 150, 18);
 
 	facetPanel->SetCompBounds(facetDetailsBtn, 5, 255, 45, 18);
-	//facetPanel->SetCompBounds(facetCoordBtn, 53, 255, 44, 18);
-	facetPanel->SetCompBounds(facetHistogramBtn, 53, 255, 44, 18);
+	facetPanel->SetCompBounds(facetCoordBtn, 53, 255, 44, 18);
+	//facetPanel->SetCompBounds(facetHistogramBtn, 53, 255, 44, 18);
 	facetPanel->SetCompBounds(facetTexBtn, 101, 255, 50, 18);
 	facetPanel->SetCompBounds(facetApplyBtn, 155, 255, 40, 18);
 
@@ -588,10 +588,10 @@ void SynRad::ClearFacetParams()
 	facetTeleport->SetEditable(false);
 	facetArea->SetEditable(false);
 	facetArea->Clear();
+	facetStructure->Clear();
+	facetStructure->SetEditable(false);
 	facetSuperDest->Clear();
 	facetSuperDest->SetEditable(false);
-	facetSILabel->Clear();
-	facetSILabel->SetEditable(false);
 	facetOpacity->Clear();
 	facetOpacity->SetEditable(false);
 	facetSideType->SetSelectedValue("");
@@ -735,41 +735,58 @@ void SynRad::ApplyFacetParams() {
 	}
 
 	// Superstructure
+
+	bool structChanged = false; //if a facet gets into a new structure, we have to re-render the geometry
+
 	int superStruct;
 	bool doSuperStruct = false;
-	if (sscanf(facetSILabel->GetText(), "%d", &superStruct) > 0 && superStruct > 0 && superStruct <= geom->GetNbStructure()) doSuperStruct = true;
+	std::string ssText = facetStructure->GetText();
+	if (Contains({ "All","all" }, ssText)) {
+		doSuperStruct = true;
+		superStruct = -1;
+	}
+	else if (ssText == "...") {
+		//Nothing to do, doSuperStruct is already false
+	}
 	else {
-		if (strcmp(facetSILabel->GetText(), "...") == 0) doSuperStruct = false;
-		else {
-			GLMessageBox::Display("Invalid superstructre number", "Error", GLDLG_OK, GLDLG_ICONERROR);
-			UpdateFacetParams();
-			return;
+		try {
+			superStruct = std::stoi(ssText);
+			superStruct--; //Internally numbered from 0
+			if (superStruct < 0 || superStruct >= geom->GetNbStructure()) {
+				throw std::invalid_argument("Invalid superstructure number");
+			}
+			doSuperStruct = true;
+		}
+		catch (std::invalid_argument err) {
+			GLMessageBox::Display("Invalid superstructure number", "Error", GLDLG_OK, GLDLG_ICONERROR);
+			return ;
 		}
 	}
 
 	// Super structure destination (link)
 	int superDest;
 	bool doLink = false;
-	if (strcmp(facetSuperDest->GetText(), "none") == 0 || strcmp(facetSuperDest->GetText(), "no") == 0 || strcmp(facetSuperDest->GetText(), "0") == 0) {
+	std::string linkText = facetSuperDest->GetText();
+	if (Contains({ "none","no","0" }, linkText )) {
 		doLink = true;
 		superDest = 0;
 	}
-	else if (sscanf(facetSuperDest->GetText(), "%d", &superDest) > 0) {
-		if (superDest == superStruct) {
+	else if (facetSuperDest->GetNumberInt(&superDest)) {
+		if (superDest == (superStruct + 1)) {
 			GLMessageBox::Display("Link and superstructure can't be the same", "Error", GLDLG_OK, GLDLG_ICONERROR);
-			return;
+			return ;
 		}
 		else if (superDest < 0 || superDest > geom->GetNbStructure()) {
 			GLMessageBox::Display("Link destination points to a structure that doesn't exist", "Error", GLDLG_OK, GLDLG_ICONERROR);
-			return;
+			return ;
 		}
 		else
 			doLink = true;
 	}
-	else if (strcmp(facetSuperDest->GetText(), "...") == 0) doLink = false;
+	else if (facetSuperDest->GetText() == "...") doLink = false;
 	else {
 		GLMessageBox::Display("Invalid superstructure destination", "Error", GLDLG_OK, GLDLG_ICONERROR);
-		return;
+		return ;
 	}
 
 	// Record type
@@ -781,7 +798,6 @@ void SynRad::ApplyFacetParams() {
 	// 2sided
 	int is2Sided = facetSideType->GetSelectedIndex();
 
-	bool structChanged = false; //if a facet gets into a new structure, we have to re-render the geometry
 	// Update facets (local)
 	for (int i = 0; i < nbFacet; i++) {
 		Facet *f = geom->GetFacet(i);
@@ -979,11 +995,16 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 			facetSuperDest->SetText("...");
 		}
 		if (superIdxE) {
-			sprintf(tmp, "%zd", f0->sh.superIdx + 1);
-			facetSILabel->SetText(tmp);
+			if (f0->sh.superIdx >= 0) {
+				sprintf(tmp, "%zd", f0->sh.superIdx + 1);
+				facetStructure->SetText(tmp);
+			}
+			else {
+				facetStructure->SetText("All");
+			}
 		}
 		else {
-			facetSILabel->SetText("...");
+			facetStructure->SetText("...");
 		}
 		if (updateSelection) {
 			if (nbSel > 1000 || geom->GetNbFacet() > 50000) { //If it would take too much time to look up every selected facet in the list
@@ -1004,8 +1025,8 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 
 		facetTeleport->SetEditable(true);
 		facetOpacity->SetEditable(true);
+		facetStructure->SetEditable(true);
 		facetSuperDest->SetEditable(true);
-		facetSILabel->SetEditable(true);
 		facetSideType->SetEditable(true);
 
 		facetProfileCombo->SetEditable(true);
@@ -1884,14 +1905,14 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		else if (src == facetOpacity) {
 			facetApplyBtn->SetEnabled(true);
 		}
-		else if (src == facetSuperDest || src == facetSILabel) {
+		else if (src == facetStructure || src == facetSuperDest) {
 			facetApplyBtn->SetEnabled(true);
 		}
 		break;
 
 	case MSG_TEXT:
 		if (src == facetSticking || src == facetRMSroughness || src == facetAutoCorrLength
-			|| src == facetTeleport || src == facetOpacity || src == facetSuperDest || src == facetSILabel) {
+			|| src == facetTeleport || src == facetOpacity || src == facetStructure || src == facetSuperDest) {
 			ApplyFacetParams();
 		}
 		break;
@@ -1910,7 +1931,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			facetRMSroughness->SetEditable(!isDiffuse && scatter);
 			facetAutoCorrLength->SetEditable(!isDiffuse && scatter);
 		}
-		else if (src == facetProfileCombo || facetSpectrumToggle || src == facetSideType) {
+		else if (src == facetProfileCombo || src == facetSideType) {
 			facetApplyBtn->SetEnabled(true);
 		}
 		else if (src == modeCombo) {
@@ -1942,6 +1963,10 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 			autoFrameMove = autoFrameMoveToggle->GetState();
 			forceFrameMoveButton->SetEnabled(!autoFrameMove);
 		}
+		else if (src == facetSpectrumToggle) {
+			facetApplyBtn->SetEnabled(true);
+		}
+
 		else UpdateViewerFlags(); //Viewer flags clicked
 		break;
 
@@ -2479,7 +2504,7 @@ void SynRad::LoadParam(char *fName, int position) {
 			files = GLFileBox::OpenMultipleFiles(fileParFilters, "Add magnetic region(s)");
 		else { //To given position, allow only one file
 			FILENAME *file = GLFileBox::OpenFile(currentDir, NULL, "Add magnetic region", fileParFilters, 0);
-			files.push_back(*file);
+			if (file!=NULL) files.push_back(*file);
 		}
 	}
 	else { //Filename already defined

@@ -262,27 +262,32 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool sa
 					}
 				}
 
+				std::ostringstream commandLine;
+				if (!foundConflict) {
+					
+					commandLine << "compress.exe \"" << fileNameWithSyn << "\" Geometry.syn";
+					if (paths.size() > 0) {
+						std::ofstream includeFile;
+						includeFile.open("compressionInclude.txt");
+						if (!includeFile.is_open()) {
+							std::ostringstream msg;
+							msg << "compressionInclude.txt cannot be opened for writing. Maybe already in use?\n\n";
+							msg << "File will be saved as uncompressed syn file\n\n";
+							GLMessageBox::Display(msg.str().c_str(), "Name conflict", GLDLG_OK, GLDLG_ICONWARNING);
+							fileName = fileNameWithSyn;
+							foundConflict = true;
+						}
+						else {
+							for (auto path : paths) {
+								includeFile << path << "\n";
+							}
+							includeFile.close();
+							commandLine << " @compressionInclude.txt";
+						}
+					}
+				}
 
 				if (!foundConflict) {
-					std::ostringstream commandLine;
-					commandLine << "compress.exe \"" << fileNameWithSyn << "\" Geometry.syn";
-					for (auto path : paths) {
-						commandLine << " \"" << path << "\"";
-					}
-
-
-					/*sprintf(tmp, "compress.exe \"%s\" Geometry.syn", fileNameWithSyn);
-					for (int i = 0; i<(int)regions.size(); i++) {
-						sprintf(tmp, "%s \"%s\"", tmp, regions[i].fileName.c_str());
-						if (!regions[i].MAGXfileName.empty())
-							sprintf(tmp, "%s \"%s\"", tmp, regions[i].MAGXfileName.c_str());
-						if (!regions[i].MAGYfileName.empty())
-							sprintf(tmp, "%s \"%s\"", tmp, regions[i].MAGYfileName.c_str());
-						if (!regions[i].MAGZfileName.empty())
-							sprintf(tmp, "%s \"%s\"", tmp, regions[i].MAGZfileName.c_str());
-						if (!regions[i].BXYfileName.empty())
-							sprintf(tmp, "%s \"%s\"", tmp, regions[i].BXYfileName.c_str());
-					}*/
 					int procId = StartProc(commandLine.str().c_str(), STARTPROC_BACKGROUND);
 					mApp->compressProcessHandle = OpenProcess(PROCESS_ALL_ACCESS, true, procId);
 					fileName = fileNameWithSyn7z;

@@ -84,7 +84,7 @@ void ClearSimulation() {
 	/*for (i=0;i<(int)sHandle->regions.size();i++)
 	delete &(sHandle->regions[i]);*/
 	sHandle->regions.clear();
-	sHandle->tmpGlobalHistograms.clear(); sHandle->tmpGlobalHistograms.shrink_to_fit();
+	//sHandle->tmpGlobalHistograms.clear(); sHandle->tmpGlobalHistograms.shrink_to_fit();
 	//sHandle->regions=std::vector<Region_mathonly>();
 	SAFE_FREE(sHandle->vertices3);
 	for (j = 0; j < sHandle->nbSuper; j++) {
@@ -101,8 +101,8 @@ void ClearSimulation() {
 				delete f->spectrum;
 				SAFE_FREE(f->direction);
 				//SAFE_FREE(f->fullElem);
-				f->tmpHistograms.clear();
-				f->tmpHistograms.shrink_to_fit();
+				//f->tmpHistograms.clear();
+				//f->tmpHistograms.shrink_to_fit();
 				delete(f); f = NULL;
 			}
 			
@@ -154,7 +154,8 @@ double Norme(Vector3d *v) {
 
 bool LoadSimulation(Dataport *loader) {
 
-	size_t i, j, idx;
+	size_t i, j;
+	int idx;
 	BYTE *buffer, *bufferAfterMaterials;
 	BYTE *areaBuff;
 	BYTE *bufferStart;
@@ -386,12 +387,20 @@ bool LoadSimulation(Dataport *loader) {
 	buffer += sizeof(Vector3d)*sHandle->nbVertex;
 	for (i = 0; i < sHandle->totalFacet; i++) {
 		FacetProperties *shFacet = (FacetProperties *)buffer;
-		sHandle->str[shFacet->superIdx].nbFacet++;
+		if (shFacet->superIdx == -1) { //Facet in all structures
+			for (size_t s = 0; s < sHandle->nbSuper; s++) {
+				sHandle->str[s].nbFacet++;
+			}
+		}
+		else {
+			sHandle->str[shFacet->superIdx].nbFacet++;
+		}
 		buffer += sizeof(FacetProperties) + shFacet->nbIndex*(sizeof(size_t) + sizeof(Vector2d));
 	}
 	for (i = 0; i < sHandle->nbSuper; i++) {
 		int nbF = sHandle->str[i].nbFacet;
 		if (nbF == 0) {
+
 		}
 		else {
 			sHandle->str[i].facets = (SubprocessFacet **)malloc(nbF * sizeof(SubprocessFacet *));
@@ -428,9 +437,17 @@ bool LoadSimulation(Dataport *loader) {
 		//sHandle->hasDirection |= f->sh.countDirection;
 
 		idx = f->sh.superIdx;
-		sHandle->str[idx].facets[sHandle->str[idx].nbFacet] = f;
+		if (idx == -1) {
+			for (size_t s = 0; s < sHandle->nbSuper; s++) {
+				sHandle->str[s].facets[sHandle->str[s].nbFacet] = f;
+				sHandle->str[s].nbFacet++;
+			}
+		}
+		else {
+			sHandle->str[idx].facets[sHandle->str[idx].nbFacet] = f;
+			sHandle->str[idx].nbFacet++;
+		}
 		sHandle->str[idx].facets[sHandle->str[idx].nbFacet]->globalId = i;
-		sHandle->str[idx].nbFacet++;
 
 		if (f->sh.superDest || f->sh.isVolatile) {
 			// Link or volatile facet, overides facet settings

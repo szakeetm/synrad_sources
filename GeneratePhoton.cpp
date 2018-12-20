@@ -110,7 +110,7 @@ GenPhoton GeneratePhoton(size_t pointId, Region_mathonly *current_region, int ge
 		result.radius = 1.0E30;
 	}
 
-	result.critical_energy = 2.959E-5*pow(current_region->params.gamma, 3) / result.radius; //becomes ~1E-30 if radius is 1E30
+	result.critical_energy = 2.959905E-5*pow(current_region->params.gamma, 3) / result.radius; //becomes ~1E-30 if radius is 1E30
 
 	//Precalc reused values
 	double loEnergyRatio = current_region->params.energy_low_eV / result.critical_energy;

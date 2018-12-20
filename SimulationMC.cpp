@@ -216,7 +216,9 @@ void PerformTeleport(SubprocessFacet& collidedFacet) {
 		for (size_t j = 0; j < sHandle->str[i].nbFacet && (!found); j++) {
 			if (destIndex == sHandle->str[i].facets[j]->globalId) {
 				destination = sHandle->str[i].facets[j];
-				sHandle->curStruct = (int)destination->sh.superIdx; //change current superstructure
+				if (destination->sh.superIdx != -1) {
+					sHandle->curStruct = (int)destination->sh.superIdx; //change current superstructure, unless universal facet
+				}
 				sHandle->teleportedFrom = (int)collidedFacet.globalId; //memorize where the particle came from
 				found = true;
 			}
@@ -646,6 +648,7 @@ bool StartFromSource() {
 		SetErrorSub(tmp);
 		return false;
 	}
+	
 	sHandle->curStruct = sourceRegion->params.structureId;
 	sHandle->teleportedFrom = -1;
 

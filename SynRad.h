@@ -17,6 +17,9 @@ GNU General Public License for more details.
 
 Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 */
+
+#pragma once 
+
 #include "Interface.h"
 //#include "ExportDesorption.h"
 #include "FacetMesh.h"
@@ -85,7 +88,7 @@ public:
 	GLTextField   *facetAutoCorrLength;
 	GLCombo       *facetReflType;
 	GLToggle      *facetDoScattering;
-    GLTextField   *facetSuperDest;
+    GLTextField   *facetStructure;
     GLCombo       *facetProfileCombo;
 	GLToggle	  *facetSpectrumToggle;
     GLButton      *facetTexBtn;
@@ -95,8 +98,8 @@ public:
 	GLLabel       *facetRMSroughnessLabel;
 	GLLabel       *facetAutoCorrLengthLabel;
     GLLabel       *facetLinkLabel;
-    GLLabel       *facetStrLabel;
-    GLTextField   *facetSILabel;
+    GLLabel       *facetStructureLabel;
+    GLTextField   *facetSuperDest;
    // GLLabel       *facetTLabel;
     GLLabel       *facetRLabel;
     GLLabel       *facetReLabel;
