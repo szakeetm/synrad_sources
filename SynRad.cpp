@@ -783,7 +783,7 @@ void SynRad::ApplyFacetParams() {
 		else
 			doLink = true;
 	}
-	else if (facetSuperDest->GetText() == "...") doLink = false;
+	else if (linkText == "...") doLink = false;
 	else {
 		GLMessageBox::Display("Invalid superstructure destination", "Error", GLDLG_OK, GLDLG_ICONERROR);
 		return ;
@@ -834,8 +834,8 @@ void SynRad::ApplyFacetParams() {
 			} if (spectrumPlotter) spectrumPlotter->Refresh();
 			if (is2Sided >= 0) f->sh.is2sided = is2Sided;
 			if (doSuperStruct) {
-				if (f->sh.superIdx != (superStruct - 1)) {
-					f->sh.superIdx = superStruct - 1;
+				if (f->sh.superIdx != superStruct) {
+					f->sh.superIdx = superStruct;
 					structChanged = true;
 				}
 			}

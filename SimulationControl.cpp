@@ -441,7 +441,11 @@ bool LoadSimulation(Dataport *loader) {
 		idx = f->sh.superIdx;
 		if (idx == -1) {
 			for (size_t s = 0; s < sHandle->nbSuper; s++) {
-				sHandle->str[s].facets[sHandle->str[s].nbFacet] = f;
+				SubprocessFacet* f_copy = f;
+				if (s > 0) { //Create copy
+					f_copy = new SubprocessFacet(*f);
+				}
+				sHandle->str[s].facets[sHandle->str[s].nbFacet] = f_copy;
 				sHandle->str[s].nbFacet++;
 			}
 		}
