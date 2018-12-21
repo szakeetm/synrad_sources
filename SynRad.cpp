@@ -996,7 +996,7 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 		}
 		if (superIdxE) {
 			if (f0->sh.superIdx >= 0) {
-				sprintf(tmp, "%zd", f0->sh.superIdx + 1);
+				sprintf(tmp, "%d", f0->sh.superIdx + 1);
 				facetStructure->SetText(tmp);
 			}
 			else {

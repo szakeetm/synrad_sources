@@ -1820,7 +1820,7 @@ void SynradGeometry::SaveProfileSYN(FileWriter *file, Dataport *dpHit, int super
 	//Profiles
 
 	BYTE *buffer;
-	if (!crashSave && !saveSelected) buffer = (BYTE *)dpHit->buff;
+	if (!crashSave) buffer = (BYTE *)dpHit->buff;
 	file->Write("profiles {\n");
 	// Profiles
 	

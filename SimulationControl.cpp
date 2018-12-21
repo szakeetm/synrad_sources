@@ -425,13 +425,15 @@ bool LoadSimulation(Dataport *loader) {
 	for (i = 0; i < sHandle->totalFacet; i++) {
 
 		FacetProperties *shFacet = (FacetProperties *)buffer;
-		SubprocessFacet *f = (SubprocessFacet *)malloc(sizeof(SubprocessFacet));
+		SubprocessFacet *f = /*(SubprocessFacet *)malloc(sizeof(SubprocessFacet));*/ new SubprocessFacet();
 		if (!f) {
 			SetErrorSub("Not enough memory to load facets");
 			return false;
 		}
 		memset(f, 0, sizeof(SubprocessFacet));
-		memcpy(&(f->sh), shFacet, sizeof(FacetProperties));
+		//memcpy(&(f->sh), shFacet, sizeof(FacetProperties));
+		f->sh = *shFacet;
+		f->globalId = i;
 
 		sHandle->hasVolatile |= f->sh.isVolatile;
 		//sHandle->hasDirection |= f->sh.countDirection;
@@ -447,7 +449,7 @@ bool LoadSimulation(Dataport *loader) {
 			sHandle->str[idx].facets[sHandle->str[idx].nbFacet] = f;
 			sHandle->str[idx].nbFacet++;
 		}
-		sHandle->str[idx].facets[sHandle->str[idx].nbFacet]->globalId = i;
+		//sHandle->str[idx].facets[sHandle->str[idx].nbFacet]->globalId = i;
 
 		if (f->sh.superDest || f->sh.isVolatile) {
 			// Link or volatile facet, overides facet settings

@@ -455,7 +455,7 @@ void TrajectoryDetails::UpdateTable() {
 			pointList->SetValueAt(j, (int)((double)pointId / (double)freq), FormatCell(pointId, shown[j], &photon));
 	}
 	updatePrg->SetVisible(false);
-	SAFE_FREE(updatePrg);
+	SAFE_DELETE(updatePrg);
 }
 
 void TrajectoryDetails::Update() {
