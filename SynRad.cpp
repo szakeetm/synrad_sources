@@ -49,8 +49,8 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 //Hard-coded identifiers, update these on new release
 //---------------------------------------------------
 std::string appName = "Synrad";
-int appVersionId = 1424; //Recompile Interface.cpp after changing it to make AppUpdater aware of change
-std::string appVersionName = "1.4.24";
+int appVersionId = 1425; //Recompile Interface.cpp after changing it to make AppUpdater aware of change
+std::string appVersionName = "1.4.25";
 //---------------------------------------------------
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";

@@ -558,7 +558,7 @@ bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingP
 bool DoOldRegularReflection(SubprocessFacet& collidedFacet, const int& reflType, const double& theta, const double& phi,
 	const Vector3d& N_rotated, const Vector3d& nU_rotated, const Vector3d& nV_rotated) {
 	
-	sHandle->lastHitFacet = &collidedFacet;
+	//sHandle->lastHitFacet = &collidedFacet; //If sticks, startfromsource will set to NULL, if reflects, PerformBounce_old will set it
 	ProfileSlice increment;
 	increment.count_absorbed = 0;
 	increment.count_incident = 1;
@@ -571,7 +571,7 @@ bool DoOldRegularReflection(SubprocessFacet& collidedFacet, const int& reflType,
 	if (reflType == REFL_ABSORB) {
 				Stick(collidedFacet);
 				return StartFromSource(); //false if maxdesorption reached
-		} else return PerformBounce_old(collidedFacet, reflType, theta, phi, N_rotated, nU_rotated, nV_rotated);		
+	} else return PerformBounce_old(collidedFacet, reflType, theta, phi, N_rotated, nU_rotated, nV_rotated);		
 }
 
 // Launch photon from a trajectory point
@@ -754,6 +754,7 @@ bool PerformBounce_old(SubprocessFacet& collidedFacet, const int& reflType, cons
 			return false;
 		}
 	}
+	sHandle->lastHitFacet = &collidedFacet;
 	return true;
 }
 
