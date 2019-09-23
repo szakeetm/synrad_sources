@@ -154,10 +154,10 @@ typedef struct {
 	OntheflySimulationParams ontheflyParams; //Low flux, generation mode, photon cache display
 	std::vector<ParticleLoggerItem> tmpParticleLog;
 
-} SIMULATION;
+} Simulation;
 
 // Handle to simulation object
-extern SIMULATION *sHandle;
+extern Simulation *sHandle;
 
 // -- Macros ---------------------------------------------------
 

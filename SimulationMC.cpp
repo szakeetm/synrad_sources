@@ -31,7 +31,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "SynradTypes.h" //Histogram
 #include <tuple>
 
-extern SIMULATION *sHandle;
+extern Simulation *sHandle;
 extern void SetErrorSub(const char *message);
 
 //extern Distribution2D K_1_3_distribution;

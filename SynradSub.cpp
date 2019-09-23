@@ -44,7 +44,7 @@ static Dataport *dpLog = NULL;
 static int       prIdx;
 static size_t    prState;
 static size_t    prParam;
-static size_t     prParam2;
+static size_t    prParam2;
 static DWORD     hostProcessId;
 static char      ctrlDpName[32];
 static char      loadDpName[32];
@@ -149,7 +149,7 @@ void Load() {
   size_t hSize;
 
   // Load geometry
-  loader = OpenDataport(loadDpName/*,prParam*/);
+  loader = OpenDataport(loadDpName,prParam);
   if( !loader ) {
     char err[512];
     sprintf(err,"Failed to connect to 'loader' dataport %s (%zd Bytes)",loadDpName, prParam);
@@ -167,7 +167,7 @@ void Load() {
 
   //Connect to log dataport
   if (sHandle->ontheflyParams.enableLogging) {
-	  dpLog = OpenDataport(logDpName/*, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem)*/);
+	  dpLog = OpenDataport(logDpName, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem));
 	  if (!dpLog) {
 		  char err[512];
 		  sprintf(err, "Failed to connect to 'dpLog' dataport %s (%zd Bytes)", logDpName, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem));
@@ -181,7 +181,7 @@ void Load() {
 
   // Connect to hit dataport
   hSize = GetHitsSize();
-  dpHit = OpenDataport(hitsDpName/*,hSize*/);
+  dpHit = OpenDataport(hitsDpName,hSize);
   if( !dpHit ) {
     SetErrorSub("Failed to connect to 'hits' dataport");
     return;
@@ -196,7 +196,7 @@ bool UpdateParams() {
 	Dataport *loader;
 
 	// Load geometry
-	loader = OpenDataport(loadDpName/*, prParam*/);
+	loader = OpenDataport(loadDpName, prParam);
 	if (!loader) {
 		char err[512];
 		sprintf(err, "Failed to connect to 'loader' dataport %s (%zd Bytes)", loadDpName, prParam);
@@ -210,7 +210,7 @@ bool UpdateParams() {
 	CLOSEDP(loader);
 
 	if (sHandle->ontheflyParams.enableLogging) {
-		dpLog = OpenDataport(logDpName/*, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem)*/);
+		dpLog = OpenDataport(logDpName, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem));
 		if (!dpLog) {
 			char err[512];
 			sprintf(err, "Failed to connect to 'dpLog' dataport %s (%zd Bytes)", logDpName, sizeof(size_t) + sHandle->ontheflyParams.logLimit * sizeof(ParticleLoggerItem));
@@ -243,7 +243,7 @@ int main(int argc,char* argv[])
   sprintf(hitsDpName,"SNRDHITS%s",argv[1]);
   sprintf(logDpName, "SNRDLOG%s", argv[1]);
 
-  dpControl = OpenDataport(ctrlDpName/*,sizeof(SHCONTROL)*/);
+  dpControl = OpenDataport(ctrlDpName,sizeof(SHCONTROL));
   if( !dpControl ) {
     printf("Usage: Cannot connect to SRDCTRL%s\n",argv[1]);
     return 1;

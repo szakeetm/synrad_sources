@@ -43,7 +43,7 @@ extern void SetErrorSub(const char *message);
 // Global handles
 
 SubprocessFacet     **THitCache;
-SIMULATION *sHandle;
+Simulation *sHandle;
 
 // Timing stuff
 
@@ -57,7 +57,7 @@ DWORD tickStart;
 void InitSimulation() {
 
 	// Global handle allocation
-	sHandle = new SIMULATION();
+	sHandle = new Simulation();
 	THitCache = new SubprocessFacet*[MAX_THIT]; // Transparent hit cache
 
 #ifdef WIN
@@ -115,7 +115,7 @@ void ClearSimulation() {
 			sHandle->str[j].aabbTree = NULL;
 		}
 	}
-	memset(sHandle, 0, sizeof(SIMULATION));
+	memset(sHandle, 0, sizeof(Simulation));
 	sHandle->tmpParticleLog.clear(); sHandle->tmpParticleLog.shrink_to_fit();
 
 }
