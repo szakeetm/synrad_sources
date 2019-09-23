@@ -285,7 +285,7 @@ void ProfilePlotter::refreshViews() {
 			v->Reset();
 			ProfileSlice   *profile = (ProfileSlice *)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer));
 			
-			llong max_MC;
+			size_t max_MC;
 			double max_flux, max_power;
 			
 			double elemArea = f->sh.area / PROFILE_SIZE;

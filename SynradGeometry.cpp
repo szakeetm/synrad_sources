@@ -427,20 +427,20 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 	}
 
 	file->ReadKeyword("totalHit"); file->ReadKeyword(":");
-	file->ReadLLong();
+	file->ReadSizeT();
 	if (version2 >= 10) {
 		file->ReadKeyword("totalHitEquiv"); file->ReadKeyword(":");
 		file->ReadDouble();
 	}
 	file->ReadKeyword("totalDes"); file->ReadKeyword(":");
-	file->ReadLLong();
+	file->ReadSizeT();
 	if (version2 >= 6) {
 		file->ReadKeyword("no_scans"); file->ReadKeyword(":");
 		loaded_no_scans = file->ReadDouble();
 	}
 	else loaded_no_scans = 0;
 	file->ReadKeyword("totalLeak"); file->ReadKeyword(":");
-	file->ReadLLong();
+	file->ReadSizeT();
 	if (version2 > 2) {
 		file->ReadKeyword("totalFlux"); file->ReadKeyword(":");
 		file->ReadDouble();
@@ -454,7 +454,7 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 		 file->ReadDouble();
 	}
 	file->ReadKeyword("maxDes"); file->ReadKeyword(":");
-	file->ReadLLong();
+	file->ReadSizeT();
 	file->ReadKeyword("nbVertex"); file->ReadKeyword(":");
 	int nbNewVertex = file->ReadInt();
 	file->ReadKeyword("nbFacet"); file->ReadKeyword(":");
@@ -680,14 +680,14 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 	}
 
 	file->ReadKeyword("totalHit"); file->ReadKeyword(":");
-	loaded_nbMCHit = 0; loaded_nbHitEquiv = 0.0; file->ReadLLong();
+	loaded_nbMCHit = 0; loaded_nbHitEquiv = 0.0; file->ReadSizeT();
 	file->ReadKeyword("totalDes"); file->ReadKeyword(":");
-	loaded_nbDesorption = 0; file->ReadLLong();
+	loaded_nbDesorption = 0; file->ReadSizeT();
 	file->ReadKeyword("totalLeak"); file->ReadKeyword(":");
-	loaded_nbLeak = 0; file->ReadLLong();
+	loaded_nbLeak = 0; file->ReadSizeT();
 	if (*version >= 12) {
 		file->ReadKeyword("totalAbs"); file->ReadKeyword(":");
-		loaded_nbAbsEquiv = 0.0; file->ReadLLong();
+		loaded_nbAbsEquiv = 0.0; file->ReadSizeT();
 		if (*version >= 15) {
 			file->ReadKeyword("totalDist_total");
 		}
@@ -706,7 +706,7 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 		loaded_distTraveledTotal = 0.0;
 	}
 	file->ReadKeyword("maxDes"); file->ReadKeyword(":");
-	loaded_desorptionLimit = 0;  file->ReadLLong();
+	loaded_desorptionLimit = 0;  file->ReadSizeT();
 	file->ReadKeyword("nbVertex"); file->ReadKeyword(":");
 	sh.nbVertex = file->ReadInt();
 	file->ReadKeyword("nbFacet"); file->ReadKeyword(":");
@@ -953,9 +953,9 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 
 		// Read facets
 		file->ReadKeyword("minHit_MC"); file->ReadKeyword(":");
-		gHits->hitMin.count = file->ReadLLong();
+		gHits->hitMin.count = file->ReadSizeT();
 		file->ReadKeyword("maxHit_MC"); file->ReadKeyword(":");
-		gHits->hitMax.count = file->ReadLLong();
+		gHits->hitMax.count = file->ReadSizeT();
 		file->ReadKeyword("minHit_flux"); file->ReadKeyword(":");
 		gHits->hitMin.flux = file->ReadDouble();
 		file->ReadKeyword("maxHit_flux"); file->ReadKeyword(":");
@@ -1000,7 +1000,7 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 				for (iy = 0; iy < (Min(f->sh.texHeight, texHeight_file)); iy++) { //MIN: If stored texture is larger, don't read extra cells
 					for (ix = 0; ix<(Min(f->sh.texWidth, texWidth_file)); ix++) { //MIN: If stored texture is larger, don't read extra cells
 						size_t index = iy*(f->sh.texWidth) + ix;
-						texture[index].count = file->ReadLLong();
+						texture[index].count = file->ReadSizeT();
 						if (version >= 7) file->ReadDouble(); //cell area
 						texture[index].flux = file->ReadDouble();
 						texture[index].power = file->ReadDouble();
@@ -1013,7 +1013,7 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 					}
 					for (size_t ie = 0; ie < texWidth_file - f->sh.texWidth; ie++) {//Executed if file texture is bigger than expected texture
 						//Read extra cells from file without doing anything
-						file->ReadLLong();
+						file->ReadSizeT();
 						if (version >= 7) file->ReadDouble(); //cell area
 						file->ReadDouble();
 						file->ReadDouble();
@@ -1022,7 +1022,7 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 				for (size_t ie = 0; ie < texHeight_file - f->sh.texHeight; ie++) {//Executed if file texture is bigger than expected texture
 					//Read extra cells ffrom file without doing anything
 					for (size_t iw = 0; iw < texWidth_file; iw++) {
-						file->ReadLLong();
+						file->ReadSizeT();
 						if (version >= 7) file->ReadDouble(); //cell area
 						file->ReadDouble();
 						file->ReadDouble();
@@ -1518,7 +1518,7 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 	}
 
 	file->ReadKeyword("totalHit"); file->ReadKeyword(":");
-	loaded_nbMCHit = file->ReadLLong();
+	loaded_nbMCHit = file->ReadSizeT();
 	if (*version >= 10) {
 		file->ReadKeyword("totalHitEquiv"); file->ReadKeyword(":");
 		loaded_nbHitEquiv = file->ReadDouble();
@@ -1528,7 +1528,7 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 		loaded_nbHitEquiv = static_cast<double>(loaded_nbMCHit);
 	}
 	file->ReadKeyword("totalDes"); file->ReadKeyword(":");
-	loaded_nbDesorption = file->ReadLLong();
+	loaded_nbDesorption = file->ReadSizeT();
 	if (*version >= 6) {
 		file->ReadKeyword("no_scans"); file->ReadKeyword(":");
 		loaded_no_scans = file->ReadDouble();
@@ -1553,7 +1553,7 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 		loaded_distTraveledTotal = 0.0;
 	}
 	file->ReadKeyword("maxDes"); file->ReadKeyword(":");
-	loaded_desorptionLimit = file->ReadLLong();
+	loaded_desorptionLimit = file->ReadSizeT();
 	file->ReadKeyword("nbVertex"); file->ReadKeyword(":");
 	sh.nbVertex = file->ReadInt();
 	file->ReadKeyword("nbFacet"); file->ReadKeyword(":");
@@ -1771,8 +1771,8 @@ void SynradGeometry::LoadProfileSYN(FileReader *file, Dataport *dpHit, const int
 			Facet *f = GetFacet(facetsWithProfile[i]);
 			ProfileSlice *profilePtr = (ProfileSlice*)(buffer + f->sh.hitOffset + sizeof(FacetHitBuffer));
 
-			if (version>=10) profilePtr[j].count_absorbed = file->ReadLLong();
-			profilePtr[j].count_incident = file->ReadLLong();
+			if (version>=10) profilePtr[j].count_absorbed = file->ReadSizeT();
+			profilePtr[j].count_incident = file->ReadSizeT();
 			if (version >= 10) profilePtr[j].flux_absorbed = file->ReadDouble();
 			profilePtr[j].flux_incident = file->ReadDouble();
 			if (version>=10) profilePtr[j].power_absorbed = file->ReadDouble();
@@ -1804,8 +1804,8 @@ void SynradGeometry::LoadSpectrumSYN(FileReader *file, Dataport *dpHit, const in
 			ProfileSlice *shSpectrum = (ProfileSlice *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize
 				+ textureSize + directionSize));
 			
-			if (version >= 10) shSpectrum[j].count_absorbed = file->ReadLLong();
-			if (version >= 10) shSpectrum[j].count_incident = file->ReadLLong();
+			if (version >= 10) shSpectrum[j].count_absorbed = file->ReadSizeT();
+			if (version >= 10) shSpectrum[j].count_incident = file->ReadSizeT();
 			if (version >= 10) shSpectrum[j].flux_absorbed = file->ReadDouble();
 			shSpectrum[j].flux_incident = file->ReadDouble();
 			if (version >= 10) shSpectrum[j].power_absorbed = file->ReadDouble();

@@ -1028,7 +1028,7 @@ void Region_full::LoadParam(FileReader *file){
 		params.polarizationCompIndex = 2; //Orthogonal polarization
 
 	(paramVersion>=3)?file->ReadKeyword("psiMax_X_Y_rad"):file->ReadKeyword("psiMax_rad");file->ReadKeyword(":");params.psimaxX_rad=file->ReadDouble();params.psimaxY_rad=file->ReadDouble();
-	if (paramVersion>=4) {file->ReadKeyword("structureId");file->ReadKeyword(":");params.structureId=file->ReadLLong();}
+	if (paramVersion>=4) {file->ReadKeyword("structureId");file->ReadKeyword(":");params.structureId=file->ReadSizeT();}
 
 	for (int i=0;i<3;i++) {
 		file->ReadKeyword((char*)Bmode_str[i].c_str());file->ReadKeyword(":");*Bmode_ptr[i]=file->ReadInt();

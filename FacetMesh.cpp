@@ -165,14 +165,14 @@ void FacetMesh::UpdateSize() {
 
 	if( enableBtn->GetState() ) {
 
-		llong ram = 0;
-		llong cell = 0;
+		size_t ram = 0;
+		size_t cell = 0;
 		size_t nbFacet = geom->GetNbFacet();
 
 			for(size_t i=0;i<nbFacet;i++) {
 				Facet *f = geom->GetFacet(i);
-				cell += (llong)f->GetNbCell();
-				ram += (llong)f->GetTexRamSize();
+				cell += f->GetNbCell();
+				ram += f->GetTexRamSize();
 			}
 
 		
@@ -208,18 +208,18 @@ void FacetMesh::UpdateSizeForRatio() {
 		return;
 	}
 
-	llong ram = 0;
-	llong cell = 0;
+	size_t ram = 0;
+	size_t cell = 0;
 	size_t nbFacet = geom->GetNbFacet();
 
 		for(size_t i=0;i<nbFacet;i++) {
 			Facet *f = geom->GetFacet(i);
 			if(f->selected) {
-				cell += (llong)f->GetNbCellForRatio(ratio);
-				ram += (llong)f->GetTexRamSizeForRatio(ratio,boundMap,recordDir);
+				cell += f->GetNbCellForRatio(ratio);
+				ram += f->GetTexRamSizeForRatio(ratio,boundMap,recordDir);
 			} else {
-				cell += (llong)f->GetNbCell();
-				ram += (llong)f->GetTexRamSize();
+				cell += f->GetNbCell();
+				ram += f->GetTexRamSize();
 			}
 		}
 

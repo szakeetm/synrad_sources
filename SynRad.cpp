@@ -1166,7 +1166,7 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 				facetsToSum = selections[selGroupId - 1].selection;
 			}
 		}
-		llong sumLL = 0;
+		size_t sumLL = 0;
 		double sumD = 0.0;
 		double sumArea = 0.0; //We average by area
 		for (auto sel : facetsToSum) {
@@ -2270,10 +2270,10 @@ void SynRad::LoadConfig() {
 			viewer[i]->transStep = f->ReadDouble();
 		f->ReadKeyword("dispNumLines"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
-			viewer[i]->dispNumHits = f->ReadLLong();
+			viewer[i]->dispNumHits = f->ReadSizeT();
 		f->ReadKeyword("dispNumLeaks"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
-			viewer[i]->dispNumLeaks = f->ReadLLong();
+			viewer[i]->dispNumLeaks = f->ReadSizeT();
 		f->ReadKeyword("dispNumTraj"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
 			viewer[i]->dispNumTraj = f->ReadInt();
@@ -2283,13 +2283,13 @@ void SynRad::LoadConfig() {
 		f->ReadKeyword("autoScale"); f->ReadKeyword(":");
 		geom->texAutoScale = f->ReadInt();
 		f->ReadKeyword("texMin_MC"); f->ReadKeyword(":");
-		geom->textureMin_auto.count = (llong)f->ReadDouble();
+		geom->textureMin_auto.count = f->ReadDouble();
 		f->ReadKeyword("texMax_MC"); f->ReadKeyword(":");
-		geom->textureMax_auto.count = (llong)f->ReadDouble();
+		geom->textureMax_auto.count = f->ReadDouble();
 		f->ReadKeyword("texMin_flux"); f->ReadKeyword(":");
-		geom->textureMin_auto.count = f->ReadLLong();
+		geom->textureMin_auto.count = f->ReadSizeT();
 		f->ReadKeyword("texMax_flux"); f->ReadKeyword(":");
-		geom->textureMax_auto.count = f->ReadLLong();
+		geom->textureMax_auto.count = f->ReadSizeT();
 		f->ReadKeyword("texMin_power"); f->ReadKeyword(":");
 		geom->textureMin_auto.power = f->ReadDouble();
 		f->ReadKeyword("texMax_power"); f->ReadKeyword(":");

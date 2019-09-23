@@ -339,7 +339,7 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 				sprintf(tmp,"%zd",worker->ontheflyParams.desorptionLimit);
 				char *val = GLInputBox::GetInput(tmp,"Desorption max (0=>endless)","Edit MAX");
 				if( val ) {
-					llong maxDes;
+					size_t maxDes;
 					if( sscanf(val,"%I64d",&maxDes)==0 ) {
 						GLMessageBox::Display("Invalid 'maximum desorption' number","Error",GLDLG_OK,GLDLG_ICONERROR);
 					} else {

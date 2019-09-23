@@ -255,8 +255,8 @@ void TextureSettings::ProcessMessage(GLComponent *src,int message) {
         return;
       }
 	  if (geom->textureMode==TEXTURE_MODE_MCHITS) {
-		  geom->textureMin_manual.count = (llong)min;
-		  geom->textureMax_manual.count = (llong)max;
+		  geom->textureMin_manual.count = min;
+		  geom->textureMax_manual.count = max;
 	  }
 	  else if (geom->textureMode == TEXTURE_MODE_FLUX) {
 		  geom->textureMin_manual.flux = min;

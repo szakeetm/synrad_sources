@@ -44,7 +44,7 @@ static Dataport *dpLog = NULL;
 static int       prIdx;
 static size_t    prState;
 static size_t    prParam;
-static llong     prParam2;
+static size_t     prParam2;
 static DWORD     hostProcessId;
 static char      ctrlDpName[32];
 static char      loadDpName[32];
@@ -120,8 +120,8 @@ void SetErrorSub(const char *message) {
 char *GetSimuStatus() {
 
   static char ret[128];
-  llong count = sHandle->totalDesorbed;
-  llong max   = sHandle->ontheflyParams.desorptionLimit / sHandle->ontheflyParams.nbProcess;
+  size_t count = sHandle->totalDesorbed;
+  size_t max   = sHandle->ontheflyParams.desorptionLimit / sHandle->ontheflyParams.nbProcess;
 
       if( max!=0 ) {
         double percent = (double)(count)*100.0 / (double)(max);

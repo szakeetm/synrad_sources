@@ -263,7 +263,7 @@ void TexturePlotter::UpdateTable() {
 					for(size_t i=0;i<w;i++) {
 						for(size_t j=0;j<h;j++) {
 
-							llong val=texture[i+j*w].count;
+							size_t val=texture[i+j*w].count;
 							if (val>maxValue) {
 								maxValue=(float)val;
 								maxX=i;maxY=j;

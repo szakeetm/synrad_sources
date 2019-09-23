@@ -816,7 +816,7 @@ void Worker::RealReload() { //Sharing geometry with workers
 	// Compute number of max desorption per process
 	if(AccessDataportTimed(dpControl, (DWORD)(3000.0 + (double)(ontheflyParams.nbProcess*loadSize) / 10000.0))) {
 		SHCONTROL *m = (SHCONTROL *)dpControl->buff;
-		llong common = ontheflyParams.desorptionLimit / ontheflyParams.nbProcess;
+		size_t common = ontheflyParams.desorptionLimit / ontheflyParams.nbProcess;
 		size_t remain = (ontheflyParams.desorptionLimit % ontheflyParams.nbProcess);
 		for(size_t i=0;i<ontheflyParams.nbProcess;i++) {
 			m->cmdParam2[i] = common;

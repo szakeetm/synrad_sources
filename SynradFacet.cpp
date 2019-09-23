@@ -86,14 +86,14 @@ void Facet::LoadGEO(FileReader *file, int version, size_t nbVertex) {
 	file->ReadInt();
 	file->ReadKeyword("nbAbs"); file->ReadKeyword(":");
 	counterCache.nbAbsEquiv = 0.0;
-	file->ReadLLong();
+	file->ReadSizeT();
 	file->ReadKeyword("nbDes"); file->ReadKeyword(":");
 	counterCache.nbDesorbed = 0;
-	file->ReadLLong();
+	file->ReadSizeT();
 	file->ReadKeyword("nbHit"); file->ReadKeyword(":");
 	counterCache.nbMCHit = 0;
 	counterCache.nbHitEquiv = 0.0;
-	file->ReadLLong();
+	file->ReadSizeT();
 	if (version >= 2) {
 		// Added in GEO version 2
 		file->ReadKeyword("temperature"); file->ReadKeyword(":");
@@ -717,10 +717,10 @@ void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, in
 	counterCache.nbAbsEquiv = file->ReadDouble();
 	if (version < 3) {
 		file->ReadKeyword("nbDes"); file->ReadKeyword(":");
-		counterCache.nbDesorbed = file->ReadLLong();
+		counterCache.nbDesorbed = file->ReadSizeT();
 	}
 	file->ReadKeyword("nbHit"); file->ReadKeyword(":");
-	counterCache.nbMCHit = file->ReadLLong();
+	counterCache.nbMCHit = file->ReadSizeT();
 	if (version >= 10) {
 		file->ReadKeyword("nbHitEquiv"); file->ReadKeyword(":");
 		counterCache.nbHitEquiv = file->ReadDouble();
