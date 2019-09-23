@@ -53,6 +53,14 @@ Vector3d Quadrupole::B(const Vector3d &position) {
 	}
 	Bz_=0.0;
 
+	// add offset for the combined function (0 in the case of a regular quadrupole)
+	if(isCombinedFunction == true) {
+		Bx_ += offset_combined_function.x;
+		By_ += offset_combined_function.y;
+		Bz_ += offset_combined_function.z;
+	}
+	
+
 	//Inverse transformation
 	xp=Bx_*cosrot_q-By_*sinrot_q;
 	yp=Bx_*sinrot_q+By_*cosrot_q;

@@ -354,7 +354,7 @@ void Region_full::LoadPAR(FileReader *file){
 
 Distribution2D Region_full::LoadMAGFile(FileReader *file,Vector3d *dir,double *period,double *phase,int mode){
 	Distribution2D result;
-	if (mode==B_MODE_QUADRUPOLE) {
+	if (mode==B_MODE_QUADRUPOLE || mode == B_MODE_COMBINED_FUNCTION) {
 		double quadrX=file->ReadDouble();
 		double quadrY=file->ReadDouble();
 		double quadrZ=file->ReadDouble();
@@ -380,6 +380,18 @@ Distribution2D Region_full::LoadMAGFile(FileReader *file,Vector3d *dir,double *p
 			-params.quad_params.sinalfa_q,
 			params.quad_params.cosalfa_q*params.quad_params.cosbeta_q);
 
+		if(mode == B_MODE_COMBINED_FUNCTION) {
+			params.quad_params.isCombinedFunction = true;
+			params.quad_params.offset_combined_function.x = file->ReadDouble();
+			params.quad_params.offset_combined_function.y = file->ReadDouble();
+			params.quad_params.offset_combined_function.z = file->ReadDouble();
+		}
+		else {
+			params.quad_params.isCombinedFunction = false;
+			params.quad_params.offset_combined_function.x = 0.0;
+			params.quad_params.offset_combined_function.y = 0.0;
+			params.quad_params.offset_combined_function.z = 0.0;
+		}
 	} else {
 		*period=file->ReadDouble();
 		if (mode==B_MODE_HELICOIDAL) *phase=file->ReadDouble();

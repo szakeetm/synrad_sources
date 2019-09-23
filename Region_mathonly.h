@@ -22,6 +22,7 @@
 #define B_MODE_ANALYTIC        6
 #define B_MODE_HELICOIDAL      7
 #define B_MODE_ROTATING_DIPOLE 8
+#define B_MODE_COMBINED_FUNCTION 9
 
 struct RegionParams {
 

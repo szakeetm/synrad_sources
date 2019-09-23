@@ -26,6 +26,8 @@ public:
 	double alfa_q,beta_q,rot_q;
 	double sinalfa_q,cosalfa_q,sinbeta_q,cosbeta_q,sinrot_q,cosrot_q;
 	double K_q,L_q,period_q;
+	Vector3d offset_combined_function; // additional offset that needs to be applied for a combined function magnet
+	bool isCombinedFunction;
 	Vector3d B(const Vector3d &position);
 };
 

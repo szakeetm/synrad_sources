@@ -494,7 +494,7 @@ RegionEditor::RegionEditor():GLWindow() {
 	BxtypeCombo = new GLCombo(0);
 	magPanel->SetCompBounds(BxtypeCombo, 35, 18, 135, 21);
 	magPanel->Add(BxtypeCombo);
-	BxtypeCombo->SetSize(8);
+	BxtypeCombo->SetSize(9);
 	BxtypeCombo->SetValueAt(0, "Constant field");
 	BxtypeCombo->SetValueAt(1, "Coords along a direction");
 	BxtypeCombo->SetValueAt(2, "Coords along the beam");
@@ -503,6 +503,7 @@ RegionEditor::RegionEditor():GLWindow() {
 	BxtypeCombo->SetValueAt(5, "Analytical expression");
 	BxtypeCombo->SetValueAt(6, "Helicoidal");
 	BxtypeCombo->SetValueAt(7, "Rotating dipole");
+	BxtypeCombo->SetValueAt(8, "Combined function");
 
 	label66 = new GLLabel("Bx:");
 	magPanel->SetCompBounds(label66, 7, 22, 22, 13);
@@ -535,7 +536,7 @@ RegionEditor::RegionEditor():GLWindow() {
 	BztypeCombo = new GLCombo(0);
 	magPanel->SetCompBounds(BztypeCombo, 35, 70, 135, 21);
 	magPanel->Add(BztypeCombo);
-	BztypeCombo->SetSize(8);
+	BztypeCombo->SetSize(9);
 	BztypeCombo->SetValueAt(0, "Constant field");
 	BztypeCombo->SetValueAt(1, "Coords along a direction");
 	BztypeCombo->SetValueAt(2, "Coords along the beam");
@@ -544,6 +545,7 @@ RegionEditor::RegionEditor():GLWindow() {
 	BztypeCombo->SetValueAt(5, "Analytical expression");
 	BztypeCombo->SetValueAt(6, "Helicoidal");
 	BztypeCombo->SetValueAt(7, "Rotating dipole");
+	BztypeCombo->SetValueAt(8, "Combined function");
 
 	label70 = new GLLabel("Bz:");
 	magPanel->SetCompBounds(label70, 7, 74, 22, 13);
@@ -576,7 +578,7 @@ RegionEditor::RegionEditor():GLWindow() {
 	BytypeCombo = new GLCombo(0);
 	magPanel->SetCompBounds(BytypeCombo, 35, 44, 135, 21);
 	magPanel->Add(BytypeCombo);
-	BytypeCombo->SetSize(8);
+	BytypeCombo->SetSize(9);
 	BytypeCombo->SetValueAt(0, "Constant field");
 	BytypeCombo->SetValueAt(1, "Coords along a direction");
 	BytypeCombo->SetValueAt(2, "Coords along the beam");
@@ -585,6 +587,7 @@ RegionEditor::RegionEditor():GLWindow() {
 	BytypeCombo->SetValueAt(5, "Analytical expression");
 	BytypeCombo->SetValueAt(6, "Helicoidal");
 	BytypeCombo->SetValueAt(7, "Rotating dipole");
+	BytypeCombo->SetValueAt(8, "Combined function");
 
 	label67 = new GLLabel("By:");
 	magPanel->SetCompBounds(label67, 7, 48, 22, 13);
@@ -865,7 +868,7 @@ void RegionEditor::EnableDisableControls(GLComponent* src) {
 		std::vector<GLButton*> browseButtons = { magxBrowseButton , magyBrowseButton, magzBrowseButton };
 		std::vector<GLButton*> editButtons = { magxEditButton , magyEditButton, magzEditButton };
 		
-		std::vector<int> allCompModes = { B_MODE_QUADRUPOLE,B_MODE_ANALYTIC,B_MODE_ROTATING_DIPOLE };
+		std::vector<int> allCompModes = { B_MODE_QUADRUPOLE,B_MODE_ANALYTIC,B_MODE_ROTATING_DIPOLE, B_MODE_COMBINED_FUNCTION };
 		bool setAllComponents = Contains(allCompModes, ((GLCombo*)src)->GetSelectedIndex()+1);
 		
 		for (size_t i = 0; i < 3; i++) {
@@ -1025,7 +1028,7 @@ void RegionEditor::FillValues() {
 		std::vector<GLButton*> browseButtons = { magxBrowseButton , magyBrowseButton, magzBrowseButton };
 		std::vector<GLButton*> editButtons = { magxEditButton , magyEditButton, magzEditButton };
 
-		std::vector<int> allCompModes = { B_MODE_QUADRUPOLE,B_MODE_ANALYTIC,B_MODE_ROTATING_DIPOLE };
+		std::vector<int> allCompModes = { B_MODE_QUADRUPOLE,B_MODE_ANALYTIC,B_MODE_ROTATING_DIPOLE , B_MODE_COMBINED_FUNCTION };
 		
 		int setAllComponentsId = -1; //No all component setter
 		for (size_t i = 0; setAllComponentsId == -1 && i < 3; i++) {

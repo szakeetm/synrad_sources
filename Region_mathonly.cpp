@@ -86,6 +86,10 @@ Vector3d Region_mathonly::B(size_t pointId, const Vector3d &offset) {
 				*result_components[componentIndex]+=distr_components[componentIndex]->GetY(j)*pow(cos((double)(j+1)*ratio),j+1);
 			}
 			break;
+		case B_MODE_COMBINED_FUNCTION: //mode 8 works same as quadrupole with offset to the B vector
+			Bset = true;
+			result = params.quad_params.B(position_with_offset);
+			break;
 		case B_MODE_QUADRUPOLE: //mode 4
 			Bset=true;
 			result= params.quad_params.B(position_with_offset);
