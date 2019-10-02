@@ -19,9 +19,6 @@
 #ifndef _SIMULATIONH_
 #define _SIMULATIONH_
 
-#define MAX_STRUCT 512
-#define MAX_THIT 16384
-
 #include "SynradTypes.h"
 #include "Buffer_shared.h"
 #include "SMP.h"
@@ -37,18 +34,19 @@
 class SubprocessFacet {
 public:
 	FacetProperties sh;
-	FacetHitBuffer counter;
+	FacetHitBuffer tmpCounter;
 
-	size_t   *indices;   // Indices (Reference to geometry vertex)
-	Vector2d *vertices2; // Vertices (2D plane space, UV coordinates)
-	double	 fullSizeInc; // 1/Texture FULL element area
-	double   *inc;        // reciprocial of element area
-	bool     *largeEnough; //cells that are NOT too small for autoscaling
-	DirectionCell     *direction; // Direction field recording (average)
+    std::vector<size_t> indices;   // Indices (Reference to geometry vertex)
+    std::vector<Vector2d> vertices2; // Vertices (2D plane space, UV coordinates)
+    std::vector<TextureCell> texture;
+
+    double	 fullSizeInc; // 1/Texture FULL element area
+    std::vector<double> textureCellIncrements;        // reciprocial of element area
+    std::vector<bool> largeEnough; //cells that are NOT too small for autoscaling
+    std::vector<DirectionCell>direction; // Direction field recording (average)
 	//char     *fullElem;  // Direction field recording (only on full element) (WHY???)
-	ProfileSlice *profile;
-	TextureCell  *texture;
-	Histogram    *spectrum;
+    std::vector<ProfileSlice> profile;
+    Histogram spectrum;
 
 	// Temporary var (used in Intersect for collision)
 	double colDist;
@@ -71,51 +69,88 @@ public:
 
 	void RegisterTransparentPass(); //Allows one shared Intersect routine between MolFlow and Synrad
 	void ResetCounter();
+    void	ResizeCounter(size_t nbMoments);
+    bool  InitializeOnLoad(const size_t& globalId);
 
+    void InitializeHistogram();
+
+    bool InitializeDirectionTexture();
+
+    bool InitializeProfile();
+
+    bool InitializeTexture();
+
+    bool InitializeSpectrum();
+
+    bool InitializeLinkAndVolatile(const size_t & id);
 };
 
-// Temporary transparent hit
-extern  SubprocessFacet     **THitCache; //Global variable
 
+class AABBNODE;
 // Local simulation structure
+class SuperStructure {
+public:
+    SuperStructure();
+    ~SuperStructure();
+    std::vector<SubprocessFacet> facets;   // Facet handles
+	AABBNODE *aabbTree; // Structure AABB tree
+} ;
 
-typedef struct {
+class CurrentParticleStatus {
+public:
 
-	int              nbFacet;  // Number of facet
-	SubprocessFacet          **facets;   // Facet handles
-	struct AABBNODE *aabbTree; // Structure AABB tree
 
-} SUPERSTRUCT;
 
-typedef struct {
+    Vector3d position;    // Position
+    Vector3d direction;    // Direction
+    double oriRatio; //Represented ratio of desorbed, used for low flux mode
 
-	FacetHitBuffer tmpGlobalCount;            // Temporary number of hits (between 2 calls of UpdateMC)
+    //Recordings for histogram
+    size_t   nbBounces; // Number of hit (current particle) since desorption
+    double   distanceTraveled;
+    double   distTraveledSinceUpdate;
 
-	int    hitCacheSize;              // Last hits  
-	HIT    hitCache[HITCACHESIZE];       // Last hit history
+    double   dF;  //Flux carried by photon
+    double   dP;  //Power carried by photon
+    double   energy; //energy of the generated photon
+
+    size_t   structureId;        // Current structure
+    int      teleportedFrom;   // We memorize where the particle came from: we can teleport back
+    SubprocessFacet *lastHitFacet;     // Last hitted facet
+    std::vector<SubprocessFacet*> transparentHitBuffer; //Storing this buffer simulation-wide is cheaper than recreating it at every Intersect() call
+};
+
+class Simulation {
+public:
+    Simulation();
+    GlobalHitBuffer tmpGlobalResult;            // Temporary number of hits (between 2 calls of UpdateMC)
 
 	size_t    nbLeakSinceUpdate;   // Leaks since last UpdateMC
-	size_t	leakCacheSize;		// Leaks from regions with displayed photons since last UpdateMC (registered in cache)
-	LEAK		leakCache[LEAKCACHESIZE];      // Leak cache since last UpdateMC
 
 	size_t totalDesorbed;        //total number of generated photons, for process state reporting and simulation end check
 
 	// Geometry
-	char name[64];         // Global name
+	/*char name[64];         // Global name
 	size_t nbVertex;         // Number of vertex
-	size_t totalFacet;       // Total number of facet
-	Vector3d *vertices3;        // Vertices
-	size_t nbSuper;          // Number of super structure
-	size_t nbRegion;
+	size_t totalFacet;       // Total number of facet*/
+    //size_t nbSuper;          // Number of super structure
+
+    GeomProperties sh;
+    WorkerParams wp;
+    OntheflySimulationParams ontheflyParams; //Low flux, generation mode, photon cache display
+
+    // to worker
+    //size_t nbRegion;
+    //size_t nbTrajPoints;
+    //bool newReflectionModel;
+
+    std::vector<Vector3d> vertices3;        // Vertices
 	size_t nbMaterials;
-	size_t nbTrajPoints;
 	size_t sourceArea;       //number of trajectory points weighed by 1/dL
 	//size_t nbDistrPoints_MAG;
 	size_t nbDistrPoints_BXY;
-	size_t curStruct;        // Current structure
-	int teleportedFrom;
 	size_t sourceRegionId;
-	SUPERSTRUCT str[MAX_STRUCT];
+    std::vector<SuperStructure> structures; //They contain the facets
 
 	std::vector<Region_mathonly> regions;// Regions
 	std::vector<Material> materials;//materials
@@ -123,7 +158,7 @@ typedef struct {
 	std::vector<std::vector<std::vector<double>>> chi_distros;
 	std::vector<std::vector<double>> parallel_polarization;
 
-	SubprocessFacet* lastHitFacet;     // Last hitted facet. Pointer, not a reference, that way it can be NULL (example: desorption from the middle of the volume)
+	//SubprocessFacet* lastHitFacet;     // Last hitted facet. Pointer, not a reference, that way it can be NULL (example: desorption from the middle of the volume)
 	//int sourceArea;  // Number of trajectory points
 	double stepPerSec;  // Avg number of step per sec
 	size_t textTotalSize;  // Texture total size
@@ -138,26 +173,13 @@ typedef struct {
 
 	gsl_rng *gen; //rnd gen stuff
 
-	// Particle coordinates (MC)
-	Vector3d pPos;    // Position
-	Vector3d pDir;    // Direction
-	//int      nbPHit;  // Number of hit (current particle) //Uncommented as it had no function
-	double   dF;  //Flux carried by photon
-	double   dP;  //Power carried by photon
-	double   energy; //energy of the generated photon
-	double   distTraveledCurrentParticle; //Distance traveled by particle before absorption
-	double   distTraveledSinceUpdate;
+    // Particle coordinates (MC)
+    CurrentParticleStatus currentParticle;
 
-	double oriRatio;
-	bool newReflectionModel;
 
-	OntheflySimulationParams ontheflyParams; //Low flux, generation mode, photon cache display
-	std::vector<ParticleLoggerItem> tmpParticleLog;
+    std::vector<ParticleLoggerItem> tmpParticleLog;
 
-} Simulation;
-
-// Handle to simulation object
-extern Simulation *sHandle;
+};
 
 // -- Macros ---------------------------------------------------
 

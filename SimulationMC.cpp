@@ -43,7 +43,7 @@ extern Distribution2D integral_SR_power;
 //extern Distribution2D g1h2_distribution;
 
 void ComputeSourceArea() {
-	sHandle->sourceArea = sHandle->nbTrajPoints;
+	sHandle->sourceArea = sHandle->wp.nbTrajPoints;
 }
 
 void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
@@ -65,13 +65,13 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 	gHits = (GlobalHitBuffer *)buffer;
 
 	// Global hits and leaks
-	gHits->total.nbMCHit += sHandle->tmpGlobalCount.nbMCHit;
-	gHits->total.nbHitEquiv += sHandle->tmpGlobalCount.nbHitEquiv;
-	gHits->total.nbAbsEquiv += sHandle->tmpGlobalCount.nbAbsEquiv;
-	gHits->total.nbDesorbed += sHandle->tmpGlobalCount.nbDesorbed;
-	gHits->distTraveledTotal += sHandle->distTraveledSinceUpdate;
-	gHits->total.fluxAbs += sHandle->tmpGlobalCount.fluxAbs;
-	gHits->total.powerAbs += sHandle->tmpGlobalCount.powerAbs;
+	gHits->globalHits.hit.nbMCHit += sHandle->tmpGlobalResult.globalHits.hit.nbMCHit;
+	gHits->globalHits.hit.nbHitEquiv += sHandle->tmpGlobalResult.globalHits.hit.nbHitEquiv;
+	gHits->globalHits.hit.nbAbsEquiv += sHandle->tmpGlobalResult.globalHits.hit.nbAbsEquiv;
+	gHits->globalHits.hit.nbDesorbed += sHandle->tmpGlobalResult.globalHits.hit.nbDesorbed;
+	gHits->globalHits.hit.fluxAbs += sHandle->tmpGlobalResult.globalHits.hit.fluxAbs;
+	gHits->globalHits.hit.powerAbs += sHandle->tmpGlobalResult.globalHits.hit.powerAbs;
+    gHits->distTraveledTotal += sHandle->currentParticle.distTraveledSinceUpdate;
 
 	oldMin = gHits->hitMin;
 	oldMax = gHits->hitMax;
@@ -85,83 +85,82 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 	//for(i=0;i<BOUNCEMAX;i++) gHits->wallHits[i] += sHandle->wallHits[i];
 
 	// Leak
-	for (size_t leakIndex = 0; leakIndex < sHandle->leakCacheSize; leakIndex++)
-		gHits->leakCache[(leakIndex + gHits->lastLeakIndex) % LEAKCACHESIZE] = sHandle->leakCache[leakIndex];
+	for (size_t leakIndex = 0; leakIndex < sHandle->tmpGlobalResult.leakCacheSize; leakIndex++)
+		gHits->leakCache[(leakIndex + gHits->lastLeakIndex) % LEAKCACHESIZE] = sHandle->tmpGlobalResult.leakCache[leakIndex];
 	gHits->nbLeakTotal += sHandle->nbLeakSinceUpdate;
-	gHits->lastLeakIndex = (gHits->lastLeakIndex + sHandle->leakCacheSize) % LEAKCACHESIZE;
-	gHits->leakCacheSize = Min(LEAKCACHESIZE, gHits->leakCacheSize + sHandle->leakCacheSize);
+	gHits->lastLeakIndex = (gHits->lastLeakIndex + sHandle->tmpGlobalResult.leakCacheSize) % LEAKCACHESIZE;
+	gHits->leakCacheSize = Min(LEAKCACHESIZE, gHits->leakCacheSize + sHandle->tmpGlobalResult.leakCacheSize);
 
 	// Hit cache (Only prIdx 0)
 	if (prIdx == 0) {
-		for (size_t hitIndex = 0; hitIndex < sHandle->hitCacheSize; hitIndex++)
-			gHits->hitCache[(hitIndex + gHits->lastHitIndex) % HITCACHESIZE] = sHandle->hitCache[hitIndex];
+		for (size_t hitIndex = 0; hitIndex < sHandle->tmpGlobalResult.hitCacheSize; hitIndex++)
+			gHits->hitCache[(hitIndex + gHits->lastHitIndex) % HITCACHESIZE] = sHandle->tmpGlobalResult.hitCache[hitIndex];
 
-		if (sHandle->hitCacheSize > 0) {
-			gHits->lastHitIndex = (gHits->lastHitIndex + sHandle->hitCacheSize) % HITCACHESIZE;
+		if (sHandle->tmpGlobalResult.hitCacheSize > 0) {
+			gHits->lastHitIndex = (gHits->lastHitIndex + sHandle->tmpGlobalResult.hitCacheSize) % HITCACHESIZE;
 
 			//if (gHits->lastHitIndex < (HITCACHESIZE - 1)) {
 			//	gHits->lastHitIndex++;
 				gHits->hitCache[gHits->lastHitIndex].type = HIT_LAST; //Penup (border between blocks of consecutive hits in the hit cache)
 			//}
 
-			gHits->hitCacheSize = Min(HITCACHESIZE, gHits->hitCacheSize + sHandle->hitCacheSize);
+			gHits->hitCacheSize = Min(HITCACHESIZE, gHits->hitCacheSize + sHandle->tmpGlobalResult.hitCacheSize);
 		}
 	}
 
 	// Facets
-	for (s = 0; s < sHandle->nbSuper; s++) {
-		for (i = 0; i < sHandle->str[s].nbFacet; i++) {
+	for (s = 0; s < sHandle->sh.nbSuper; s++) {
+        for (auto& f : sHandle->structures[s].facets) {
 
-			SubprocessFacet *f = sHandle->str[s].facets[i];
-			if (f->hitted) {
+			if (f.hitted) {
 
-				FacetHitBuffer *fFit = (FacetHitBuffer *)(buffer + f->sh.hitOffset);
-				*fFit += f->counter;
+				FacetHitBuffer *fFit = (FacetHitBuffer *)(buffer + f.sh.hitOffset);
+				*fFit += f.tmpCounter;
 
-				if (f->sh.isProfile) {
-					ProfileSlice *shProfile = (ProfileSlice *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer)));
+				if (f.sh.isProfile) {
+					ProfileSlice *shProfile = (ProfileSlice *)(buffer + (f.sh.hitOffset + sizeof(FacetHitBuffer)));
 					for (j = 0; j < PROFILE_SIZE; j++) {
-						shProfile[j] += f->profile[j];
+						shProfile[j] += f.profile[j];
 					}
 				}
 
-				size_t profileSize = (f->sh.isProfile) ? PROFILE_SIZE*sizeof(ProfileSlice) : 0;
+				size_t profileSize = (f.sh.isProfile) ? PROFILE_SIZE*sizeof(ProfileSlice) : 0;
 
-				if (f->sh.isTextured) {
-					size_t nbTextureCells = f->sh.texHeight*f->sh.texWidth;
-					TextureCell *shTexture = (TextureCell *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize));
-					for (y = 0; y < f->sh.texHeight; y++) {
-						for (x = 0; x < f->sh.texWidth; x++) {
-							size_t index = x + y*f->sh.texWidth;
+				if (f.sh.isTextured) {
+					size_t nbTextureCells = f.sh.texHeight*f.sh.texWidth;
+					TextureCell *shTexture = (TextureCell *)(buffer + (f.sh.hitOffset + sizeof(FacetHitBuffer) + profileSize));
+					for (y = 0; y < f.sh.texHeight; y++) {
+						for (x = 0; x < f.sh.texWidth; x++) {
+							size_t index = x + y*f.sh.texWidth;
 							//Increase value
-							shTexture[index] += f->texture[index];
+							shTexture[index] += f.texture[index];
 							//Adjust min/max
 							if (shTexture[index].count > gHits->hitMax.count)	gHits->hitMax.count = shTexture[index].count;
 							if (shTexture[index].count > 0 && shTexture[index].count < gHits->hitMin.count) gHits->hitMin.count = shTexture[index].count;
-							if (shTexture[index].flux > gHits->hitMax.flux && f->largeEnough[index]) gHits->hitMax.flux = shTexture[index].flux;
-							if (shTexture[index].flux > 0.0 && shTexture[index].flux < gHits->hitMin.flux && f->largeEnough[index]) gHits->hitMin.flux = shTexture[index].flux;
-							if (shTexture[index].power > gHits->hitMax.power && f->largeEnough[index]) gHits->hitMax.power = shTexture[index].power;
-							if (shTexture[index].power > 0.0 && shTexture[index].power < gHits->hitMin.power && f->largeEnough[index]) gHits->hitMin.power = shTexture[index].power;
+							if (shTexture[index].flux > gHits->hitMax.flux && f.largeEnough[index]) gHits->hitMax.flux = shTexture[index].flux;
+							if (shTexture[index].flux > 0.0 && shTexture[index].flux < gHits->hitMin.flux && f.largeEnough[index]) gHits->hitMin.flux = shTexture[index].flux;
+							if (shTexture[index].power > gHits->hitMax.power && f.largeEnough[index]) gHits->hitMax.power = shTexture[index].power;
+							if (shTexture[index].power > 0.0 && shTexture[index].power < gHits->hitMin.power && f.largeEnough[index]) gHits->hitMin.power = shTexture[index].power;
 						}
 					}
 				}
 
-				if (f->sh.countDirection) {
-					DirectionCell *shDir = (DirectionCell *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize + f->textureSize));
-					for (y = 0; y < f->sh.texHeight; y++) {
-						for (x = 0; x < f->sh.texWidth; x++) {
-							size_t add = x + y*f->sh.texWidth;
-							shDir[add].dir += f->direction[add].dir;
-							shDir[add].count += f->direction[add].count;
+				if (f.sh.countDirection) {
+					DirectionCell *shDir = (DirectionCell *)(buffer + (f.sh.hitOffset + sizeof(FacetHitBuffer) + profileSize + f.textureSize));
+					for (y = 0; y < f.sh.texHeight; y++) {
+						for (x = 0; x < f.sh.texWidth; x++) {
+							size_t add = x + y*f.sh.texWidth;
+							shDir[add].dir += f.direction[add].dir;
+							shDir[add].count += f.direction[add].count;
 						}
 					}
 				}
 
-				if (f->sh.recordSpectrum) {
-					ProfileSlice *shSpectrum = (ProfileSlice *)(buffer + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profileSize
-						+ f->textureSize + f->directionSize));
+				if (f.sh.recordSpectrum) {
+					ProfileSlice *shSpectrum = (ProfileSlice *)(buffer + (f.sh.hitOffset + sizeof(FacetHitBuffer) + profileSize
+						+ f.textureSize + f.directionSize));
 					for (j = 0; j < SPECTRUM_SIZE; j++) {
-						shSpectrum[j] += f->spectrum->GetCounts(j);
+						shSpectrum[j] += f.spectrum.GetCounts(j);
 					}
 				}
 
@@ -194,32 +193,32 @@ void UpdateMCHits(Dataport *dpHit, int prIdx, DWORD timeout) {
 void PerformTeleport(SubprocessFacet& collidedFacet) {
 
 	//Search destination
-	SubprocessFacet *destination;
 	bool found = false;
 	int destIndex;
+    SubprocessFacet* destination;
 
 	if (collidedFacet.sh.teleportDest == -1) {
-		destIndex = sHandle->teleportedFrom;
+		destIndex = sHandle->currentParticle.teleportedFrom;
 		if (destIndex == -1) {
 			/*char err[128];
 			sprintf(err, "Facet %d tried to teleport to the facet where the particle came from, but there is no such facet.", collidedFacet.globalId + 1);
 			SetErrorSub(err);*/
-			RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
-			sHandle->lastHitFacet = &collidedFacet;
+			RecordHit(HIT_REF, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
+			sHandle->currentParticle.lastHitFacet = &collidedFacet;
 			return; //LEAK
 		}
 	}
 	else destIndex = collidedFacet.sh.teleportDest - 1;
 
 	//Look in which superstructure is the destination facet:
-	for (size_t i = 0; i < sHandle->nbSuper && (!found); i++) {
-		for (size_t j = 0; j < sHandle->str[i].nbFacet && (!found); j++) {
-			if (destIndex == sHandle->str[i].facets[j]->globalId) {
-				destination = sHandle->str[i].facets[j];
+	for (size_t i = 0; i < sHandle->sh.nbSuper && (!found); i++) {
+		for (size_t j = 0; j < sHandle->structures[i].facets.size() && (!found); j++) {
+			if (destIndex == sHandle->structures[i].facets[j].globalId) {
+                destination = &(sHandle->structures[i].facets[j]);
 				if (destination->sh.superIdx != -1) {
-					sHandle->curStruct = (int)destination->sh.superIdx; //change current superstructure, unless universal facet
+                    sHandle->currentParticle.structureId = destination->sh.superIdx; //change current superstructure, unless universal facet
 				}
-				sHandle->teleportedFrom = (int)collidedFacet.globalId; //memorize where the particle came from
+                sHandle->currentParticle.teleportedFrom = (int)collidedFacet.globalId; //memorize where the particle came from
 				found = true;
 			}
 		}
@@ -228,24 +227,24 @@ void PerformTeleport(SubprocessFacet& collidedFacet) {
 		/*char err[128];
 		sprintf(err, "Teleport destination of facet %d not found (facet %d does not exist)", collidedFacet.globalId + 1, collidedFacet.sh.teleportDest);
 		SetErrorSub(err);*/
-		RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
-		sHandle->lastHitFacet = &collidedFacet;
+		RecordHit(HIT_REF, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
+		sHandle->currentParticle.lastHitFacet = &collidedFacet;
 		return; //LEAK
 	}
 
 	// Count this hit as a transparent pass
-	RecordHit(HIT_TELEPORTSOURCE, sHandle->dF, sHandle->dP);
-	if (collidedFacet.texture && collidedFacet.sh.countTrans) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
+	RecordHit(HIT_TELEPORTSOURCE, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
+	if (/*collidedFacet.texture &&*/ collidedFacet.sh.countTrans) RecordHitOnTexture(collidedFacet, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
 
 	// Relaunch particle from new facet
-	double inPhi, inTheta;
-	std::tie(inTheta,inPhi) = CartesianToPolar(collidedFacet.sh.nU,collidedFacet.sh.nV, collidedFacet.sh.N);
-	PolarToCartesian(destination, inTheta, inPhi, false);
-	// Move particle to teleport destination point
-	sHandle->pPos = destination->sh.O + collidedFacet.colU*destination->sh.U + collidedFacet.colV*destination->sh.V;
+    auto[inTheta, inPhi] = CartesianToPolar(sHandle->currentParticle.direction, collidedFacet.sh.nU,collidedFacet.sh.nV, collidedFacet.sh.N);
 
-	RecordHit(HIT_TELEPORTDEST, sHandle->dF, sHandle->dP);
-	sHandle->lastHitFacet = destination;
+    PolarToCartesian(destination, inTheta, inPhi, false);
+	// Move particle to teleport destination point
+	sHandle->currentParticle.position = destination->sh.O + collidedFacet.colU*destination->sh.U + collidedFacet.colV*destination->sh.V;
+
+	RecordHit(HIT_TELEPORTDEST, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
+	sHandle->currentParticle.lastHitFacet = destination;
 
 	//Count hits on teleport facets (only TP source)
 	//collidedFacet.counter.nbAbsorbed++;
@@ -255,15 +254,15 @@ void PerformTeleport(SubprocessFacet& collidedFacet) {
 	increment.count_absorbed = 0;
 	increment.count_incident = 1;
 	increment.flux_absorbed = 0.0;
-	increment.flux_incident = sHandle->dF;
+	increment.flux_incident = sHandle->currentParticle.dF;
 	increment.power_absorbed = 0.0;
-	increment.power_incident = sHandle->dP;
-	ProfileFacet(collidedFacet, sHandle->energy, increment); //Put here since removed from Intersect() routine
+	increment.power_incident = sHandle->currentParticle.dP;
+	ProfileFacet(collidedFacet, sHandle->currentParticle.energy, increment); //Put here since removed from Intersect() routine
 
-	collidedFacet.counter.nbMCHit++;//destination->counter.nbMCHit++;
-	collidedFacet.counter.nbHitEquiv += sHandle->oriRatio;
-	collidedFacet.counter.fluxAbs += sHandle->dF;//destination->counter.fluxAbs+=sHandle->dF;
-	collidedFacet.counter.powerAbs += sHandle->dP;//destination->counter.powerAbs+=sHandle->dP;
+	collidedFacet.tmpCounter.hit.nbMCHit++;//destination->counter.nbMCHit++;
+	collidedFacet.tmpCounter.hit.nbHitEquiv += sHandle->currentParticle.oriRatio;
+	collidedFacet.tmpCounter.hit.fluxAbs += sHandle->currentParticle.dF;//destination->counter.fluxAbs+=sHandle->dF;
+	collidedFacet.tmpCounter.hit.powerAbs += sHandle->currentParticle.dP;//destination->counter.powerAbs+=sHandle->dP;
 }
 
 // Perform nbStep simulation steps (a step is a bounce)
@@ -273,19 +272,16 @@ bool SimulationMCStep(const size_t& nbStep) {
 	// Perform simulation steps
 	for (size_t i = 0; i < nbStep; i++) {
 
-		SubprocessFacet*   collidedFacetPtr=NULL;
-		double   d;
-		bool     found;
-
-		std::tie(found,collidedFacetPtr,d) = Intersect(sHandle->pPos, sHandle->pDir,THitCache); //May decide reflection type
+		//std::tie(found,collidedFacetPtr,d) = Intersect(sHandle->pPos, sHandle->pDir); //May decide reflection type
+        auto[found, collidedFacetPtr, d] = Intersect(sHandle, sHandle->currentParticle.position, sHandle->currentParticle.direction);
 
 		if (found) {
 			
 			SubprocessFacet& collidedFacet = *collidedFacetPtr; //better readability and passing as reference argument during this function
 
 			// Move particle to intersection point
-			sHandle->pPos = sHandle->pPos + d*sHandle->pDir;
-			sHandle->distTraveledSinceUpdate += d;
+			sHandle->currentParticle.position = sHandle->currentParticle.position + d*sHandle->currentParticle.direction;
+			sHandle->currentParticle.distTraveledSinceUpdate += d;
 			LogHit(&collidedFacet);
 
 			if (collidedFacet.sh.teleportDest) {
@@ -293,36 +289,36 @@ bool SimulationMCStep(const size_t& nbStep) {
 			}
 			else {
 				// Record incident
-				sHandle->tmpGlobalCount.nbMCHit++;
-				sHandle->tmpGlobalCount.nbHitEquiv += sHandle->oriRatio;
-				collidedFacet.counter.nbMCHit++;
-				collidedFacet.counter.nbHitEquiv += sHandle->oriRatio;
+				sHandle->tmpGlobalResult.globalHits.hit.nbMCHit++;
+				sHandle->tmpGlobalResult.globalHits.hit.nbHitEquiv += sHandle->currentParticle.oriRatio;
+				collidedFacet.tmpCounter.hit.nbMCHit++;
+				collidedFacet.tmpCounter.hit.nbHitEquiv += sHandle->currentParticle.oriRatio;
 				if (collidedFacet.sh.superDest) {	// Handle super structure link facet
-					sHandle->curStruct = collidedFacet.sh.superDest - 1;
+                    sHandle->currentParticle.structureId = collidedFacet.sh.superDest - 1;
 					// Count this hit as a transparent pass
-					RecordHit(HIT_TRANS, sHandle->dF, sHandle->dP);
+					RecordHit(HIT_TRANS, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
 					ProfileSlice increment;
 					increment.count_absorbed = 0;
 					increment.count_incident = 1;
 					increment.flux_absorbed = 0.0;
-					increment.flux_incident = sHandle->dF;
+					increment.flux_incident = sHandle->currentParticle.dF;
 					increment.power_absorbed = 0.0;
-					increment.power_incident = sHandle->dP;
-					ProfileFacet(collidedFacet, sHandle->energy, increment);
+					increment.power_incident = sHandle->currentParticle.dP;
+					ProfileFacet(collidedFacet, sHandle->currentParticle.energy, increment);
 					
-					if (collidedFacet.texture && collidedFacet.sh.countTrans) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
+					if (/*collidedFacet.texture &&*/ collidedFacet.sh.countTrans) RecordHitOnTexture(collidedFacet, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
 				}
 				else { //Not superDest or Teleport
-					if (sHandle->newReflectionModel) {
+					if (sHandle->wp.newReflectionModel) {
 						//New reflection model (Synrad 1.4)
 						double inTheta, inPhi;
-						std::tie(inTheta,inPhi) = CartesianToPolar(collidedFacet.sh.nU,collidedFacet.sh.nV,collidedFacet.sh.N);
+						std::tie(inTheta,inPhi) = CartesianToPolar(sHandle->currentParticle.direction,collidedFacet.sh.nU,collidedFacet.sh.nV,collidedFacet.sh.N);
 
 						double stickingProbability;
 						bool complexScattering; //forward/diffuse/back/transparent/stick
 						std::vector<double> materialReflProbabilities; //0: forward reflection, 1: diffuse, 2: backscattering, 3: transparent, 100%-(0+1+2+3): absorption
 
-						if (sHandle->dF == 0.0 || sHandle->dP == 0.0 || sHandle->energy < 1E-3) {
+						if (sHandle->currentParticle.dF == 0.0 || sHandle->currentParticle.dP == 0.0 || sHandle->currentParticle.energy < 1E-3) {
 							//stick non real photons (from beam beginning)
 							stickingProbability = 1.0; 
 							complexScattering = false;
@@ -348,14 +344,14 @@ bool SimulationMCStep(const size_t& nbStep) {
 						}
 						else {
 							//Low flux mode and simple scattering:
-							Vector3d dummyNullVector(0.0, 0.0, 0.0); //DoLowFluxReflection will not use it since sHandle->newReflectionModel == true
+							Vector3d dummyNullVector(0.0, 0.0, 0.0); //DoLowFluxReflection will not use it since sHandle->wp.newReflectionModel == true
 							DoLowFluxReflection(collidedFacet, stickingProbability, complexScattering, materialReflProbabilities,
 								inTheta, inPhi, dummyNullVector, dummyNullVector, dummyNullVector);
 						} //end low flux mode
 					}
 					else {
 						//Old reflection model (Synrad <=1.3 or if user deselects new model in Global Settings)						
-						if (sHandle->dF == 0.0 || sHandle->dP == 0.0 || sHandle->energy < 1E-3) { //stick non real photons (from beam beginning)
+						if (sHandle->currentParticle.dF == 0.0 || sHandle->currentParticle.dP == 0.0 || sHandle->currentParticle.energy < 1E-3) { //stick non real photons (from beam beginning)
 							Stick(collidedFacet);
 							if (!StartFromSource()) return false;
 						}
@@ -372,20 +368,20 @@ bool SimulationMCStep(const size_t& nbStep) {
 									//First step: generate a random surface and determine incident angles
 									double inTheta, inPhi;
 									if (collidedFacet.sh.doScattering) {
-										double n_ori = Dot(sHandle->pDir, collidedFacet.sh.N); //incident angle with original facet surface (negative if front collision, positive if back collision);
+										double n_ori = Dot(sHandle->currentParticle.direction, collidedFacet.sh.N); //incident angle with original facet surface (negative if front collision, positive if back collision);
 										double n_new;
 										do { //generate angles until incidence is from front
 											double sigmaRatio = collidedFacet.sh.rmsRoughness/collidedFacet.sh.autoCorrLength;
 											std::tie(nU_rotated, nV_rotated, N_rotated) = PerturbateSurface(collidedFacet, sigmaRatio);
-											n_new = Dot(sHandle->pDir, N_rotated);
+											n_new = Dot(sHandle->currentParticle.direction, N_rotated);
 										} while (n_new*n_ori <= 0.0); //generate new random surface if grazing angle would be over 90deg (shadowing)
-										std::tie(inTheta, inPhi) = CartesianToPolar(nU_rotated, nV_rotated, N_rotated); //Finally, get incident angles
+										std::tie(inTheta, inPhi) = CartesianToPolar(sHandle->currentParticle.direction, nU_rotated, nV_rotated, N_rotated); //Finally, get incident angles
 									}
 									else { //no scattering, use original surface
 										nU_rotated = collidedFacet.sh.nU;
 										nV_rotated = collidedFacet.sh.nV;
 										N_rotated = collidedFacet.sh.N;
-										std::tie(inTheta, inPhi) = CartesianToPolar(collidedFacet.sh.nU, collidedFacet.sh.nV, collidedFacet.sh.N); //Incident angles with original facet surface
+										std::tie(inTheta, inPhi) = CartesianToPolar(sHandle->currentParticle.direction, collidedFacet.sh.nU, collidedFacet.sh.nV, collidedFacet.sh.N); //Incident angles with original facet surface
 									}
 										
 									//Second step: determine sticking/scattering probabilities
@@ -443,7 +439,7 @@ std::tuple<double,std::vector<double>,bool> GetStickingProbability(const Subproc
 	//Returns sticking probability, materialReflProbabilities and complexScattering
 	Material *mat = &(sHandle->materials[collidedFacet.sh.reflectType - 10]);
 	bool complexScattering = mat->hasBackscattering;
-	std::vector<double> materialReflProbabilities = mat->BilinearInterpolate(sHandle->energy, abs(theta - PI / 2));
+	std::vector<double> materialReflProbabilities = mat->BilinearInterpolate(sHandle->currentParticle.energy, abs(theta - PI / 2));
 	double stickingProbability = complexScattering
 		? 1.0 - materialReflProbabilities[0] - materialReflProbabilities[1] - materialReflProbabilities[2] //100% - forward - diffuse - back (transparent already excluded in Intersect() routine)
 		: 1.0 - materialReflProbabilities[0]; //100% - forward (transparent already excluded in Intersect() routine)
@@ -509,29 +505,29 @@ bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingP
 	const Vector3d& N_rotated, const Vector3d& nU_rotated, const Vector3d& nV_rotated) {
 
 	//First register sticking part:
-	collidedFacet.counter.fluxAbs += sHandle->dF*stickingProbability;
-	collidedFacet.counter.powerAbs += sHandle->dP*stickingProbability;
-	collidedFacet.counter.nbAbsEquiv += stickingProbability;
-	if (collidedFacet.texture && collidedFacet.sh.countAbs) RecordHitOnTexture(collidedFacet,
-		sHandle->dF*stickingProbability, sHandle->dP*stickingProbability);
+	collidedFacet.tmpCounter.hit.fluxAbs += sHandle->currentParticle.dF * stickingProbability;
+	collidedFacet.tmpCounter.hit.powerAbs += sHandle->currentParticle.dP * stickingProbability;
+	collidedFacet.tmpCounter.hit.nbAbsEquiv += stickingProbability;
+	if (/*collidedFacet.texture &&*/ collidedFacet.sh.countAbs) RecordHitOnTexture(collidedFacet,
+		sHandle->currentParticle.dF*stickingProbability, sHandle->currentParticle.dP*stickingProbability);
 	ProfileSlice increment;
 	increment.count_absorbed = 0;
 	increment.count_incident = 1;
-	increment.flux_absorbed = sHandle->dF*stickingProbability;
-	increment.flux_incident = sHandle->dF;
-	increment.power_absorbed = sHandle->dP*stickingProbability;
-	increment.power_incident = sHandle->dP;
-	ProfileFacet(collidedFacet, sHandle->energy, increment);
+	increment.flux_absorbed = sHandle->currentParticle.dF*stickingProbability;
+	increment.flux_incident = sHandle->currentParticle.dF;
+	increment.power_absorbed = sHandle->currentParticle.dP*stickingProbability;
+	increment.power_incident = sHandle->currentParticle.dP;
+	ProfileFacet(collidedFacet, sHandle->currentParticle.energy, increment);
 	//Absorbed part recorded, let's see how much is left
 	double survivalProbability = 1.0 - stickingProbability;
-	sHandle->oriRatio *= survivalProbability;
-	if (sHandle->oriRatio < sHandle->ontheflyParams.lowFluxCutoff) {//reflected part not important, throw it away
-		RecordHit(HIT_ABS, sHandle->dF, sHandle->dP); //for hits and lines display
+	sHandle->currentParticle.oriRatio *= survivalProbability;
+	if (sHandle->currentParticle.oriRatio < sHandle->ontheflyParams.lowFluxCutoff) {//reflected part not important, throw it away
+		RecordHit(HIT_ABS, sHandle->currentParticle.dF, sHandle->currentParticle.dP); //for hits and lines display
 		return StartFromSource(); //false if maxdesorption reached
 	}
 	else { //reflect remainder
-		sHandle->dF *= survivalProbability;
-		sHandle->dP *= survivalProbability;
+		sHandle->currentParticle.dF *= survivalProbability;
+		sHandle->currentParticle.dP *= survivalProbability;
 
 		//Decide reflection type (fwd/diff/back, transparent excluded by intersect)
 		int reflType;
@@ -545,7 +541,7 @@ bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingP
 			else reflType = REFL_BACK;
 		}
 
-		if (sHandle->newReflectionModel) {
+		if (sHandle->wp.newReflectionModel) {
 			PerformBounce_new(collidedFacet, reflType, inTheta, inPhi);
 			return true;
 		}
@@ -558,16 +554,16 @@ bool DoLowFluxReflection(SubprocessFacet& collidedFacet, const double& stickingP
 bool DoOldRegularReflection(SubprocessFacet& collidedFacet, const int& reflType, const double& theta, const double& phi,
 	const Vector3d& N_rotated, const Vector3d& nU_rotated, const Vector3d& nV_rotated) {
 	
-	//sHandle->lastHitFacet = &collidedFacet; //If sticks, startfromsource will set to NULL, if reflects, PerformBounce_old will set it
+	//sHandle->currentParticle.lastHitFacet = &collidedFacet; //If sticks, startfromsource will set to NULL, if reflects, PerformBounce_old will set it
 	ProfileSlice increment;
 	increment.count_absorbed = 0;
 	increment.count_incident = 1;
 	increment.flux_absorbed = 0.0;
-	increment.flux_incident = sHandle->dF;
+	increment.flux_incident = sHandle->currentParticle.dF;
 	increment.power_absorbed = 0.0;
-	increment.power_incident = sHandle->dP;
-	ProfileFacet(collidedFacet, sHandle->energy, increment);
-	if (collidedFacet.texture && collidedFacet.sh.countRefl) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
+	increment.power_incident = sHandle->currentParticle.dP;
+	ProfileFacet(collidedFacet, sHandle->currentParticle.energy, increment);
+	if (/*collidedFacet.texture &&*/ collidedFacet.sh.countRefl) RecordHitOnTexture(collidedFacet, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
 	if (reflType == REFL_ABSORB) {
 				Stick(collidedFacet);
 				return StartFromSource(); //false if maxdesorption reached
@@ -581,7 +577,7 @@ bool StartFromSource() {
 	// Check end of simulation
 	if (sHandle->ontheflyParams.desorptionLimit > 0) {
 		if (sHandle->totalDesorbed >= sHandle->ontheflyParams.desorptionLimit / sHandle->ontheflyParams.nbProcess) {
-			sHandle->lastHitFacet = NULL;
+            sHandle->currentParticle.lastHitFacet = NULL;
 			return false;
 		}
 	}
@@ -592,7 +588,7 @@ bool StartFromSource() {
 	size_t regionId;
 	size_t pointIdLocal;
 	size_t sum = 0;
-	for (regionId = 0; regionId<sHandle->nbRegion&&!found; regionId++) {
+	for (regionId = 0; regionId<sHandle->wp.nbRegion&&!found; regionId++) {
 		if ((pointIdGlobal >= sum) && (pointIdGlobal < (sum + sHandle->regions[regionId].Points.size()))) {
 			pointIdLocal = pointIdGlobal - sum;
 			found = true;
@@ -609,7 +605,7 @@ bool StartFromSource() {
 	do {
 		photon = GeneratePhoton(pointIdLocal, sourceRegion, sHandle->ontheflyParams.generation_mode,
 			sHandle->psi_distro, sHandle->chi_distros[sourceRegion->params.polarizationCompIndex],
-			sHandle->parallel_polarization, sHandle->tmpGlobalCount.nbDesorbed == 0);
+			sHandle->parallel_polarization, sHandle->tmpGlobalResult.globalHits.hit.nbDesorbed == 0);
 		validEnergy = (photon.energy >= sourceRegion->params.energy_low_eV && photon.energy <= sourceRegion->params.energy_hi_eV);
 		if (!validEnergy && photon.energy>0.0) {
 			retries++;
@@ -626,39 +622,39 @@ bool StartFromSource() {
 	}
 
 	//sHandle->distTraveledCurrentParticle=0.0;
-	sHandle->dF = photon.SR_flux;
-	sHandle->dP = photon.SR_power;
-	sHandle->energy = photon.energy;
-	sHandle->oriRatio = 1.0;
+	sHandle->currentParticle.dF = photon.SR_flux;
+	sHandle->currentParticle.dP = photon.SR_power;
+	sHandle->currentParticle.energy = photon.energy;
+	sHandle->currentParticle.oriRatio = 1.0;
 
 	//starting position
-	sHandle->pPos = photon.start_pos;
+	sHandle->currentParticle.position = photon.start_pos;
 
 	sHandle->sourceRegionId = regionId;
 
-	RecordHit(HIT_DES, sHandle->dF, sHandle->dP);
+	RecordHit(HIT_DES, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
 
 	//angle
-	sHandle->pDir = photon.start_dir;
+	sHandle->currentParticle.direction = photon.start_dir;
 
-	if (sourceRegion->params.structureId > sHandle->nbSuper) {
+	if (sourceRegion->params.structureId > sHandle->sh.nbSuper) {
 		char tmp[1024];
 		sprintf(tmp, "Region %zd is in structure %zd which doesn't exist\n(This geometry has only %zd structures)",
-			regionId + 1, sourceRegion->params.structureId + 1, sHandle->nbSuper);
+			regionId + 1, sourceRegion->params.structureId + 1, sHandle->sh.nbSuper);
 		SetErrorSub(tmp);
 		return false;
 	}
-	
-	sHandle->curStruct = sourceRegion->params.structureId;
-	sHandle->teleportedFrom = -1;
+
+    sHandle->currentParticle.structureId = sourceRegion->params.structureId;
+    sHandle->currentParticle.teleportedFrom = -1;
 
 	// Count
 	sHandle->totalDesorbed++;
-	sHandle->tmpGlobalCount.fluxAbs += sHandle->dF;
-	sHandle->tmpGlobalCount.powerAbs += sHandle->dP;
-	sHandle->tmpGlobalCount.nbDesorbed++;
+	sHandle->tmpGlobalResult.globalHits.hit.fluxAbs += sHandle->currentParticle.dF;
+	sHandle->tmpGlobalResult.globalHits.hit.powerAbs += sHandle->currentParticle.dP;
+	sHandle->tmpGlobalResult.globalHits.hit.nbDesorbed++;
 
-	sHandle->lastHitFacet = NULL; //Photon originates from the volume, not from a facet
+	sHandle->currentParticle.lastHitFacet = NULL; //Photon originates from the volume, not from a facet
 
 	return true;
 
@@ -700,7 +696,7 @@ void PerformBounce_new(SubprocessFacet& collidedFacet,  const int &reflType, con
 		double incidentAngle = abs(inTheta);
 		if (incidentAngle > PI / 2) incidentAngle = PI - incidentAngle; //coming from the normal side
 		double y = cos(incidentAngle);
-		double wavelength = 3E8*6.626E-34 / (sHandle->energy*1.6E-19); //energy[eV] to wavelength[m]
+		double wavelength = 3E8*6.626E-34 / (sHandle->currentParticle.energy*1.6E-19); //energy[eV] to wavelength[m]
 		double specularReflProbability = exp(-Sqr(4 * PI*collidedFacet.sh.rmsRoughness*y / wavelength)); //Debye-Wallers factor, See "Measurements of x-ray scattering..." by Dugan, Sonnad, Cimino, Ishibashi, Scafers, eq.2
 		bool specularReflection = rnd() < specularReflProbability;
 		if (!specularReflection) {
@@ -736,14 +732,14 @@ void PerformBounce_new(SubprocessFacet& collidedFacet,  const int &reflType, con
 
 	PolarToCartesian(&collidedFacet, outTheta, outPhi, false);
 
-	RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
-	sHandle->lastHitFacet = &collidedFacet;
-	if (collidedFacet.texture && collidedFacet.sh.countRefl) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
+	RecordHit(HIT_REF, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
+	sHandle->currentParticle.lastHitFacet = &collidedFacet;
+	if (/*collidedFacet.texture &&*/ collidedFacet.sh.countRefl) RecordHitOnTexture(collidedFacet, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
 }
 
 bool PerformBounce_old(SubprocessFacet& collidedFacet, const int& reflType, const double& inTheta, const double& inPhi,
 	const Vector3d& N_rotated, const Vector3d& nU_rotated, const Vector3d& nV_rotated) {
-	RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
+	RecordHit(HIT_REF, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
 	// Relaunch particle, regular monte-carlo
 	if (collidedFacet.sh.reflectType == REFLECTION_DIFFUSE) {
 		//See docs/theta_gen.png for further details on angular distribution generation
@@ -754,7 +750,7 @@ bool PerformBounce_old(SubprocessFacet& collidedFacet, const int& reflType, cons
 			return false;
 		}
 	}
-	sHandle->lastHitFacet = &collidedFacet;
+	sHandle->currentParticle.lastHitFacet = &collidedFacet;
 	return true;
 }
 
@@ -814,9 +810,9 @@ bool VerifiedSpecularReflection(const SubprocessFacet& collidedFacet, const int&
 			}
 		}
 
-		newDir = Vector3d(-sHandle->pDir.x * rotationMatrix[0][0] + -sHandle->pDir.y * rotationMatrix[0][1] + -sHandle->pDir.z * rotationMatrix[0][2],
-			-sHandle->pDir.x * rotationMatrix[1][0] + -sHandle->pDir.y * rotationMatrix[1][1] + -sHandle->pDir.z * rotationMatrix[1][2],
-			-sHandle->pDir.x * rotationMatrix[2][0] + -sHandle->pDir.y * rotationMatrix[2][1] + -sHandle->pDir.z * rotationMatrix[2][2]);
+		newDir = Vector3d(-sHandle->currentParticle.direction.x * rotationMatrix[0][0] + -sHandle->currentParticle.direction.y * rotationMatrix[0][1] + -sHandle->currentParticle.direction.z * rotationMatrix[0][2],
+			-sHandle->currentParticle.direction.x * rotationMatrix[1][0] + -sHandle->currentParticle.direction.y * rotationMatrix[1][1] + -sHandle->currentParticle.direction.z * rotationMatrix[1][2],
+			-sHandle->currentParticle.direction.x * rotationMatrix[2][0] + -sHandle->currentParticle.direction.y * rotationMatrix[2][1] + -sHandle->currentParticle.direction.z * rotationMatrix[2][2]);
 
 		calcNewDir = false;
 		break;
@@ -838,7 +834,7 @@ bool VerifiedSpecularReflection(const SubprocessFacet& collidedFacet, const int&
 		return false; //if reflection would go against the surface, generate new angles
 	}
 
-	sHandle->pDir = newDir;
+	sHandle->currentParticle.direction = newDir;
 	return true;
 }
 
@@ -847,8 +843,8 @@ void RecordHitOnTexture(SubprocessFacet& f, double dF, double dP) {
 	size_t tv = (size_t)(f.colV * f.sh.texHeightD);
 	size_t index = tu + tv*f.sh.texWidth;
 	f.texture[index].count++;
-	f.texture[index].flux += dF*f.inc[index]; //normalized by area
-	f.texture[index].power += dP*f.inc[index]; //normalized by area
+	f.texture[index].flux += dF*f.textureCellIncrements[index]; //normalized by area
+	f.texture[index].power += dP*f.textureCellIncrements[index]; //normalized by area
 }
 
 void RecordDirectionVector(SubprocessFacet& f) {
@@ -856,90 +852,31 @@ void RecordDirectionVector(SubprocessFacet& f) {
 	size_t tv = (size_t)(f.colV * f.sh.texHeightD);
 	size_t add = tu + tv*(f.sh.texWidth);
 
-	f.direction[add].dir.x += sHandle->pDir.x;
-	f.direction[add].dir.y += sHandle->pDir.y;
-	f.direction[add].dir.z += sHandle->pDir.z;
+	f.direction[add].dir.x += sHandle->currentParticle.direction.x;
+	f.direction[add].dir.y += sHandle->currentParticle.direction.y;
+	f.direction[add].dir.z += sHandle->currentParticle.direction.z;
 	f.direction[add].count++;
 }
 
 void Stick(SubprocessFacet& collidedFacet) {
-	collidedFacet.counter.nbAbsEquiv+=1.0;
-	collidedFacet.counter.fluxAbs += sHandle->dF;
-	collidedFacet.counter.powerAbs += sHandle->dP;
-	sHandle->tmpGlobalCount.nbAbsEquiv+=1.0;
+	collidedFacet.tmpCounter.hit.nbAbsEquiv+=1.0;
+	collidedFacet.tmpCounter.hit.fluxAbs += sHandle->currentParticle.dF;
+	collidedFacet.tmpCounter.hit.powerAbs += sHandle->currentParticle.dP;
+	sHandle->tmpGlobalResult.globalHits.hit.nbAbsEquiv+=1.0;
 	//sHandle->distTraveledSinceUpdate+=sHandle->distTraveledCurrentParticle;
 	//sHandle->counter.nbAbsorbed++;
 	//sHandle->counter.fluxAbs+=sHandle->dF;
 	//sHandle->counter.powerAbs+=sHandle->dP;
-	RecordHit(HIT_ABS, sHandle->dF, sHandle->dP); //for hits and lines display
+	RecordHit(HIT_ABS, sHandle->currentParticle.dF, sHandle->currentParticle.dP); //for hits and lines display
 	ProfileSlice increment;
 	increment.count_absorbed = 1;
 	increment.count_incident = 1;
-	increment.flux_absorbed = sHandle->dF;
-	increment.flux_incident = sHandle->dF;
-	increment.power_absorbed = sHandle->dP;
-	increment.power_incident = sHandle->dP;
-	ProfileFacet(collidedFacet, sHandle->energy, increment);
-	if (collidedFacet.texture && collidedFacet.sh.countAbs) RecordHitOnTexture(collidedFacet, sHandle->dF, sHandle->dP);
-}
-
-void SubprocessFacet::RegisterTransparentPass()
-{
-	//Low flux mode not supported (ray properties can't change on transparent pass since it's inside the Intersect() routine)
-	this->hitted = true;
-	this->counter.nbMCHit++; //count MC hits
-	this->counter.nbHitEquiv += sHandle->oriRatio;
-	this->counter.fluxAbs += sHandle->dF;
-	this->counter.powerAbs += sHandle->dP;
-	ProfileSlice increment;
-	increment.count_absorbed = 0;
-	increment.count_incident = 1;
-	increment.flux_absorbed = 0.0;
-	increment.flux_incident = sHandle->dF;
-	increment.power_absorbed = 0.0;
-	increment.power_incident = sHandle->dP;
-	ProfileFacet(*this, sHandle->energy, increment); //count profile
-	LogHit(this);
-	if (this->texture && this->sh.countTrans) RecordHitOnTexture(*this, sHandle->dF, sHandle->dP); //count texture
-	if (this->direction && this->sh.countDirection) RecordDirectionVector(*this);
-}
-
-void ProfileFacet(SubprocessFacet &f, const double &energy, const ProfileSlice& increment) {
-
-	size_t pos;
-
-	switch (f.sh.profileType) {
-
-	case PROFILE_ANGULAR: {
-		double dot = abs(Dot(f.sh.N, sHandle->pDir));
-		double theta = acos(dot);              // Angle to normal (0 to PI/2)
-		size_t grad = (size_t)(((double)PROFILE_SIZE)*(theta) / (PI / 2)); // To Grad
-		Saturate(grad, 0, PROFILE_SIZE - 1);
-		f.profile[grad] += increment;
-
-	} break;
-
-	case PROFILE_U:
-		pos = (size_t)((f.colU)*(double)PROFILE_SIZE);
-		Saturate(pos, 0, PROFILE_SIZE - 1);
-		f.profile[pos]+= increment;
-		break;
-
-	case PROFILE_V:
-		pos = (size_t)((f.colV)*(double)PROFILE_SIZE);
-		Saturate(pos, 0, PROFILE_SIZE - 1);
-		f.profile[pos] += increment;
-		break;
-
-	}
-
-	if (f.sh.recordSpectrum) {
-		f.spectrum->Add(energy, increment);
-	}
-}
-
-void SubprocessFacet::ResetCounter() {
-	memset(&counter, 0, sizeof(counter));
+	increment.flux_absorbed = sHandle->currentParticle.dF;
+	increment.flux_incident = sHandle->currentParticle.dF;
+	increment.power_absorbed = sHandle->currentParticle.dP;
+	increment.power_incident = sHandle->currentParticle.dP;
+	ProfileFacet(collidedFacet, sHandle->currentParticle.energy, increment);
+	if (/*collidedFacet.texture &&*/ collidedFacet.sh.countAbs) RecordHitOnTexture(collidedFacet, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
 }
 
 void UpdateLog(Dataport * dpLog, DWORD timeout)
@@ -980,11 +917,70 @@ void LogHit(SubprocessFacet * f)
 		sHandle->tmpParticleLog.size() < (sHandle->ontheflyParams.logLimit / sHandle->ontheflyParams.nbProcess)) {
 		ParticleLoggerItem log;
 		log.facetHitPosition = Vector2d(f->colU, f->colV);
-		std::tie(log.hitTheta, log.hitPhi) = CartesianToPolar(f->sh.nU, f->sh.nV, f->sh.N);
-		log.oriRatio = sHandle->oriRatio;
-		log.energy = sHandle->energy;
-		log.dF = sHandle->dF;
-		log.dP = sHandle->dP;
+		std::tie(log.hitTheta, log.hitPhi) = CartesianToPolar(sHandle->currentParticle.direction, f->sh.nU, f->sh.nV, f->sh.N);
+		log.oriRatio = sHandle->currentParticle.oriRatio;
+		log.energy = sHandle->currentParticle.energy;
+		log.dF = sHandle->currentParticle.dF;
+		log.dP = sHandle->currentParticle.dP;
 		sHandle->tmpParticleLog.push_back(log);
 	}
+}
+
+void SubprocessFacet::RegisterTransparentPass()
+{
+    //Low flux mode not supported (ray properties can't change on transparent pass since it's inside the Intersect() routine)
+    this->hitted = true;
+    this->tmpCounter.hit.nbMCHit++; //count MC hits
+    this->tmpCounter.hit.nbHitEquiv += sHandle->currentParticle.oriRatio;
+    this->tmpCounter.hit.fluxAbs += sHandle->currentParticle.dF;
+    this->tmpCounter.hit.powerAbs += sHandle->currentParticle.dP;
+    ProfileSlice increment;
+    increment.count_absorbed = 0;
+    increment.count_incident = 1;
+    increment.flux_absorbed = 0.0;
+    increment.flux_incident = sHandle->currentParticle.dF;
+    increment.power_absorbed = 0.0;
+    increment.power_incident = sHandle->currentParticle.dP;
+    ProfileFacet(*this, sHandle->currentParticle.energy, increment); //count profile
+    LogHit(this);
+    if (/*this->texture &&*/ this->sh.countTrans) RecordHitOnTexture(*this, sHandle->currentParticle.dF, sHandle->currentParticle.dP); //count texture
+    if (/*this->direction &&*/ this->sh.countDirection) RecordDirectionVector(*this);
+}
+
+void ProfileFacet(SubprocessFacet &f, const double &energy, const ProfileSlice& increment) {
+
+    size_t pos;
+
+    switch (f.sh.profileType) {
+
+        case PROFILE_ANGULAR: {
+            double dot = abs(Dot(f.sh.N, sHandle->currentParticle.direction));
+            double theta = acos(dot);              // Angle to normal (0 to PI/2)
+            size_t grad = (size_t)(((double)PROFILE_SIZE)*(theta) / (PI / 2)); // To Grad
+            Saturate(grad, 0, PROFILE_SIZE - 1);
+            f.profile[grad] += increment;
+
+        } break;
+
+        case PROFILE_U:
+            pos = (size_t)((f.colU)*(double)PROFILE_SIZE);
+            Saturate(pos, 0, PROFILE_SIZE - 1);
+            f.profile[pos]+= increment;
+            break;
+
+        case PROFILE_V:
+            pos = (size_t)((f.colV)*(double)PROFILE_SIZE);
+            Saturate(pos, 0, PROFILE_SIZE - 1);
+            f.profile[pos] += increment;
+            break;
+
+    }
+
+    if (f.sh.recordSpectrum) {
+        f.spectrum.Add(energy, increment);
+    }
+}
+
+void SubprocessFacet::ResetCounter() {
+    memset(&tmpCounter, 0, sizeof(tmpCounter));
 }

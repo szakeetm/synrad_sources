@@ -296,7 +296,7 @@ char *FacetDetails::FormatCell(size_t idx,Facet *f, size_t mode) {
 		sprintf(ret,"%s",FormatMemory(f->GetTexRamSize()));
 		break;
 	case 16:
-		sprintf(ret,"%f",f->err);
+		sprintf(ret,"%f",f->planarityError);
 		break;
 	case 17:
 		sprintf(ret,"%s",profStr[f->sh.profileType]);
@@ -305,17 +305,17 @@ char *FacetDetails::FormatCell(size_t idx,Facet *f, size_t mode) {
 		sprintf(ret,f->sh.recordSpectrum==1?"Yes":"No");
 		break;
 	case 19:
-		sprintf(ret,"%zd",f->counterCache.nbMCHit);
+		sprintf(ret,"%zd",f->facetHitCache.hit.nbMCHit);
 		break;
 	case 20:
-		sprintf(ret,"%g",f->counterCache.nbAbsEquiv);
+		sprintf(ret,"%g",f->facetHitCache.hit.nbAbsEquiv);
 		break;
 
 	case 21:
-		sprintf(ret,"%g",f->counterCache.fluxAbs/worker->no_scans);
+		sprintf(ret,"%g",f->facetHitCache.hit.fluxAbs/worker->no_scans);
 		break;
 	case 22:
-		sprintf(ret,"%g",f->counterCache.powerAbs/worker->no_scans);
+		sprintf(ret,"%g",f->facetHitCache.hit.powerAbs/worker->no_scans);
 		break;
 	}
 
@@ -337,7 +337,7 @@ void FacetDetails::UpdateTable() {
 	DWORD sumMemory=0;
 	*/
 
-	char *tmpName[NB_FDCOLUMN];
+	const char *tmpName[NB_FDCOLUMN];
 	int  tmpWidth[NB_FDCOLUMN];
 	int  tmpAlign[NB_FDCOLUMN];
 

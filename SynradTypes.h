@@ -69,6 +69,8 @@ public:
 	double power_incident;
 	double power_absorbed;
 	ProfileSlice& operator+=(const ProfileSlice& rhs);
+    ProfileSlice& operator=(const ProfileSlice& rhs);
+
 };
 
 class TextureCell {
@@ -77,6 +79,7 @@ public:
 	double flux;
 	double power;
 	TextureCell& operator+=(const TextureCell& rhs);
+    TextureCell& operator=(const TextureCell& rhs);
 };
 
 class Trajectory_Point {
@@ -89,6 +92,29 @@ public:
 	
 	double Critical_Energy(const double &gamma);
 	double dAlpha(const double &dL);
+
+    template<class Archive>
+    void serialize(Archive & archive)
+    {
+        archive(
+                CEREAL_NVP(position),
+                CEREAL_NVP(direction),
+                CEREAL_NVP(X_local),CEREAL_NVP(Y_local),CEREAL_NVP(Z_local),
+                CEREAL_NVP(rho),
+
+                CEREAL_NVP(critical_energy),
+                CEREAL_NVP(emittance_X),CEREAL_NVP(emittance_Y),
+                CEREAL_NVP(beta_X),CEREAL_NVP(beta_Y),
+                CEREAL_NVP(eta),CEREAL_NVP(eta_prime),
+                CEREAL_NVP(alpha_X),CEREAL_NVP(alpha_Y),
+                CEREAL_NVP(sigma_x),CEREAL_NVP(sigma_y),
+                CEREAL_NVP(sigma_x_prime),CEREAL_NVP(sigma_y_prime),
+                CEREAL_NVP(theta_X),CEREAL_NVP(theta_Y),
+                CEREAL_NVP(gamma_X),CEREAL_NVP(gamma_Y),
+                CEREAL_NVP(a_x),CEREAL_NVP(a_y),
+                CEREAL_NVP(b_x),CEREAL_NVP(b_y)
+        );
+    }
 };
 
 class GenPhoton {
@@ -104,9 +130,11 @@ class Histogram {
 private:
 	int number_of_bins;
 	double delta,min,max;
-	ProfileSlice *counts;
+	//ProfileSlice *counts;
+    std::vector<ProfileSlice> counts;
 public:
-	Histogram(double min,double max,int number_of_bins,bool logscale);
+    Histogram();
+    Histogram(double min,double max,int number_of_bins,bool logscale);
 	~Histogram();
 	ProfileSlice GetCounts(size_t index);
 	//double GetNormalized(int index);

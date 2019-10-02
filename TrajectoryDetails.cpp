@@ -414,7 +414,7 @@ void TrajectoryDetails::UpdateTable() {
 	static char ret[256];
 	strcpy(ret, "");
 
-	char *tmpName[NB_TPCOLUMN];
+	const char *tmpName[NB_TPCOLUMN];
 	int  tmpWidth[NB_TPCOLUMN];
 	int  tmpAlign[NB_TPCOLUMN];
 

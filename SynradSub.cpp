@@ -35,6 +35,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #endif
 
 // Global process variables
+Simulation* sHandle; //Global handle to simulation, one per subprocess
 
 #define WAITTIME    100  // Answer in STOP mode
 
@@ -125,9 +126,9 @@ char *GetSimuStatus() {
 
       if( max!=0 ) {
         double percent = (double)(count)*100.0 / (double)(max);
-        sprintf(ret,"(%s) MC %I64d/%I64d (%.1f%%)",sHandle->name,count,max,percent);
+        sprintf(ret,"(%s) MC %I64d/%I64d (%.1f%%)",sHandle->sh.name.c_str(),count,max,percent);
       } else {
-        sprintf(ret,"(%s) MC %I64d",sHandle->name,count);
+        sprintf(ret,"(%s) MC %I64d",sHandle->sh.name.c_str(),count);
       }
 
   return ret;
@@ -308,7 +309,7 @@ int main(int argc,char* argv[])
         break;
 
       case COMMAND_RESET:
-        printf("COMMAND: RESET (%zd,%I64d)\n",prParam,prParam2);
+          printf("COMMAND: RESET (%zd,%I64d)\n",prParam,prParam2);
         ResetSimulation();
         SetReady();
         break;

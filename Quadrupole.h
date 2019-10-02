@@ -29,6 +29,28 @@ public:
 	Vector3d offset_combined_function; // additional offset that needs to be applied for a combined function magnet
 	bool isCombinedFunction;
 	Vector3d B(const Vector3d &position);
+
+    template<class Archive>
+    void serialize(Archive & archive)
+    {
+        archive(
+                CEREAL_NVP(center),CEREAL_NVP(direction),
+                CEREAL_NVP(alfa_q),CEREAL_NVP(beta_q),CEREAL_NVP(rot_q),
+
+                CEREAL_NVP(sinalfa_q),
+                CEREAL_NVP(cosalfa_q),
+                CEREAL_NVP(sinbeta_q),
+                CEREAL_NVP(cosbeta_q),
+                CEREAL_NVP(sinrot_q),
+                CEREAL_NVP(cosrot_q),
+
+                CEREAL_NVP(K_q),CEREAL_NVP(L_q),CEREAL_NVP(period_q),
+                CEREAL_NVP(offset_combined_function),
+                CEREAL_NVP(isCombinedFunction)
+
+
+        );
+    }
 };
 
 #endif

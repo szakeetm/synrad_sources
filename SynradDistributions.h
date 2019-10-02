@@ -20,7 +20,10 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #pragma once
 //Synrad stuff, distributions and interpolation
 
+#include <string>
 #include "Distributions.h"
+#include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
 
 #define NUMBER_OF_DISTRO_VALUES 100
 
@@ -47,6 +50,19 @@ public:
 	int GetReflectionType(const double &energy, const double &angle,const double &rnd);
 	int hasBackscattering; //has forward/diffuse/backscattering/transparent pass probabilities
 	void InitAngles(std::vector<std::string> data);
+
+    template<class Archive>
+    void serialize(Archive & archive)
+    {
+        archive(
+              CEREAL_NVP(hasBackscattering),
+                CEREAL_NVP(angleVals),
+                CEREAL_NVP(energyVals),
+                CEREAL_NVP(reflVals),
+             CEREAL_NVP(name)
+
+        );
+    }
 };
 
 /*
@@ -71,6 +87,8 @@ double find_chi(const double& psi, const double& gamma, const std::vector<std::v
 double SYNGEN1(const double& log10LoEnergyRatio, const double& log10HiEnergyRatio,
 	double& interpFluxLo,double& interpFluxHi,double& interpPowerLo,double& interpPowerHi, const bool& calcInterpolates,
 	const int& generation_mode);
+
+double QuadraticInterpolateX(const double & y, const double & a, const double & b, const double & c, const double & FA, const double & FB, const double & FC);
 
 //Distribution2D Generate_K_Distribution(double order);
 //Distribution2D Generate_G1_H2_Distribution();

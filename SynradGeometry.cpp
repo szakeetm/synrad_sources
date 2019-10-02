@@ -32,6 +32,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "GLApp\GLWindowManager.h"
 #include "Region_full.h"
 #include "Facet_shared.h"
+#include <cereal/types/vector.hpp>
 
 using namespace pugi;
 extern SynRad *mApp;
@@ -101,17 +102,17 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> &
 	const bool& newReflectionModel, const OntheflySimulationParams& ontheflyParams) {
 
 	// Build shared buffer for geometry (see Shared.h)
-	size_t fOffset = sizeof(GlobalHitBuffer);
-	GeomProperties *shGeom = (GeomProperties *)buffer;
-	sh.nbRegion = regions.size();
-	sh.newReflectionModel = newReflectionModel;
-	memcpy(shGeom, &(this->sh), sizeof(GeomProperties));
-	buffer += sizeof(GeomProperties);
+    Worker *w = &mApp->worker;
+    WRITEBUFFER(sh, GeomProperties);
+    WRITEBUFFER(w->wp, WorkerParams);
+    /*GeomProperties *shGeom = (GeomProperties *)buffer;
+    memcpy(shGeom, &(this->sh), sizeof(GeomProperties));
+	buffer += sizeof(GeomProperties);*/
 
 	WRITEBUFFER(ontheflyParams, OntheflySimulationParams);
 
 	// Build shared buffer for trajectory (see Shared.h)
-	for (size_t i = 0; i < sh.nbRegion; i++) {
+	for (size_t i = 0; i < w->wp.nbRegion; i++) {
 		RegionParams* regparam = (RegionParams*)buffer;
 		regions[i].params.nbDistr_MAG = Vector3d((int)regions[i].Bx_distr.GetSize(), (int)regions[i].By_distr.GetSize(), (int)regions[i].Bz_distr.GetSize());
 		regions[i].params.nbPointsToCopy = regions[i].Points.size();
@@ -120,7 +121,7 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> &
 		buffer += sizeof(RegionParams);
 	}
 	//copy trajectory points
-	for (size_t i = 0; i < sh.nbRegion; i++) {
+	for (size_t i = 0; i < w->wp.nbRegion; i++) {
 		/*for (size_t j = 0; j < regions[i].params.nbPointsToCopy; j++){
 			WRITEBUFFER(regions[i].Points[j], Trajectory_Point);
 		}*/
@@ -130,7 +131,7 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> &
 	}
 
 	//copy distribution points
-	for (size_t i = 0; i < sh.nbRegion; i++) {
+	for (size_t i = 0; i < w->wp.nbRegion; i++) {
 		for (size_t j = 0; j < (size_t)regions[i].params.nbDistr_MAG.x; j++) {
 			WRITEBUFFER(regions[i].Bx_distr.GetX(j), double);
 			WRITEBUFFER(regions[i].Bx_distr.GetY(j), double);
@@ -221,31 +222,30 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> &
 		}
 	}
 
-	memcpy(buffer, vertices3, sizeof(Vector3d)*sh.nbVertex);
-	buffer += sizeof(Vector3d)*sh.nbVertex;
-	for (size_t i = 0; i < sh.nbFacet; i++) {
+    memcpy(buffer, vertices3.data(), sizeof(Vector3d)*sh.nbVertex);
+    buffer += sizeof(Vector3d)*sh.nbVertex;
+
+    size_t fOffset = sizeof(GlobalHitBuffer);
+    for (size_t i = 0; i < sh.nbFacet; i++) {
 		Facet *f = facets[i];
 		f->sh.hitOffset = fOffset;
 		fOffset += f->GetHitsSize();
-		memcpy(buffer, &(f->sh), sizeof(FacetProperties));
-		buffer += sizeof(FacetProperties);
-		memcpy(buffer, f->indices, sizeof(size_t)*f->sh.nbIndex);
-		buffer += sizeof(size_t)*f->sh.nbIndex;
-		memcpy(buffer, f->vertices2, sizeof(Vector2d)*f->sh.nbIndex);
-		buffer += sizeof(Vector2d)*f->sh.nbIndex;
+        WRITEBUFFER(f->sh, FacetProperties);
+        memcpy(buffer, f->indices.data(), sizeof(size_t)*f->sh.nbIndex);
+        buffer += sizeof(size_t)*f->sh.nbIndex;
+        memcpy(buffer, f->vertices2.data(), sizeof(Vector2d)*f->sh.nbIndex);
+        buffer += sizeof(Vector2d)*f->sh.nbIndex;
 	}
 
 	// Add surface elements area (reciprocal)
 	for (int k = 0; k < sh.nbFacet; k++) {
 		Facet *f = facets[k];
-		DWORD add = 0;
 		if (f->sh.isTextured) {
-
 			if (f->cellPropertiesIds) {
-
+                size_t add = 0;
 				for (int j = 0; j < f->sh.texHeight; j++) {
 					for (int i = 0; i < f->sh.texWidth; i++) {
-						float area = f->GetMeshArea(add);
+						double area = f->GetMeshArea(add, true);
 						if (area > 0.0f) {
 								WRITEBUFFER(1.0 / area, double);
 						}
@@ -260,7 +260,7 @@ void SynradGeometry::CopyGeometryBuffer(BYTE *buffer, std::vector<Region_full> &
 
 				double rw = f->sh.U.Norme() / (double)(f->sh.texWidthD);
 				double rh = f->sh.V.Norme() / (double)(f->sh.texHeightD);
-				float area = (float)(rw*rh);
+				double area = (float)(rw*rh);
 
 				for (int j = 0; j < f->sh.texHeight; j++) {
 					for (int i = 0; i < f->sh.texWidth; i++) {
@@ -301,11 +301,9 @@ void  SynradGeometry::BuildPipe(double L, double R, double s, int step) {
 	int nbTV = 4 * nbTF;
 
 	sh.nbVertex = 2 * step + nbTV;
-	if (!(vertices3 = (InterfaceVertex *)malloc(sh.nbVertex * sizeof(InterfaceVertex))))
-		throw Error("Couldn't allocate memory for vertices");
-	memset(vertices3, 0, sh.nbVertex * sizeof(InterfaceVertex));
+    std::vector<InterfaceVertex>(sh.nbVertex).swap(vertices3);
 
-	sh.nbFacet = step + 2 + nbTF;
+    sh.nbFacet = step + 2 + nbTF;
 	sh.nbSuper = 1;
 	strName[0] = _strdup("Pipe");
 
@@ -399,11 +397,18 @@ void  SynradGeometry::BuildPipe(double L, double R, double s, int step) {
 
 }
 
+/**
+* \brief File handling for inserting a SYN geometry + initialisation
+* \param file name of the input file
+* \param prg GLProgress (TODO: which is never used)
+* \param newStr newStructure if a super structure will be used or not
+* \return vector with strings for regions to be loaded
+*/
 std::vector<std::string> SynradGeometry::InsertSYN(FileReader *file, GLProgress *prg, bool newStr) {
 
 	int structId = viewStruct;
 	if (structId == -1) structId = 0;
-	std::vector<std::string> result = InsertSYNGeom(file, &(sh.nbVertex), &(sh.nbFacet), &vertices3, &facets, structId, newStr);
+	std::vector<std::string> result = InsertSYNGeom(file, structId, newStr);
 	char *e = strrchr(strName[0], '.');
 	if (e) *e = 0;
 	InitializeGeometry();
@@ -411,7 +416,14 @@ std::vector<std::string> SynradGeometry::InsertSYN(FileReader *file, GLProgress 
 	return result;
 }
 
-std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t *nbVertex, size_t *nbFacet, InterfaceVertex **vertices3, Facet ***facets, size_t strIdx, bool newStruct) {
+/**
+* \brief Inserting the SYN geometry
+* \param file name of the input file
+* \param strIdx struct ID
+* \param newStruct if a super structure will be used or not
+ * * \return vector with strings for regions to be loaded
+*/
+std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t strIdx, bool newStruct) {
 
 	std::vector<std::string> parFileList;
 	UnselectAll();
@@ -456,35 +468,31 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 	file->ReadKeyword("maxDes"); file->ReadKeyword(":");
 	file->ReadSizeT();
 	file->ReadKeyword("nbVertex"); file->ReadKeyword(":");
-	int nbNewVertex = file->ReadInt();
+	size_t nbNewVertex = file->ReadSizeT();
 	file->ReadKeyword("nbFacet"); file->ReadKeyword(":");
-	int nbNewFacets = file->ReadInt();
+	size_t nbNewFacets = file->ReadSizeT();
 	file->ReadKeyword("nbSuper"); file->ReadKeyword(":");
-	int nbNewSuper = file->ReadInt();
-	int nbF = 0;  std::vector<std::vector<string>> loadFormulas;
-	int nbV = 0;
-	file->ReadKeyword("nbFormula"); file->ReadKeyword(":");
-	nbF = file->ReadInt();
+	size_t nbNewSuper = file->ReadSizeT();
+    file->ReadKeyword("nbFormula"); file->ReadKeyword(":");
+    size_t nbF = file->ReadInt(); std::vector<std::vector<string>> loadFormulas;
 	file->ReadKeyword("nbView"); file->ReadKeyword(":");
-	nbV = file->ReadInt();
-	int nbS = 0;
-
-	file->ReadKeyword("nbSelection"); file->ReadKeyword(":");
-	nbS = file->ReadInt();
+    size_t nbV = file->ReadSizeT();
+    file->ReadKeyword("nbSelection"); file->ReadKeyword(":");
+	size_t nbS = file->ReadSizeT();
 	if (version2 > 1) {
 		file->ReadKeyword("nbRegions"); file->ReadKeyword(":");
-		int nbR = file->ReadInt();
+		size_t nbR = file->ReadSizeT();
 		parFileList.reserve(nbR);
 
 		file->ReadKeyword("PARfiles"); file->ReadKeyword("{");
-		for (int i = 0; i < nbR; i++) {
+		for (size_t i = 0; i < nbR; i++) {
 			parFileList.push_back(file->ReadString());
 		}
 		file->ReadKeyword("}");
 	}
 
 	file->ReadKeyword("formulas"); file->ReadKeyword("{");
-	for (int i = 0; i < nbF; i++) {
+	for (size_t i = 0; i < nbF; i++) {
 		char tmpName[256];
 		char tmpExpr[512];
 		strcpy(tmpName, file->ReadString());
@@ -499,7 +507,7 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 	file->ReadKeyword("}");
 
 	file->ReadKeyword("views"); file->ReadKeyword("{");
-	for (int i = 0; i < nbV; i++) {
+	for (size_t i = 0; i < nbV; i++) {
 		char tmpName[256];
 		AVIEW v;
 		strcpy(tmpName, file->ReadString());
@@ -521,14 +529,13 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 	file->ReadKeyword("}");
 
 	file->ReadKeyword("selections"); file->ReadKeyword("{");
-	for (int i = 0; i < nbS; i++) {
+	for (size_t i = 0; i < nbS; i++) {
 		SelectionGroup s;
 		char tmpName[256];
 		strcpy(tmpName, file->ReadString());
-		s.name = _strdup(tmpName);
-		int nbFS = file->ReadInt();
-
-		for (int j = 0; j < nbFS; j++) {
+		s.name = strdup(tmpName);
+		size_t nbSel = file->ReadSizeT();
+		for (size_t j = 0; j < nbSel; j++) {
 			s.selection.push_back((size_t)file->ReadInt() + sh.nbFacet); //offset facet number by current
 		}
 		mApp->AddSelection(s);
@@ -540,8 +547,8 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 	}
 
 	file->ReadKeyword("structures"); file->ReadKeyword("{");
-	for (int i = 0; i < nbNewSuper; i++) {
-		strName[sh.nbSuper + i] = _strdup(file->ReadString());
+	for (size_t i = 0; i < nbNewSuper; i++) {
+		strName[sh.nbSuper + i] = strdup(file->ReadString());
 		// For backward compatibilty with STR
 		/*sprintf(tmp,"%s.txt",strName[i]);
 		strFileName[i] = _strdup(tmp);*/
@@ -549,34 +556,37 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 	file->ReadKeyword("}");
 
 	// Reallocate memory
-	*facets = (Facet **)realloc(*facets, (nbNewFacets + *nbFacet) * sizeof(Facet **));
-	memset(*facets + *nbFacet, 0, nbNewFacets * sizeof(Facet *));
-	//*vertices3 = (Vector3d*)realloc(*vertices3,(nbNewVertex+*nbVertex) * sizeof(Vector3d));
-	InterfaceVertex *tmp_vertices3 = (InterfaceVertex *)malloc((nbNewVertex + *nbVertex) * sizeof(InterfaceVertex));
-	memmove(tmp_vertices3, *vertices3, (*nbVertex)*sizeof(InterfaceVertex));
-	memset(tmp_vertices3 + *nbVertex, 0, nbNewVertex * sizeof(InterfaceVertex));
+	facets = (Facet **)realloc(facets, (nbNewFacets + sh.nbFacet) * sizeof(Facet **));
+	memset(facets + sh.nbFacet, 0, nbNewFacets * sizeof(Facet *));
+
+	/*
+	InterfaceVertex *tmp_vertices3 = (InterfaceVertex *)malloc((nbNewVertex + wp.nbVertex) * sizeof(InterfaceVertex));
+	memmove(tmp_vertices3, *vertices3, (wp.nbVertex)*sizeof(Vector3d));
+	memset(tmp_vertices3 + wp.nbVertex, 0, nbNewVertex * sizeof(Vector3d));
 	SAFE_FREE(*vertices3);
 	*vertices3 = tmp_vertices3;
+	*/
+	vertices3.resize(nbNewVertex + sh.nbVertex);
 
 	// Read geometry vertices
 	file->ReadKeyword("vertices"); file->ReadKeyword("{");
-	for (size_t i = *nbVertex; i < (*nbVertex + nbNewVertex); i++) {
+	for (size_t i = sh.nbVertex; i < (sh.nbVertex + nbNewVertex); i++) {
 		// Check idx
 		int idx = file->ReadInt();
-		if (idx != i - *nbVertex + 1) throw Error(file->MakeError("Wrong vertex index !"));
-		(*vertices3 + i)->x = file->ReadDouble();
-		(*vertices3 + i)->y = file->ReadDouble();
-		(*vertices3 + i)->z = file->ReadDouble();
-		(*vertices3 + i)->selected = false;
+		if (idx != i - sh.nbVertex + 1) throw Error(file->MakeError("Wrong vertex index !"));
+		vertices3[i].x = file->ReadDouble();
+		vertices3[i].y = file->ReadDouble();
+		vertices3[i].z = file->ReadDouble();
+		vertices3[i].selected = false;
 	}
 	file->ReadKeyword("}");
 
 	// Read leaks
 	file->ReadKeyword("leaks"); file->ReadKeyword("{");
 	file->ReadKeyword("nbLeak"); file->ReadKeyword(":");
-	int nbleak_local = file->ReadInt();
-	for (int i = 0; i < nbleak_local; i++) {
-		int idx = file->ReadInt();
+	size_t nbleak_local = file->ReadSizeT();
+	for (size_t i = 0; i < nbleak_local; i++) {
+		size_t idx = file->ReadSizeT();
 		//if( idx != i ) throw Error(file->MakeError("Wrong leak index !"));
 		file->ReadDouble();
 		file->ReadDouble();
@@ -587,13 +597,13 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 		file->ReadDouble();
 	}
 	file->ReadKeyword("}");
-
 	// Read hit cache
+
 	file->ReadKeyword("hits"); file->ReadKeyword("{");
 	file->ReadKeyword("nbHHit"); file->ReadKeyword(":");
-	int nbHHit_local = file->ReadInt();
-	for (int i = 0; i < nbHHit_local; i++) {
-		int idx = file->ReadInt();
+	size_t nbHHit_local = file->ReadSizeT();
+	for (size_t i = 0; i < nbHHit_local; i++) {
+		size_t idx = file->ReadSizeT();
 		//if( idx != i ) throw Error(file->MakeError("Wrong hit cache index !"));
 		file->ReadDouble(); //x
 		file->ReadDouble(); //y
@@ -605,15 +615,15 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 	file->ReadKeyword("}");
 
 	// Read geometry facets (indexed from 1)
-	for (size_t i = *nbFacet; i < (*nbFacet + nbNewFacets); i++) {
+	for (size_t i = sh.nbFacet; i < (sh.nbFacet + nbNewFacets); i++) {
 		file->ReadKeyword("facet");
 		// Check idx
-		int idx = file->ReadInt();
-		if (idx != i + 1 - *nbFacet) throw Error(file->MakeError("Wrong facet index !"));
+		size_t idx = file->ReadSizeT();
+		if (idx != i + 1 - sh.nbFacet) throw Error(file->MakeError("Wrong facet index !"));
 		file->ReadKeyword("{");
 		file->ReadKeyword("nbIndex");
 		file->ReadKeyword(":");
-		size_t nb = file->ReadInt();
+		size_t nb = file->ReadSizeT();
 
 		if (nb < 3) {
 			char errMsg[512];
@@ -621,26 +631,26 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 			throw Error(errMsg);
 		}
 
-		*(*facets + i) = new Facet(nb);
-		(*facets)[i]->LoadSYN(file, mApp->worker.materials, version2, nbNewVertex);
-		(*facets)[i]->selected = true;
-		for (int j = 0; j < nb; j++)
-			(*facets)[i]->indices[j] += *nbVertex;
+		facets[i] = new Facet(nb);
+		facets[i]->LoadSYN(file, mApp->worker.materials, version2, nbNewVertex);
+		facets[i]->selected = true;
+		for (size_t j = 0; j < nb; j++)
+			facets[i]->indices[j] += sh.nbVertex;
 		file->ReadKeyword("}");
 		if (newStruct) {
-			if ((*facets)[i]->sh.superIdx != -1) //-1 = facet member of all structures
-				(*facets)[i]->sh.superIdx += static_cast<int>(sh.nbSuper);
-			if ((*facets)[i]->sh.superDest > 0) (*facets)[i]->sh.superDest += sh.nbSuper;
+			if (facets[i]->sh.superIdx != -1) //-1 = facet member of all structures
+				facets[i]->sh.superIdx += static_cast<int>(sh.nbSuper);
+			if (facets[i]->sh.superDest > 0) facets[i]->sh.superDest += sh.nbSuper;
 		}
 		else {
-			if ((*facets)[i]->sh.superIdx != -1) //-1 = facet member of all structures
-				(*facets)[i]->sh.superIdx += static_cast<int>(strIdx);
-			if ((*facets)[i]->sh.superDest > 0) (*facets)[i]->sh.superDest += strIdx;
+			if (facets[i]->sh.superIdx != -1) //-1 = facet member of all structures
+				facets[i]->sh.superIdx += static_cast<int>(strIdx);
+			if (facets[i]->sh.superDest > 0) facets[i]->sh.superDest += strIdx;
 		}
 	}
 
-	*nbVertex += nbNewVertex;
-	*nbFacet += nbNewFacets;
+	sh.nbVertex += nbNewVertex;
+	sh.nbFacet += nbNewFacets;
 	if (newStruct) sh.nbSuper += nbNewSuper;
 	else if (sh.nbSuper < strIdx + nbNewSuper) sh.nbSuper = strIdx + nbNewSuper;
 	return parFileList;
@@ -660,7 +670,7 @@ void SynradGeometry::SaveProfileGEO(FileWriter *file, int super, bool saveSelect
 }
 */
 
-void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
+void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version, Worker *worker) {
 
 	//mApp->ClearAllSelections();
 	//mApp->ClearAllViews();
@@ -831,10 +841,9 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 	file->ReadKeyword("}");
 
 	// Allocate memory
-	facets = (Facet **)malloc(sh.nbFacet * sizeof(Facet *));
-	memset(facets, 0, sh.nbFacet * sizeof(Facet *));
-	vertices3 = (InterfaceVertex *)malloc(sh.nbVertex * sizeof(InterfaceVertex));
-	memset(vertices3, 0, sh.nbVertex * sizeof(InterfaceVertex));
+    facets = (Facet **)malloc(sh.nbFacet * sizeof(Facet *));
+    memset(facets, 0, sh.nbFacet * sizeof(Facet *));
+    std::vector<InterfaceVertex>(sh.nbVertex).swap(vertices3);
 
 	// Read vertices
 	prg->SetMessage("Reading vertices...");
@@ -859,13 +868,13 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 		for (int i = 0; i < tmpNbLeak; i++) {
 			int idx = file->ReadInt();
 			if (idx != i) throw Error(file->MakeError("Wrong leak index !"));
-			/*(pleak + i)->pos.x =*/ file->ReadDouble();
-			/*(pleak + i)->pos.y =*/ file->ReadDouble();
-			/*(pleak + i)->pos.z =*/ file->ReadDouble();
+			/*worker->globalHitCache.leakCache[i].pos.x =*/ file->ReadDouble();
+			/*worker->globalHitCache.leakCache[i].pos.y =*/ file->ReadDouble();
+			/*worker->globalHitCache.leakCache[i].pos.z =*/ file->ReadDouble();
 
-			/*(pleak + i)->dir.x =*/ file->ReadDouble();
-			/*(pleak + i)->dir.y =*/ file->ReadDouble();
-			/*(pleak + i)->dir.z =*/ file->ReadDouble();
+			/*worker->globalHitCache.leakCache[i].dir.x =*/ file->ReadDouble();
+			/*worker->globalHitCache.leakCache[i].dir.y =*/ file->ReadDouble();
+			/*worker->globalHitCache.leakCache[i].dir.z =*/ file->ReadDouble();
 		}
 		file->ReadKeyword("}");
 
@@ -876,11 +885,11 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version) {
 		for (int i = 0; i < tmpNbHHit; i++) {
 			int idx = file->ReadInt();
 			if (idx != i) throw Error(file->MakeError("Wrong hit cache index !"));
-			/*(hitCache + i)->pos.x =*/ file->ReadDouble();
-			/*(hitCache + i)->pos.y =*/ file->ReadDouble();
-			/*(hitCache + i)->pos.z =*/ file->ReadDouble();
+			/*worker->globalHitCache.hitCache[i].pos.x =*/ file->ReadDouble();
+			/*worker->globalHitCache.hitCache[i].pos.y =*/ file->ReadDouble();
+			/*worker->globalHitCache.hitCache[i].pos.z =*/ file->ReadDouble();
 
-			/*(hitCache + i)->type =*/ file->ReadInt();
+			/*worker->globalHitCache.hitCache[i].type =*/ file->ReadInt();
 		}
 		file->ReadKeyword("}");
 	}
@@ -942,13 +951,13 @@ bool SynradGeometry::LoadTextures(FileReader *file, GLProgress *prg, Dataport *d
 		BYTE *buffer = (BYTE *)dpHit->buff;
 		GlobalHitBuffer *gHits = (GlobalHitBuffer *)buffer;
 
-		gHits->total.nbMCHit = loaded_nbMCHit;
-		gHits->total.nbHitEquiv = loaded_nbHitEquiv;
-		gHits->total.nbDesorbed = loaded_nbDesorption;
-		gHits->total.nbAbsEquiv = loaded_nbAbsEquiv;
+		gHits->globalHits.hit.nbMCHit = loaded_nbMCHit;
+		gHits->globalHits.hit.nbHitEquiv = loaded_nbHitEquiv;
+		gHits->globalHits.hit.nbDesorbed = loaded_nbDesorption;
+		gHits->globalHits.hit.nbAbsEquiv = loaded_nbAbsEquiv;
 		gHits->nbLeakTotal = loaded_nbLeak;
-		gHits->total.fluxAbs = loaded_totalFlux;
-		gHits->total.powerAbs = loaded_totalPower;
+		gHits->globalHits.hit.fluxAbs = loaded_totalFlux;
+		gHits->globalHits.hit.powerAbs = loaded_totalPower;
 		gHits->distTraveledTotal = loaded_distTraveledTotal;
 
 		// Read facets
@@ -1098,7 +1107,7 @@ void SynradGeometry::SaveTXT(FileWriter *file, Dataport *dpHit, bool saveSelecte
 		// Update facet hits from shared mem
 		Facet *f = facets[i];
 		//FacetHitBuffer *shF = (FacetHitBuffer *)(buffer + f->sh.hitOffset);
-		//memcpy(&(f->counterCache),shF,sizeof(FacetHitBuffer));
+		//memcpy(&(f->facetHitCache),shF,sizeof(FacetHitBuffer));
 		if (saveSelected) {
 			if (f->selected) f->SaveTXT(file);
 		}
@@ -1303,14 +1312,14 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 
 	prg->SetMessage("Writing geometry details...");
 	file->Write("version:"); file->Write(SYNVERSION, "\n");
-	file->Write("totalHit:"); file->Write((!crashSave && !saveSelected) ? gHits->total.nbMCHit : 0, "\n");
-	file->Write("totalHitEquiv:"); file->Write((!crashSave && !saveSelected) ? gHits->total.nbHitEquiv : 0, "\n");
-	file->Write("totalDes:"); file->Write((!crashSave && !saveSelected) ? gHits->total.nbDesorbed : 0, "\n");
+	file->Write("totalHit:"); file->Write((!crashSave && !saveSelected) ? gHits->globalHits.hit.nbMCHit : 0, "\n");
+	file->Write("totalHitEquiv:"); file->Write((!crashSave && !saveSelected) ? gHits->globalHits.hit.nbHitEquiv : 0, "\n");
+	file->Write("totalDes:"); file->Write((!crashSave && !saveSelected) ? gHits->globalHits.hit.nbDesorbed : 0, "\n");
 	file->Write("no_scans:"); file->Write((!crashSave && !saveSelected) ? worker->no_scans : 0, "\n");
 	file->Write("totalLeak:"); file->Write((!crashSave && !saveSelected) ? gHits->nbLeakTotal : 0, "\n");
-	file->Write("totalFlux:"); file->Write((!crashSave && !saveSelected) ? gHits->total.fluxAbs : 0, "\n");
-	file->Write("totalPower:"); file->Write((!crashSave && !saveSelected) ? gHits->total.powerAbs : 0, "\n");
-	file->Write("totalAbsEquiv:"); file->Write((!crashSave && !saveSelected) ? gHits->total.nbAbsEquiv : 0, "\n");
+	file->Write("totalFlux:"); file->Write((!crashSave && !saveSelected) ? gHits->globalHits.hit.fluxAbs : 0, "\n");
+	file->Write("totalPower:"); file->Write((!crashSave && !saveSelected) ? gHits->globalHits.hit.powerAbs : 0, "\n");
+	file->Write("totalAbsEquiv:"); file->Write((!crashSave && !saveSelected) ? gHits->globalHits.hit.nbAbsEquiv : 0, "\n");
 	file->Write("totalDist:"); file->Write((!crashSave && !saveSelected) ? gHits->distTraveledTotal : 0, "\n");
 	file->Write("maxDes:"); file->Write((!crashSave && !saveSelected) ? loaded_desorptionLimit : 0, "\n");
 	file->Write("nbVertex:"); file->Write(sh.nbVertex, "\n");
@@ -1499,7 +1508,7 @@ void SynradGeometry::SaveSYN(FileWriter *file, GLProgress *prg, Dataport *dpHit,
 
 }
 
-std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *prg, LEAK *pleak, size_t *nbleak, HIT *hitCache, size_t *hitCacheSize, int *version) {
+std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *prg, int *version, Worker *worker) {
 
 	prg->SetMessage("Clearing current geometry...");
 	Clear();
@@ -1646,11 +1655,10 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 	}
 	file->ReadKeyword("}");
 
-	// Allocate memory
-	facets = (Facet **)malloc(sh.nbFacet * sizeof(Facet *));
-	memset(facets, 0, sh.nbFacet * sizeof(Facet *));
-	vertices3 = (InterfaceVertex *)malloc(sh.nbVertex * sizeof(InterfaceVertex));
-	memset(vertices3, 0, sh.nbVertex * sizeof(InterfaceVertex));
+    // Allocate memory
+    facets = (Facet **)malloc(sh.nbFacet * sizeof(Facet *));
+    memset(facets, 0, sh.nbFacet * sizeof(Facet *));
+    vertices3.resize(sh.nbVertex); vertices3.shrink_to_fit();
 
 	// Read vertices
 	prg->SetMessage("Reading vertices...");
@@ -1669,18 +1677,18 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 	// Read leaks
 	file->ReadKeyword("leaks"); file->ReadKeyword("{");
 	file->ReadKeyword("nbLeak"); file->ReadKeyword(":");
-	*nbleak = file->ReadInt();
-	for (int i = 0; i < *nbleak; i++) {
+    int nbleak_local = file->ReadInt();
+	for (int i = 0; i < nbleak_local; i++) {
 		int idx = file->ReadInt();
 		if (idx != i) throw Error(file->MakeError("Wrong leak index !"));
 		if (i < LEAKCACHESIZE) {
-			(pleak + i)->pos.x = file->ReadDouble();
-			(pleak + i)->pos.y = file->ReadDouble();
-			(pleak + i)->pos.z = file->ReadDouble();
+			worker->globalHitCache.leakCache[i].pos.x = file->ReadDouble();
+			worker->globalHitCache.leakCache[i].pos.y = file->ReadDouble();
+			worker->globalHitCache.leakCache[i].pos.z = file->ReadDouble();
 
-			(pleak + i)->dir.x = file->ReadDouble();
-			(pleak + i)->dir.y = file->ReadDouble();
-			(pleak + i)->dir.z = file->ReadDouble();
+			worker->globalHitCache.leakCache[i].dir.x = file->ReadDouble();
+			worker->globalHitCache.leakCache[i].dir.y = file->ReadDouble();
+			worker->globalHitCache.leakCache[i].dir.z = file->ReadDouble();
 		}
 		else { //Saved file has more leaks than we could load
 			for (int i = 0; i < 6; i++)
@@ -1692,17 +1700,17 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 	// Read hit cache
 	file->ReadKeyword("hits"); file->ReadKeyword("{");
 	file->ReadKeyword("nbHHit"); file->ReadKeyword(":");
-	*hitCacheSize = file->ReadInt();
-	for (int i = 0; i < *hitCacheSize; i++) {
+    worker->globalHitCache.hitCacheSize = file->ReadInt();
+	for (int i = 0; i < worker->globalHitCache.hitCacheSize; i++) {
 		int idx = file->ReadInt();
 		if (idx != i) throw Error(file->MakeError("Wrong hit cache index !"));
 		if (i < HITCACHESIZE) {
-			(hitCache + i)->pos.x = file->ReadDouble();
-			(hitCache + i)->pos.y = file->ReadDouble();
-			(hitCache + i)->pos.z = file->ReadDouble();
-			(hitCache + i)->dF = file->ReadDouble();
-			(hitCache + i)->dP = file->ReadDouble();
-			(hitCache + i)->type = file->ReadInt();
+			worker->globalHitCache.hitCache[i].pos.x = file->ReadDouble();
+			worker->globalHitCache.hitCache[i].pos.y = file->ReadDouble();
+			worker->globalHitCache.hitCache[i].pos.z = file->ReadDouble();
+			worker->globalHitCache.hitCache[i].dF = file->ReadDouble();
+			worker->globalHitCache.hitCache[i].dP = file->ReadDouble();
+			worker->globalHitCache.hitCache[i].type = file->ReadInt();
 		}
 		else { //Saved file has more hits than we could load
 			for (int i = 0; i < 6; i++)
@@ -1906,7 +1914,7 @@ void SynradGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgre
 	//Vertices
 	sh.nbVertex = geomNode.child("Vertices").select_nodes("Vertex").size();
 
-	vertices3 = (InterfaceVertex *)malloc(sh.nbVertex * sizeof(InterfaceVertex));
+    vertices3.resize(sh.nbVertex); vertices3.shrink_to_fit();
 	int idx = 0;
 	for (xml_node vertex : geomNode.child("Vertices").children("Vertex")) {
 		vertices3[idx].x = vertex.attribute("x").as_double();
@@ -2039,11 +2047,14 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 	facets = (Facet **)realloc(facets, (nbNewFacets + sh.nbFacet) * sizeof(Facet **));
 	memset(facets + sh.nbFacet, 0, nbNewFacets * sizeof(Facet *));
 
-	InterfaceVertex *tmp_vertices3 = (InterfaceVertex *)malloc((nbNewVertex + sh.nbVertex) * sizeof(InterfaceVertex));
-	memmove(tmp_vertices3, vertices3, (sh.nbVertex)*sizeof(InterfaceVertex));
-	memset(tmp_vertices3 + sh.nbVertex, 0, nbNewVertex * sizeof(InterfaceVertex));
-	SAFE_FREE(vertices3);
-	vertices3 = tmp_vertices3;
+    /*
+    InterfaceVertex *tmp_vertices3 = (InterfaceVertex *)malloc((nbNewVertex + wp.nbVertex) * sizeof(InterfaceVertex));
+    memmove(tmp_vertices3, vertices3, (wp.nbVertex)*sizeof(InterfaceVertex));
+    memset(tmp_vertices3 + wp.nbVertex, 0, nbNewVertex * sizeof(InterfaceVertex));
+    SAFE_FREE(vertices3);
+    vertices3 = tmp_vertices3;
+    */
+    vertices3.resize(nbNewVertex + sh.nbVertex);
 
 	// Read geometry vertices
 	size_t idx = sh.nbVertex;
@@ -2160,3 +2171,21 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 
 bool SynradGeometry::LoadXML_simustate(pugi::xml_node loadXML, Dataport *dpHit, Worker *work, GLProgress *progressDlg){ return false; }
 
+/**
+* \brief Serializes data of the complete geometry into a cereal binary archive
+* \param outputarchive reference to the binary archive
+*/
+void SynradGeometry::SerializeForLoader(cereal::BinaryOutputArchive &outputArchive) {
+
+    outputArchive(
+            CEREAL_NVP(sh),
+            CEREAL_NVP(vertices3)
+    );
+
+    size_t fOffset = sizeof(GlobalHitBuffer); //calculating offsets for all facets for the hits dataport during the simulation
+    for (size_t i = 0; i < sh.nbFacet; i++) {
+        facets[i]->sh.hitOffset = fOffset; //Marking the offsets for the hits, but here we don't actually send any hits.
+        fOffset += facets[i]->GetHitsSize();
+        facets[i]->SerializeForLoader(outputArchive);
+    }
+}

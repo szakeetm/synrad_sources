@@ -41,7 +41,7 @@ class SynRad : public Interface
 public:
     SynRad();
 
-	void LoadFile(char *fName = NULL);
+    void LoadFile(std::string fileName="");
 	void InsertGeometry(bool newStr, char *fName = NULL);
 	void SaveFile();
 

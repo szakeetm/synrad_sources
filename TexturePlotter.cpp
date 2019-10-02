@@ -258,7 +258,7 @@ void TexturePlotter::UpdateTable() {
 					size_t profSize = (selFacet->sh.isProfile)?profile_memory:0;
 					TextureCell *texture = (TextureCell *)((BYTE *)buffer + (selFacet->sh.hitOffset + sizeof(FacetHitBuffer) + profSize));
 					float dCoef = 1.0f;
-					//if( shGHit->mode == MC_MODE ) dCoef=1.0;//dCoef = (float)totalOutgassing / (float)shGHit->total.nbDesorbed;
+					//if( shGHit->mode == MC_MODE ) dCoef=1.0;//dCoef = (float)totalOutgassing / (float)shGHit->globalHits.hit.nbDesorbed;
 
 					for(size_t i=0;i<w;i++) {
 						for(size_t j=0;j<h;j++) {

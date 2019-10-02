@@ -128,7 +128,7 @@ GlobalSettings::GlobalSettings():GLWindow() {
 	processList->SetHScrollVisible(true);
 	processList->SetSize(5, MAX_PROCESS + 1);
 	processList->SetColumnWidths((int*)plWidth);
-	processList->SetColumnLabels((char **)plName);
+	processList->SetColumnLabels(plName);
 	processList->SetColumnAligns((int *)plAligns);
 	processList->SetColumnLabelVisible(true);
 	processList->SetBounds(10, 195, wD - 20, hD - 305);
@@ -191,7 +191,7 @@ void GlobalSettings::Display(Worker *w) {
 	cutoffText->SetText(worker->ontheflyParams.lowFluxCutoff);
 	cutoffText->SetEditable(worker->ontheflyParams.lowFluxMode);
 	lowFluxToggle->SetState(worker->ontheflyParams.lowFluxMode);
-	chkNewReflectionModel->SetState(worker->newReflectionModel);
+	chkNewReflectionModel->SetState(worker->wp.newReflectionModel);
 
 	sprintf(tmp,"%g",mApp->autoSaveFrequency);
 	autoSaveText->SetText(tmp);
@@ -298,7 +298,7 @@ void GlobalSettings::SMPUpdate() {
 void GlobalSettings::RestartProc() {
 
 	int nbProc;
-	if( sscanf(nbProcText->GetText(),"%d",&nbProc)==0 ) {
+	if( sscanf(nbProcText->GetText().c_str(),"%d",&nbProc)==0 ) {
 		GLMessageBox::Display("Invalid process number","Error",GLDLG_OK,GLDLG_ICONERROR);
 	} else {
 		//char tmp[128];
@@ -388,12 +388,12 @@ void GlobalSettings::ProcessMessage(GLComponent *src,int message) {
 					worker->ChangeSimuParams();
 			}
 
-			if (worker->newReflectionModel != (chkNewReflectionModel->GetState()==1)) {
+			if (worker->wp.newReflectionModel != (chkNewReflectionModel->GetState()==1)) {
 				if (mApp->AskToReset()) {
-					worker->newReflectionModel = (chkNewReflectionModel->GetState() == 1);
+					worker->wp.newReflectionModel = (chkNewReflectionModel->GetState() == 1);
 					mApp->changedSinceSave = true;
 					worker->Reload();
-					mApp->PlaceScatteringControls(worker->newReflectionModel);
+					mApp->PlaceScatteringControls(worker->wp.newReflectionModel);
 				}
 			}
 

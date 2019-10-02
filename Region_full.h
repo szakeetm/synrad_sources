@@ -30,6 +30,9 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "GLApp\GLToolkit.h"
 #include "GLApp\GLProgress.h"
 //#include "GLApp\GLTypes.h"
+#include <cereal/types/string.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/utility.hpp>
 
 class Region_full : public Region_mathonly { //Beam trajectory
 public:
@@ -58,7 +61,26 @@ public:
 	void Render(const size_t& regionId, const size_t& dispNumTraj, GLMATERIAL *B_material, const double& vectorLength);
 	void SelectTrajPoint(int x,int y, size_t regionId);
 	void SaveParam(FileWriter *f);
-	
+
+    /*template<class Archive>
+    void serialize(Archive & archive)
+    {
+
+        archive(
+                CEREAL_NVP(fileName),
+                CEREAL_NVP(MAGXfileName),CEREAL_NVP(MAGYfileName),CEREAL_NVP(MAGZfileName),
+                CEREAL_NVP(BXYfileName),
+                CEREAL_NVP(isLoaded),
+                CEREAL_NVP(AABBmin),
+                CEREAL_NVP(AABBmax),
+                CEREAL_NVP(selectedPointId),
+
+                CEREAL_NVP(params),
+                CEREAL_NVP(Points),
+                CEREAL_NVP(Bx_distr),CEREAL_NVP(By_distr),CEREAL_NVP(Bx_distr),
+                CEREAL_NVP(latticeFunctions)
+        );
+    }*/
 };
 
 #endif

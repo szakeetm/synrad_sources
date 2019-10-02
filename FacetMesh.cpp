@@ -202,7 +202,7 @@ void FacetMesh::UpdateSizeForRatio() {
 		return;
 	}
 
-	if( sscanf(resolutionText->GetText(),"%lf",&ratio)==0 ) {
+	if( sscanf(resolutionText->GetText().c_str(),"%lf",&ratio)==0 ) {
 		ramText->SetText("");
 		cellText->SetText("");
 		return;
@@ -341,7 +341,7 @@ bool FacetMesh::Apply() {
 
 		// Auto resolution
 		double ratio;
-		if( sscanf(resolutionText->GetText(),"%lf",&ratio)==0 ) {
+		if( sscanf(resolutionText->GetText().c_str(),"%lf",&ratio)==0 ) {
 			GLMessageBox::Display("Invalid number format for sample/cm","Error",GLDLG_OK,GLDLG_ICONERROR);
 			return false;
 		}

@@ -776,3 +776,34 @@ int Material::GetReflectionType(const double &energy, const double &angle, doubl
 	}
 	return REFL_ABSORB; //absorption
 }
+
+double QuadraticInterpolateX(const double& y,
+                             const double& a, const double& b, const double& c,
+                             const double& FA, const double& FB, const double& FC) {
+    double amb = a - b;
+    double amc = a - c;
+    double bmc = b - c;
+    double amb_amc = amb*amc;
+    double amc_bmc = amc*bmc;
+    double divisor = (2 * (-(FA / (amb_amc)) + FB / (amb_amc)+FB / (amc_bmc)-FC / (amc_bmc)));
+
+    if (fabs(divisor) < 1e-30) {
+        //Divisor is 0 when the slope is 1st order (a straight line) i.e. (FC-FB)/(c-b) == (FB-FA)/(b-a)
+        if ((FB - FA) < 1e-30) {
+            //FA==FB, shouldn't happen
+            return a + rnd()*(b - a);
+        }
+        else {
+            //Inverse linear interpolation
+            return a + (y - FA) * (b - a)/ (FB - FA);
+        }
+    }
+    else {
+        //(reverse interpolate y on a 2nd order polynomial fitted on {a,FA},{b,FB},{c,FC} where FA<y<FB):
+        //Root of Lagrangian polynomials, solved by Mathematica
+        return (FA / (amb)-(a*FA) / (amb_amc)-(b*FA) / (amb_amc)-FB / (amb)+(a*FB) / (amb_amc)+(b*FB) / (amb_amc)+(a*FB) / (amc_bmc)+(b*	FB) / (amc_bmc)-(a*FC) / (amc_bmc)
+                -(b*FC) / (amc_bmc)-sqrt(Sqr(-(FA / (amb)) + (a*FA) / (amb_amc)+(b*FA) / (amb_amc)+FB / (amb)-(a*FB) / (amb_amc)-(b*FB) / (amb_amc)-(a*FB) / (amc_bmc)-(b*FB)
+                                                                                                                                                                       / (amc_bmc)+(a*FC) / (amc_bmc)+(b*FC) / (amc_bmc)) - 4 * (-(FA / (amb_amc)) + FB / (amb_amc)+FB / (amc_bmc)-FC / (amc_bmc))*(-FA + (a*FA) / (amb)-(a*b*FA)
+                                                                                                                                                                                                                                                                                                                         / (amb_amc)-(a*FB) / (amb)+(a*b*FB) / (amb_amc)+(a*b*FB) / (amc_bmc)-(a*b*FC) / (amc_bmc)+y))) / divisor;
+    }
+}

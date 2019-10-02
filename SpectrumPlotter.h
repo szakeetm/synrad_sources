@@ -65,7 +65,7 @@ private:
   GLButton    *resetButton;
 
   GLDataView  *views[32];
-  GLCColor    *colors[8];
+  GLColor    *colors[8];
 
   int          nbColors;
   int          nbView;

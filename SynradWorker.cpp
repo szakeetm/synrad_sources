@@ -43,7 +43,8 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "ZipUtils/zip.h"
 #include "ZipUtils/unzip.h"
 #include "File.h" //File utils (Get extension, etc)
-
+#include <cereal/types/vector.hpp>
+#include <cereal/archives/json.hpp>
 using namespace pugi;
 
 #ifdef MOLFLOW
@@ -62,14 +63,14 @@ Worker::Worker() {
 	sprintf(hitsDpName,"SNRDHITS%d",pid);
 	sprintf(logDpName, "SNRDLOG%d", pid);
 	
-	distTraveled_total=0.0;
+	globalHitCache.distTraveledTotal=0.0;
 	ontheflyParams.nbProcess = 0;
 	ontheflyParams.enableLogging = false;
 	ontheflyParams.desorptionLimit = 0;
 	ontheflyParams.lowFluxCutoff = 1E-7;
 	ontheflyParams.lowFluxMode = false;
 	ontheflyParams.generation_mode=SYNGEN_MODE_FLUXWISE;
-	newReflectionModel = false;
+	wp.newReflectionModel = false;
 	ResetWorkerStats();
 	geom = new SynradGeometry();
 	regions = std::vector<Region_full>();
@@ -77,14 +78,14 @@ Worker::Worker() {
 	dpControl = NULL;
 	dpHit = NULL;
 	dpLog = NULL;
-	hitCacheSize = 0;
-	leakCacheSize = 0;
+	globalHitCache.hitCacheSize = 0;
+    globalHitCache.leakCacheSize = 0;
 
-	nbLeakTotal = 0;
+    globalHitCache.nbLeakTotal = 0;
 	startTime = 0.0f;
 	stopTime = 0.0f;
 	simuTime = 0.0f;
-	nbTrajPoints=0;
+	wp.nbTrajPoints=0;
 	isRunning = false;
 	calcAC = false; //not used, reserved for shared function
 
@@ -96,7 +97,7 @@ SynradGeometry *Worker::GetSynradGeometry() {
 	return geom;
 }
 
-void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool saveSelected,bool autoSave,bool crashSave) {
+void Worker::SaveGeometry(std::string fileName,GLProgress *prg,bool askConfirm,bool saveSelected,bool autoSave,bool crashSave) {
 
 	try {
 		if (needsReload&&(!crashSave && !saveSelected)) RealReload();
@@ -106,65 +107,68 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool sa
 		sprintf(errMsg,"Error reloading worker. Trying crash save:\n%s",e.GetMsg());
 		GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
 		crashSave=true;
-	} 
-	char tmp[65536]; //compress.exe command line
+	}
+    std::string compressCommandLine; //compress.exe command line
 	/*char fileNameWithGeo[2048]; //file name with .geo extension (instead of .geo7z)
 	char fileNameWithGeo7z[2048];*/
-	char fileNameWithSyn[2048]; //file name with .syn extension (instead of .syn7z)
-	char fileNameWithSyn7z[2048];
-	char fileNameWithoutExtension[2048]; //file name without extension
+    std::string fileNameWithSyn; //file name with .syn extension (instead of .syn7z)
+    std::string fileNameWithSyn7z;
+    std::string fileNameWithoutExtension; //file name without extension
 	//char *ext = fileName+strlen(fileName)-4;
-	char *ext,*dir;
 
-	dir = strrchr(fileName,'\\');
-	ext = strrchr(fileName,'.');
+    std::string ext = FileUtils::GetExtension(fileName);
+    std::string dir = FileUtils::GetPath(fileName);
 
-	if(!(ext) || !(*ext=='.') || ((dir)&&(dir>ext)) ) { 
-		sprintf(fileName, mApp->compressSavedFiles ? "%s.syn7z" : "%s.syn", fileName); //set to default SYN/SYN7Z format
-		ext = strrchr(fileName,'.');
-	}
-
-	ext++;
+    bool ok = true;
+    if (ext.empty()) {
+        fileName = fileName + (mApp->compressSavedFiles ? ".syn7z" : ".syn");
+        ext = FileUtils::GetExtension(fileName);
+        if (!autoSave && FileUtils::Exist(fileName)) {
+            char tmp[1024];
+            sprintf(tmp, "Overwrite existing file ?\n%s", fileName.c_str());
+            if (askConfirm) ok = (GLMessageBox::Display(tmp, "Question", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONWARNING) == GLDLG_OK);
+        }
+    }
 
 	// Read a file
-	bool ok = true;
 	FileWriter *f = NULL;
-	bool isTXT = _stricmp(ext,"txt")==0;
-	bool isSTR = _stricmp(ext,"str")==0;
+
 	/*bool isGEO = _stricmp(ext,"geo")==0;
 	bool isGEO7Z = _stricmp(ext,"geo7z")==0;*/
-	bool isSYN = _stricmp(ext,"syn")==0;
-	bool isSYN7Z = _stricmp(ext,"syn7z")==0;
+
+    bool isTXT = Contains({ "txt","TXT" },ext);
+    bool isSTR = Contains({ "str","STR" }, ext);
+    bool isSYN = ext == "syn";
+    bool isSYN7Z = ext == "syn7z";
 
 	if(isTXT || isSYN || isSYN7Z || isSTR) {
-
+#ifdef _WIN32
 		if (WAIT_TIMEOUT==WaitForSingleObject(mApp->compressProcessHandle,0)) {
 			GLMessageBox::Display("Compressing a previous save file is in progress. Wait until that finishes "
 				"or close process \"compress.exe\"\nIf this was an autosave attempt,"
 				"you have to lower the autosave frequency.","Can't save right now.",GLDLG_OK,GLDLG_ICONERROR);
 			return;
 		}
-		if (isSYN) {
-			memcpy(fileNameWithoutExtension,fileName,sizeof(char)*(strlen(fileName)-4));
-			fileNameWithoutExtension[strlen(fileName)-4]='\0';
-			sprintf(fileNameWithSyn7z,"%s7z",fileName);
-			memcpy(fileNameWithSyn,fileName,(strlen(fileName)+1)*sizeof(char));
+#endif
 
-		} else if (isSYN7Z) {
-			memcpy(fileNameWithoutExtension,fileName,sizeof(char)*(strlen(fileName)-6));
-			fileNameWithoutExtension[strlen(fileName)-6]='\0';
-			memcpy(fileNameWithSyn,fileName,sizeof(char)*(strlen(fileName)-2));
-			fileNameWithSyn[strlen(fileName)-2]='\0';
-			memcpy(fileNameWithSyn7z,fileName,(1+strlen(fileName))*sizeof(char));
-			sprintf(tmp,"A .syn file of the same name exists. Overwrite that file ?\n%s",fileNameWithSyn);
-			if(!autoSave && FileUtils::Exist(fileNameWithSyn) ) {
+        if (isSYN) {
+            fileNameWithoutExtension = fileName.substr(0,fileName.length()-4);
+            fileNameWithSyn7z = fileName + "7z";
 
-				ok = ( GLMessageBox::Display(tmp,"Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING)==GLDLG_OK );
-			}
+        } else if (isSYN7Z) {
+            fileNameWithoutExtension = fileName.substr(0, fileName.length() - 6);
+            fileNameWithSyn = fileName.substr(0, fileName.length() - 2);
+            fileNameWithSyn7z = fileName;
+            std::ostringstream tmp;
+            tmp << "A .syn file of the same name exists. Overwrite that file ?\n" << fileNameWithSyn;
+            if (!autoSave && FileUtils::Exist(fileNameWithSyn)) {
+                ok = (GLMessageBox::Display(tmp.str().c_str(), "Question", GLDLG_OK | GLDLG_CANCEL, GLDLG_ICONWARNING) == GLDLG_OK);
+            }
 		}
 
 		if(!autoSave && ok && FileUtils::Exist(fileName) ) {
-			sprintf(tmp,"Overwrite existing file ?\n%s",fileName);
+            char tmp[1024];
+            sprintf(tmp,"Overwrite existing file ?\n%s",fileName.c_str());
 			if (askConfirm) ok = ( GLMessageBox::Display(tmp,"Question",GLDLG_OK|GLDLG_CANCEL,GLDLG_ICONWARNING)==GLDLG_OK );
 		}
 
@@ -193,18 +197,19 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool sa
 					//Save regions
 					for (int i=0;i<(int)regions.size();i++) {
 						if (FileUtils::GetExtension(regions[i].fileName)=="par") { //fileName doesn't end with .param, save a param version
-							sprintf(tmp,"%sam",regions[i].fileName.c_str());
+                            char tmp[1024];
+                            sprintf(tmp,"%sam",regions[i].fileName.c_str());
 							regions[i].fileName=tmp;
 						}	
 
 						SaveRegion((char*)regions[i].fileName.c_str(),i,true); //save with forced overwrite
 					}
 
-					geom->SaveSYN(f,prg,dpHit,saveSelected,leakCache,&leakCacheSize,hitCache,&hitCacheSize,crashSave);
+					geom->SaveSYN(f,prg,dpHit,saveSelected,globalHitCache.leakCache,(&globalHitCache.leakCacheSize),globalHitCache.hitCache,&(globalHitCache.hitCacheSize),crashSave);
 				}
 			}
 			if (!autoSave && !saveSelected) {
-				strcpy(fullFileName,fileName);
+                strcpy(fullFileName, fileName.c_str());
 				remove("Synrad_AutoSave.syn");
 
 				remove("Synrad_AutoSave.syn7z");
@@ -301,7 +306,7 @@ void Worker::SaveGeometry(char *fileName,GLProgress *prg,bool askConfirm,bool sa
 			}
 		} else if (ok && isSYN) fileName=fileNameWithSyn;
 		if (!autoSave && !saveSelected) {
-			SetCurrentFileName(fileName);
+			SetCurrentFileName(fileName.c_str());
 			mApp->UpdateTitle();
 		}
 }
@@ -344,7 +349,7 @@ void Worker::ExportDesorption(char *fileName,bool selectedOnly,int mode,double e
 }
 */
 
-void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
+void Worker::LoadGeometry(const std::string& fileName, bool insert, bool newStr) {
 	if (!insert) {
 		needsReload=true;
 	}
@@ -365,23 +370,25 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 	progressDlg->SetVisible(true);
 	progressDlg->SetProgress(0.0);
 
+    ResetWorkerStats();
+
 	if (!insert) {
 		//Clear hits and leaks cache
 		//Reset leak and hit cache
-		leakCacheSize = 0;
-		SetLeakCache(leakCache, &leakCacheSize, dpHit); //will only write leakCacheSize
-		hitCacheSize = 0;
-		SetHitCache(hitCache, &hitCacheSize, dpHit); //will only write hitCacheSize
+		globalHitCache.leakCacheSize = 0;
+        //SetLeakCache(globalHitCache.leakCache, &(globalHitCache.leakCacheSize), dpHit); //will only write leakCacheSize
+        globalHitCache.hitCacheSize = 0;
+		//SetHitCache(globalHitCache.hitCache, (&globalHitCache.hitCacheSize), dpHit); //will only write hitCacheSize
 	}
 
 	if(ext=="txt" || ext=="TXT") {
 
 		try {
-			if (!insert) ResetWorkerStats();
+			//if (!insert) ResetWorkerStats();
 			f = new FileReader(fileName);
 			if (!insert) {
-				geom->LoadTXT(f, progressDlg);
-				strcpy(fullFileName, fileName);
+				geom->LoadTXT(f, progressDlg,this);
+				strcpy(fullFileName, fileName.c_str());
 			}
 			else { //insert
 				mApp->changedSinceSave = true;
@@ -426,7 +433,7 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 				f = new FileReader(fileName);
 				if (!insert) {					
 					geom->LoadSTL(f, progressDlg, scaleFactor);
-					strcpy(fullFileName, fileName);
+					strcpy(fullFileName, fileName.c_str());
 					mApp->DisplayCollapseDialog();
 				}
 				else { //insert
@@ -453,7 +460,7 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 			progressDlg->SetVisible(true);
 			geom->LoadSTR(f,progressDlg);
 			SAFE_DELETE(f);
-			strcpy(fullFileName,fileName);
+			strcpy(fullFileName,fileName.c_str());
 		}
 		catch(Error &e) {
 			if (!insert) geom->Clear();
@@ -472,7 +479,7 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 				//decompress file
 				progressDlg->SetMessage("Decompressing file...");
 				char tmp[1024];
-				sprintf(tmp,"cmd /C \"pushd \"%s\"&&7za.exe x -t7z -aoa \"%s\" -otmp&&popd\"",CWD,fileName);
+				sprintf(tmp,"cmd /C \"pushd \"%s\"&&7za.exe x -t7z -aoa \"%s\" -otmp&&popd\"",CWD,fileName.c_str());
 				system(tmp);
 				f = new FileReader((std::string)CWD + "\\tmp\\Geometry.syn"); //Open extracted file
 			} else f = new FileReader(fileName); //syn file, open it directly
@@ -486,14 +493,14 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 				progressDlg->SetMessage("Resetting worker...");
 				ResetWorkerStats();
 				
-				regionsToLoad = geom->LoadSYN(f, progressDlg, loaded_leakCache, &loaded_nbLeak, hitCache, &hitCacheSize, &version);
+				regionsToLoad = geom->LoadSYN(f, progressDlg, &version, this);
 				//copy temp values from geom to worker. They will be sent to shared memory in LoadTextures() which connects to dpHit
-				nbLeakTotal = geom->loaded_nbLeak;
-				nbMCHit = geom->loaded_nbMCHit;
-				nbHitEquiv = geom->loaded_nbHitEquiv;
-				nbDesorption = geom->loaded_nbDesorption;
-				nbAbsEquiv = geom->loaded_nbAbsEquiv;
-				distTraveled_total = geom->loaded_distTraveledTotal;
+				globalHitCache.nbLeakTotal = geom->loaded_nbLeak;
+                globalHitCache.globalHits.hit.nbMCHit = geom->loaded_nbMCHit;
+                globalHitCache.globalHits.hit.nbHitEquiv = geom->loaded_nbHitEquiv;
+                globalHitCache.globalHits.hit.nbDesorbed = geom->loaded_nbDesorption;
+                globalHitCache.globalHits.hit.nbAbsEquiv = geom->loaded_nbAbsEquiv;
+                globalHitCache.distTraveledTotal = geom->loaded_distTraveledTotal;
 				ontheflyParams.desorptionLimit = geom->loaded_desorptionLimit;
 				totalFlux = geom->loaded_totalFlux;
 				totalPower = geom->loaded_totalPower;
@@ -538,11 +545,11 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 				RealReload(); //for the loading of textures
 				geom->LoadProfileSYN(f, dpHit, version);
 				geom->LoadSpectrumSYN(f, dpHit, version);
-				SetLeakCache(loaded_leakCache, &loaded_nbLeak, dpHit);
-				SetHitCache(hitCache, &hitCacheSize, dpHit);
+				//SetLeakCache(loaded_leakCache, &loaded_nbLeak, dpHit);
+				//SetHitCache(hitCache, &(globalHitCache.hitCacheSize), dpHit);
 				progressDlg->SetMessage("Loading texture values...");
 				LoadTexturesSYN(f, version);
-				strcpy(fullFileName, fileName);
+				strcpy(fullFileName, fileName.c_str());
 			}
 			SAFE_DELETE(f);
 		} catch(Error &e) {
@@ -562,10 +569,10 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 				//decompress file
 				progressDlg->SetMessage("Decompressing file...");
 				char tmp[1024];
-				sprintf(tmp,"cmd /C \"pushd \"%s\"&&7za.exe x -t7z -aoa \"%s\" -otmp&&popd\"",CWD,fileName);
+				sprintf(tmp,"cmd /C \"pushd \"%s\"&&7za.exe x -t7z -aoa \"%s\" -otmp&&popd\"",CWD,fileName.c_str());
 				system(tmp);
 				toOpen = (std::string)CWD + "\\tmp\\Geometry.geo"; //newer geo7z format: contains Geometry.geo
-				if (!FileUtils::Exist(toOpen)) toOpen = ((std::string)fileName).substr(0, strlen(fileName) - 2); //Inside the zip, try original filename with extension changed from geo7z to geo
+				if (!FileUtils::Exist(toOpen)) toOpen = (fileName).substr(0, strlen(fileName.c_str()) - 2); //Inside the zip, try original filename with extension changed from geo7z to geo
 				f = new FileReader(toOpen);
 			}
 			else { //not geo7z
@@ -575,12 +582,15 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 			progressDlg->SetMessage("Resetting worker...");
 			ResetWorkerStats();
 			if (!insert) {
-				geom->LoadGEO(f, progressDlg, &version);
+				geom->LoadGEO(f, progressDlg, &version, this);
 				SAFE_DELETE(f);
 				ontheflyParams.desorptionLimit = 0;
 				progressDlg->SetMessage("Reloading worker with new geometry...");
 				RealReload();
-				strcpy(fullFileName,fileName);
+                SendToHitBuffer(); //Global hit counters and hit/leak cache
+                SendFacetHitCounts(); // From facetHitCache to dpHit's const.flow counter
+
+                strcpy(fullFileName,fileName.c_str());
 			}
 			else { //insert
 				mApp->changedSinceSave = true;
@@ -606,7 +616,7 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 				//decompress file
 				progressDlg->SetMessage("Decompressing file...");
 
-				HZIP hz = OpenZip(fileName, 0);
+				HZIP hz = OpenZip(fileName.c_str(), 0);
 				if (!hz) {
 					throw Error("Can't open ZIP file");
 				}
@@ -630,7 +640,7 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 					throw Error("Didn't find any XML file in the ZIP file.");
 				}
 			}
-			else parseResult = loadXML.load_file(fileName); //parse xml file directly
+			else parseResult = loadXML.load_file(fileName.c_str()); //parse xml file directly
 
 			ResetWorkerStats();
 			if (!parseResult) {
@@ -648,7 +658,7 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 				ontheflyParams.desorptionLimit = 0;
 				progressDlg->SetMessage("Reloading worker with new geometry...");
 				RealReload();
-				geom->UpdateName(fileName);
+				geom->UpdateName(fileName.c_str());
 			}
 			else { //insert
 				mApp->changedSinceSave = true;
@@ -670,7 +680,7 @@ void Worker::LoadGeometry(char *fileName, bool insert, bool newStr) {
 			progressDlg->SetVisible(true);
 			geom->LoadASE(f,progressDlg);
 			SAFE_DELETE(f);
-			strcpy(fullFileName,fileName);
+			strcpy(fullFileName,fileName.c_str());
 
 		} catch(Error &e) {
 			if (!insert) geom->Clear();
@@ -755,13 +765,19 @@ void Worker::StartStop(float appTime) {
 
 }
 
-void Worker::RealReload() { //Sharing geometry with workers
+void Worker::RealReload(bool sendOnly) { //Sharing geometry with workers
 
 	if(ontheflyParams.nbProcess==0) return;
 
 	GLProgress *progressDlg = new GLProgress("Asking subprocesses to clear geometry...","Passing Geometry to workers");
 	progressDlg->SetVisible(true);
 	progressDlg->SetProgress(0.0);
+
+    //this->regions = std::vector<Region_full>();
+    //this->materials = std::vector<Material>();
+    //this->psi_distro = std::vector<std::vector<double>>();
+    //this->chi_distros = std::vector<std::vector<std::vector<double>>>();
+    //this->parallel_polarization = std::vector<std::vector<double>>();
 
 	// Clear geometry
 	CLOSEDP(dpHit);
@@ -781,13 +797,21 @@ void Worker::RealReload() { //Sharing geometry with workers
 
 	progressDlg->SetMessage("Creating dataport...");
 	// Create the temporary geometry shared structure
-	size_t loadSize = geom->GetGeometrySize(regions, materials, psi_distro, chi_distros, parallel_polarization);
+	//size_t loadSize = geom->GetGeometrySize(regions, materials, psi_distro, chi_distros, parallel_polarization);
 	if (ontheflyParams.enableLogging) {
 		dpLog = CreateDataport(logDpName, sizeof(size_t) + sizeof(ParticleLoggerItem)*ontheflyParams.logLimit);
 		if (!dpLog)
 			throw Error("Failed to create 'dpLog' dataport.\nMost probably out of memory.\nReduce number of logged particles in Particle Logger.");
 		//*((size_t*)dpLog->buff) = 0; //Automatic 0-filling
 	}
+
+    std::string loaderString = SerializeForLoader().str();
+
+    //size_t loadSize = geom->GetGeometrySize();
+    //Dataport *loader = CreateDataport(loadDpName, loadSize);
+
+    size_t loadSize = loaderString.size();
+
 	Dataport *loader = CreateDataport(loadDpName,loadSize);
 	if (!loader) {
 		progressDlg->SetVisible(false);
@@ -797,22 +821,28 @@ void Worker::RealReload() { //Sharing geometry with workers
 	progressDlg->SetMessage("Accessing dataport...");
 	AccessDataportTimed(loader,(DWORD)(3000.0+(double)(ontheflyParams.nbProcess*loadSize)/10000.0));
 	progressDlg->SetMessage("Assembling geometry and regions to pass...");
-	this->ontheflyParams;
-	geom->CopyGeometryBuffer((BYTE *)loader->buff,regions,materials,psi_distro,chi_distros,
-		parallel_polarization,newReflectionModel,ontheflyParams);
-	progressDlg->SetMessage("Releasing dataport...");
+	//this->ontheflyParams;
+	/*geom->CopyGeometryBuffer((BYTE *)loader->buff,regions,materials,psi_distro,chi_distros,
+		parallel_polarization,wp.newReflectionModel,ontheflyParams);
+	*/
+
+    BYTE* buffer = (BYTE*)loader->buff;
+    //memcpy(loader->buff, loaderString.c_str(), loadSize);
+    std::copy(loaderString.begin(), loaderString.end(), buffer);
+	 progressDlg->SetMessage("Releasing dataport...");
 	ReleaseDataport(loader);
 
-	size_t hitSize = geom->GetHitsSize();
-	dpHit = CreateDataport(hitsDpName,hitSize);
-	if( !dpHit ) {
-		CLOSEDP(loader);
+    if (!sendOnly) {
+        size_t hitSize = geom->GetHitsSize();
+        dpHit = CreateDataport(hitsDpName, hitSize);
+        if (!dpHit) {
+            CLOSEDP(loader);
 
-		progressDlg->SetVisible(false);
-		SAFE_DELETE(progressDlg);
-		throw Error("Failed to create 'hits' dataport: out of memory");
-	}
-
+            progressDlg->SetVisible(false);
+            SAFE_DELETE(progressDlg);
+            throw Error("Failed to create 'hits' dataport: out of memory");
+        }
+    }
 	// Compute number of max desorption per process
 	if(AccessDataportTimed(dpControl, (DWORD)(3000.0 + (double)(ontheflyParams.nbProcess*loadSize) / 10000.0))) {
 		SHCONTROL *m = (SHCONTROL *)dpControl->buff;
@@ -877,18 +907,16 @@ void Worker::ClearHits(bool noReload) {
 
 }
 
+/**
+* \brief Resets workers global hit cache
+* Reset function mainly used for initialisation / reload procedures
+*/
 void Worker::ResetWorkerStats() {
 
-
-	nbAbsEquiv = 0.0;
-	nbDesorption = 0;
-	nbMCHit = 0;
-	nbHitEquiv = 0.0;
-	nbLeakTotal = 0;
+    memset(&globalHitCache, 0, sizeof(GlobalHitBuffer));
 
 	totalFlux = 0.0;
 	totalPower = 0.0;
-	distTraveled_total = 0.0;
 	no_scans=1.0;
 
 }
@@ -908,23 +936,26 @@ void Worker::AddRegion(const char *fileName,int position) {
 
 	std::string ext = FileUtils::GetExtension(fileName);
 	if(ext=="par" || ext=="PAR" || ext=="param") {
-			Region_full newtraj;
-			if (ext == "par" || ext == "PAR") newtraj.LoadPAR(&FileReader(fileName));
-			else {
-				FileReader* fr = new FileReader(fileName);
-				newtraj.LoadParam(fr);
-				SAFE_DELETE(fr);
+        Region_full newtraj;
 
-			}
-			newtraj.fileName=fileName;
+        FileReader* fr = new FileReader(fileName);
+
+        if (ext == "par" || ext == "PAR")
+            newtraj.LoadPAR(fr);
+        else {
+            newtraj.LoadParam(fr);
+        }
+        SAFE_DELETE(fr);
+
+        newtraj.fileName=fileName;
 			if (position==-1) regions.push_back(newtraj);
 			else {
-				nbTrajPoints-=(int)regions[position].Points.size();
+				wp.nbTrajPoints-=(int)regions[position].Points.size();
 				regions[position]=newtraj;
 				//regions[position].Points=newtraj.Points; //need to force because of operator=
 			}
 			geom->RecalcBoundingBox(); //recalculate bounding box
-			nbTrajPoints+=(int)newtraj.Points.size();
+			wp.nbTrajPoints+=(int)newtraj.Points.size();
 	}  else {
 		throw Error("LoadParam(): Invalid file extension [Only par or param]");
 	}
@@ -935,10 +966,10 @@ void Worker::RecalcRegion(int regionId) {
 	try {
 			//Region_full newtraj;
 			//newtraj=regions[regionId]; //copy all except the points
-			nbTrajPoints-=(int)regions[regionId].Points.size();
+			wp.nbTrajPoints-=(int)regions[regionId].Points.size();
 			regions[regionId].Points = std::vector<Trajectory_Point>(); //clear points
 			regions[regionId].CalculateTrajectory(1000000); //points calculated
-			nbTrajPoints+=(int)regions[regionId].Points.size();
+			wp.nbTrajPoints+=(int)regions[regionId].Points.size();
 			//regions[regionId]=newtraj;
 			//regions[regionId].Points=newtraj.Points; //need to force because of operator=
 			geom->RecalcBoundingBox(); //recalculate bounding box
@@ -951,12 +982,12 @@ void Worker::ClearRegions() {
 	//if ((int)regions.size()>0) regions.clear();
 	regions=std::vector<Region_full>();
 	geom->RecalcBoundingBox(); //recalculate bounding box
-	nbTrajPoints=0;
+	wp.nbTrajPoints=0;
 	Reload();
 }
 
 void Worker::RemoveRegion(int index) {
-	nbTrajPoints -= (int)regions[index].Points.size();
+	wp.nbTrajPoints -= (int)regions[index].Points.size();
 	/*
 	//Explicit removal as Region_full doesn't copy Points for some reason
 	for (size_t i = index; i < (regions.size() - 1); i++) { //Copy next
@@ -981,7 +1012,7 @@ void Worker::AddMaterial(std::string *fileName){
 	materials.push_back(result);
 }
 
-void Worker::SaveRegion(char *fileName,int position,bool overwrite) {
+void Worker::SaveRegion(const char *fileName,int position,bool overwrite) {
 	char tmp[512];
 
 	// Read a file
@@ -1055,19 +1086,19 @@ void Worker::WriteHitBuffer() {
 
 			GlobalHitBuffer *gHits = (GlobalHitBuffer *)pBuff;
 
-			gHits->total.nbMCHit = nbMCHit;
-			gHits->total.nbHitEquiv = nbHitEquiv;
-			gHits->nbLeakTotal = nbLeakTotal;
-			gHits->total.nbDesorbed = nbDesorption;
-			gHits->total.nbAbsEquiv = nbAbsEquiv;
-			gHits->distTraveledTotal = distTraveled_total;
-			gHits->total.fluxAbs = totalFlux;
-			gHits->total.powerAbs = totalPower;
+			gHits->globalHits.hit.nbMCHit = globalHitCache.globalHits.hit.nbMCHit;
+			gHits->globalHits.hit.nbHitEquiv = globalHitCache.globalHits.hit.nbHitEquiv;
+			gHits->nbLeakTotal = globalHitCache.nbLeakTotal;
+			gHits->globalHits.hit.nbDesorbed = globalHitCache.globalHits.hit.nbDesorbed;
+			gHits->globalHits.hit.nbAbsEquiv = globalHitCache.globalHits.hit.nbAbsEquiv;
+			gHits->distTraveledTotal = globalHitCache.distTraveledTotal;
+			gHits->globalHits.hit.fluxAbs = totalFlux;
+			gHits->globalHits.hit.powerAbs = totalPower;
 
 			size_t nbFacet = geom->GetNbFacet();
 			for (int i = 0; i<nbFacet; i++) {
 				Facet *f = geom->GetFacet(i);
-				memcpy(pBuff + f->sh.hitOffset, &(f->counterCache), sizeof(FacetHitBuffer));
+				memcpy(pBuff + f->sh.hitOffset, &(f->facetHitCache), sizeof(FacetHitBuffer));
 			}
 			ReleaseDataport(dpHit);
 		}
@@ -1076,4 +1107,109 @@ void Worker::WriteHitBuffer() {
 		}
 
 	}
+}
+
+
+/**
+* \brief Function that updates the global hit counter with the cached value + releases the mutex
+* \param skipFacetHits TODO: check if not necessary anymore
+*
+* Send total and facet hit counts to subprocesses
+*/
+void Worker::SendToHitBuffer() {
+    if (dpHit) {
+        if (AccessDataport(dpHit)) {
+
+            GlobalHitBuffer *gHits = (GlobalHitBuffer *)dpHit->buff;
+
+            *gHits = globalHitCache;
+            gHits->globalHits.hit.fluxAbs = totalFlux;
+            gHits->globalHits.hit.powerAbs = totalPower;
+
+            ReleaseDataport(dpHit);
+
+        }
+        else {
+            throw Error("Failed to initialize 'hits' dataport");
+        }
+    }
+}
+
+/**
+* \brief Saves current facet hit counter from cache to results
+*/
+void Worker::SendFacetHitCounts() {
+    // Store initial hit counts in the shared memory
+    BYTE *pBuff = (BYTE *)dpHit->buff;
+
+    size_t nbFacet = geom->GetNbFacet();
+    for (size_t i = 0; i < nbFacet; i++) {
+        Facet *f = geom->GetFacet(i);
+        *((FacetHitBuffer*)(pBuff + f->sh.hitOffset )) = f->facetHitCache; //Only const.flow
+        memcpy(pBuff + f->sh.hitOffset, &(f->facetHitCache), sizeof(FacetHitBuffer));
+    }
+}
+
+/*void Worker::SendLeakCache(Dataport* dpHit) { //From worker.globalhitCache to dpHit
+    if (dpHit) {
+        AccessDataport(dpHit);
+        GlobalHitBuffer *gHits = (GlobalHitBuffer *)dpHit->buff;
+        size_t nbCopy = Min(LEAKCACHESIZE, globalHitCache.leakCacheSize);
+        gHits->leakCache = globalHitCache.leakCache;
+        gHits->lastLeakIndex = nbCopy-1;
+        gHits->leakCacheSize = globalHitCache.leakCacheSize;
+        ReleaseDataport(dpHit);
+    }
+}
+
+void Worker::SendHitCache(Dataport* dpHit) { //From worker.globalhitCache to dpHit
+    if (dpHit) {
+        AccessDataport(dpHit);
+        GlobalHitBuffer *gHits = (GlobalHitBuffer *)dpHit->buff;
+        size_t nbCopy = Min(HITCACHESIZE, globalHitCache.hitCacheSize);
+        gHits->hitCache = globalHitCache.hitCache;
+        gHits->lastHitIndex = nbCopy - 1;
+        gHits->hitCacheSize = globalHitCache.hitCacheSize;
+        ReleaseDataport(dpHit);
+    }
+}*/
+
+/**
+* \brief Serialization function for a binary cereal archive for the worker attributes
+* \return output string stream containing the result of the archiving
+*/
+std::ostringstream Worker::SerializeForLoader()
+{
+    //std::ofstream is("data.json");
+    //cereal::JSONOutputArchive outputarchive( is );
+    std::ostringstream result;
+    cereal::BinaryOutputArchive outputarchive(result);
+
+    //sh.nbRegion = regions.size();
+    //sh.newReflectionModel = newReflectionModel;
+
+    wp.nbRegion = regions.size();
+    //wp.newReflectionModel = newReflectionModel;
+
+    // Build shared buffer for trajectory (see Shared.h)
+    for (auto& reg : regions) {
+        reg.params.nbDistr_MAG = Vector3d((int)reg.Bx_distr.GetSize(), (int)reg.By_distr.GetSize(), (int)reg.Bz_distr.GetSize());
+        std::cout << "Points to copy: "<< reg.params.nbPointsToCopy<< " , "<< reg.Points.size()<<std::endl;
+
+        reg.params.nbPointsToCopy = reg.Points.size();
+    }
+
+    outputarchive(
+            CEREAL_NVP(wp),
+            CEREAL_NVP(ontheflyParams),
+            CEREAL_NVP(regions), // full
+            CEREAL_NVP(materials),
+            CEREAL_NVP(psi_distro),
+            CEREAL_NVP(chi_distros),
+            CEREAL_NVP(parallel_polarization)
+    ); //Worker
+
+    geom->SerializeForLoader(outputarchive);
+
+    return result;
 }

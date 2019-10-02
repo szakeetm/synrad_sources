@@ -59,10 +59,17 @@ const char *fileSFilters = "SYN files\0*.syn;*.syn7z;\0Text files\0*.txt\0All fi
 //static const char *fileTexFilters = "Text files\0*.txt\0Texture files\0*.tex\0All files\0*.*\0";
 static const char *fileParFilters = "param files\0*.param\0PAR files\0*.par\0All files\0*.*\0";
 static const char *fileDesFilters = "DES files\0*.des\0All files\0*.*\0";
+//NativeFileDialog compatible file filters
+std::string fileLoadFilters = "txt,xml,zip,stl,str,ase,geo,syn,geo7z,syn7z";
+std::string fileInsertFilters = "txt,xml,zip,stl,geo,syn,geo7z,syn7z";
+std::string fileSaveFilters = "xml,zip,txt,geo,geo7z";
+std::string fileSelFilters = "sel";
+std::string fileTexFilters = "txt";
+std::string fileProfFilters = "csv;txt";
 
 int   cSize = 5;
 int   cWidth[] = { 30, 56, 50, 50, 50 };
-char *cName[] = { "#", "Hits", "Flux", "Power", "Abs" };
+const char *cName[] = { "#", "Hits", "Flux", "Power", "Abs" };
 
 #ifdef _DEBUG
 std::string appTitle = "SynRad+ debug version (Compiled " __DATE__ " " __TIME__ ")";
@@ -141,8 +148,9 @@ SynRad *mApp;
 // Desc: Entry point to the program. Initializes everything, and goes into a
 //       message-processing loop. Idle time is used to render the scene.
 
-INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
-{
+int main(int argc,char* argv[]){
+/*INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
+{*/
 
 	SynRad *mApp = new SynRad();
 
@@ -379,7 +387,7 @@ int SynRad::OneTimeSceneInit()
 	facetList->SetSelectionMode(MULTIPLE_ROW);
 	facetList->SetSize(5, 0);
 	facetList->SetColumnWidths((int*)cWidth);
-	facetList->SetColumnLabels((char **)cName);
+	facetList->SetColumnLabels(cName);
 	facetList->SetColumnLabelVisible(true);
 	facetList->Sortable = true;
 	Add(facetList);
@@ -490,7 +498,7 @@ void SynRad::PlaceComponents() {
 	facetPanel->SetCompBounds(facetAutoCorrLengthLabel, 113, 55, 35, 18);
 	facetPanel->SetCompBounds(facetAutoCorrLength, 150, 55, 45, 18);
 
-	PlaceScatteringControls(worker.newReflectionModel);
+	PlaceScatteringControls(worker.wp.newReflectionModel);
 
 	facetPanel->SetCompBounds(facetSideLabel, 7, 80, 50, 18);
 	facetPanel->SetCompBounds(facetSideType, 65, 80, 130, 18);
@@ -627,7 +635,7 @@ void SynRad::ApplyFacetParams() {
 			doSticking = true;
 		}
 		else { //Not a double number
-			if (strcmp(facetSticking->GetText(), "...") == 0) doSticking = false;
+			if (strcmp(facetSticking->GetText().c_str(), "...") == 0) doSticking = false;
 			else {
 				GLMessageBox::Display("Invalid sticking number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 				UpdateFacetParams();
@@ -656,7 +664,7 @@ void SynRad::ApplyFacetParams() {
 				doRoughness = true;
 			}
 			else {
-				if (strcmp(facetRMSroughness->GetText(), "...") == 0) doRoughness = false;
+				if (strcmp(facetRMSroughness->GetText().c_str(), "...") == 0) doRoughness = false;
 				else {
 					GLMessageBox::Display("Invalid roughness number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 					UpdateFacetParams();
@@ -664,7 +672,7 @@ void SynRad::ApplyFacetParams() {
 				}
 			}
 
-			if (worker.newReflectionModel) {
+			if (worker.wp.newReflectionModel) {
 				// Autocorrelation length
 				if (facetAutoCorrLength->GetNumber(&corrLength)) {
 					if (corrLength <= 0.0) {
@@ -675,7 +683,7 @@ void SynRad::ApplyFacetParams() {
 					doCorrLength = true;
 				}
 				else {
-					if (strcmp(facetAutoCorrLength->GetText(), "...") == 0) doCorrLength = false;
+					if (strcmp(facetAutoCorrLength->GetText().c_str(), "...") == 0) doCorrLength = false;
 					else {
 						GLMessageBox::Display("Invalid autocorrelation length", "Error", GLDLG_OK, GLDLG_ICONERROR);
 						UpdateFacetParams();
@@ -706,7 +714,7 @@ void SynRad::ApplyFacetParams() {
 		doTeleport = true;
 	}
 	else {
-		if (strcmp(facetTeleport->GetText(), "...") == 0) doTeleport = false;
+		if (strcmp(facetTeleport->GetText().c_str(), "...") == 0) doTeleport = false;
 		else {
 			GLMessageBox::Display("Invalid teleport destination\n(If no teleport: set number to 0)", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			UpdateFacetParams();
@@ -726,7 +734,7 @@ void SynRad::ApplyFacetParams() {
 		doOpacity = true;
 	}
 	else {
-		if (strcmp(facetOpacity->GetText(), "...") == 0) doOpacity = false;
+		if (strcmp(facetOpacity->GetText().c_str(), "...") == 0) doOpacity = false;
 		else {
 			GLMessageBox::Display("Invalid opacity number", "Error", GLDLG_OK, GLDLG_ICONERROR);
 			UpdateFacetParams();
@@ -740,7 +748,7 @@ void SynRad::ApplyFacetParams() {
 
 	int superStruct;
 	bool doSuperStruct = false;
-	std::string ssText = facetStructure->GetText();
+	std::string ssText = facetStructure->GetText().c_str();
 	if (Contains({ "All","all" }, ssText)) {
 		doSuperStruct = true;
 		superStruct = -1;
@@ -766,7 +774,7 @@ void SynRad::ApplyFacetParams() {
 	// Super structure destination (link)
 	int superDest;
 	bool doLink = false;
-	std::string linkText = facetSuperDest->GetText();
+	std::string linkText = facetSuperDest->GetText().c_str();
 	if (Contains({ "none","no","0" }, linkText )) {
 		doLink = true;
 		superDest = 0;
@@ -810,7 +818,7 @@ void SynRad::ApplyFacetParams() {
 			}
 			if (doSticking) f->sh.sticking = sticking;
 			if (doScattering) f->sh.doScattering = facetDoScattering->GetState();
-			if (worker.newReflectionModel) { //Apply values directly
+			if (worker.wp.newReflectionModel) { //Apply values directly
 				if (doRoughness) f->sh.rmsRoughness = roughness*1E-9; //nm->m
 				if (doCorrLength) f->sh.autoCorrLength = corrLength*1E-9; //nm->m
 			}
@@ -900,7 +908,7 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 			double fArea = f->GetArea();
 			reflectTypeE = reflectTypeE && (f0->sh.reflectType == f->sh.reflectType);
 			stickingE = stickingE && (abs(f0->sh.sticking - f->sh.sticking) < 1e-7);
-			if (worker.newReflectionModel) { //RMS roughness compare
+			if (worker.wp.newReflectionModel) { //RMS roughness compare
 				rmsRoughnessE = rmsRoughnessE && (abs(f0->sh.rmsRoughness - f->sh.rmsRoughness) < 1e-15);
 			}
 			else { //Roughness ratio compare
@@ -964,7 +972,7 @@ void SynRad::UpdateFacetParams(bool updateSelection) {
 		else {
 			facetDoScattering->SetEnabled(true);
 			if (rmsRoughnessE) {
-				if (worker.newReflectionModel) { //RMS roughness (nm)
+				if (worker.wp.newReflectionModel) { //RMS roughness (nm)
 					facetRMSroughness->SetText(f0->sh.rmsRoughness*1E9);
 				}
 				else { //Roughness ratio
@@ -1058,23 +1066,23 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 
 	if ((idx = GetVariable(v->name, "A")) > 0) {
 		ok = (idx <= nbFacet);
-		if (ok) v->value = geom->GetFacet(idx - 1)->counterCache.nbAbsEquiv;
+		if (ok) v->value = geom->GetFacet(idx - 1)->facetHitCache.hit.nbAbsEquiv;
 	}
 	else if ((idx = GetVariable(v->name, "MCH")) > 0) {
 		ok = (idx > 0 && idx <= nbFacet);
-		if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.nbMCHit;
+		if (ok) v->value = (double)geom->GetFacet(idx - 1)->facetHitCache.hit.nbMCHit;
 	}
 	else if ((idx = GetVariable(v->name, "H")) > 0) {
 		ok = (idx <= nbFacet);
-		if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.nbHitEquiv;
+		if (ok) v->value = (double)geom->GetFacet(idx - 1)->facetHitCache.hit.nbHitEquiv;
 	}
 	else if ((idx = GetVariable(v->name, "F")) > 0) {
 		ok = (idx <= nbFacet);
-		if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.fluxAbs / worker.no_scans;
+		if (ok) v->value = (double)geom->GetFacet(idx - 1)->facetHitCache.hit.fluxAbs / worker.no_scans;
 	}
 	else if ((idx = GetVariable(v->name, "P")) > 0) {
 		ok = (idx <= nbFacet);
-		if (ok) v->value = (double)geom->GetFacet(idx - 1)->counterCache.powerAbs / worker.no_scans;
+		if (ok) v->value = (double)geom->GetFacet(idx - 1)->facetHitCache.hit.powerAbs / worker.no_scans;
 	}
 	else if ((idx = GetVariable(v->name, "AR")) > 0) {
 		ok = (idx <= nbFacet);
@@ -1084,13 +1092,13 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 		v->value = worker.no_scans;
 	}
 	else if (_stricmp(v->name, "SUMDES") == 0) {
-		v->value = (double)worker.nbDesorption;
+		v->value = (double)worker.globalHitCache.globalHits.hit.nbDesorbed;
 	}
 	else if (_stricmp(v->name, "SUMABS") == 0) {
-		v->value = worker.nbAbsEquiv;
+		v->value = worker.globalHitCache.globalHits.hit.nbAbsEquiv;
 	}
 	else if (_stricmp(v->name, "SUMHIT") == 0) {
-		v->value = (double)worker.nbMCHit;
+		v->value = (double)worker.globalHitCache.globalHits.hit.nbMCHit;
 	}
 	else if (_stricmp(v->name, "SUMFLUX") == 0) {
 		v->value = worker.totalFlux / worker.no_scans;
@@ -1099,10 +1107,10 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 		v->value = worker.totalPower / worker.no_scans;
 	}
 	else if (_stricmp(v->name, "MPP") == 0) {
-		v->value = worker.distTraveled_total / (double)worker.nbDesorption;
+		v->value = worker.globalHitCache.distTraveledTotal / (double)worker.globalHitCache.globalHits.hit.nbDesorbed;
 	}
 	else if (_stricmp(v->name, "MFP") == 0) {
-		v->value = worker.distTraveled_total / worker.nbHitEquiv;
+		v->value = worker.globalHitCache.distTraveledTotal / worker.globalHitCache.globalHits.hit.nbHitEquiv;
 	}
 	else if (_stricmp(v->name, "ABSAR") == 0) {
 		double sumArea = 0.0;
@@ -1171,22 +1179,22 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 		double sumArea = 0.0; //We average by area
 		for (auto sel : facetsToSum) {
 			if (Contains({ "MCH", "mch" }, tokens[0])) {
-				sumLL += geom->GetFacet(sel)->counterCache.nbMCHit;
+				sumLL += geom->GetFacet(sel)->facetHitCache.hit.nbMCHit;
 			}
 			else if (Contains({ "H", "h" }, tokens[0])) {
-				sumD += geom->GetFacet(sel)->counterCache.nbHitEquiv;
+				sumD += geom->GetFacet(sel)->facetHitCache.hit.nbHitEquiv;
 			}
 			else if (Contains({ "A","a" }, tokens[0])) {
-				sumD += geom->GetFacet(sel)->counterCache.nbAbsEquiv;
+				sumD += geom->GetFacet(sel)->facetHitCache.hit.nbAbsEquiv;
 			}
 			else if (Contains({ "AR","ar" }, tokens[0])) {
 				sumArea += geom->GetFacet(sel)->GetArea();
 			}
 			else if (Contains({ "F","f" }, tokens[0])) {
-				sumD += geom->GetFacet(sel)->counterCache.fluxAbs /*/ worker.no_scans*/;
+				sumD += geom->GetFacet(sel)->facetHitCache.hit.fluxAbs /*/ worker.no_scans*/;
 			}
 			else if (Contains({ "P","p" }, tokens[0])) {
-				sumD += geom->GetFacet(sel)->counterCache.powerAbs/* / worker.no_scans*/;
+				sumD += geom->GetFacet(sel)->facetHitCache.hit.powerAbs/* / worker.no_scans*/;
 			}
 			else return false;
 		}
@@ -1226,16 +1234,16 @@ int SynRad::FrameMove()
 		doseNumber->SetText("Starting...");
 	}
 	else {
-		sprintf(tmp, "%s (%s)", FormatInt(worker.nbMCHit, "hit"), FormatPS(hps, "hit"));
+		sprintf(tmp, "%s (%s)", FormatInt(worker.globalHitCache.globalHits.hit.nbMCHit, "hit"), FormatPS(hps, "hit"));
 		hitNumber->SetText(tmp);
-		sprintf(tmp, "%s (%s)", FormatInt(worker.nbDesorption, "des"), FormatPS(dps, "des"));
+		sprintf(tmp, "%s (%s)", FormatInt(worker.globalHitCache.globalHits.hit.nbDesorbed, "des"), FormatPS(dps, "des"));
 		desNumber->SetText(tmp);
 	}
 
 	if (worker.no_scans) {
 		sprintf(tmp, "Scn:%.1f F=%.3g P=%.3g", (worker.no_scans == 1.0) ? 0.0 : worker.no_scans,
 			worker.totalFlux / worker.no_scans, worker.totalPower / worker.no_scans);
-		if (worker.nbTrajPoints > 0) doseNumber->SetText(tmp);
+		if (worker.wp.nbTrajPoints > 0) doseNumber->SetText(tmp);
 	}
 	else {
 		doseNumber->SetText("");
@@ -1275,13 +1283,13 @@ void SynRad::UpdateFacetHits(bool all) {
 				sprintf(tmp, "%d", facetId + 1);
 				facetList->SetValueAt(0, i, tmp);
 				facetList->SetColumnLabel(1, "Hits");
-				sprintf(tmp, "%I64d", f->counterCache.nbMCHit);
+				sprintf(tmp, "%I64d", f->facetHitCache.hit.nbMCHit);
 				facetList->SetValueAt(1, i, tmp);
-				sprintf(tmp, "%.3g", f->counterCache.fluxAbs / worker.no_scans);
+				sprintf(tmp, "%.3g", f->facetHitCache.hit.fluxAbs / worker.no_scans);
 				facetList->SetValueAt(2, i, tmp);
-				sprintf(tmp, "%.3g", f->counterCache.powerAbs / worker.no_scans);
+				sprintf(tmp, "%.3g", f->facetHitCache.hit.powerAbs / worker.no_scans);
 				facetList->SetValueAt(3, i, tmp);
-				sprintf(tmp, "%g", f->counterCache.nbAbsEquiv);
+				sprintf(tmp, "%g", f->facetHitCache.hit.nbAbsEquiv);
 				facetList->SetValueAt(4, i, tmp);
 
 			}
@@ -1438,19 +1446,19 @@ void SynRad::SaveFile() {
 	else SaveFileAs();
 }
 
-void SynRad::LoadFile(char *fName) {
+void SynRad::LoadFile(std::string fileName) {
 
 	char fullName[512];
 	char shortName[512];
 	strcpy(fullName, "");
 
-	if (fName == NULL) {
+	if (fileName == "") {
 		FILENAME *fn = GLFileBox::OpenFile(currentDir, NULL, "Open File", fileLFilters, 0);
 		if (fn)
 			strcpy(fullName, fn->fullName);
 	}
 	else {
-		strcpy(fullName, fName);
+		strcpy(fullName, fileName.c_str());
 	}
 
 	GLProgress *progressDlg2 = new GLProgress("Preparing to load file...", "Please wait");
@@ -1482,8 +1490,8 @@ void SynRad::LoadFile(char *fName) {
 			viewer[i]->SetWorker(&worker);
 		startSimu->SetEnabled(true);
 		ClearFacetParams();
-		nbDesStart = worker.nbDesorption;
-		nbHitStart = worker.nbMCHit;
+		nbDesStart = worker.globalHitCache.globalHits.hit.nbDesorbed;
+		nbHitStart = worker.globalHitCache.globalHits.hit.nbMCHit;
 		AddRecent(fullName);
 		geom->viewStruct = -1;
 
@@ -1524,7 +1532,7 @@ void SynRad::LoadFile(char *fName) {
 		char errMsg[512];
 		sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), shortName);
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
-		RemoveRecent(fName);
+		RemoveRecent(fileName.c_str());
 
 	}
 	progressDlg2->SetVisible(false);
@@ -1623,8 +1631,8 @@ void SynRad::StartStopSimulation() {
 	hps = 0.0;
 	lastHps = hps;
 	lastDps = dps;
-	lastNbHit = worker.nbMCHit;
-	lastNbDes = worker.nbDesorption;
+	lastNbHit = worker.globalHitCache.globalHits.hit.nbMCHit;
+	lastNbDes = worker.globalHitCache.globalHits.hit.nbDesorbed;
 	lastUpdate = 0.0;
 
 }
@@ -2008,6 +2016,7 @@ void SynRad::ProcessMessage(GLComponent *src, int message)
 		}*/
 		break;
 	}
+
 }
 
 void SynRad::QuickPipe() {
@@ -2044,7 +2053,7 @@ void SynRad::BuildPipe(double ratio, int steps) {
 	ClearAllViews();
 	ClearRegions();
 	geom->BuildPipe(L, R, 0, step);
-	worker.nbDesorption = 0;
+	worker.globalHitCache.globalHits.hit.nbDesorbed = 0;
 	sprintf(tmp, "L|R %g", L / R);
 	nbDesStart = 0;
 	nbHitStart = 0;
@@ -2351,8 +2360,8 @@ void SynRad::LoadConfig() {
 		f->ReadKeyword("textureLogScale"); f->ReadKeyword(":");
 		geom->texLogScale = f->ReadInt();
 		f->ReadKeyword("newReflectionModel"); f->ReadKeyword(":");
-		worker.newReflectionModel = f->ReadInt();
-		PlaceScatteringControls(worker.newReflectionModel);
+		worker.wp.newReflectionModel = f->ReadInt();
+		PlaceScatteringControls(worker.wp.newReflectionModel);
 		f->ReadKeyword("hideLot"); f->ReadKeyword(":");
 		for (int i = 0; i < MAX_VIEWER; i++)
 			viewer[i]->hideLot = f->ReadInt();
@@ -2461,7 +2470,7 @@ void SynRad::SaveConfig() {
 		f->Write("lowFluxMode:"); f->Write(worker.ontheflyParams.lowFluxMode, "\n");
 		f->Write("lowFluxCutoff:"); f->Write(worker.ontheflyParams.lowFluxCutoff, "\n");
 		f->Write("textureLogScale:"); f->Write(geom->texLogScale, "\n");
-		f->Write("newReflectionModel:"); f->Write(worker.newReflectionModel, "\n");
+		f->Write("newReflectionModel:"); f->Write(worker.wp.newReflectionModel, "\n");
 		WRITEI("hideLot", hideLot);
 		f->Write("leftHandedView:"); f->Write(leftHandedView, "\n");
 		/*f->Write("installId:"); f->Write(installId + "\n");

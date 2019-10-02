@@ -90,8 +90,8 @@ void SynradGeometry::BuildFacetTextures(BYTE *hits, bool renderRegularTexture, b
 			size_t dSize = nbElem * sizeof(DirectionCell);
 			
 			double iDesorbed = 0.0;
-			if (shGHit->total.nbDesorbed)
-				iDesorbed = 1.0 / (double)shGHit->total.nbDesorbed;
+			if (shGHit->globalHits.hit.nbDesorbed)
+				iDesorbed = 1.0 / (double)shGHit->globalHits.hit.nbDesorbed;
 
 			DirectionCell *dirs = (DirectionCell *)((BYTE *)shGHit + (f->sh.hitOffset + sizeof(FacetHitBuffer) + profSize + tSize));
 			for (int j = 0; j < nbElem; j++) {

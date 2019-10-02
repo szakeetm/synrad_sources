@@ -31,11 +31,24 @@ double Trajectory_Point::dAlpha(const double &dL) {
 	return dL/rho.Norme();
 }
 
+Histogram::Histogram(){
+    number_of_bins=0;
+    logarithmic=0;
+    min=0;
+    max=0;
+    delta=0;
+
+}
+
 Histogram::Histogram(double min_V,double max_V,int N,bool logscale){
 	number_of_bins=N;
-	counts = (ProfileSlice*)calloc(number_of_bins,sizeof(ProfileSlice));
-	if (!counts) throw Error("Can't reserve memory for histogram");
-	logarithmic=logscale;	
+    try {
+        counts.resize(number_of_bins);
+    }
+    catch (...){
+        throw Error("Can't reserve memory for histogram");
+    }
+	logarithmic=logscale;
 	this->min=min_V;
 	this->max=max_V;
 	
@@ -47,7 +60,7 @@ Histogram::Histogram(double min_V,double max_V,int N,bool logscale){
 }
 
 Histogram::~Histogram() {
-	free(counts);
+	//free(counts);
 }
 
 void Histogram::Add(const double &x,const ProfileSlice &increment) {
@@ -80,7 +93,7 @@ double Histogram::GetX(size_t index){
 }
 
 void Histogram::ResetCounts(){
-	memset(counts,0,number_of_bins*sizeof(ProfileSlice));
+    std::vector<ProfileSlice>(counts.size()).swap(counts);
 }
 
 ProfileSlice & ProfileSlice::operator+=(const ProfileSlice & rhs)
@@ -94,10 +107,29 @@ ProfileSlice & ProfileSlice::operator+=(const ProfileSlice & rhs)
 	return *this;
 }
 
-TextureCell & TextureCell::operator+=(const TextureCell & rhs)
+ProfileSlice & ProfileSlice::operator=(const ProfileSlice & rhs)
+{
+    this->count_absorbed = rhs.count_absorbed;
+    this->count_incident = rhs.count_incident;
+    this->flux_absorbed = rhs.flux_absorbed;
+    this->flux_incident = rhs.flux_incident;
+    this->power_absorbed = rhs.power_absorbed;
+    this->power_incident = rhs.power_incident;
+    return *this;
+}
+
+TextureCell &TextureCell::operator+=(const TextureCell & rhs)
 {
 	this->count += rhs.count;
 	this->flux += rhs.flux;
 	this->power += rhs.power;
 	return *this;
+}
+
+TextureCell &TextureCell::operator=(const TextureCell & rhs)
+{
+    this->count = rhs.count;
+    this->flux = rhs.flux;
+    this->power = rhs.power;
+    return *this;
 }

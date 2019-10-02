@@ -32,18 +32,23 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include <sstream>
 #include "Simulation.h"
 #include "IntersectAABB_shared.h"
 #include "Random.h"
 #include "SynradTypes.h" //Histogram
 //#include "Tools.h"
+#include <cereal/types/utility.hpp>
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/archives/json.hpp>
 
 extern void SetErrorSub(const char *message);
 
 // Global handles
 
-SubprocessFacet     **THitCache;
-Simulation *sHandle;
+extern Simulation *sHandle;
 
 // Timing stuff
 
@@ -58,7 +63,6 @@ void InitSimulation() {
 
 	// Global handle allocation
 	sHandle = new Simulation();
-	THitCache = new SubprocessFacet*[MAX_THIT]; // Transparent hit cache
 
 #ifdef WIN
 	{
@@ -78,45 +82,8 @@ void InitSimulation() {
 
 void ClearSimulation() {
 
-	int i, j;
-
-	// Free old stuff
-	/*for (i=0;i<(int)sHandle->regions.size();i++)
-	delete &(sHandle->regions[i]);*/
-	sHandle->regions.clear();
-	//sHandle->tmpGlobalHistograms.clear(); sHandle->tmpGlobalHistograms.shrink_to_fit();
-	//sHandle->regions=std::vector<Region_mathonly>();
-	SAFE_FREE(sHandle->vertices3);
-	for (j = 0; j < sHandle->nbSuper; j++) {
-		for (i = 0; i < sHandle->str[j].nbFacet; i++) {
-			SubprocessFacet *f = sHandle->str[j].facets[i];
-			if (f) {
-				SAFE_FREE(f->indices);
-				SAFE_FREE(f->vertices2);
-				SAFE_FREE(f->inc);
-				SAFE_FREE(f->largeEnough);
-				SAFE_FREE(f->texture);
-				//SAFE_FREE(f->area);
-				SAFE_FREE(f->profile);
-				delete f->spectrum;
-				SAFE_FREE(f->direction);
-				//SAFE_FREE(f->fullElem);
-				//f->tmpHistograms.clear();
-				//f->tmpHistograms.shrink_to_fit();
-				delete(f); f = NULL;
-			}
-			
-		}
-		SAFE_FREE(sHandle->str[j].facets);
-		if (sHandle->str[j].aabbTree) {
-			DestroyAABB(sHandle->str[j].aabbTree->left);
-			DestroyAABB(sHandle->str[j].aabbTree->right);
-			free(sHandle->str[j].aabbTree);
-			sHandle->str[j].aabbTree = NULL;
-		}
-	}
-	memset(sHandle, 0, sizeof(Simulation));
-	sHandle->tmpParticleLog.clear(); sHandle->tmpParticleLog.shrink_to_fit();
+    delete sHandle;
+    sHandle = new Simulation;
 
 }
 
@@ -154,16 +121,8 @@ double Norme(Vector3d *v) {
 
 bool LoadSimulation(Dataport *loader) {
 
-	size_t i, j;
-	int idx;
-	BYTE *buffer, *bufferAfterMaterials;
-	BYTE *areaBuff;
-	BYTE *bufferStart;
-	Vector3d *shVert;
 	double t1, t0;
 	DWORD seed;
-	char err[128];
-
 	t0 = GetTick();
 
 	sHandle->loadOK = false;
@@ -185,10 +144,126 @@ bool LoadSimulation(Dataport *loader) {
 	}
 	*/
 
-	bufferStart = (BYTE *)loader->buff;
-	buffer = bufferStart;
+    SetState(PROCESS_STARTING, "Loading simulation");
+    sHandle->textTotalSize =
+    sHandle->profTotalSize =
+    sHandle->dirTotalSize =
+            sHandle->spectrumTotalSize = 0;
+
+    {
+
+        std::string inputString(loader->size,NULL);
+        BYTE* buffer = (BYTE*)loader->buff;
+        std::copy(buffer, buffer + loader->size, inputString.begin());
+        std::stringstream inputStream;
+        inputStream << inputString;
+        cereal::BinaryInputArchive inputarchive(inputStream);
+
+        //std::ifstream is("data.json");
+        //cereal::JSONInputArchive inputarchive(is);
+
+        //Worker params
+        inputarchive(sHandle->wp);
+        sHandle->regions.resize(sHandle->wp.nbRegion); //Create structures
+        inputarchive(sHandle->ontheflyParams);
+        inputarchive(sHandle->regions); // mathonly
+        inputarchive(sHandle->materials);
+        inputarchive(sHandle->psi_distro);
+        inputarchive(sHandle->chi_distros);
+        inputarchive(sHandle->parallel_polarization);
+
+        //Geometry
+        inputarchive(sHandle->sh);
+        inputarchive(sHandle->vertices3);
+
+        // Prepare super structure
+        sHandle->structures.resize(sHandle->sh.nbSuper); //Create structures
+        /*for (size_t i = 0; i < sHandle->sh.nbSuper; i++) {
+            int nbF = sHandle->structures[i].facets.size();
+            if (nbF == 0) {
+
+            }
+            else {
+                std::vector<SubprocessFacet>(nbF).swap(sHandle->structures[i].facets);
+            }
+        }*/
+
+        SetState(PROCESS_STARTING, ("Loading facets"));
+
+        //Facets
+        for (size_t i = 0; i < sHandle->sh.nbFacet; i++) { //Necessary because facets is not (yet) a vector in the interface
+            SubprocessFacet f;
+            inputarchive(f.sh);
+            inputarchive(f.indices);
+            inputarchive(f.vertices2);
+            inputarchive(f.textureCellIncrements);
+
+            //Some initialization
+            if (!f.InitializeOnLoad(i)) return false;
+            if (f.sh.superIdx == -1) { //Facet in all structures
+                for (auto& s : sHandle->structures) {
+                    s.facets.push_back(f);
+                }
+            }
+            else {
+                sHandle->structures[f.sh.superIdx].facets.push_back(f); //Assign to structure
+            }
+        }
+    }//inputarchive goes out of scope, file released
+
+    sHandle->wp.nbTrajPoints = 0;
+
+    if (sHandle->sh.nbSuper > MAX_STRUCT) {
+        //ReleaseDataport(loader);
+        SetErrorSub("Too many structures");
+        return false;
+    }
+    if (sHandle->sh.nbSuper <= 0) {
+        //ReleaseDataport(loader);
+        SetErrorSub("No structures");
+        return false;
+    }
+
+    try {
+        //copy trajectory points
+        for (auto& reg : sHandle->regions) {
+            reg.Points.resize(reg.params.nbPointsToCopy);
+            sHandle->wp.nbTrajPoints += reg.params.nbPointsToCopy;
+        }
+        //copy distribution points
+
+        sHandle->nbDistrPoints_BXY = 0;
+        for (auto& reg : sHandle->regions) {
+            reg.Bx_distr.Resize((size_t)reg.params.nbDistr_MAG.x);
+            reg.By_distr.Resize((size_t)reg.params.nbDistr_MAG.y);
+            reg.Bz_distr.Resize((size_t)reg.params.nbDistr_MAG.z);
+            reg.latticeFunctions.Resize(0);
+
+            sHandle->nbDistrPoints_BXY += reg.params.nbDistr_BXY;
+        }
+    }
+    catch (...) {
+        SetErrorSub("Error loading regions");
+        return false;
+    }
+
+
+
+    //Reserve particle log
+    if (sHandle->ontheflyParams.enableLogging)
+        sHandle->tmpParticleLog.reserve(sHandle->ontheflyParams.logLimit / sHandle->ontheflyParams.nbProcess);
+
+
+    /*BYTE *bufferStart = (BYTE *)loader->buff;
+    BYTE *buffer = bufferStart;
+    BYTE *areaBuff;
 
 	// Load new geom from the dataport
+
+    WorkerParams* wPms = (WorkerParams *)buffer;
+    sHandle->wp.newReflectionModel = wPms->newReflectionModel;
+    sHandle->wp.nbRegion = wPms->nbRegion;
+    buffer += sizeof(WorkerParams);
 
 	GeomProperties* shGeom = (GeomProperties *)buffer;
 	if (shGeom->nbSuper > MAX_STRUCT) {
@@ -200,23 +275,37 @@ bool LoadSimulation(Dataport *loader) {
 		//ReleaseDataport(loader);
 		SetErrorSub("No structures");
 		return false;
-	}
+	}*/
 
-	sHandle->newReflectionModel = shGeom->newReflectionModel;
-	sHandle->nbVertex = shGeom->nbVertex;
-	sHandle->nbSuper = shGeom->nbSuper;
-	sHandle->nbRegion = shGeom->nbRegion;
-	sHandle->totalFacet = shGeom->nbFacet;
+    /*sHandle->totalFacet = shGeom->nbFacet;
+    sHandle->nbVertex = shGeom->nbVertex;
+    sHandle->nbSuper = shGeom->nbSuper;*/
 
+
+/*
 	buffer += sizeof(GeomProperties);
 
-	sHandle->ontheflyParams = READBUFFER(OntheflySimulationParams);
+    sHandle->sh = READBUFFER(GeomProperties); //Copy all geometry properties
+    sHandle->structures.resize(sHandle->sh.nbSuper); //Create structures
 
-	sHandle->nbTrajPoints = 0;
+    sHandle->ontheflyParams = READBUFFER(OntheflySimulationParams);
+
+	sHandle->wp.nbTrajPoints = 0;
+
+	// RegionParams / Region_mathonly + Trajectory points
+	// Distribution Points Bx By Bz LatticeFunctions
+	// Material
+	// chi_distros
+	// psi_distro
+	// parallel_polarization
+
+	// FacetProperties
+	// SubprocessFacet
+
 
 	//Regions
 	try {
-		for (size_t r = 0; r < sHandle->nbRegion; r++) {
+		for (size_t r = 0; r < sHandle->wp.nbRegion; r++) {
 			RegionParams *regparam = (RegionParams *)buffer;
 			Region_mathonly newreg;
 			newreg.params = *regparam;//memcpy(&newreg.params, regparam, sizeof(RegionParams));
@@ -224,23 +313,18 @@ bool LoadSimulation(Dataport *loader) {
 			sHandle->regions.push_back(newreg);
 		}
 		//copy trajectory points	
-		for (size_t r = 0; r < sHandle->nbRegion; r++) {
-			/*sHandle->regions[r].Points.reserve(sHandle->regions[r].params.nbPointsToCopy);
-			for (int k=0;k<sHandle->regions[r].params.nbPointsToCopy;k++) {
-				sHandle->regions[r].Points.push_back(*(Trajectory_Point*)(buffer));
-				buffer+=sizeof(Trajectory_Point);
-			}*/
+		for (size_t r = 0; r < sHandle->wp.nbRegion; r++) {
 
 			sHandle->regions[r].Points.resize(sHandle->regions[r].params.nbPointsToCopy);
 			memcpy(&sHandle->regions[r].Points[0], buffer, sizeof(Trajectory_Point)*sHandle->regions[r].params.nbPointsToCopy);
 			buffer += sizeof(Trajectory_Point)*sHandle->regions[r].params.nbPointsToCopy;
-			sHandle->nbTrajPoints += sHandle->regions[r].params.nbPointsToCopy;
+			sHandle->wp.nbTrajPoints += sHandle->regions[r].params.nbPointsToCopy;
 		}
 
 		//copy distribution points
 		//sHandle->nbDistrPoints_MAG=0;
 		sHandle->nbDistrPoints_BXY = 0;
-		for (size_t r = 0; r < sHandle->nbRegion; r++) {
+		for (size_t r = 0; r < sHandle->wp.nbRegion; r++) {
 
 			sHandle->regions[r].Bx_distr.Resize((size_t)sHandle->regions[r].params.nbDistr_MAG.x);
 			for (size_t j = 0; j < sHandle->regions[r].params.nbDistr_MAG.x; j++) {
@@ -327,6 +411,7 @@ bool LoadSimulation(Dataport *loader) {
 		return false;
 	}
 
+
 	size_t totalDistroSize = READBUFFER(size_t);
 
 	if (sHandle->chi_distros.size() == 3) buffer += totalDistroSize; //already loaded, skip
@@ -381,189 +466,119 @@ bool LoadSimulation(Dataport *loader) {
 			return false;
 		}
 	}
-	bufferAfterMaterials = buffer;
+
+
+    BYTE *bufferAfterMaterials = buffer;
 
 	// Prepare super structure
-	buffer += sizeof(Vector3d)*sHandle->nbVertex;
-	for (i = 0; i < sHandle->totalFacet; i++) {
+
+    sHandle->structures.resize(sHandle->sh.nbSuper); //Create structures
+
+    buffer += sizeof(Vector3d)*sHandle->sh.nbVertex;
+	for (size_t i = 0; i < sHandle->sh.nbFacet; i++) {
 		FacetProperties *shFacet = (FacetProperties *)buffer;
-		if (shFacet->superIdx == -1) { //Facet in all structures
-			for (size_t s = 0; s < sHandle->nbSuper; s++) {
-				sHandle->str[s].nbFacet++;
-			}
-		}
-		else {
-			sHandle->str[shFacet->superIdx].nbFacet++;
-		}
+
 		buffer += sizeof(FacetProperties) + shFacet->nbIndex*(sizeof(size_t) + sizeof(Vector2d));
 	}
-	for (i = 0; i < sHandle->nbSuper; i++) {
-		int nbF = sHandle->str[i].nbFacet;
+	for (size_t i = 0; i < sHandle->sh.nbSuper; i++) {
+		int nbF = sHandle->structures[i].facets.size();
 		if (nbF == 0) {
 
 		}
 		else {
-			sHandle->str[i].facets = (SubprocessFacet **)malloc(nbF * sizeof(SubprocessFacet *));
-			memset(sHandle->str[i].facets, 0, nbF * sizeof(SubprocessFacet *));
+            std::vector<SubprocessFacet>(nbF).swap(sHandle->structures[i].facets);
 		}
-		sHandle->str[i].nbFacet = 0;
 	}
-	areaBuff = buffer;
+
+    buffer = bufferAfterMaterials;
+    areaBuff = buffer;
 	//buffer = (BYTE *)loader->buff;
 
 	// Name
-	memcpy(sHandle->name, shGeom->name, 64);
+	sHandle->sh.name = shGeom->name;
 
 	// Vertex
-	sHandle->vertices3 = (Vector3d *)malloc(sHandle->nbVertex * sizeof(Vector3d));
-	buffer = bufferAfterMaterials;
-	shVert = (Vector3d *)(buffer);
-	memcpy(sHandle->vertices3, shVert, sHandle->nbVertex * sizeof(Vector3d));
-	buffer += sizeof(Vector3d)*sHandle->nbVertex;
+    try {
+        sHandle->vertices3.resize(sHandle->sh.nbVertex);
+    }
+    catch (...) {
+        SetErrorSub("Not enough memory to load vertices");
+        return false;
+    }
+
+
+    memcpy(sHandle->vertices3.data(), buffer, sHandle->sh.nbVertex * sizeof(Vector3d));
+    buffer += sizeof(Vector3d)*sHandle->sh.nbVertex;
 
 	// Facets
-	for (i = 0; i < sHandle->totalFacet; i++) {
+	for (size_t i = 0; i < sHandle->sh.nbFacet; i++) {
 
-		FacetProperties *shFacet = (FacetProperties *)buffer;
-		SubprocessFacet *f = /*(SubprocessFacet *)malloc(sizeof(SubprocessFacet));*/ new SubprocessFacet();
-		if (!f) {
-			SetErrorSub("Not enough memory to load facets");
-			return false;
-		}
-		memset(f, 0, sizeof(SubprocessFacet));
-		//memcpy(&(f->sh), shFacet, sizeof(FacetProperties));
-		f->sh = *shFacet;
-		f->globalId = i;
+		SubprocessFacet f;
+		f.sh = READBUFFER(FacetProperties);
 
-		sHandle->hasVolatile |= f->sh.isVolatile;
-		//sHandle->hasDirection |= f->sh.countDirection;
+        f.globalId = i;
 
-		idx = f->sh.superIdx;
-		if (idx == -1) {
-			for (size_t s = 0; s < sHandle->nbSuper; s++) {
-				SubprocessFacet* f_copy = f;
+		if (f.sh.superIdx == -1) {
+			for (size_t s = 0; s < sHandle->sh.nbSuper; s++) {
+				SubprocessFacet f_copy = f;
 				if (s > 0) { //Create copy
-					f_copy = new SubprocessFacet(*f);
+					f_copy = SubprocessFacet(f);
 				}
-				sHandle->str[s].facets[sHandle->str[s].nbFacet] = f_copy;
-				sHandle->str[s].nbFacet++;
+				sHandle->structures[s].facets[sHandle->structures[s].facets.size()] = f_copy;
 			}
 		}
 		else {
-			sHandle->str[idx].facets[sHandle->str[idx].nbFacet] = f;
-			sHandle->str[idx].nbFacet++;
+			sHandle->structures[f.sh.superIdx].facets[sHandle->structures[f.sh.superIdx].facets.size()] = f;
 		}
 		//sHandle->str[idx].facets[sHandle->str[idx].nbFacet]->globalId = i;
 
-		if (f->sh.superDest || f->sh.isVolatile) {
-			// Link or volatile facet, overides facet settings
-			// Must be full opaque and 0 sticking
-			// (see SimulationMC.c::PerformBounce)
-			//f->sh.isOpaque = true;
-			f->sh.opacity = 1.0;
-			f->sh.sticking = 0.0;
-			if ((f->sh.superDest - 1) >= sHandle->nbSuper || f->sh.superDest < 0) {
-				// Geometry error
-				ClearSimulation();
-				//ReleaseDataport(loader);
-				sprintf(err, "Invalid structure (wrong link on F#%zd)", i + 1);
-				SetErrorSub(err);
-				return false;
-			}
-		}
-
 		// Reset counter in local memory
-		memset(&(f->counter), 0, sizeof(FacetHitBuffer));
-		f->indices = (size_t *)malloc(f->sh.nbIndex * sizeof(size_t));
-		buffer += sizeof(FacetProperties);
-		memcpy(f->indices, buffer, f->sh.nbIndex * sizeof(size_t));
-		buffer += f->sh.nbIndex * sizeof(size_t);
-		f->vertices2 = (Vector2d *)malloc(f->sh.nbIndex * sizeof(Vector2d));
-		if (!f->vertices2) {
-			SetErrorSub("Not enough memory to load vertices");
-			return false;
-		}
-		memcpy(f->vertices2, buffer, f->sh.nbIndex * sizeof(Vector2d));
-		buffer += f->sh.nbIndex * sizeof(Vector2d);
+		//memset(&(f.tmpCounter), 0, sizeof(FacetHitBuffer));
+		//buffer += sizeof(FacetProperties);
 
-		//Textures
-		if (f->sh.isTextured) {
-			size_t nbE = f->sh.texWidth*f->sh.texHeight;
-			f->textureSize = nbE*sizeof(TextureCell);
-			f->texture = (TextureCell *)calloc(nbE, sizeof(TextureCell));
+		// Indicies
+        f.indices.resize(f.sh.nbIndex);
+        memcpy(f.indices.data(), buffer, f.sh.nbIndex * sizeof(size_t));
+        buffer += f.sh.nbIndex * sizeof(size_t);
 
-			f->inc = (double*)malloc(nbE*sizeof(double));
-			f->largeEnough = (bool *)malloc(sizeof(bool)*nbE);
-			//f->fullElem = (char *)malloc(nbE);
-			if (!(f->inc && f->largeEnough/* && f->fullElem*/)) {
-				SetErrorSub("Not enough memory to load");
-				return false;
-			}
-			f->fullSizeInc = (float)1E30;
-			for (j = 0; j < nbE; j++) {
-				double incVal = ((double *)areaBuff)[j];
-				/*if( incVal<0 ) {
-					f->fullElem[j] = 1;
-					f->inc[j] = -incVal;
-				} else {
-					f->fullElem[j] = 0;*/
-				f->inc[j] = incVal;
-				/*}*/
-				if ((f->inc[j] > 0.0) && (f->inc[j] < f->fullSizeInc)) f->fullSizeInc = f->inc[j];
-			}
-			for (j = 0; j < nbE; j++) { //second pass, filter out very small cells
-				f->largeEnough[j] = (f->inc[j] < ((5.0)*f->fullSizeInc));
-			}
-			sHandle->textTotalSize += f->textureSize;
-			areaBuff += nbE * sizeof(double);
-			f->iw = 1.0 / (double)f->sh.texWidthD;
-			f->ih = 1.0 / (double)f->sh.texHeightD;
-			f->rw = Norme(&(f->sh.U)) * f->iw;
-			f->rh = Norme(&(f->sh.V)) * f->ih;
-		}
-		else f->textureSize = 0;
+        // Vertices2
+        try {
+            f.vertices2.resize(f.sh.nbIndex);
+        } catch (...) {
+            SetErrorSub("Not enough memory to load vertices");
+            return false;
+        }
+        memcpy(f.vertices2.data(), buffer, f.sh.nbIndex * sizeof(Vector2d));
+        buffer += f.sh.nbIndex * sizeof(Vector2d);
 
-		if (f->sh.isProfile) {
-			f->profileSize = PROFILE_SIZE*sizeof(ProfileSlice);
-
-			f->profile = (ProfileSlice *)calloc(PROFILE_SIZE,sizeof(ProfileSlice));
-
-			sHandle->profTotalSize += f->profileSize;
-		}
-		else f->profileSize = 0;
-
-		if (f->sh.countDirection) {
-			f->directionSize = f->sh.texWidth*f->sh.texHeight * sizeof(DirectionCell);
-			f->direction = (DirectionCell *)malloc(f->directionSize);
-			memset(f->direction, 0, f->directionSize);
-			sHandle->dirTotalSize += f->directionSize;
-		}
-		else f->directionSize = 0;
-
-		if (f->sh.recordSpectrum) {
-			f->spectrumSize = sizeof(ProfileSlice)*SPECTRUM_SIZE;
-			double min_energy, max_energy;
-			if (sHandle->nbRegion > 0) {
-				min_energy = sHandle->regions[0].params.energy_low_eV;
-				max_energy = sHandle->regions[0].params.energy_hi_eV;
-			}
-			else {
-				min_energy = 10.0;
-				max_energy = 1000000.0;
-			}
-			f->spectrum = new Histogram(min_energy, max_energy, SPECTRUM_SIZE, true);
-			sHandle->spectrumTotalSize += f->spectrumSize;
-		}
-		else f->spectrumSize = 0;
-
+        //Some initialization
+        if (!f.InitializeOnLoad(i)) return false;
+        if (f.sh.superIdx == -1) { //Facet in all structures
+            for (auto& s : sHandle->structures) {
+                s.facets.push_back(f);
+            }
+        }
+        else {
+            sHandle->structures[f.sh.superIdx].facets.push_back(f); //Assign to structure
+        }
 	}
 
-	//ReleaseDataport(loader); //Commented out as AccessDataport removed
+    //Reserve particle log
+    if (sHandle->ontheflyParams.enableLogging)
+        sHandle->tmpParticleLog.reserve(sHandle->ontheflyParams.logLimit / sHandle->ontheflyParams.nbProcess);
+*/
+    //ReleaseDataport(loader); //Commented out as AccessDataport removed
 
 	// Build all AABBTrees
 	size_t maxDepth = 0;
-	for (i = 0; i < sHandle->nbSuper; i++)
-		sHandle->str[i].aabbTree = BuildAABBTree(sHandle->str[i].facets, sHandle->str[i].nbFacet, 0,maxDepth);
+
+    for (auto& s : sHandle->structures) {
+        std::vector<SubprocessFacet*> facetPointers; facetPointers.reserve(s.facets.size());
+        for (auto& f : s.facets) {
+            facetPointers.push_back(&f);
+        }
+        s.aabbTree = BuildAABBTree(facetPointers, 0, maxDepth);
+    }
 
 	// Initialise simulation
 	ComputeSourceArea();
@@ -571,20 +586,20 @@ bool LoadSimulation(Dataport *loader) {
 	rseed(seed);
 
 	//--- GSL random init ---
-	gsl_rng_env_setup();                          // Read variable environnement
-	const gsl_rng_type* type = gsl_rng_default;   // Default algorithm 'twister'
-	sHandle->gen = gsl_rng_alloc(type);          // Rand generator allocation
+    gsl_rng_env_setup();                          // Read variable environnement
+    const gsl_rng_type* type = gsl_rng_default;   // Default algorithm 'twister'
+    sHandle->gen = gsl_rng_alloc(type);          // Rand generator allocation
 
 	sHandle->loadOK = true;
 	t1 = GetTick();
-	printf("  Load %s successful\n", sHandle->name);
-	printf("  Geometry: %zd vertex %zd facets\n", sHandle->nbVertex, sHandle->totalFacet);
-	printf("  Region: %zd regions\n", sHandle->nbRegion);
-	printf("  Trajectory points: %zd points\n", sHandle->nbTrajPoints);
-	printf("  Geom size: %d bytes\n", (int)(buffer - bufferStart));
-	printf("  Number of stucture: %zd\n", sHandle->nbSuper);
+	printf("  Load %s successful\n", sHandle->sh.name.c_str());
+	printf("  Geometry: %zd vertex %zd facets\n", sHandle->sh.nbVertex, sHandle->sh.nbFacet);
+	printf("  Region: %zd regions\n", sHandle->wp.nbRegion);
+	printf("  Trajectory points: %zd points\n", sHandle->wp.nbTrajPoints);
+	printf("  Geom size: %d bytes\n", /*(size_t)(buffer - bufferStart)*/0);
+	printf("  Number of stucture: %zd\n", sHandle->sh.nbSuper);
 	printf("  Global Hit: %zd bytes\n", sizeof(GlobalHitBuffer));
-	printf("  Facet Hit : %zd bytes\n", sHandle->totalFacet*(int)sizeof(FacetHitBuffer));
+	printf("  Facet Hit : %zd bytes\n", sHandle->sh.nbFacet*(int)sizeof(FacetHitBuffer));
 	printf("  Texture   : %zd bytes\n", sHandle->textTotalSize);
 	printf("  Profile   : %zd bytes\n", sHandle->profTotalSize);
 	printf("  Direction : %zd bytes\n", sHandle->dirTotalSize);
@@ -606,17 +621,16 @@ bool UpdateOntheflySimuParams(Dataport *loader) {
 
 	sHandle->ontheflyParams = READBUFFER(OntheflySimulationParams);
 
-	for (size_t i = 0; i < sHandle->nbRegion; i++) {
+	for (size_t i = 0; i < sHandle->wp.nbRegion; i++) {
 		sHandle->regions[i].params.showPhotons = READBUFFER(bool);
 	}
 
 	ReleaseDataport(loader);
 
 	//Reset hit cache
-	sHandle->hitCacheSize = 0;
+    sHandle->tmpGlobalResult.hitCacheSize = 0;
 	//memset(sHandle->hitCache, 0, sizeof(HIT)*HITCACHESIZE);
-
-	sHandle->leakCacheSize = 0;
+    sHandle->tmpGlobalResult.leakCacheSize = 0;
 	//memset(sHandle->leakCache, 0, sizeof(LEAK)*LEAKCACHESIZE); //No need to reset, will gradually overwrite
 
 	return true;
@@ -630,37 +644,39 @@ void UpdateHits(Dataport *dpHit, Dataport* dpLog, int prIdx, DWORD timeout) {
 
 size_t GetHitsSize() {
 	return sHandle->textTotalSize + sHandle->profTotalSize + sHandle->dirTotalSize +
-		sHandle->spectrumTotalSize + sHandle->totalFacet * sizeof(FacetHitBuffer) + sizeof(GlobalHitBuffer);
+		sHandle->spectrumTotalSize + sHandle->sh.nbFacet * sizeof(FacetHitBuffer) + sizeof(GlobalHitBuffer);
 }
 
 void ResetTmpCounters() {
 	SetState(NULL, "Resetting local cache...", false, true);
 
-	memset(&sHandle->tmpGlobalCount, 0, sizeof(FacetHitBuffer));
+	memset(&sHandle->tmpGlobalResult, 0, sizeof(GlobalHitBuffer));
 
-	sHandle->distTraveledSinceUpdate = 0.0;
+	sHandle->currentParticle.distTraveledSinceUpdate = 0.0;
 	sHandle->nbLeakSinceUpdate = 0;
-	sHandle->hitCacheSize = 0;
-	sHandle->leakCacheSize = 0;
+	sHandle->tmpGlobalResult.hitCacheSize = 0;
+	sHandle->tmpGlobalResult.leakCacheSize = 0;
 
-	for (int j = 0; j < sHandle->nbSuper; j++) {
-		for (int i = 0; i < sHandle->str[j].nbFacet; i++) {
-			SubprocessFacet *f = sHandle->str[j].facets[i];
-			f->ResetCounter();
-			f->hitted = false;
-			size_t textureElemNb = f->sh.texHeight*f->sh.texWidth;
-			if (f->texture) memset(f->texture, 0, textureElemNb * sizeof(f->texture[0]));
-			if (f->profile) memset(f->profile, 0, PROFILE_SIZE * sizeof(f->profile[0]));
-			if (f->spectrum) f->spectrum->ResetCounts();
+    for (int j = 0; j < sHandle->sh.nbSuper; j++) {
+        for (auto& f : sHandle->structures[j].facets) {
 
-			if (f->direction) memset(f->direction, 0, f->directionSize);
-		}
-	}
+            f.ResetCounter();
+            f.hitted = false;
 
+            std::vector<TextureCell>(f.texture.size()).swap(f.texture);
+            std::vector<ProfileSlice>(f.profile.size()).swap(f.profile);
+            //if (f.sh.recordSpectrum)
+                f.spectrum.ResetCounts();
+            std::vector<DirectionCell>(f.direction.size()).swap(f.direction);
+
+
+
+        }
+    }
 }
 
 void ResetSimulation() {
-	sHandle->lastHitFacet = NULL;
+    sHandle->currentParticle.lastHitFacet = NULL;
 	sHandle->totalDesorbed = 0;
 	ResetTmpCounters();
 	sHandle->tmpParticleLog.clear();
@@ -674,43 +690,46 @@ bool StartSimulation() {
 
 	//Check for invalid material (ID==9) passed from the interface
 	//It is valid to load invalid materials (to extract textures, etc.) but not to launch the simulation
-	for (int s = 0; s < sHandle->nbSuper; s++) {
-		for (int f = 0; f < sHandle->str[s].nbFacet; f++) {
-			if (sHandle->str[s].facets[f]->sh.reflectType == 9) {
+    for(auto& s : sHandle->structures) {
+		for (auto& f : s.facets) {
+			if (f.sh.reflectType == 9) {
 				char tmp[32];
-				sprintf(tmp, "Invalid material on Facet %d.", f + 1);
+				sprintf(tmp, "Invalid material on Facet %zd.", f.globalId + 1);
 				SetErrorSub(tmp);
 				return false;
 			}
 		}
 	}
 
-	if (!sHandle->lastHitFacet) StartFromSource();
+	//if (!sHandle->lastHitFacet) StartFromSource();
+    if (!sHandle->currentParticle.lastHitFacet) StartFromSource();
+    //return (sHandle->currentParticle.lastHitFacet != NULL);
 	return true;
 }
 
 void RecordHit(const int &type, const double &dF, const double &dP) {
 	if (sHandle->regions[sHandle->sourceRegionId].params.showPhotons) {
-		if (sHandle->hitCacheSize < HITCACHESIZE) {
-			sHandle->hitCache[sHandle->hitCacheSize].pos = sHandle->pPos;
-			sHandle->hitCache[sHandle->hitCacheSize].type = type;
-			sHandle->hitCache[sHandle->hitCacheSize].dF = sHandle->dF;
-			sHandle->hitCache[sHandle->hitCacheSize].dP = sHandle->dP;
-			sHandle->hitCacheSize++;
-		}
+        if (sHandle->tmpGlobalResult.hitCacheSize < HITCACHESIZE) {
+            sHandle->tmpGlobalResult.hitCache[sHandle->tmpGlobalResult.hitCacheSize].pos = sHandle->currentParticle.position;
+            sHandle->tmpGlobalResult.hitCache[sHandle->tmpGlobalResult.hitCacheSize].type = type;
+            sHandle->tmpGlobalResult.hitCache[sHandle->tmpGlobalResult.hitCacheSize].dF = sHandle->currentParticle.dF;
+            sHandle->tmpGlobalResult.hitCache[sHandle->tmpGlobalResult.hitCacheSize].dP = sHandle->currentParticle.dP;
+
+            sHandle->tmpGlobalResult.hitCacheSize++;
+        }
 	}
 }
 
 void RecordLeakPos() {
 	// Source region check performed when calling this routine 
 	// Record leak for debugging
-	RecordHit(HIT_REF, sHandle->dF, sHandle->dP);
-	RecordHit(HIT_LAST, sHandle->dF, sHandle->dP);
-	if (sHandle->leakCacheSize < LEAKCACHESIZE) {
-		sHandle->leakCache[sHandle->leakCacheSize].pos = sHandle->pPos;
-		sHandle->leakCache[sHandle->leakCacheSize].dir = sHandle->pDir;
-		sHandle->leakCacheSize++;
-	}
+	RecordHit(HIT_REF, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
+	RecordHit(HIT_LAST, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
+    if (sHandle->tmpGlobalResult.leakCacheSize < LEAKCACHESIZE) {
+        sHandle->tmpGlobalResult.leakCache[sHandle->tmpGlobalResult.leakCacheSize].pos = sHandle->currentParticle.position;
+        sHandle->tmpGlobalResult.leakCache[sHandle->tmpGlobalResult.leakCacheSize].dir = sHandle->currentParticle.direction;
+        sHandle->tmpGlobalResult.leakCacheSize++;
+    }
 }
 
 bool SimulationRun() {
@@ -774,4 +793,135 @@ double GetTick() {
 
 #endif
 
+}
+
+bool SubprocessFacet::InitializeOnLoad(const size_t& id) {
+    globalId = id;
+    if (!InitializeLinkAndVolatile(id)) return false;
+    if (!InitializeTexture()) return false;
+    if (!InitializeProfile()) return false;
+    if (!InitializeDirectionTexture()) return false;
+    if (!InitializeSpectrum()) return false;
+
+    return true;
+}
+
+bool SubprocessFacet::InitializeProfile() {
+    //Profiles
+    if (sh.isProfile) {
+        profileSize = PROFILE_SIZE * sizeof(ProfileSlice);
+        try {
+            profile = std::vector<ProfileSlice>(PROFILE_SIZE);
+        }
+        catch (...) {
+            SetErrorSub("Not enough memory to load profiles");
+            return false;
+        }
+        sHandle->profTotalSize += profileSize * (1);
+    }
+    else profileSize = 0;
+    return true;
+}
+
+bool SubprocessFacet::InitializeTexture(){
+    //Textures
+    if (sh.isTextured) {
+        size_t nbE = sh.texWidth*sh.texHeight;
+        textureSize = nbE*sizeof(TextureCell);
+        try {
+            texture.resize(nbE);
+            textureCellIncrements.resize(nbE);
+            largeEnough.resize(nbE);
+        }
+        catch (...) {
+            SetErrorSub("Not enough memory to load textures");
+            return false;
+        }
+
+
+        fullSizeInc = 1E30;
+
+        for (size_t j = 0; j < nbE; j++) {
+            if ((textureCellIncrements[j] > 0.0) && (textureCellIncrements[j] < fullSizeInc)) fullSizeInc = textureCellIncrements[j];
+        }
+        for (size_t j = 0; j < nbE; j++) { //second pass, filter out very small cells
+            largeEnough[j] = (textureCellIncrements[j] < ((5.0f)*fullSizeInc));
+        }
+        sHandle->textTotalSize += textureSize;
+        iw = 1.0 / (double)sh.texWidthD;
+        ih = 1.0 / (double)sh.texHeightD;
+        rw = sh.U.Norme() * iw;
+        rh = sh.V.Norme() * ih;
+    }
+    else textureSize = 0;
+    return true;
+}
+
+bool SubprocessFacet::InitializeDirectionTexture(){
+    //Direction
+    if (sh.countDirection) {
+        directionSize = sh.texWidth*sh.texHeight * sizeof(DirectionCell);
+        try {
+            direction = std::vector<DirectionCell>(directionSize);
+        }
+        catch (...) {
+            SetErrorSub("Not enough memory to load direction textures");
+            return false;
+        }
+        sHandle->dirTotalSize += directionSize;
+    }
+    else directionSize = 0;
+    return true;
+}
+
+bool SubprocessFacet::InitializeSpectrum(){
+    //Spectrum
+    if (sh.recordSpectrum) {
+        spectrumSize = sizeof(ProfileSlice)*SPECTRUM_SIZE;
+        double min_energy, max_energy;
+        if (sHandle->wp.nbRegion > 0) {
+            min_energy = sHandle->regions[0].params.energy_low_eV;
+            max_energy = sHandle->regions[0].params.energy_hi_eV;
+        }
+        else {
+            min_energy = 10.0;
+            max_energy = 1000000.0;
+        }
+
+        try {
+            spectrum = Histogram(min_energy, max_energy, SPECTRUM_SIZE, true);
+            //spectrum = std::vector<ProfileSlice>(SPECTRUM_SIZE);
+        }
+        catch (...) {
+            SetErrorSub("Not enough memory to load spectrum");
+            return false;
+        }
+        sHandle->spectrumTotalSize += spectrumSize;
+    }
+    else spectrumSize = 0;
+
+    return true;
+}
+
+bool SubprocessFacet::InitializeLinkAndVolatile(const size_t & id){
+    sHandle->hasVolatile |= sh.isVolatile;
+
+    if (sh.superDest || sh.isVolatile) {
+        // Link or volatile facet, overides facet settings
+        // Must be full opaque and 0 sticking
+        // (see SimulationMC.c::PerformBounce)
+        //sh.isOpaque = true;
+        sh.opacity = 1.0;
+        sh.sticking = 0.0;
+        if (((sh.superDest - 1) >= sHandle->sh.nbSuper || sh.superDest < 0)) {
+            // Geometry error
+            ClearSimulation();
+            //ReleaseDataport(loader);
+            std::ostringstream err;
+            err << "Invalid structure (wrong link on F#" << id + 1 << ")";
+            SetErrorSub(err.str().c_str());
+            return false;
+        }
+    }
+    return true;
 }

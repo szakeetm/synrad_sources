@@ -575,8 +575,12 @@ void Region_full::SelectTrajPoint(int x,int y, size_t regionId) {
 
 	// Transform points to screen coordinates
 	bool *ok = (bool *)malloc(Points.size()*sizeof(bool));
-	for(i=0;i<(int)Points.size();i++)
-		ok[i] = GLToolkit::Get2DScreenCoord((float)Points[i].position.x,(float)Points[i].position.y,(float)Points[i].position.z,allXe+i,allYe+i);
+	for(i=0;i<(int)Points.size();i++) {
+        if (auto screenCoords = GLToolkit::Get2DScreenCoord(Points[i].position)) { //To improve
+            std::tie(allXe[i], allYe[i]) = *screenCoords;
+            ok[i] = true;
+        }
+    }
 
 	//Get Closest Point to click
 	double minDist=9999;

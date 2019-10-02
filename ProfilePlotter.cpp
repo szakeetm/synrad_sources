@@ -43,14 +43,14 @@ ProfilePlotter::ProfilePlotter() :GLWindow() {
 	lastUpdate = 0.0f;
 
 	nbColors = 8;
-	colors[0] = new GLCColor(); colors[0]->r = 255; colors[0]->g = 000; colors[0]->b = 055; //red
-	colors[1] = new GLCColor(); colors[1]->r = 000; colors[1]->g = 000; colors[1]->b = 255; //blue
-	colors[2] = new GLCColor(); colors[2]->r = 000; colors[2]->g = 204; colors[2]->b = 051; //green
-	colors[3] = new GLCColor(); colors[3]->r = 000; colors[3]->g = 000; colors[3]->b = 000; //black
-	colors[4] = new GLCColor(); colors[4]->r = 255; colors[4]->g = 153; colors[4]->b = 051; //orange
-	colors[5] = new GLCColor(); colors[5]->r = 153; colors[5]->g = 204; colors[5]->b = 255; //light blue
-	colors[6] = new GLCColor(); colors[6]->r = 153; colors[6]->g = 000; colors[6]->b = 102; //violet
-	colors[7] = new GLCColor(); colors[7]->r = 255; colors[7]->g = 230; colors[7]->b = 005; //yellow
+	colors[0] = new GLColor(); colors[0]->r = 255; colors[0]->g = 000; colors[0]->b = 055; //red
+	colors[1] = new GLColor(); colors[1]->r = 000; colors[1]->g = 000; colors[1]->b = 255; //blue
+	colors[2] = new GLColor(); colors[2]->r = 000; colors[2]->g = 204; colors[2]->b = 051; //green
+	colors[3] = new GLColor(); colors[3]->r = 000; colors[3]->g = 000; colors[3]->b = 000; //black
+	colors[4] = new GLColor(); colors[4]->r = 255; colors[4]->g = 153; colors[4]->b = 051; //orange
+	colors[5] = new GLColor(); colors[5]->r = 153; colors[5]->g = 204; colors[5]->b = 255; //light blue
+	colors[6] = new GLColor(); colors[6]->r = 153; colors[6]->g = 000; colors[6]->b = 102; //violet
+	colors[7] = new GLColor(); colors[7]->r = 255; colors[7]->g = 230; colors[7]->b = 005; //yellow
 
 	chart = new GLChart(0);
 	chart->SetBorder(BORDER_BEVEL_IN);
@@ -196,7 +196,7 @@ void ProfilePlotter::Update(float appTime, bool force) {
 void ProfilePlotter::plot() {
 
 	GLParser *parser = new GLParser();
-	parser->SetExpression(formulaText->GetText());
+	parser->SetExpression(formulaText->GetText().c_str());
 	if (!parser->Parse()) {
 		GLMessageBox::Display(parser->GetErrorMsg(), "Error", GLDLG_OK, GLDLG_ICONERROR);
 		SAFE_DELETE(parser);
@@ -234,13 +234,13 @@ void ProfilePlotter::plot() {
 
 	if (found) {
 		v = views[i];
-		v->SetName(formulaText->GetText());
+		v->SetName(formulaText->GetText().c_str());
 		v->Reset();
 	}
 	else {
 		if (nbView < 50) {
 			v = new GLDataView();
-			v->SetName(formulaText->GetText());
+			v->SetName(formulaText->GetText().c_str());
 			v->userData1 = -1;
 			chart->GetY1Axis()->AddDataView(v);
 			views[nbView] = v;
@@ -272,9 +272,9 @@ void ProfilePlotter::refreshViews() {
 
 	Geometry *geom = worker->GetGeometry();
 	GlobalHitBuffer *gHits = (GlobalHitBuffer *)buffer;
-	//double nbAbs = gHits->total.nbAbsEquiv;
-	double nbDes = (double)gHits->total.nbDesorbed;
-	//double nbHit = (double)gHits->total.nbMCHit;
+	//double nbAbs = gHits->globalHits.hit.nbAbsEquiv;
+	double nbDes = (double)gHits->globalHits.hit.nbDesorbed;
+	//double nbHit = (double)gHits->globalHits.hit.nbMCHit;
 
 	for (int i = 0; i < nbView; i++) {
 
@@ -384,13 +384,13 @@ void ProfilePlotter::refreshViews() {
 					if (f->sh.isVolatile) {
 						FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->sh.hitOffset);
 						double z = geom->GetVertex(f->indices[0])->z;
-						v->Add(z, fCount->nbAbsEquiv / nbDes, false);
+						v->Add(z, fCount->hit.nbAbsEquiv / nbDes, false);
 					}
 				}
 				// Last
 				Facet *f = geom->GetFacet(28);
 				FacetHitBuffer *fCount = (FacetHitBuffer *)(buffer + f->sh.hitOffset);
-				double fnbAbs = fCount->nbAbsEquiv;
+				double fnbAbs = fCount->hit.nbAbsEquiv;
 				v->Add(1000.0, fnbAbs / nbDes, false);
 				v->CommitChange();
 			}

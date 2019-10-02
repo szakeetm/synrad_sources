@@ -686,19 +686,19 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 			particleChargeCombo->SetSelectedIndex(0);
 		} else if (src==this->bxyEditButton) {
 			char tmp[512];
-			sprintf(tmp,"notepad.exe \"%s\"",BXYfileNameText->GetText());
+			sprintf(tmp,"notepad.exe \"%s\"",BXYfileNameText->GetText().c_str());
 			StartProc(tmp,STARTPROC_FOREGROUND);
 		} else if (src==this->magxEditButton) {
 			char tmp[512];
-			sprintf(tmp,"notepad.exe \"%s\"",MAGfileXtext->GetText());
+			sprintf(tmp,"notepad.exe \"%s\"",MAGfileXtext->GetText().c_str());
 			StartProc(tmp, STARTPROC_FOREGROUND);
 		} else if (src==this->magyEditButton) {
 			char tmp[512];
-			sprintf(tmp,"notepad.exe \"%s\"",MAGfileYtext->GetText());
+			sprintf(tmp,"notepad.exe \"%s\"",MAGfileYtext->GetText().c_str());
 			StartProc(tmp, STARTPROC_FOREGROUND);
 		} else if (src==this->magzEditButton) {
 			char tmp[512];
-			sprintf(tmp,"notepad.exe \"%s\"",MAGfileZtext->GetText());
+			sprintf(tmp,"notepad.exe \"%s\"",MAGfileZtext->GetText().c_str());
 			StartProc(tmp, STARTPROC_FOREGROUND);
 		} else if (src==this->bxyBrowseButton) {
 			//load file dialog
@@ -1102,7 +1102,7 @@ void RegionEditor::ApplyChanges() {
 			if (tmp<0.0) {GLMessageBox::Display("E_Spread must be non-negative","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		} else { //use BXY file
 			if (BXYfileNameText->GetTextLength()==0) {GLMessageBox::Display("BXY file name can't be empty","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
-			if (!FileUtils::Exist(BXYfileNameText->GetText())) {GLMessageBox::Display("BXY file doesn't exist","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
+			if (!FileUtils::Exist(BXYfileNameText->GetText().c_str())) {GLMessageBox::Display("BXY file doesn't exist","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 		}
 	}
 
@@ -1128,19 +1128,19 @@ void RegionEditor::ApplyChanges() {
 		if (!constBXtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid Bx field value","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	} else { //use MAG file
 		if (MAGfileXtext->GetTextLength()==0) {GLMessageBox::Display("X component: MAG file name can't be empty","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
-		if (!FileUtils::Exist(MAGfileXtext->GetText())) {GLMessageBox::Display("X component: the MAG file doesn't exist","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
+		if (!FileUtils::Exist(MAGfileXtext->GetText().c_str())) {GLMessageBox::Display("X component: the MAG file doesn't exist","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	}
 	if (BytypeCombo->GetSelectedIndex()==0) {//const B field
 		if (!constBYtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid By field value","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	} else { //use MAG file
 		if (MAGfileYtext->GetTextLength()==0) {GLMessageBox::Display("Y component: MAG file name can't be empty","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
-		if (!FileUtils::Exist(MAGfileYtext->GetText())) {GLMessageBox::Display("Y component: the MAG file doesn't exist","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
+		if (!FileUtils::Exist(MAGfileYtext->GetText().c_str())) {GLMessageBox::Display("Y component: the MAG file doesn't exist","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	}
 	if (BztypeCombo->GetSelectedIndex()==0) {//const B field
 		if (!constBZtext->GetNumber(&tmp)) {GLMessageBox::Display("Invalid Bz field value","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	} else { //use MAG file
 		if (MAGfileZtext->GetTextLength()==0) {GLMessageBox::Display("Z component: MAG file name can't be empty","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
-		if (!FileUtils::Exist(MAGfileZtext->GetText())) {GLMessageBox::Display("Z component: the MAG file doesn't exist","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
+		if (!FileUtils::Exist(MAGfileZtext->GetText().c_str())) {GLMessageBox::Display("Z component: the MAG file doesn't exist","Invalid input",GLDLG_OK,GLDLG_ICONERROR);return;}
 	}
 
 	// Hallelujah, the user filled out the form without any errors
@@ -1185,10 +1185,10 @@ void RegionEditor::ApplyChanges() {
 			etaPrimeText->GetNumber(&cr->params.eta_x_prime_const);
 		} else { //load BXY file
 			cr->params.betax_const_cm=-1.0; //negative value: use BXY file
-			cr->BXYfileName.assign(BXYfileNameText->GetText());
+			cr->BXYfileName.assign(BXYfileNameText->GetText().c_str());
 			//loadbxy
 			try {
-				cr->params.nbDistr_BXY=cr->LoadBXY(BXYfileNameText->GetText());
+				cr->params.nbDistr_BXY=cr->LoadBXY(BXYfileNameText->GetText().c_str());
 			} catch(Error &e) {
 				char tmp[256];
 				sprintf(tmp,"Couldn't load BXY file. Error message:\n%s",e.GetMsg());
@@ -1227,9 +1227,9 @@ void RegionEditor::ApplyChanges() {
 	if (cr->params.Bx_mode==B_MODE_CONSTANT) { //constant B field
 		constBXtext->GetNumber(&cr->params.B_const.x);
 	} else { //use MAG file
-		cr->MAGXfileName.assign(MAGfileXtext->GetText());
+		cr->MAGXfileName.assign(MAGfileXtext->GetText().c_str());
 		try {
-			FileReader MAGfile(MAGfileXtext->GetText());
+			FileReader MAGfile(MAGfileXtext->GetText().c_str());
 			cr->Bx_distr=cr->LoadMAGFile(&MAGfile,&cr->params.Bx_dir,&cr->params.Bx_period,&cr->params.Bx_phase,cr->params.Bx_mode);
 		} catch(Error &e) {
 			char tmp[256];
@@ -1244,9 +1244,9 @@ void RegionEditor::ApplyChanges() {
 	if (cr->params.By_mode==B_MODE_CONSTANT) { //constant B field
 		constBYtext->GetNumber(&cr->params.B_const.y);
 	} else { //use MAG file
-		cr->MAGYfileName.assign(MAGfileYtext->GetText());
+		cr->MAGYfileName.assign(MAGfileYtext->GetText().c_str());
 		try {
-			FileReader MAGfile(MAGfileYtext->GetText());
+			FileReader MAGfile(MAGfileYtext->GetText().c_str());
 			cr->By_distr=cr->LoadMAGFile(&MAGfile,&cr->params.By_dir,&cr->params.By_period,&cr->params.By_phase,cr->params.By_mode);
 		} catch(Error &e) {
 			char tmp[256];
@@ -1261,9 +1261,9 @@ void RegionEditor::ApplyChanges() {
 	if (cr->params.Bz_mode==B_MODE_CONSTANT) { //constant B field
 		constBZtext->GetNumber(&cr->params.B_const.z);
 	} else { //use MAG file
-		cr->MAGZfileName.assign(MAGfileZtext->GetText());
+		cr->MAGZfileName.assign(MAGfileZtext->GetText().c_str());
 		try {
-			FileReader MAGfile(MAGfileZtext->GetText());
+			FileReader MAGfile(MAGfileZtext->GetText().c_str());
 			cr->Bz_distr=cr->LoadMAGFile(&MAGfile,&cr->params.Bz_dir,&cr->params.Bz_period,&cr->params.Bz_phase,cr->params.Bz_mode);
 		} catch(Error &e) {
 			char tmp[256];

@@ -42,14 +42,14 @@ SpectrumPlotter::SpectrumPlotter():GLWindow() {
 	lastUpdate = 0.0f;
 
 	nbColors = 8;
-	colors[0] = new GLCColor(); colors[0]->r = 255; colors[0]->g = 000; colors[0]->b = 055; //red
-	colors[1] = new GLCColor(); colors[1]->r = 000; colors[1]->g = 000; colors[1]->b = 255; //blue
-	colors[2] = new GLCColor(); colors[2]->r = 000; colors[2]->g = 204; colors[2]->b = 051; //green
-	colors[3] = new GLCColor(); colors[3]->r = 000; colors[3]->g = 000; colors[3]->b = 000; //black
-	colors[4] = new GLCColor(); colors[4]->r = 255; colors[4]->g = 153; colors[4]->b = 051; //orange
-	colors[5] = new GLCColor(); colors[5]->r = 153; colors[5]->g = 204; colors[5]->b = 255; //light blue
-	colors[6] = new GLCColor(); colors[6]->r = 153; colors[6]->g = 000; colors[6]->b = 102; //violet
-	colors[7] = new GLCColor(); colors[7]->r = 255; colors[7]->g = 230; colors[7]->b = 005; //yellow
+	colors[0] = new GLColor(); colors[0]->r = 255; colors[0]->g = 000; colors[0]->b = 055; //red
+	colors[1] = new GLColor(); colors[1]->r = 000; colors[1]->g = 000; colors[1]->b = 255; //blue
+	colors[2] = new GLColor(); colors[2]->r = 000; colors[2]->g = 204; colors[2]->b = 051; //green
+	colors[3] = new GLColor(); colors[3]->r = 000; colors[3]->g = 000; colors[3]->b = 000; //black
+	colors[4] = new GLColor(); colors[4]->r = 255; colors[4]->g = 153; colors[4]->b = 051; //orange
+	colors[5] = new GLColor(); colors[5]->r = 153; colors[5]->g = 204; colors[5]->b = 255; //light blue
+	colors[6] = new GLColor(); colors[6]->r = 153; colors[6]->g = 000; colors[6]->b = 102; //violet
+	colors[7] = new GLColor(); colors[7]->r = 255; colors[7]->g = 230; colors[7]->b = 005; //yellow
 
 	chart = new GLChart(0);
 	chart->SetBorder(BORDER_BEVEL_IN);

@@ -21,6 +21,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 
 #include "Geometry_shared.h"
 #include "Region_full.h"
+#include <cereal/archives/json.hpp>
 
 #define SYNVERSION   10
 
@@ -33,14 +34,14 @@ class SynradGeometry: public Geometry {
 #pragma region Geometry.cpp
 private:
 	//void CalculateFacetParam(int facetId); // Facet parameters
-	std::vector<std::string> InsertSYNGeom(FileReader *file, size_t *nbV, size_t *nbF, InterfaceVertex **V, Facet ***F, size_t strIdx = 0, bool newStruct = false);
+	std::vector<std::string> InsertSYNGeom(FileReader *file, size_t strIdx, bool newStruct = false);
 	void SaveProfileSYN(FileWriter *file, Dataport *dpHit, int super = -1, bool saveSelected = false, bool crashSave = false);
 	void SaveSpectrumSYN(FileWriter *file, Dataport *dpHit, int super = -1, bool saveSelected = false, bool crashSave = false);
 	//void SaveProfileGEO(FileWriter *file, int super = -1, bool saveSelected = false);
 public:
 	SynradGeometry();
-	void LoadGEO(FileReader *file, GLProgress *prg, int *version);
-	std::vector<std::string> LoadSYN(FileReader *file, GLProgress *prg, LEAK *pleak, size_t *nbleakLoad, HIT *hitCache, size_t *nbHHitLoad, int *version);
+	void LoadGEO(FileReader *file, GLProgress *prg, int *version, Worker *worker);
+	std::vector<std::string> LoadSYN(FileReader *file, GLProgress *prg, int *version, Worker *worker);
 	bool LoadTextures(FileReader *file, GLProgress *prg, Dataport *dpHit, int version);
 	std::vector<std::string> InsertSYN(FileReader *file, GLProgress *prg, bool newStr);
 	void SaveTXT(FileWriter *file, Dataport *dhHit, bool saveSelected);
@@ -70,6 +71,8 @@ public:
 #pragma region GeometryRender.cpp
 	void BuildFacetTextures(BYTE *hits, bool renderRegularTexture, bool renderDirectionTexture);
 #pragma endregion
+
+    void SerializeForLoader(cereal::BinaryOutputArchive &outputArchive);
 
 	// Temporary variable (used by LoadXXX)
 	double loaded_totalFlux;

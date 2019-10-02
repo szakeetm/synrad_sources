@@ -13,6 +13,7 @@
 #include "Distributions.h"
 #include "GLApp\GLTypes.h"
 //#include "GLApp\GLTypes.h"
+#include <cereal/types/vector.hpp>
 
 #define B_MODE_CONSTANT        1
 #define B_MODE_DIRECTION       2
@@ -58,6 +59,44 @@ struct RegionParams {
 	Quadrupole quad_params;
 	bool showPhotons; //Whether to include photons from this region in the hit cache
 	size_t structureId; //Which structure generated photons belong to
+
+    template<class Archive>
+    void serialize(Archive & archive)
+    {
+        archive(
+                CEREAL_NVP(energy_low_eV),
+        CEREAL_NVP(energy_hi_eV),
+        CEREAL_NVP(dL_cm),
+        CEREAL_NVP(particleMass_GeV),
+        CEREAL_NVP(E_GeV),
+        CEREAL_NVP(current_mA),
+        CEREAL_NVP(emittance_cm),
+        CEREAL_NVP(betax_const_cm), CEREAL_NVP(betay_const_cm),
+        CEREAL_NVP(eta_x_const_cm), CEREAL_NVP(eta_x_prime_const),
+        CEREAL_NVP(psimaxX_rad), CEREAL_NVP(psimaxY_rad),
+        CEREAL_NVP(coupling_percent),
+        CEREAL_NVP(energy_spread_percent),
+
+        CEREAL_NVP(gamma), // Calculated:   gamma=E/abs(particleMass)
+
+        CEREAL_NVP(Bx_mode), CEREAL_NVP(By_mode), CEREAL_NVP(Bz_mode), CEREAL_NVP(beta_kind),//switches between constant or file-based magnetic fields
+
+        CEREAL_NVP(enable_ort_polarization), CEREAL_NVP(enable_par_polarization),
+                CEREAL_NVP(polarizationCompIndex),
+
+        CEREAL_NVP(nbDistr_MAG),//MAG file points
+        CEREAL_NVP(nbDistr_BXY),//BXY file points
+        CEREAL_NVP(Bx_dir), CEREAL_NVP(By_dir), CEREAL_NVP(Bz_dir),//direction in which MAG files are oriented (in their second line)
+        CEREAL_NVP(Bx_period), CEREAL_NVP(By_period), CEREAL_NVP(Bz_period),//first line of length files
+        CEREAL_NVP(Bx_phase), CEREAL_NVP(By_phase), CEREAL_NVP(Bz_phase),//phase in case of helicoidal B file
+
+                CEREAL_NVP(nbPointsToCopy),//passes info about the number of points that needs to be read from the buffer on loading
+        CEREAL_NVP(startPoint), CEREAL_NVP(startDir), CEREAL_NVP(B_const), CEREAL_NVP(limits),//AABBmin,AABBmax
+        CEREAL_NVP(quad_params),
+        CEREAL_NVP(showPhotons),//Whether to include photons from this region in the hit cache
+        CEREAL_NVP(structureId)//Which structure generated photons belong to
+        );
+    }
 };
 
 class Region_mathonly { //Beam trajectory
@@ -79,6 +118,17 @@ public:
 	//Region_mathonly& operator=(const Region_mathonly &src);
 
 	Vector3d B(size_t pointId,const Vector3d &offset); //returns the B field at a given point, allows interpolation between points and offset due to non-ideal beam
+
+    template<class Archive>
+    void serialize(Archive & archive)
+    {
+        archive(
+                CEREAL_NVP(params),
+                CEREAL_NVP(Points),
+                CEREAL_NVP(Bx_distr),CEREAL_NVP(By_distr),CEREAL_NVP(Bx_distr),
+                CEREAL_NVP(latticeFunctions)
+        );
+    }
 };
 
 #endif

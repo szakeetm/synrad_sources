@@ -21,6 +21,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "SynradTypes.h"
 #include "GlApp/MathTools.h" //IS_ZERO
 #include "SynradDistributions.h" //Material
+#include <cereal/types/vector.hpp>
 
 // Colormap stuff, defined in GLGradient.cpp
 extern std::vector<int> colorMap;
@@ -85,14 +86,14 @@ void Facet::LoadGEO(FileReader *file, int version, size_t nbVertex) {
 	file->ReadKeyword("acMode"); file->ReadKeyword(":");
 	file->ReadInt();
 	file->ReadKeyword("nbAbs"); file->ReadKeyword(":");
-	counterCache.nbAbsEquiv = 0.0;
+	facetHitCache.hit.nbAbsEquiv = 0.0;
 	file->ReadSizeT();
 	file->ReadKeyword("nbDes"); file->ReadKeyword(":");
-	counterCache.nbDesorbed = 0;
+	facetHitCache.hit.nbDesorbed = 0;
 	file->ReadSizeT();
 	file->ReadKeyword("nbHit"); file->ReadKeyword(":");
-	counterCache.nbMCHit = 0;
-	counterCache.nbHitEquiv = 0.0;
+	facetHitCache.hit.nbMCHit = 0;
+	facetHitCache.hit.nbHitEquiv = 0.0;
 	file->ReadSizeT();
 	if (version >= 2) {
 		// Added in GEO version 2
@@ -139,11 +140,11 @@ void Facet::LoadTXT(FileReader *file) {
 	sh.sticking = file->ReadDouble();
 	double o = file->ReadDouble();
 	/*sh.area =*/ file->ReadDouble();
-	counterCache.nbDesorbed = 0; file->ReadDouble();
-	counterCache.nbMCHit = 0; counterCache.nbHitEquiv = 0.0; file->ReadDouble();
-	counterCache.nbAbsEquiv = 0.0; file->ReadDouble();
+	facetHitCache.hit.nbDesorbed = 0; file->ReadDouble();
+	facetHitCache.hit.nbMCHit = 0; facetHitCache.hit.nbHitEquiv = 0.0; file->ReadDouble();
+	facetHitCache.hit.nbAbsEquiv = 0.0; file->ReadDouble();
 	file->ReadDouble(); //desorbtype, unused in Synrad
-	counterCache.fluxAbs = 0.0; counterCache.powerAbs = 0.0;
+	facetHitCache.hit.fluxAbs = 0.0; facetHitCache.hit.powerAbs = 0.0;
 
 	// Convert opacity
 	sh.profileType = PROFILE_NONE;
@@ -614,11 +615,11 @@ void Facet::SaveSYN(FileWriter *file, const std::vector<Material> &materials, in
 	file->Write("  countAbs:"); file->Write(sh.countAbs, "\n");
 	file->Write("  countRefl:"); file->Write(sh.countRefl, "\n");
 	file->Write("  countTrans:"); file->Write(sh.countTrans, "\n");
-	file->Write("  nbAbsEquiv:"); file->Write(counterCache.nbAbsEquiv, "\n");
-	file->Write("  nbHit:"); file->Write(counterCache.nbMCHit, "\n");
-	file->Write("  nbHitEquiv:"); file->Write(counterCache.nbHitEquiv, "\n");
-	file->Write("  fluxAbs:"); file->Write(counterCache.fluxAbs, "\n");
-	file->Write("  powerAbs:"); file->Write(counterCache.powerAbs, "\n");
+	file->Write("  nbAbsEquiv:"); file->Write(facetHitCache.hit.nbAbsEquiv, "\n");
+	file->Write("  nbHit:"); file->Write(facetHitCache.hit.nbMCHit, "\n");
+	file->Write("  nbHitEquiv:"); file->Write(facetHitCache.hit.nbHitEquiv, "\n");
+	file->Write("  fluxAbs:"); file->Write(facetHitCache.hit.fluxAbs, "\n");
+	file->Write("  powerAbs:"); file->Write(facetHitCache.hit.powerAbs, "\n");
 	file->Write("  countDirection:"); file->Write(sh.countDirection, "\n");
 	file->Write("  textureVisible:"); file->Write(textureVisible, "\n");
 	file->Write("  volumeVisible:"); file->Write(volumeVisible, "\n");
@@ -714,27 +715,36 @@ void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, in
 	sh.countTrans = file->ReadInt();
 	if (version>=10) file->ReadKeyword("nbAbsEquiv");
 	else file->ReadKeyword("nbAbs"); file->ReadKeyword(":");
-	counterCache.nbAbsEquiv = file->ReadDouble();
+    facetHitCache.hit.nbAbsEquiv = 0;
+	facetHitCache.hit.nbAbsEquiv = file->ReadDouble();
 	if (version < 3) {
 		file->ReadKeyword("nbDes"); file->ReadKeyword(":");
-		counterCache.nbDesorbed = file->ReadSizeT();
+        facetHitCache.hit.nbDesorbed = 0;
+        facetHitCache.hit.nbDesorbed = file->ReadSizeT();
 	}
-	file->ReadKeyword("nbHit"); file->ReadKeyword(":");
-	counterCache.nbMCHit = file->ReadSizeT();
-	if (version >= 10) {
+
+    file->ReadKeyword("nbHit"); file->ReadKeyword(":");
+    facetHitCache.hit.nbMCHit = 0;
+    facetHitCache.hit.nbMCHit = file->ReadSizeT();
+
+    facetHitCache.hit.nbHitEquiv = 0.0;
+    if (version >= 10) {
 		file->ReadKeyword("nbHitEquiv"); file->ReadKeyword(":");
-		counterCache.nbHitEquiv = file->ReadDouble();
+		facetHitCache.hit.nbHitEquiv = file->ReadDouble();
 	}
-	else counterCache.nbHitEquiv = static_cast<double>(counterCache.nbMCHit);
+	else facetHitCache.hit.nbHitEquiv = static_cast<double>(facetHitCache.hit.nbMCHit);
 
 	if (version >= 3) {
 		file->ReadKeyword("fluxAbs"); file->ReadKeyword(":");
-		counterCache.fluxAbs = file->ReadDouble();
+        facetHitCache.hit.fluxAbs = 0.0;
+        facetHitCache.hit.fluxAbs = file->ReadDouble();
 		file->ReadKeyword("powerAbs"); file->ReadKeyword(":");
-		counterCache.powerAbs = file->ReadDouble();
+        facetHitCache.hit.powerAbs = 0.0;
+        facetHitCache.hit.powerAbs = file->ReadDouble();
 	}
 	file->ReadKeyword("countDirection"); file->ReadKeyword(":");
-	sh.countDirection = file->ReadInt();
+    sh.countDirection = false;
+    sh.countDirection = file->ReadInt();
 	file->ReadKeyword("textureVisible"); file->ReadKeyword(":");
 	textureVisible = file->ReadInt();
 	file->ReadKeyword("volumeVisible"); file->ReadKeyword(":");
@@ -746,3 +756,59 @@ void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, in
 
 }
 
+/**
+* \brief Serializes data from facet into a cereal binary archive
+* \param outputarchive reference to the binary archive
+*/
+void Facet::SerializeForLoader(cereal::BinaryOutputArchive &outputarchive) {
+
+    std::vector<double> textIncVector;
+
+    // Add surface elements area (reciprocal)
+    if (sh.isTextured) {
+        textIncVector.resize(sh.texHeight*sh.texWidth);
+        if (cellPropertiesIds) {
+            size_t add = 0;
+            for (size_t j = 0; j < sh.texHeight; j++) {
+                for (size_t i = 0; i < sh.texWidth; i++) {
+                    double area = GetMeshArea(add, true);
+
+                    if (area > 0.0) {
+                        // Use the sign bit to store isFull flag
+                        textIncVector[add] = 1.0 / area;
+                    }
+                    else {
+                        textIncVector[add] = 0.0;
+                    }
+                    add++;
+                }
+            }
+        }
+        else {
+
+            double rw = sh.U.Norme() / (double)(sh.texWidthD);
+            double rh = sh.V.Norme() / (double)(sh.texHeightD);
+            double area = rw * rh;
+            size_t add = 0;
+            for (int j = 0; j < sh.texHeight; j++) {
+                for (int i = 0; i < sh.texWidth; i++) {
+                    if (area > 0.0) {
+                        textIncVector[add] = 1.0 / area;
+                    }
+                    else {
+                        textIncVector[add] = 0.0;
+                    }
+                    add++;
+                }
+            }
+        }
+    }
+
+    outputarchive(
+            CEREAL_NVP(sh),
+            CEREAL_NVP(indices),
+            CEREAL_NVP(vertices2),
+            CEREAL_NVP(textIncVector)
+    );
+
+}
