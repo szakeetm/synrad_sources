@@ -1194,8 +1194,6 @@ std::ostringstream Worker::SerializeForLoader()
     // Build shared buffer for trajectory (see Shared.h)
     for (auto& reg : regions) {
         reg.params.nbDistr_MAG = Vector3d((int)reg.Bx_distr.GetSize(), (int)reg.By_distr.GetSize(), (int)reg.Bz_distr.GetSize());
-        std::cout << "Points to copy: "<< reg.params.nbPointsToCopy<< " , "<< reg.Points.size()<<std::endl;
-
         reg.params.nbPointsToCopy = reg.Points.size();
     }
 
