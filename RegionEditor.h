@@ -20,6 +20,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #ifndef _REGIONEDITORH_
 #define _REGIONEDITORH_
 
+#include <GLApp/GLCombo.h>
 #include "GLApp/GLWindow.h"
 #include "GLApp/GLButton.h"
 #include "GLApp/GLTextField.h"
@@ -27,7 +28,6 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "GLApp/GLToggle.h"
 #include "GLApp/GLTitledPanel.h"
 #include "GLApp/GLGradient.h"
-#include "GLApp\GLFileBox.h"
 
 class Worker;
 class Region_full;

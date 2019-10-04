@@ -40,11 +40,11 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 
 #include <direct.h>
 
-#include "ZipUtils/zip.h"
-#include "ZipUtils/unzip.h"
+#include "ziplib/ZipArchive.h"
+#include "ziplib/ZipArchiveEntry.h"
+#include "ziplib/ZipFile.h"
 #include "File.h" //File utils (Get extension, etc)
 #include <cereal/types/vector.hpp>
-#include <cereal/archives/json.hpp>
 using namespace pugi;
 
 #ifdef MOLFLOW
@@ -616,27 +616,28 @@ void Worker::LoadGeometry(const std::string& fileName, bool insert, bool newStr)
 				//decompress file
 				progressDlg->SetMessage("Decompressing file...");
 
-				HZIP hz = OpenZip(fileName.c_str(), 0);
-				if (!hz) {
-					throw Error("Can't open ZIP file");
-				}
-				ZIPENTRY ze; GetZipItem(hz, -1, &ze); int numitems = ze.index;
-				bool notFoundYet = true;
-				for (int i = 0; i < numitems && notFoundYet; i++) { //extract first xml file found in ZIP archive
-					GetZipItem(hz, i, &ze);
-					std::string zipFileName = ze.name;
+                ZipArchive::Ptr zip = ZipFile::Open(fileName);
+                if (zip == nullptr) {
+                    throw Error("Can't open ZIP file");
+                }
+                size_t numitems = zip->GetEntriesCount();
+                bool notFoundYet = true;
+                for (int i = 0; i < numitems && notFoundYet; i++) { //extract first xml file found in ZIP archive
+                    auto zipItem = zip->GetEntry(i);
+                    std::string zipFileName = zipItem->GetName();
 
 					if (FileUtils::GetExtension(zipFileName) == "xml") { //if it's an .xml file
 						notFoundYet = false;
-						std::string tmpFileName = "tmp/" + zipFileName;
-						UnzipItem(hz, i, tmpFileName.c_str()); //unzip it to tmp directory
-						CloseZip(hz);
+
+                        FileUtils::CreateDir("tmp");// If doesn't exist yet
+
+                        std::string tmpFileName = "tmp/" + zipFileName;
+                        ZipFile::ExtractFile(fileName, zipFileName, tmpFileName);
 						progressDlg->SetMessage("Reading and parsing XML file...");
 						parseResult = loadXML.load_file(tmpFileName.c_str()); //load and parse it
 					}
 				}
 				if (notFoundYet) {
-					CloseZip(hz);
 					throw Error("Didn't find any XML file in the ZIP file.");
 				}
 			}

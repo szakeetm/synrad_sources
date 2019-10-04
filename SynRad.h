@@ -42,7 +42,7 @@ public:
     SynRad();
 
     void LoadFile(std::string fileName="");
-	void InsertGeometry(bool newStr, char *fName = NULL);
+	void InsertGeometry(bool newStr,std::string fileName="");
 	void SaveFile();
 
     // Util functions
@@ -71,8 +71,8 @@ public:
     // Recent files   	
 	char *recentPARs[MAX_RECENT];
     int  nbRecentPAR;
-    void AddRecentPAR(char *fileName);
-    void RemoveRecentPAR(char *fileName);
+    void AddRecentPAR(const char *fileName);
+    void RemoveRecentPAR(const char *fileName);
 	void UpdateRecentPARMenu();
 	void PlaceScatteringControls(bool newReflectionMode);
 

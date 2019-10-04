@@ -24,7 +24,6 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "GLApp/GLMessageBox.h"
 #include "GLApp/GLSaveDialog.h"
 #include "GLApp/GLInputBox.h"
-#include "GLApp/GLFileBox.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLWindowManager.h"
 #include "GLApp/GLMenuBar.h"
@@ -38,6 +37,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include <string>
 #include <io.h>
 #include <numeric> //std::iota
+#include <NativeFileDialog/molflow_wrapper/nfd_wrapper.h>
 //#include <winsparkle.h>
 
 #include "FacetCoordinates.h"
@@ -46,36 +46,39 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "FormulaEditor.h"
 #include "ParticleLogger.h"
 
+/*
 //Hard-coded identifiers, update these on new release
 //---------------------------------------------------
 std::string appName = "Synrad";
 int appVersionId = 1425; //Recompile Interface.cpp after changing it to make AppUpdater aware of change
 std::string appVersionName = "1.4.25";
+#ifdef _DEBUG
+std::string appTitle = "SynRad+ debug version (Compiled " __DATE__ " " __TIME__ ")";
+#else
+std::string appTitle = "SynRad+ " + appVersionName + " (" __DATE__ ")";
+#endif
 //---------------------------------------------------
+*/
 
 static const char *fileLFilters = "All SynRad supported files\0*.xml;*.zip;*.txt;*.syn;*.syn7z;*.geo;*.geo7z;*.str;*.stl;*.ase\0All files\0*.*\0";
 const char *fileSFilters = "SYN files\0*.syn;*.syn7z;\0Text files\0*.txt\0All files\0*.*\0";
 //static const char *fileSelFilters = "Selection files\0*.sel\0All files\0*.*\0";
 //static const char *fileTexFilters = "Text files\0*.txt\0Texture files\0*.tex\0All files\0*.*\0";
-static const char *fileParFilters = "param files\0*.param\0PAR files\0*.par\0All files\0*.*\0";
+//static const char *fileParFilters = "param files\0*.param\0PAR files\0*.par\0All files\0*.*\0";
 static const char *fileDesFilters = "DES files\0*.des\0All files\0*.*\0";
 //NativeFileDialog compatible file filters
 std::string fileLoadFilters = "txt,xml,zip,stl,str,ase,geo,syn,geo7z,syn7z";
 std::string fileInsertFilters = "txt,xml,zip,stl,geo,syn,geo7z,syn7z";
-std::string fileSaveFilters = "xml,zip,txt,geo,geo7z";
+std::string fileSaveFilters = "syn,syn7z,xml,zip,txt,geo,geo7z";
 std::string fileSelFilters = "sel";
+std::string fileMagFilters = "mag";
+std::string fileParFilters = "param,par";
 std::string fileTexFilters = "txt";
 std::string fileProfFilters = "csv;txt";
 
 int   cSize = 5;
 int   cWidth[] = { 30, 56, 50, 50, 50 };
 const char *cName[] = { "#", "Hits", "Flux", "Power", "Abs" };
-
-#ifdef _DEBUG
-std::string appTitle = "SynRad+ debug version (Compiled " __DATE__ " " __TIME__ ")";
-#else
-std::string appTitle = "SynRad+ " + appVersionName + " (" __DATE__ ")";
-#endif
 
 std::vector<string> formulaPrefixes = { "H","MCH","A","F","P","AR","h","mch","a","f","p","ar","," };
 std::string formulaSyntax =
@@ -1448,40 +1451,33 @@ void SynRad::SaveFile() {
 
 void SynRad::LoadFile(std::string fileName) {
 
-	char fullName[512];
-	char shortName[512];
-	strcpy(fullName, "");
+    std::string fileShortName, filePath;
 
-	if (fileName == "") {
-		FILENAME *fn = GLFileBox::OpenFile(currentDir, NULL, "Open File", fileLFilters, 0);
-		if (fn)
-			strcpy(fullName, fn->fullName);
-	}
-	else {
-		strcpy(fullName, fileName.c_str());
-	}
+    if (fileName.empty()) {
+        fileName = NFD_OpenFile_Cpp(fileLoadFilters, "");
+    }
+
+    filePath = fileName;
 
 	GLProgress *progressDlg2 = new GLProgress("Preparing to load file...", "Please wait");
 	progressDlg2->SetVisible(true);
 	progressDlg2->SetProgress(0.0);
 	//GLWindowManager::Repaint();
 
-	if (strlen(fullName) == 0) {
+	if (filePath.empty()) {
 		progressDlg2->SetVisible(false);
 		SAFE_DELETE(progressDlg2);
 		return;
 	}
 
-	char *lPart = strrchr(fullName, '\\');
-	if (lPart) strcpy(shortName, lPart + 1);
-	else strcpy(shortName, fullName);
+    fileShortName = FileUtils::GetFilename(filePath);
 
-	try {
+    try {
 		ClearFormulas();
 		ClearAllSelections();
 		ClearAllViews();
 		ClearRegions();
-		worker.LoadGeometry(fullName);
+		worker.LoadGeometry(filePath);
 
 		Geometry *geom = worker.GetGeometry();
 
@@ -1492,14 +1488,14 @@ void SynRad::LoadFile(std::string fileName) {
 		ClearFacetParams();
 		nbDesStart = worker.globalHitCache.globalHits.hit.nbDesorbed;
 		nbHitStart = worker.globalHitCache.globalHits.hit.nbMCHit;
-		AddRecent(fullName);
+		AddRecent(filePath.c_str());
 		geom->viewStruct = -1;
 
 		RebuildPARMenus();
 		UpdateStructMenu();
 		if (profilePlotter) profilePlotter->Reset();
 		if (spectrumPlotter) spectrumPlotter->Refresh();
-		UpdateCurrentDir(fullName);
+		UpdateCurrentDir(filePath.c_str());
 
 		// Check non simple polygon
 		progressDlg2->SetMessage("Checking for non simple polygons...");
@@ -1530,9 +1526,9 @@ void SynRad::LoadFile(std::string fileName) {
 	catch (Error &e) {
 
 		char errMsg[512];
-		sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), shortName);
+		sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), fileShortName.c_str());
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
-		RemoveRecent(fileName.c_str());
+		RemoveRecent(filePath.c_str());
 
 	}
 	progressDlg2->SetVisible(false);
@@ -1540,46 +1536,40 @@ void SynRad::LoadFile(std::string fileName) {
 	changedSinceSave = false;
 }
 
-void SynRad::InsertGeometry(bool newStr, char *fName) {
+void SynRad::InsertGeometry(bool newStr, std::string fileName) {
 	if (!AskToReset()) return;
 	ResetSimulation(false);
 
-	char fullName[512];
-	char shortName[512];
-	strcpy(fullName, "");
+    std::string fileShortName, filePath;
 
-	if (fName == NULL) {
-		FILENAME *fn = GLFileBox::OpenFile(currentDir, NULL, "Open File", fileLFilters, 0);
-		if (fn)
-			strcpy(fullName, fn->fullName);
-	}
-	else {
-		strcpy(fullName, fName);
-	}
+    if (fileName.empty()) {
+        fileName = NFD_OpenFile_Cpp(fileLoadFilters, "");
+    }
+
+    filePath = fileName;
 
 	GLProgress *progressDlg2 = new GLProgress("Loading file...", "Please wait");
 	progressDlg2->SetVisible(true);
 	progressDlg2->SetProgress(0.0);
 	//GLWindowManager::Repaint();
 
-	if (strlen(fullName) == 0) {
+	if (filePath.empty()) {
 		progressDlg2->SetVisible(false);
 		SAFE_DELETE(progressDlg2);
 		return;
 	}
 
-	char *lPart = strrchr(fullName, '\\');
-	if (lPart) strcpy(shortName, lPart + 1);
-	else strcpy(shortName, fullName);
+    fileShortName = FileUtils::GetFilename(filePath);
 
-	try {
 
-		worker.LoadGeometry(fullName, true, newStr);
+    try {
+
+		worker.LoadGeometry(filePath, true, newStr);
 		Geometry *geom = worker.GetGeometry();
 
 		startSimu->SetEnabled(true);
 
-		AddRecent(fullName);
+		AddRecent(filePath.c_str());
 		geom->viewStruct = -1;
 
 		//Increase BB
@@ -1605,9 +1595,9 @@ void SynRad::InsertGeometry(bool newStr, char *fName) {
 	}
 	catch (Error &e) {
 		char errMsg[512];
-		sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), shortName);
+		sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), fileShortName.c_str());
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
-		RemoveRecent(fName);
+		RemoveRecent(filePath.c_str());
 	}
 	progressDlg2->SetVisible(false);
 	SAFE_DELETE(progressDlg2);
@@ -2153,7 +2143,7 @@ void SynRad::RebuildPARMenus() {
 	}
 }
 
-void SynRad::RemoveRecentPAR(char *fileName) {
+void SynRad::RemoveRecentPAR(const char *fileName) {
 
 	if (!fileName) return;
 
@@ -2178,7 +2168,7 @@ void SynRad::RemoveRecentPAR(char *fileName) {
 	SaveConfig();
 }
 
-void SynRad::AddRecentPAR(char *fileName) {
+void SynRad::AddRecentPAR(const char *fileName) {
 
 	// Check if already exists
 	bool found = false;
@@ -2506,25 +2496,20 @@ void SynRad::LoadParam(char *fName, int position) {
 		return;
 	}
 
-	std::vector<FILENAME> files;
+	std::vector<std::string> files;
 	if (!AskToReset()) return;
 	if (fName == NULL) {
 		if (position == -1)
-			files = GLFileBox::OpenMultipleFiles(fileParFilters, "Add magnetic region(s)");
-		else { //To given position, allow only one file
-			FILENAME *file = GLFileBox::OpenFile(currentDir, NULL, "Add magnetic region", fileParFilters, 0);
-			if (file!=NULL) files.push_back(*file);
+            files = NFD_OpenMultiple_Cpp(fileParFilters, "");
+
+        else { //To given position, allow only one file
+            std::string fileName = NFD_OpenFile_Cpp(fileParFilters, currentDir);
+			if (fileName.empty()) files.push_back(fileName);
 		}
 	}
 	else { //Filename already defined
-		char shortName[256];
-		char *lPart = strrchr(fName, '\\');
-		if (lPart) strcpy(shortName, lPart + 1);
-		else strcpy(shortName, fName);
-		FILENAME file;
-		strcpy(file.file, shortName);
-		strcpy(file.fullName, fName);
-		files.push_back(file);
+        std::string fileShortName = FileUtils::GetFilename(fName);
+		files.push_back(fName);
 	}
 
 	GLProgress *progressDlg2 = new GLProgress("Preparing to load file...", "Please wait");
@@ -2539,16 +2524,16 @@ void SynRad::LoadParam(char *fName, int position) {
 	}
 	for (size_t i = 0; i < files.size(); i++) {
 		char tmp[256];
-		sprintf(tmp, "Adding %s...", files[i].file);
+		sprintf(tmp, "Adding %s...", files[i].c_str());
 		progressDlg2->SetMessage(tmp);
 		progressDlg2->SetProgress((double)i / (double)files.size());
 		try {
-			worker.AddRegion(files[i].fullName, position);
-			AddRecentPAR(files[i].fullName);
+			worker.AddRegion(files[i].c_str(), position);
+			AddRecentPAR(files[i].c_str());
 		}
 		catch (Error &e) {
 			char errMsg[512];
-			sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), files[i].file);
+			sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), files[i].c_str());
 			GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
 		}
 		if (regionInfo) regionInfo->Update();
@@ -2593,26 +2578,30 @@ void SynRad::NewRegion() {
 		return;
 	}
 	if (worker.isRunning) worker.Stop_Public();
-	FILENAME *fn = GLFileBox::SaveFile(NULL, NULL, "Save Region", "param files\0*.param\0All files\0*.*\0", 2);
-	if (!fn || !fn->fullName) return;
-	if (!(FileUtils::GetExtension(fn->fullName) == "param"))
-		sprintf(fn->fullName, "%s.param", fn->fullName); //append .param extension
+
+    std::string saveFile = NFD_SaveFile_Cpp("param", "");
+
+    if (saveFile.empty()) {
+        return;
+    }
+    if (FileUtils::GetExtension(saveFile) != "param") saveFile = saveFile + ".param"; //append .param extension
+
 	try {
 		Region_full newreg;
-		newreg.fileName.assign(fn->fullName);
+		newreg.fileName.assign(saveFile);
 		//worker.regions.push_back(newreg);
-		FileWriter *file = new FileWriter(fn->fullName);
+		FileWriter *file = new FileWriter(saveFile);
 		newreg.SaveParam(file);
 		SAFE_DELETE(file);
-		AddRecentPAR(fn->fullName);
-		worker.AddRegion(fn->fullName);
+		AddRecentPAR(saveFile.c_str());
+		worker.AddRegion(saveFile.c_str());
 		RebuildPARMenus();
 	}
 	catch (Error &e) {
 		char errMsg[512];
-		sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), fn->fullName);
+		sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), saveFile.c_str());
 		GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
-		RemoveRecentPAR(fn->fullName);
+		RemoveRecentPAR(saveFile.c_str());
 		return;
 	}
 	if (regionInfo) regionInfo->Update();

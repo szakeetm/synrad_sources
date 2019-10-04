@@ -25,10 +25,11 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "GLApp/GLInputBox.h"
 #include "GLApp/GLTitledPanel.h"
 #include "GLApp/GLCombo.h"
-
+#include "NativeFileDialog/molflow_wrapper/nfd_wrapper.h"
 #include "Synrad.h"
 
 extern GLApplication *theApp;
+extern std::string fileMagFilters;
 
 RegionEditor::RegionEditor():GLWindow() {
 
@@ -702,28 +703,36 @@ void RegionEditor::ProcessMessage(GLComponent *src,int message) {
 			StartProc(tmp, STARTPROC_FOREGROUND);
 		} else if (src==this->bxyBrowseButton) {
 			//load file dialog
-			FILENAME *bxyFile=GLFileBox::OpenFile(NULL,NULL,"Open BXY file","BXY files\0*.bxy\0All files\0*.*\0",2);
-			if (!bxyFile) return;
-			if (!(bxyFile->fullName)) return;
-			BXYfileNameText->SetText(bxyFile->fullName);
+            std::string bxyFile;
+            if (bxyFile.empty()) {
+                bxyFile = NFD_OpenFile_Cpp(fileMagFilters, "");
+                if (bxyFile.empty()) return;
+            }
+            BXYfileNameText->SetText(bxyFile);
 		} else if (src==this->magxBrowseButton) {
 			//load file dialog
-			FILENAME *magFile=GLFileBox::OpenFile(NULL,NULL,"Open MAG file","MAG files\0*.mag\0All files\0*.*\0",2);
-			if (!magFile) return;
-			if (!(magFile->fullName)) return;
-			MAGfileXtext->SetText(magFile->fullName);
+            std::string magFile;
+            if (magFile.empty()) {
+                magFile = NFD_OpenFile_Cpp(fileMagFilters, "");
+                if (magFile.empty()) return;
+            }
+            MAGfileXtext->SetText(magFile);
 		} else if (src==this->magyBrowseButton) {
 			//load file dialog
-			FILENAME *magFile=GLFileBox::OpenFile(NULL,NULL,"Open MAG file","MAG files\0*.mag\0All files\0*.*\0",2);
-			if (!magFile) return;
-			if (!(magFile->fullName)) return;
-			MAGfileYtext->SetText(magFile->fullName);
+            std::string magFile;
+            if (magFile.empty()) {
+                magFile = NFD_OpenFile_Cpp(fileMagFilters, "");
+                if (magFile.empty()) return;
+            }
+            MAGfileYtext->SetText(magFile);
 		} else if (src==this->magzBrowseButton) {
 			//load file dialog
-			FILENAME *magFile=GLFileBox::OpenFile(NULL,NULL,"Open MAG file","MAG files\0*.mag\0All files\0*.*\0",2);
-			if (!magFile) return;
-			if (!(magFile->fullName)) return;
-			MAGfileZtext->SetText(magFile->fullName);
+            std::string magFile;
+            if (magFile.empty()) {
+                magFile = NFD_OpenFile_Cpp(fileMagFilters, "");
+                if (magFile.empty()) return;
+            }
+            MAGfileZtext->SetText(magFile);
 		} else if (src==this->startDirInfoButton) {
 			char tmp[]="Theta [-PI..PI]: angle with Z axis in XZ plane (positive if X<0)\n"
 				"Alpha [-PI/2..PI/2]: angle with XZ plane (positive if Y<0)\n\n"

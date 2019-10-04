@@ -17,6 +17,7 @@ GNU General Public License for more details.
 
 Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 */
+#include <NativeFileDialog/molflow_wrapper/nfd_wrapper.h>
 #include "RegionInfo.h"
 #include "GLApp/GLTitledPanel.h"
 #include "GLApp/GLToolkit.h"
@@ -24,7 +25,6 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include "GLApp/GLMessageBox.h"
 #include "Region_full.h"
 #include "SynRad.h"
-#include "GLApp/GLFileBox.h"
 
 extern GLApplication *theApp;
 static const char *fileTrajFilters = "CSV files\0*.csv\tTXT files\0*.txt\0All files\0*.*\0";
@@ -200,11 +200,19 @@ void RegionInfo::ProcessMessage(GLComponent *src,int message) {
 		if ( mApp->trajectoryDetails==NULL) mApp->trajectoryDetails = new TrajectoryDetails();
 		mApp->trajectoryDetails->Display(work,regionSelector->GetSelectedIndex());
 	} else if (src==saveAsButton) {
-		FILENAME *fn = GLFileBox::SaveFile(NULL,NULL,"Save Region","param files\0*.param\0All files\0*.*\0",2);
-		if (!fn || !fn->fullName) return;
-		if (!EndsWithParam(fn->fullName))
-			sprintf(fn->fullName,"%s.param",fn->fullName); //append .param extension
-		work->SaveRegion(fn->fullName,regionSelector->GetSelectedIndex());
+        std::string fileName = NFD_SaveFile_Cpp("param", "");
+        if (!fileName.empty()) {
+            try {
+                if (FileUtils::GetExtension(fileName).empty()) fileName = fileName + ".param"; //append .param extension
+
+                work->SaveRegion(fileName.c_str(),regionSelector->GetSelectedIndex());
+            }
+            catch (Error &e) {
+                char errMsg[512];
+                sprintf(errMsg, "%s\nFile:%s", e.GetMsg(), fileName.c_str());
+                GLMessageBox::Display(errMsg, "Error", GLDLG_OK, GLDLG_ICONERROR);
+            }
+        }
 	}
 	break;
 	case MSG_COMBO:

@@ -213,11 +213,6 @@ bool LoadSimulation(Dataport *loader) {
 
     sHandle->wp.nbTrajPoints = 0;
 
-    if (sHandle->sh.nbSuper > MAX_STRUCT) {
-        //ReleaseDataport(loader);
-        SetErrorSub("Too many structures");
-        return false;
-    }
     if (sHandle->sh.nbSuper <= 0) {
         //ReleaseDataport(loader);
         SetErrorSub("No structures");

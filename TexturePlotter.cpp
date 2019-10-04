@@ -17,17 +17,18 @@ GNU General Public License for more details.
 
 Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 */
+#include <NativeFileDialog/molflow_wrapper/nfd_wrapper.h>
 #include "TexturePlotter.h"
 #include "Facet_shared.h"
 #include "GLApp/GLToolkit.h"
 #include "GLApp/GLMessageBox.h"
-#include "GLApp/GLFileBox.h"
 #include "SynRad.h"
 
 extern SynRad *mApp;
+extern std::string fileTexFilters;
 
-static const char *fileFilters = "Text files\0*.txt";
-static const int   nbFilter = sizeof(fileFilters) / (2*sizeof(char *));
+//static const char *fileFilters = "Text files\0*.txt";
+//static const int   nbFilter = sizeof(fileFilters) / (2*sizeof(char *));
 
 TexturePlotter::TexturePlotter():GLWindow() {
 
@@ -306,9 +307,9 @@ void TexturePlotter::SaveFile() {
 
 	if(!selFacet) return;
 
-	FILENAME *fn = GLFileBox::SaveFile(currentDir,NULL,"Save File",fileFilters,nbFilter);
+    std::string saveFile = NFD_SaveFile_Cpp(fileTexFilters, currentDir);
 
-	if( fn ) {
+	if(!saveFile.empty()) {
 
 		size_t u,v,wu,wv;
 		if( !mapList->GetSelectionBox(&u,&v,&wu,&wv) ) {
@@ -319,11 +320,11 @@ void TexturePlotter::SaveFile() {
 		}
 
 		// Save tab separated text
-		FILE *f = fopen(fn->fullName,"w");
+		FILE *f = fopen(saveFile.c_str(),"w");
 
 		if( f==NULL ) {
 			char errMsg[512];
-			sprintf(errMsg,"Cannot open file\nFile:%s",fn->fullName);
+			sprintf(errMsg,"Cannot open file\nFile:%s",saveFile.c_str());
 			GLMessageBox::Display(errMsg,"Error",GLDLG_OK,GLDLG_ICONERROR);
 			return;
 		}
