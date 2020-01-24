@@ -475,14 +475,15 @@ void Worker::LoadGeometry(const std::string& fileName, bool insert, bool newStr)
 		int version;
 		progressDlg->SetVisible(true);
 		try {
-			if (ext == "syn7z") {
-				//decompress file
-				progressDlg->SetMessage("Decompressing file...");
-				char tmp[1024];
-				sprintf(tmp,"cmd /C \"pushd \"%s\"&&7za.exe x -t7z -aoa \"%s\" -otmp&&popd\"",CWD,fileName.c_str());
-				system(tmp);
-				f = new FileReader((std::string)CWD + "\\tmp\\Geometry.syn"); //Open extracted file
-			} else f = new FileReader(fileName); //syn file, open it directly
+            if (ext == "syn7z") {
+                //decompress file
+                progressDlg->SetMessage("Decompressing file...");
+                f = ExtractFrom7zAndOpen(fileName, "Geometry.syn");
+            }
+            else {
+                f = new FileReader(fileName);  //original file opened
+            }
+
 			std::vector<std::string> regionsToLoad;
 			
 			LEAK loaded_leakCache[LEAKCACHESIZE];
@@ -502,8 +503,8 @@ void Worker::LoadGeometry(const std::string& fileName, bool insert, bool newStr)
                 globalHitCache.globalHits.hit.nbAbsEquiv = geom->loaded_nbAbsEquiv;
                 globalHitCache.distTraveledTotal = geom->loaded_distTraveledTotal;
 				ontheflyParams.desorptionLimit = geom->loaded_desorptionLimit;
-				totalFlux = geom->loaded_totalFlux;
-				totalPower = geom->loaded_totalPower;
+                globalHitCache.globalHits.hit.fluxAbs = geom->loaded_totalFlux;
+                globalHitCache.globalHits.hit.powerAbs = geom->loaded_totalPower;
 				no_scans = geom->loaded_no_scans;
 			}
 			else { //insert
@@ -659,6 +660,8 @@ void Worker::LoadGeometry(const std::string& fileName, bool insert, bool newStr)
 				ontheflyParams.desorptionLimit = 0;
 				progressDlg->SetMessage("Reloading worker with new geometry...");
 				RealReload();
+                strcpy(fullFileName, fileName.c_str());
+
 				geom->UpdateName(fileName.c_str());
 			}
 			else { //insert
@@ -916,8 +919,6 @@ void Worker::ResetWorkerStats() {
 
     memset(&globalHitCache, 0, sizeof(GlobalHitBuffer));
 
-	totalFlux = 0.0;
-	totalPower = 0.0;
 	no_scans=1.0;
 
 }
@@ -1093,8 +1094,8 @@ void Worker::WriteHitBuffer() {
 			gHits->globalHits.hit.nbDesorbed = globalHitCache.globalHits.hit.nbDesorbed;
 			gHits->globalHits.hit.nbAbsEquiv = globalHitCache.globalHits.hit.nbAbsEquiv;
 			gHits->distTraveledTotal = globalHitCache.distTraveledTotal;
-			gHits->globalHits.hit.fluxAbs = totalFlux;
-			gHits->globalHits.hit.powerAbs = totalPower;
+			gHits->globalHits.hit.fluxAbs = globalHitCache.globalHits.hit.fluxAbs;
+			gHits->globalHits.hit.powerAbs = globalHitCache.globalHits.hit.powerAbs;
 
 			size_t nbFacet = geom->GetNbFacet();
 			for (int i = 0; i<nbFacet; i++) {
@@ -1124,8 +1125,6 @@ void Worker::SendToHitBuffer() {
             GlobalHitBuffer *gHits = (GlobalHitBuffer *)dpHit->buff;
 
             *gHits = globalHitCache;
-            gHits->globalHits.hit.fluxAbs = totalFlux;
-            gHits->globalHits.hit.powerAbs = totalPower;
 
             ReleaseDataport(dpHit);
 

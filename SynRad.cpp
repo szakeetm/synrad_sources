@@ -38,6 +38,7 @@ Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 #include <io.h>
 #include <numeric> //std::iota
 #include <NativeFileDialog/molflow_wrapper/nfd_wrapper.h>
+#include <Buffer_shared.h>
 //#include <winsparkle.h>
 
 #include "FacetCoordinates.h"
@@ -1104,10 +1105,10 @@ bool SynRad::EvaluateVariable(VLIST *v) {
 		v->value = (double)worker.globalHitCache.globalHits.hit.nbMCHit;
 	}
 	else if (_stricmp(v->name, "SUMFLUX") == 0) {
-		v->value = worker.totalFlux / worker.no_scans;
+		v->value = worker.globalHitCache.globalHits.hit.fluxAbs / worker.no_scans;
 	}
 	else if (_stricmp(v->name, "SUMPOWER") == 0) {
-		v->value = worker.totalPower / worker.no_scans;
+		v->value = worker.globalHitCache.globalHits.hit.powerAbs / worker.no_scans;
 	}
 	else if (_stricmp(v->name, "MPP") == 0) {
 		v->value = worker.globalHitCache.distTraveledTotal / (double)worker.globalHitCache.globalHits.hit.nbDesorbed;
@@ -1244,8 +1245,8 @@ int SynRad::FrameMove()
 	}
 
 	if (worker.no_scans) {
-		sprintf(tmp, "Scn:%.1f F=%.3g P=%.3g", (worker.no_scans == 1.0) ? 0.0 : worker.no_scans,
-			worker.totalFlux / worker.no_scans, worker.totalPower / worker.no_scans);
+        sprintf(tmp, "Scn:%.1f F=%.3g P=%.3g", (worker.no_scans == 1.0) ? 0.0 : worker.no_scans,
+                worker.globalHitCache.globalHits.hit.fluxAbs / worker.no_scans, worker.globalHitCache.globalHits.hit.powerAbs / worker.no_scans);
 		if (worker.wp.nbTrajPoints > 0) doseNumber->SetText(tmp);
 	}
 	else {
@@ -2208,7 +2209,7 @@ void SynRad::LoadConfig() {
 
 	FileReader *f = NULL;
 	char *w;
-	nbRecent = 0;
+	//nbRecent = 0;
 
 	try {
 
@@ -2301,9 +2302,8 @@ void SynRad::LoadConfig() {
 		if (nbProc <= 0) nbProc = 1;
 		f->ReadKeyword("recents"); f->ReadKeyword(":"); f->ReadKeyword("{");
 		w = f->ReadString();
-		while (strcmp(w, "}") != 0 && nbRecent < MAX_RECENT) {
-			recents[nbRecent] = _strdup(w);
-			nbRecent++;
+		while (strcmp(w, "}") != 0 && recentsList.size() < MAX_RECENT) {
+		    recentsList.emplace_back(_strdup(w));
 			w = f->ReadString();
 		}
 
@@ -2431,10 +2431,10 @@ void SynRad::SaveConfig() {
 		f->Write("processNum:"); f->Write(worker.GetProcNumber(), "\n");
 #endif
 		f->Write("recents:{\n");
-		for (int i = 0; i < nbRecent; i++) {
-			f->Write("\"");
-			f->Write(recents[i]);
-			f->Write("\"\n");
+		for(auto& recent : recentsList){
+            f->Write("\"");
+            f->Write(recent);
+            f->Write("\"\n");
 		}
 		f->Write("}\n");
 		f->Write("recentPARs:{\n");

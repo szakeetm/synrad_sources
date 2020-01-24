@@ -164,7 +164,7 @@ bool LoadSimulation(Dataport *loader) {
 
         //Worker params
         inputarchive(sHandle->wp);
-        sHandle->regions.resize(sHandle->wp.nbRegion); //Create structures
+        //sHandle->regions.resize(sHandle->wp.nbRegion); //Create structures
         inputarchive(sHandle->ontheflyParams);
         inputarchive(sHandle->regions); // mathonly
         inputarchive(sHandle->materials);
@@ -225,8 +225,8 @@ bool LoadSimulation(Dataport *loader) {
             reg.Points.resize(reg.params.nbPointsToCopy);
             sHandle->wp.nbTrajPoints += reg.params.nbPointsToCopy;
         }
-        //copy distribution points
 
+        //copy distribution points
         sHandle->nbDistrPoints_BXY = 0;
         for (auto& reg : sHandle->regions) {
             reg.Bx_distr.Resize((size_t)reg.params.nbDistr_MAG.x);

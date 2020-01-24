@@ -514,7 +514,8 @@ std::vector<std::string> SynradGeometry::InsertSYNGeom(FileReader *file, size_t 
 		v.projMode = file->ReadInt();
 		v.camAngleOx = file->ReadDouble();
 		v.camAngleOy = file->ReadDouble();
-		v.camDist = file->ReadDouble();
+        v.camAngleOz = 0.0; //No support for Z angle in current SYN version
+        v.camDist = file->ReadDouble();
 		v.camOffset.x = file->ReadDouble();
 		v.camOffset.y = file->ReadDouble();
 		v.camOffset.z = file->ReadDouble();
@@ -795,7 +796,8 @@ void SynradGeometry::LoadGEO(FileReader *file, GLProgress *prg, int *version, Wo
 			v.projMode = file->ReadInt();
 			v.camAngleOx = file->ReadDouble();
 			v.camAngleOy = file->ReadDouble();
-			v.camDist = file->ReadDouble();
+            v.camAngleOz = 0.0; //No support for Z angle in current GEO version
+            v.camDist = file->ReadDouble();
 			v.camOffset.x = file->ReadDouble();
 			v.camOffset.y = file->ReadDouble();
 			v.camOffset.z = file->ReadDouble();
@@ -1614,7 +1616,8 @@ std::vector<std::string> SynradGeometry::LoadSYN(FileReader *file, GLProgress *p
 		v.projMode = file->ReadInt();
 		v.camAngleOx = file->ReadDouble();
 		v.camAngleOy = file->ReadDouble();
-		v.camDist = file->ReadDouble();
+        v.camAngleOz = 0.0; //No support for Z angle in current SYN version
+        v.camDist = file->ReadDouble();
 		v.camOffset.x = file->ReadDouble();
 		v.camOffset.y = file->ReadDouble();
 		v.camOffset.z = file->ReadDouble();
@@ -1988,7 +1991,14 @@ void SynradGeometry::LoadXML_geom(pugi::xml_node loadXML, Worker *work, GLProgre
 		v.projMode = newView.attribute("projMode").as_int();
 		v.camAngleOx = newView.attribute("camAngleOx").as_double();
 		v.camAngleOy = newView.attribute("camAngleOy").as_double();
-		v.camDist = newView.attribute("camDist").as_double();
+        if (newView.attribute("camAngleOz")) {
+            v.camAngleOz = newView.attribute("camAngleOz").as_double();
+        }
+        else {
+            v.camAngleOz = 0.0; //Otherwise RoundAngle() routine hangs for unitialized value
+        }
+
+        v.camDist = newView.attribute("camDist").as_double();
 		v.camOffset.x = newView.attribute("camOffset.x").as_double();
 		v.camOffset.y = newView.attribute("camOffset.y").as_double();
 		v.camOffset.z = newView.attribute("camOffset.z").as_double();
@@ -2136,7 +2146,13 @@ void SynradGeometry::InsertXML(pugi::xml_node loadXML, Worker *work, GLProgress 
 		v.projMode = newView.attribute("projMode").as_int();
 		v.camAngleOx = newView.attribute("camAngleOx").as_double();
 		v.camAngleOy = newView.attribute("camAngleOy").as_double();
-		v.camDist = newView.attribute("camDist").as_double();
+        if (newView.attribute("camAngleOz")) {
+            v.camAngleOz = newView.attribute("camAngleOz").as_double();
+        }
+        else {
+            v.camAngleOz = 0.0; //Otherwise RoundAngle() routine hangs for unitialized value
+        }
+        v.camDist = newView.attribute("camDist").as_double();
 		v.camOffset.x = newView.attribute("camOffset.x").as_double();
 		v.camOffset.y = newView.attribute("camOffset.y").as_double();
 		v.camOffset.z = newView.attribute("camOffset.z").as_double();

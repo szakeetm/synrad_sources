@@ -715,16 +715,13 @@ void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, in
 	sh.countTrans = file->ReadInt();
 	if (version>=10) file->ReadKeyword("nbAbsEquiv");
 	else file->ReadKeyword("nbAbs"); file->ReadKeyword(":");
-    facetHitCache.hit.nbAbsEquiv = 0;
 	facetHitCache.hit.nbAbsEquiv = file->ReadDouble();
 	if (version < 3) {
 		file->ReadKeyword("nbDes"); file->ReadKeyword(":");
-        facetHitCache.hit.nbDesorbed = 0;
         facetHitCache.hit.nbDesorbed = file->ReadSizeT();
 	}
 
     file->ReadKeyword("nbHit"); file->ReadKeyword(":");
-    facetHitCache.hit.nbMCHit = 0;
     facetHitCache.hit.nbMCHit = file->ReadSizeT();
 
     facetHitCache.hit.nbHitEquiv = 0.0;
@@ -736,10 +733,8 @@ void Facet::LoadSYN(FileReader *file, const std::vector<Material> &materials, in
 
 	if (version >= 3) {
 		file->ReadKeyword("fluxAbs"); file->ReadKeyword(":");
-        facetHitCache.hit.fluxAbs = 0.0;
         facetHitCache.hit.fluxAbs = file->ReadDouble();
 		file->ReadKeyword("powerAbs"); file->ReadKeyword(":");
-        facetHitCache.hit.powerAbs = 0.0;
         facetHitCache.hit.powerAbs = file->ReadDouble();
 	}
 	file->ReadKeyword("countDirection"); file->ReadKeyword(":");

@@ -238,9 +238,9 @@ void PerformTeleport(SubprocessFacet& collidedFacet) {
 
 	// Relaunch particle from new facet
     auto[inTheta, inPhi] = CartesianToPolar(sHandle->currentParticle.direction, collidedFacet.sh.nU,collidedFacet.sh.nV, collidedFacet.sh.N);
+    sHandle->currentParticle.direction = PolarToCartesian(destination, inTheta, inPhi, false);
 
-    PolarToCartesian(destination, inTheta, inPhi, false);
-	// Move particle to teleport destination point
+    // Move particle to teleport destination point
 	sHandle->currentParticle.position = destination->sh.O + collidedFacet.colU*destination->sh.U + collidedFacet.colV*destination->sh.V;
 
 	RecordHit(HIT_TELEPORTDEST, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
@@ -730,7 +730,7 @@ void PerformBounce_new(SubprocessFacet& collidedFacet,  const int &reflType, con
 		}
 	}
 
-	PolarToCartesian(&collidedFacet, outTheta, outPhi, false);
+    sHandle->currentParticle.direction = PolarToCartesian(&collidedFacet, outTheta, outPhi, false);
 
 	RecordHit(HIT_REF, sHandle->currentParticle.dF, sHandle->currentParticle.dP);
 	sHandle->currentParticle.lastHitFacet = &collidedFacet;
@@ -743,7 +743,7 @@ bool PerformBounce_old(SubprocessFacet& collidedFacet, const int& reflType, cons
 	// Relaunch particle, regular monte-carlo
 	if (collidedFacet.sh.reflectType == REFLECTION_DIFFUSE) {
 		//See docs/theta_gen.png for further details on angular distribution generation
-		PolarToCartesian(&collidedFacet, acos(sqrt(rnd())), rnd()*2.0*PI, false);
+        sHandle->currentParticle.direction = PolarToCartesian(&collidedFacet, acos(sqrt(rnd())), rnd()*2.0*PI, false);
 	} else { //Fwd/diff/back reflection, optionally with surface perturbation
 		if (!VerifiedSpecularReflection(collidedFacet, (collidedFacet.sh.reflectType == REFLECTION_SPECULAR)?REFL_FORWARD:reflType, inTheta, inPhi,
 			nU_rotated, nV_rotated, N_rotated)) {
@@ -983,4 +983,5 @@ void ProfileFacet(SubprocessFacet &f, const double &energy, const ProfileSlice& 
 
 void SubprocessFacet::ResetCounter() {
     memset(&tmpCounter, 0, sizeof(tmpCounter));
+    tmpCounter.ResetBuffer();
 }
